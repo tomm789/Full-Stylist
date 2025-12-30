@@ -163,3 +163,128 @@ label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; fon
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+/* MOBILE RESPONSIVE STYLES */
+@media (max-width: 768px) {
+    .app-layout {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        width: 100%;
+    }
+
+    .nav-rail {
+        flex-direction: row;
+        justify-content: center;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 10px 20px;
+        width: 100%;
+        gap: 15px;
+        flex-shrink: 0;
+    }
+
+    .nav-item {
+        width: 50px;
+        height: 50px;
+        font-size: 1.4rem;
+    }
+
+    .stage-area {
+        flex: 1;
+        min-height: 0;
+        padding: 10px;
+        position: relative;
+    }
+
+    .image-wrapper {
+        max-height: 100%;
+        width: 100%;
+    }
+
+    #stage-image {
+        max-height: 100%;
+        width: 100%;
+        object-fit: contain;
+    }
+
+    .controls-panel {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: 380px;
+        z-index: 100;
+        border-left: 1px solid var(--border);
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out;
+        box-shadow: -5px 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .controls-panel.open {
+        transform: translateX(0);
+    }
+
+    .toggle-panel-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 12px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-top: none;
+        color: var(--text-main);
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.2s;
+        z-index: 99;
+        position: relative;
+        font-size: 0.9rem;
+    }
+
+    .toggle-panel-btn:hover {
+        background: var(--surface-light);
+    }
+
+    .toggle-panel-btn .icon {
+        margin-left: 8px;
+        transition: transform 0.3s;
+    }
+
+    .toggle-panel-btn.open .icon {
+        transform: rotate(180deg);
+    }
+
+    .history-slider-container {
+        top: auto;
+        bottom: 60px;
+        height: 80px;
+        border-bottom: none;
+        border-top: 1px solid var(--border);
+    }
+
+    #stage-label {
+        bottom: 80px;
+    }
+
+    .panel-content {
+        padding: 15px;
+    }
+
+    .step-card {
+        padding: 20px;
+    }
+}
+
+/* Hide toggle button on desktop */
+.toggle-panel-btn {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .toggle-panel-btn {
+        display: flex;
+    }
+}
+

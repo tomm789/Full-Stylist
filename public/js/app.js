@@ -157,6 +157,29 @@ function switchTab(tab) {
     }
 
     updateStageImage(tab);
+    
+    // Close mobile panel when switching tabs on mobile
+    if (window.innerWidth <= 768) {
+        const panel = document.querySelector('.controls-panel');
+        const button = document.getElementById('toggle-panel-btn');
+        if (panel && button) {
+            panel.classList.remove('open');
+            button.classList.remove('open');
+        }
+    }
+}
+
+/* ----------------------------------------------------------------
+   MOBILE PANEL TOGGLE
+   ---------------------------------------------------------------- */
+function toggleControlsPanel() {
+    const panel = document.querySelector('.controls-panel');
+    const button = document.getElementById('toggle-panel-btn');
+    
+    if (panel && button) {
+        panel.classList.toggle('open');
+        button.classList.toggle('open');
+    }
 }
 
 function updateStageImage(tab) {
