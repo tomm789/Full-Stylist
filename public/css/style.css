@@ -47,6 +47,7 @@ body {
 input, textarea, select {
     width: 100%; background: var(--surface-light); border: 1px solid #444;
     color: white; padding: 10px; border-radius: 8px; font-family: inherit; margin-bottom: 10px;
+    font-size: 16px; /* Prevent iOS auto-zoom on focus */
 }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); }
 label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; font-weight: 600;}
@@ -94,7 +95,7 @@ label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; fon
     padding-top: 20px;
 }
 .stage-area.has-history {
-    padding-top: 120px;
+    padding-top: 110px;
 }
 
 /* IMAGE WRAPPER (For Download Button Positioning) */
@@ -133,6 +134,7 @@ label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; fon
     z-index: 20;
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     padding: 0 20px;
     overflow-x: auto;
     gap: 10px;
@@ -305,6 +307,7 @@ label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; fon
     .history-slider-container {
         height: 90px;
         padding: 0 10px;
+        justify-content: flex-start;
     }
     
     .history-thumb {
@@ -348,7 +351,7 @@ label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; fon
     }
     
     .stage-area.has-history {
-        padding-top: 120px;
+        padding-top: 100px;
         margin-top: 0;
     }
     
@@ -356,8 +359,9 @@ label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; fon
         position: sticky;
         top: 60px;
         z-index: 90;
-        height: 100px;
+        height: 90px;
         padding: 0 10px;
+        justify-content: flex-start;
     }
     
     .history-thumb {
