@@ -205,8 +205,8 @@ function updateStageImage(tab) {
     if (tab === 'salon' && state.previewHeadshotUrl) {
         stageImg.src = state.previewHeadshotUrl;
         label.innerText = "Preview (Unsaved)";
-        // Show save button on mobile when preview exists
-        if (saveBtnContainer && window.innerWidth <= 768) {
+        // Show save button on both mobile and desktop when preview exists
+        if (saveBtnContainer) {
             saveBtnContainer.style.display = state.previewHeadshotUrl ? 'block' : 'none';
         }
         return;
@@ -215,7 +215,7 @@ function updateStageImage(tab) {
     const currentLook = state.savedLooks.find(l => l.id === state.selectedLookId);
     if (!currentLook) {
         // Hide save button if no preview
-        if (saveBtnContainer && window.innerWidth <= 768) {
+        if (saveBtnContainer) {
             saveBtnContainer.style.display = 'none';
         }
         return;
@@ -225,14 +225,14 @@ function updateStageImage(tab) {
         stageImg.src = currentLook.bodyUrl;
         label.innerText = "Studio Base (Reference)";
         // Hide save button on stylist tab
-        if (saveBtnContainer && window.innerWidth <= 768) {
+        if (saveBtnContainer) {
             saveBtnContainer.style.display = 'none';
         }
     } else {
         stageImg.src = currentLook.headUrl;
         label.innerText = "Salon View (Headshot)";
         // Hide save button when showing saved look (no preview)
-        if (saveBtnContainer && window.innerWidth <= 768) {
+        if (saveBtnContainer) {
             saveBtnContainer.style.display = 'none';
         }
     }
@@ -275,9 +275,9 @@ async function generateNewHeadshot() {
         document.getElementById('stage-image').src = state.previewHeadshotUrl;
         document.getElementById('stage-label').innerText = "Preview (Click Save to Apply)";
         
-        // Show save button on mobile
+        // Show save button on both mobile and desktop
         const saveBtnContainer = document.getElementById('salon-save-btn-container');
-        if (saveBtnContainer && window.innerWidth <= 768) {
+        if (saveBtnContainer) {
             saveBtnContainer.style.display = 'block';
         }
 
@@ -297,9 +297,9 @@ async function saveCurrentHeadshot() {
         alert("Look Saved!");
         state.previewHeadshotUrl = null;
         
-        // Hide save button after saving
+        // Hide save button after saving (on both mobile and desktop)
         const saveBtnContainer = document.getElementById('salon-save-btn-container');
-        if (saveBtnContainer && window.innerWidth <= 768) {
+        if (saveBtnContainer) {
             saveBtnContainer.style.display = 'none';
         }
         

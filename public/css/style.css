@@ -310,6 +310,21 @@ label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; fon
         z-index: 30;
     }
 
+    .salon-save-btn-container {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 30;
+        display: none;
+    }
+
+    @media (max-width: 768px) {
+        .salon-save-btn-container {
+            top: 70px;
+        }
+    }
+
     .step-card {
         padding: 20px;
     }
@@ -328,19 +343,11 @@ label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; fon
     .panel-close-btn {
         display: flex;
     }
-
-    #salon-save-btn-container {
-        display: block;
-    }
 }
 
 @media (min-width: 769px) {
     .panel-close-btn {
         display: none;
-    }
-
-    #salon-save-btn-container {
-        display: none !important;
     }
 
     .panel-content {
