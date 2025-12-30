@@ -164,9 +164,11 @@ function switchTab(tab) {
 
 function updateStageImage(tab) {
     const stageImg = document.getElementById('stage-image');
+    const label = document.getElementById('stage-label');
     
     if (tab === 'salon' && state.previewHeadshotUrl) {
         stageImg.src = state.previewHeadshotUrl;
+        label.innerText = "Preview (Unsaved)";
         return;
     }
 
@@ -175,8 +177,10 @@ function updateStageImage(tab) {
 
     if (tab === 'stylist') {
         stageImg.src = currentLook.bodyUrl;
+        label.innerText = "Studio Base (Reference)";
     } else {
         stageImg.src = currentLook.headUrl;
+        label.innerText = "Salon View (Headshot)";
     }
 }
 
@@ -205,6 +209,7 @@ async function generateNewHeadshot() {
         state.previewHeadshotUrl = `data:image/png;base64,${headB64}`;
         
         document.getElementById('stage-image').src = state.previewHeadshotUrl;
+        document.getElementById('stage-label').innerText = "Preview (Click Save to Apply)";
 
     } catch(e) {
         alert(e.message);
@@ -352,6 +357,7 @@ async function generateOutfit() {
         const url = `data:image/png;base64,${b64}`;
         
         document.getElementById('stage-image').src = url;
+        document.getElementById('stage-label').innerText = "Generated Outfit";
         addToHistory(url);
 
     } catch(e) {
@@ -371,16 +377,17 @@ function addToHistory(url) {
     stageArea.classList.add('has-history');
     track.innerHTML = ''; 
 
-        state.outfitHistory.forEach(histUrl => {
-            const img = document.createElement('img');
-            img.src = histUrl;
-            img.className = 'history-thumb';
-            img.onclick = () => {
-                document.getElementById('stage-image').src = histUrl;
-            };
-            img.ondblclick = () => openLightbox(histUrl);
-            track.appendChild(img);
-        });
+    state.outfitHistory.forEach(histUrl => {
+        const img = document.createElement('img');
+        img.src = histUrl;
+        img.className = 'history-thumb';
+        img.onclick = () => {
+            document.getElementById('stage-image').src = histUrl;
+            document.getElementById('stage-label').innerText = "History View";
+        };
+        img.ondblclick = () => openLightbox(histUrl);
+        track.appendChild(img);
+    });
 }
 
 /* ----------------------------------------------------------------
