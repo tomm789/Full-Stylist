@@ -150,10 +150,13 @@ function switchTab(tab) {
 
     // History Slider
     const slider = document.getElementById('history-slider');
+    const stageArea = document.querySelector('.stage-area');
     if(tab === 'stylist' && state.outfitHistory.length > 0) {
         slider.classList.remove('hidden');
+        stageArea.classList.add('has-history');
     } else {
         slider.classList.add('hidden');
+        stageArea.classList.remove('has-history');
     }
 
     updateStageImage(tab);
@@ -257,6 +260,11 @@ function renderHeadshotGrid() {
             renderHeadshotGrid();
             updateStageImage('stylist'); 
         };
+        // Double click or double tap for lightbox
+        img.ondblclick = (e) => {
+            e.stopPropagation();
+            openLightbox(item.headUrl);
+        };
         grid.appendChild(img);
     });
 }
@@ -290,6 +298,11 @@ function renderWardrobeGrid() {
         img.onclick = () => {
             item.selected = !item.selected;
             renderWardrobeGrid();
+        };
+        // Double click for lightbox
+        img.ondblclick = (e) => {
+            e.stopPropagation();
+            openLightbox(item.url);
         };
         grid.appendChild(img);
     });
@@ -358,8 +371,10 @@ function addToHistory(url) {
     state.outfitHistory.unshift(url);
     const slider = document.getElementById('history-slider');
     const track = document.getElementById('history-track');
+    const stageArea = document.querySelector('.stage-area');
     
     slider.classList.remove('hidden');
+    stageArea.classList.add('has-history');
     track.innerHTML = ''; 
 
     state.outfitHistory.forEach(histUrl => {
@@ -370,6 +385,7 @@ function addToHistory(url) {
             document.getElementById('stage-image').src = histUrl;
             document.getElementById('stage-label').innerText = "History View";
         };
+        img.ondblclick = () => openLightbox(histUrl);
         track.appendChild(img);
     });
 }
@@ -411,4 +427,43 @@ async function callGemini(promptText, b64Images) {
         throw error;
     }
 }
+
+/* ----------------------------------------------------------------
+   LIGHTBOX FUNCTIONALITY
+   ---------------------------------------------------------------- */
+function openLightbox(imageSrc) {
+    if (!imageSrc || imageSrc === '') return;
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImage = document.getElementById('lightbox-image');
+    lightboxImage.src = imageSrc;
+    lightbox.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+    const lightbox = document.getElementById('lightbox');
+    lightbox.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function downloadLightboxImage() {
+    const lightboxImage = document.getElementById('lightbox-image');
+    const src = lightboxImage.src;
+    
+    if (!src || src === "") return alert("No image to download.");
+    
+    const link = document.createElement('a');
+    link.href = src;
+    link.download = `full_stylist_${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Close lightbox on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeLightbox();
+    }
+});
 

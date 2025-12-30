@@ -76,9 +76,9 @@
                 <div id="loading-text" style="color:white;">Processing...</div>
             </div>
 
-            <div class="image-wrapper">
-                <img id="stage-image" src="">
-                <button class="download-btn" onclick="downloadCurrentImage()" title="Download Image">
+            <div class="image-wrapper" onclick="openLightbox(document.getElementById('stage-image').src)">
+                <img id="stage-image" src="" style="cursor: pointer;">
+                <button class="download-btn" onclick="event.stopPropagation(); downloadCurrentImage()" title="Download Image">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
@@ -137,6 +137,21 @@
             </div>
 
         </aside>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+        <div class="lightbox-content" onclick="event.stopPropagation()">
+            <button class="lightbox-close" onclick="closeLightbox()" title="Close">×</button>
+            <img id="lightbox-image" class="lightbox-image" src="" alt="Full screen image">
+            <button class="lightbox-download" onclick="downloadLightboxImage()" title="Download Image">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+            </button>
+        </div>
     </div>
 
     <script src="/js/app.js"></script>
