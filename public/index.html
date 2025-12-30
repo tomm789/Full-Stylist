@@ -81,6 +81,10 @@
                 <div id="loading-text" style="color:white;">Processing...</div>
             </div>
 
+            <div id="salon-save-btn-container" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 30; display: none;">
+                <button class="btn btn-outline" onclick="saveCurrentHeadshot()" style="width: auto; padding: 10px 20px; margin: 0;">Save to Profile</button>
+            </div>
+
             <div class="image-wrapper">
                 <img id="stage-image" src="">
                 <button class="download-btn" onclick="downloadCurrentImage()" title="Download Image">
@@ -98,6 +102,7 @@
         </main>
 
         <aside class="controls-panel">
+            <button class="panel-close-btn" onclick="toggleControlsPanel()" title="Close">✕</button>
             
             <div id="tab-stylist" class="control-section active">
                 <div class="panel-content">
@@ -137,7 +142,6 @@
                     <input type="text" id="salon-makeup" placeholder="e.g. Heavy eyeliner, nude look...">
 
                     <button class="btn btn-purple" onclick="generateNewHeadshot()">Generate New Look</button>
-                    <button class="btn btn-outline" onclick="saveCurrentHeadshot()">Save to Profile</button>
                 </div>
             </div>
 

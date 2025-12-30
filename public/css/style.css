@@ -225,6 +225,35 @@ label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; fon
         transform: translateX(0);
     }
 
+    .panel-close-btn {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        background: var(--surface-light);
+        border: 1px solid var(--border);
+        color: var(--text-main);
+        font-size: 1.2rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 101;
+        transition: 0.2s;
+    }
+
+    .panel-close-btn:hover {
+        background: var(--primary);
+        color: #000;
+        border-color: var(--primary);
+    }
+
+    .panel-content {
+        padding-top: 50px;
+    }
+
     .toggle-panel-btn {
         display: flex;
         align-items: center;
@@ -270,6 +299,15 @@ label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; fon
 
     .panel-content {
         padding: 15px;
+        padding-top: 50px;
+    }
+
+    #salon-save-btn-container {
+        position: absolute;
+        top: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 30;
     }
 
     .step-card {
@@ -285,6 +323,28 @@ label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; fon
 @media (max-width: 768px) {
     .toggle-panel-btn {
         display: flex;
+    }
+
+    .panel-close-btn {
+        display: flex;
+    }
+
+    #salon-save-btn-container {
+        display: block;
+    }
+}
+
+@media (min-width: 769px) {
+    .panel-close-btn {
+        display: none;
+    }
+
+    #salon-save-btn-container {
+        display: none !important;
+    }
+
+    .panel-content {
+        padding-top: 20px;
     }
 }
 

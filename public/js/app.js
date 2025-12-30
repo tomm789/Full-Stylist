@@ -139,7 +139,9 @@ async function runBodyGeneration(headB64, referenceBodyB64) {
 function enterDashboard() {
     document.getElementById('onboarding-view').classList.add('hidden');
     document.getElementById('dashboard-view').classList.remove('hidden');
-    switchTab('stylist'); 
+    switchTab('stylist');
+    // Initialize toggle button text
+    updateToggleButtonText('stylist');
 }
 
 function switchTab(tab) {
@@ -158,6 +160,9 @@ function switchTab(tab) {
 
     updateStageImage(tab);
     
+    // Update toggle button text based on tab
+    updateToggleButtonText(tab);
+    
     // Close mobile panel when switching tabs on mobile
     if (window.innerWidth <= 768) {
         const panel = document.querySelector('.controls-panel');
@@ -165,6 +170,16 @@ function switchTab(tab) {
         if (panel && button) {
             panel.classList.remove('open');
             button.classList.remove('open');
+        }
+    }
+}
+
+function updateToggleButtonText(tab) {
+    const button = document.getElementById('toggle-panel-btn');
+    if (button) {
+        const textSpan = button.querySelector('span:not(.icon)');
+        if (textSpan) {
+            textSpan.textContent = tab === 'stylist' ? 'Outfit' : 'Look';
         }
     }
 }
@@ -185,22 +200,41 @@ function toggleControlsPanel() {
 function updateStageImage(tab) {
     const stageImg = document.getElementById('stage-image');
     const label = document.getElementById('stage-label');
+    const saveBtnContainer = document.getElementById('salon-save-btn-container');
     
     if (tab === 'salon' && state.previewHeadshotUrl) {
         stageImg.src = state.previewHeadshotUrl;
         label.innerText = "Preview (Unsaved)";
+        // Show save button on mobile when preview exists
+        if (saveBtnContainer && window.innerWidth <= 768) {
+            saveBtnContainer.style.display = state.previewHeadshotUrl ? 'block' : 'none';
+        }
         return;
     }
 
     const currentLook = state.savedLooks.find(l => l.id === state.selectedLookId);
-    if (!currentLook) return;
+    if (!currentLook) {
+        // Hide save button if no preview
+        if (saveBtnContainer && window.innerWidth <= 768) {
+            saveBtnContainer.style.display = 'none';
+        }
+        return;
+    }
 
     if (tab === 'stylist') {
         stageImg.src = currentLook.bodyUrl;
         label.innerText = "Studio Base (Reference)";
+        // Hide save button on stylist tab
+        if (saveBtnContainer && window.innerWidth <= 768) {
+            saveBtnContainer.style.display = 'none';
+        }
     } else {
         stageImg.src = currentLook.headUrl;
         label.innerText = "Salon View (Headshot)";
+        // Hide save button when showing saved look (no preview)
+        if (saveBtnContainer && window.innerWidth <= 768) {
+            saveBtnContainer.style.display = 'none';
+        }
     }
 }
 
@@ -212,6 +246,16 @@ async function generateNewHeadshot() {
 
     const h = document.getElementById('salon-hair').value || "Keep original hair";
     const m = document.getElementById('salon-makeup').value || "Natural look";
+
+    // Collapse panel on mobile
+    if (window.innerWidth <= 768) {
+        const panel = document.querySelector('.controls-panel');
+        const button = document.getElementById('toggle-panel-btn');
+        if (panel && button) {
+            panel.classList.remove('open');
+            button.classList.remove('open');
+        }
+    }
 
     showLoading(true, "Generating Headshot Preview...");
 
@@ -230,6 +274,12 @@ async function generateNewHeadshot() {
         
         document.getElementById('stage-image').src = state.previewHeadshotUrl;
         document.getElementById('stage-label').innerText = "Preview (Click Save to Apply)";
+        
+        // Show save button on mobile
+        const saveBtnContainer = document.getElementById('salon-save-btn-container');
+        if (saveBtnContainer && window.innerWidth <= 768) {
+            saveBtnContainer.style.display = 'block';
+        }
 
     } catch(e) {
         alert(e.message);
@@ -245,7 +295,14 @@ async function saveCurrentHeadshot() {
         const bodyB64 = await runBodyGeneration(state.previewHeadshotB64, state.masterBodyB64);
         saveNewLook(state.previewHeadshotB64, bodyB64);
         alert("Look Saved!");
-        state.previewHeadshotUrl = null; 
+        state.previewHeadshotUrl = null;
+        
+        // Hide save button after saving
+        const saveBtnContainer = document.getElementById('salon-save-btn-container');
+        if (saveBtnContainer && window.innerWidth <= 768) {
+            saveBtnContainer.style.display = 'none';
+        }
+        
         updateStageImage('salon');
     } catch(e) {
         alert(e.message);
@@ -342,6 +399,16 @@ async function generateOutfit() {
     else {
         // Case C: Empty (Default)
         instructionText = "Design a stylish, modern outfit that perfectly suits the subject's appearance.";
+    }
+
+    // Collapse panel on mobile
+    if (window.innerWidth <= 768) {
+        const panel = document.querySelector('.controls-panel');
+        const button = document.getElementById('toggle-panel-btn');
+        if (panel && button) {
+            panel.classList.remove('open');
+            button.classList.remove('open');
+        }
     }
 
     showLoading(true, "Styling Outfit...");
