@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nano Banana | Stylist Pro v3.1</title>
+    <title>Full Stylist</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -63,11 +63,6 @@
             <div class="nav-item" id="nav-salon" onclick="switchTab('salon')" title="Hair & Make-up">💇‍♀️</div>
         </nav>
 
-        <button class="toggle-panel-btn" id="toggle-panel-btn" onclick="toggleControlsPanel()">
-            <span>Settings</span>
-            <span class="icon">▼</span>
-        </button>
-
         <main class="stage-area">
             
             <div id="history-slider" class="history-slider-container hidden">
@@ -79,10 +74,6 @@
             <div id="loading-overlay" class="loading-overlay">
                 <div class="spinner"></div>
                 <div id="loading-text" style="color:white;">Processing...</div>
-            </div>
-
-            <div id="salon-save-btn-container" class="salon-save-btn-container">
-                <button class="btn btn-outline" onclick="saveCurrentHeadshot()" style="width: auto; padding: 10px 20px; margin: 0;">Save to Profile</button>
             </div>
 
             <div class="image-wrapper">
@@ -102,7 +93,6 @@
         </main>
 
         <aside class="controls-panel">
-            <button class="panel-close-btn" onclick="toggleControlsPanel()" title="Close">✕</button>
             
             <div id="tab-stylist" class="control-section active">
                 <div class="panel-content">
@@ -142,6 +132,7 @@
                     <input type="text" id="salon-makeup" placeholder="e.g. Heavy eyeliner, nude look...">
 
                     <button class="btn btn-purple" onclick="generateNewHeadshot()">Generate New Look</button>
+                    <button class="btn btn-outline" onclick="saveCurrentHeadshot()">Save to Profile</button>
                 </div>
             </div>
 
