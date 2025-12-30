@@ -40,18 +40,62 @@ function showLoading(show, text="Processing...") {
 }
 
 // DOWNLOAD FEATURE
-function downloadCurrentImage() {
+async function downloadCurrentImage() {
     const img = document.getElementById('stage-image');
     const src = img.src;
     
     if (!src || src === "") return alert("No image to download.");
     
-    const link = document.createElement('a');
-    link.href = src;
-    link.download = `full_stylist_${Date.now()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Detect iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    try {
+        // Fetch the image as a blob to ensure proper download on mobile
+        const response = await fetch(src);
+        const blob = await response.blob();
+        
+        // For iOS, use Share API if available, otherwise open in new tab
+        if (isIOS && navigator.share) {
+            const file = new File([blob], `full_stylist_${Date.now()}.png`, { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: 'Full Stylist Image',
+                    text: 'Download image'
+                });
+                return;
+            }
+        }
+        
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `full_stylist_${Date.now()}.png`;
+        link.style.display = 'none';
+        
+        // For iOS, open in new tab as fallback
+        if (isIOS) {
+            link.target = '_blank';
+            link.rel = 'noopener';
+        }
+        
+        // For iOS and mobile browsers, we need to append to body first
+        document.body.appendChild(link);
+        
+        // Trigger download
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+        }, 100);
+    } catch (error) {
+        console.error('Download error:', error);
+        // Fallback: open image in new tab (works on iOS)
+        window.open(src, '_blank');
+    }
 }
 
 /* ----------------------------------------------------------------
@@ -446,18 +490,62 @@ function closeLightbox() {
     document.body.style.overflow = '';
 }
 
-function downloadLightboxImage() {
+async function downloadLightboxImage() {
     const lightboxImage = document.getElementById('lightbox-image');
     const src = lightboxImage.src;
     
     if (!src || src === "") return alert("No image to download.");
     
-    const link = document.createElement('a');
-    link.href = src;
-    link.download = `full_stylist_${Date.now()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Detect iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    try {
+        // Fetch the image as a blob to ensure proper download on mobile
+        const response = await fetch(src);
+        const blob = await response.blob();
+        
+        // For iOS, use Share API if available, otherwise open in new tab
+        if (isIOS && navigator.share) {
+            const file = new File([blob], `full_stylist_${Date.now()}.png`, { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: 'Full Stylist Image',
+                    text: 'Download image'
+                });
+                return;
+            }
+        }
+        
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `full_stylist_${Date.now()}.png`;
+        link.style.display = 'none';
+        
+        // For iOS, open in new tab as fallback
+        if (isIOS) {
+            link.target = '_blank';
+            link.rel = 'noopener';
+        }
+        
+        // For iOS and mobile browsers, we need to append to body first
+        document.body.appendChild(link);
+        
+        // Trigger download
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+        }, 100);
+    } catch (error) {
+        console.error('Download error:', error);
+        // Fallback: open image in new tab (works on iOS)
+        window.open(src, '_blank');
+    }
 }
 
 // Close lightbox on Escape key
