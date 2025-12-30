@@ -165,282 +165,115 @@ label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #ccc; fon
 
 /* MOBILE RESPONSIVE STYLES */
 @media (max-width: 768px) {
-    /* DASHBOARD LAYOUT - MOBILE */
+    body {
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: auto;
+        min-height: 100vh;
+    }
+
+    /* DASHBOARD LAYOUT - Mobile: Stack vertically */
     .app-layout {
         display: flex;
         flex-direction: column;
-        height: 100vh;
-        width: 100%;
-        overflow: hidden;
+        height: auto;
+        min-height: 100vh;
+        grid-template-columns: none;
     }
 
-    /* NAVIGATION - HORIZONTAL AT TOP */
+    /* NAV RAIL - Mobile: Horizontal at top */
     .nav-rail {
-        background: var(--surface);
+        flex-direction: row;
         border-right: none;
         border-bottom: 1px solid var(--border);
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: center;
         padding: 10px 20px;
-        gap: 20px;
+        justify-content: center;
+        width: 100%;
         flex-shrink: 0;
-        z-index: 50;
+        order: 1;
     }
 
     .nav-item {
-        width: 50px;
-        height: 50px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--text-muted);
-        cursor: pointer;
-        font-size: 1.3rem;
-        transition: 0.2s;
+        margin: 0 10px;
     }
 
-    .nav-item.active {
-        background: var(--surface-light);
-        color: var(--primary);
-        border: 1px solid #444;
-    }
-
-    /* CONTROLS PANEL - BELOW NAVIGATION */
+    /* CONTROLS PANEL - Mobile: Full width, below nav */
     .controls-panel {
-        background: var(--surface);
+        width: 100%;
         border-left: none;
         border-bottom: 1px solid var(--border);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
+        order: 2;
         flex-shrink: 0;
-        max-height: 40vh;
+        max-height: 50vh;
     }
 
     .panel-content {
         padding: 15px;
-        overflow-y: auto;
-        flex: 1;
     }
 
-    /* STAGE AREA - BELOW CONTROLS */
+    /* STAGE AREA - Mobile: Full width, below controls */
     .stage-area {
+        order: 3;
         flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 10px;
-        position: relative;
-        overflow: hidden;
-        min-height: 0;
+        min-height: 50vh;
+        padding: 15px;
+        justify-content: flex-start;
     }
 
-    /* IMAGE WRAPPER - MOBILE ADJUSTMENTS */
+    /* HISTORY SLIDER - Mobile: Position at bottom, below image */
+    .history-slider-container {
+        position: static;
+        top: auto;
+        left: auto;
+        right: auto;
+        width: 100%;
+        margin-top: 15px;
+        border-bottom: none;
+        border-top: 1px solid var(--border);
+        order: 2;
+    }
+
+    /* IMAGE WRAPPER - Mobile adjustments */
     .image-wrapper {
         max-width: 100%;
-        max-height: 100%;
+        max-height: none;
         width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        margin-bottom: 15px;
+        order: 1;
     }
 
     #stage-image {
         max-width: 100%;
-        max-height: 100%;
-        width: auto;
-        height: auto;
-        object-fit: contain;
-    }
-
-    /* HISTORY SLIDER - AT BOTTOM FOR MOBILE */
-    .history-slider-container {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        top: auto;
-        height: 90px;
-        background: rgba(13, 14, 18, 0.95);
-        backdrop-filter: blur(10px);
-        border-top: 1px solid var(--border);
-        border-bottom: none;
-        z-index: 20;
-        display: flex;
-        align-items: center;
-        padding: 0 15px;
-        overflow-x: auto;
-        gap: 10px;
-    }
-
-    .history-slider-container > div:first-child {
-        font-size: 0.7rem !important;
-        margin-right: 8px !important;
-    }
-
-    .history-thumb {
-        height: 60px;
-        width: 60px;
-        border-radius: 6px;
-        flex-shrink: 0;
-        background: #333;
-        cursor: pointer;
-        border: 2px solid transparent;
-        object-fit: cover;
-        transition: 0.2s;
-    }
-
-    /* ADJUST STAGE LABEL POSITION FOR MOBILE */
-    #stage-label {
-        bottom: 100px !important;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 0.75rem;
-        padding: 4px 8px;
-    }
-
-    /* GRID ADJUSTMENTS FOR MOBILE */
-    .grid-3 {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 6px;
-    }
-
-    .thumb {
+        max-height: none;
         width: 100%;
-        aspect-ratio: 1;
-        object-fit: cover;
-        border-radius: 6px;
+        height: auto;
     }
 
-    /* BUTTON ADJUSTMENTS */
-    .btn {
-        padding: 10px;
-        font-size: 0.9rem;
+    /* STAGE LABEL - Mobile adjustments */
+    #stage-label {
+        position: static;
+        margin-top: 10px;
+        margin-bottom: 0;
+        display: inline-block;
+        order: 3;
     }
 
-    /* UPLOAD BOX - MOBILE */
-    .upload-box {
-        min-height: 120px;
-        padding: 12px;
+    /* GRID - Mobile: 2 columns instead of 3 for better spacing */
+    .grid-3 {
+        grid-template-columns: repeat(2, 1fr);
     }
 
-    /* PANEL CONTENT ADJUSTMENTS */
-    .panel-content h3 {
-        font-size: 1.1rem;
-        margin-bottom: 15px;
-    }
-
-    .panel-content label {
-        font-size: 0.8rem;
-        margin-bottom: 4px;
-    }
-
-    input, textarea, select {
-        padding: 8px;
-        font-size: 0.9rem;
-        margin-bottom: 8px;
-    }
-
-    textarea {
-        min-height: 60px;
-    }
-
-    /* DOWNLOAD BUTTON - MOBILE */
-    .download-btn {
-        width: 36px;
-        height: 36px;
-        bottom: 100px;
-        right: 15px;
-    }
-
-    .download-btn svg {
-        width: 18px;
-        height: 18px;
-    }
-
-    /* LOADING OVERLAY - MOBILE */
-    .loading-overlay {
-        padding: 15px;
-    }
-
-    .spinner {
-        width: 35px;
-        height: 35px;
-        border-width: 3px;
-    }
-
-    /* ONBOARDING - MOBILE ADJUSTMENTS */
-    .onboarding-container {
-        padding: 15px;
-    }
-
+    /* STEP CARD - Mobile padding adjustment */
     .step-card {
         padding: 20px;
-        border-radius: 12px;
-    }
-
-    .step-card h1 {
-        font-size: 1.3rem;
-        margin-bottom: 15px;
     }
 }
 
-/* SMALL MOBILE DEVICES */
-@media (max-width: 480px) {
-    .nav-rail {
-        padding: 8px 15px;
-        gap: 15px;
-    }
-
-    .nav-item {
-        width: 45px;
-        height: 45px;
-        font-size: 1.2rem;
-    }
-
-    .controls-panel {
-        max-height: 35vh;
-    }
-
-    .panel-content {
-        padding: 12px;
-    }
-
-    .history-slider-container {
-        height: 80px;
-        padding: 0 10px;
-    }
-
-    .history-thumb {
-        height: 55px;
-        width: 55px;
-    }
-
-    #stage-label {
-        bottom: 90px !important;
-        font-size: 0.7rem;
-        padding: 3px 6px;
-    }
-
-    .download-btn {
-        width: 32px;
-        height: 32px;
-        bottom: 90px;
-        right: 10px;
-    }
-
-    .download-btn svg {
-        width: 16px;
-        height: 16px;
-    }
-
-    .grid-3 {
-        gap: 5px;
+/* TABLET STYLES - Keep desktop layout */
+@media (min-width: 769px) and (max-width: 1024px) {
+    /* Maintain desktop layout for tablets */
+    .app-layout {
+        grid-template-columns: 70px 1fr 380px;
     }
 }
 
