@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nano Banana | Stylist Pro v3.1</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <div id="onboarding-view" class="onboarding-container">
+        
+        <div id="step-1" class="step-card">
+            <h1 style="color: var(--primary); margin-top:0;">1. Create Headshot</h1>
+            
+            <div class="upload-box" onclick="document.getElementById('input-selfie').click()">
+                <div class="upload-text">Upload Selfie</div>
+                <img id="preview-selfie" class="hidden">
+                <input type="file" id="input-selfie" hidden accept="image/*" onchange="handleFile(this, 'preview-selfie', 'selfieBase64')">
+            </div>
+
+            <div style="margin-top: 20px;">
+                <label>Hair Description</label>
+                <input type="text" id="setup-hair" placeholder="e.g. Buzz cut, blonde, messy texture...">
+                
+                <label>Make-up Description</label>
+                <input type="text" id="setup-makeup" placeholder="e.g. Natural look, red lipstick, clean skin...">
+            </div>
+
+            <button class="btn btn-primary" onclick="generateInitialHeadshot()">Generate Headshot</button>
+            <div id="msg-1" style="margin-top:10px; color:#888; font-size:0.8rem;"></div>
+        </div>
+
+        <div id="step-2" class="step-card hidden">
+            <h1 style="color: var(--accent-purple);">Headshot Ready</h1>
+            <div style="text-align:center; margin: 20px 0;">
+                <img id="generated-headshot-preview" style="max-height:300px; border-radius:8px; border:1px solid #444;">
+            </div>
+            <button class="btn btn-primary" onclick="goToStep(3)">Looks Good - Continue</button>
+            <button class="btn btn-outline" onclick="goToStep(1)">Try Again</button>
+        </div>
+
+        <div id="step-3" class="step-card hidden">
+            <h1 style="color: var(--primary);">2. Create Studio Model</h1>
+            <p style="color:#888; font-size:0.9rem;">We will combine your new headshot with your body photo.</p>
+            
+            <div class="upload-box" onclick="document.getElementById('input-body').click()">
+                <div class="upload-text">Upload Full Body Photo</div>
+                <img id="preview-body" class="hidden">
+                <input type="file" id="input-body" hidden accept="image/*" onchange="handleFile(this, 'preview-body', 'bodyBase64')">
+            </div>
+
+            <button class="btn btn-primary" onclick="generateStudioModel()">Generate Studio Model</button>
+            <div id="msg-3" style="margin-top:10px; color:#888; font-size:0.8rem;"></div>
+        </div>
+
+    </div>
+
+    <div id="dashboard-view" class="app-layout hidden">
+        
+        <nav class="nav-rail">
+            <div class="nav-item active" id="nav-stylist" onclick="switchTab('stylist')" title="Clothes Stylist">👔</div>
+            <div class="nav-item" id="nav-salon" onclick="switchTab('salon')" title="Hair & Make-up">💇‍♀️</div>
+        </nav>
+
+        <main class="stage-area">
+            
+            <div id="history-slider" class="history-slider-container hidden">
+                <div style="color: #666; font-size: 0.8rem; margin-right: 10px; white-space:nowrap;">Generated<br>Outfits</div>
+                <div id="history-track" style="display:flex; gap:10px;">
+                    </div>
+            </div>
+
+            <div id="loading-overlay" class="loading-overlay">
+                <div class="spinner"></div>
+                <div id="loading-text" style="color:white;">Processing...</div>
+            </div>
+
+            <div class="image-wrapper">
+                <img id="stage-image" src="">
+                <button class="download-btn" onclick="downloadCurrentImage()" title="Download Image">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <div id="stage-label" style="position: absolute; bottom: 20px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; color: #ccc;">
+                Studio View
+            </div>
+        </main>
+
+        <aside class="controls-panel">
+            
+            <div id="tab-stylist" class="control-section active">
+                <div class="panel-content">
+                    <h3 style="color: var(--primary); margin-top:0;">Virtual Stylist</h3>
+
+                    <label>Hair & Make-up (Select Face)</label>
+                    <div id="headshot-grid" class="grid-3">
+                        </div>
+
+                    <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
+
+                    <label>Wardrobe (Select Multiple)</label>
+                    <div class="upload-box" style="min-height: 60px; padding: 10px;" onclick="document.getElementById('wardrobe-upload').click()">
+                        <div style="font-size:0.8rem; color:#888;">+ Add Clothes</div>
+                        <input type="file" id="wardrobe-upload" hidden multiple accept="image/*" onchange="handleWardrobeUpload(this)">
+                    </div>
+                    <div id="wardrobe-grid" class="grid-3"></div>
+
+                    <div style="margin-top: 15px;">
+                        <label>Description</label>
+                        <textarea id="clothing-desc" rows="2" placeholder="eg. yellow converse hi-tops and a rolex watch"></textarea>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="generateOutfit()">Generate Outfit</button>
+                </div>
+            </div>
+
+            <div id="tab-salon" class="control-section">
+                <div class="panel-content">
+                    <h3 style="color: var(--accent-purple); margin-top:0;">Virtual Salon</h3>
+                    <p style="font-size:0.8rem; color:#888;">Generates a new headshot. Save it to use in the Stylist tab.</p>
+
+                    <label>Hair Description</label>
+                    <input type="text" id="salon-hair" placeholder="e.g. Platinum blonde bob...">
+                    
+                    <label>Make-up Description</label>
+                    <input type="text" id="salon-makeup" placeholder="e.g. Heavy eyeliner, nude look...">
+
+                    <button class="btn btn-purple" onclick="generateNewHeadshot()">Generate New Look</button>
+                    <button class="btn btn-outline" onclick="saveCurrentHeadshot()">Save to Profile</button>
+                </div>
+            </div>
+
+        </aside>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
+

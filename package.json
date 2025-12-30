@@ -1,0 +1,17 @@
+{
+  "name": "nano-banana-stylist-pro",
+  "version": "3.1.0",
+  "description": "AI styling app for creating virtual headshots and outfits",
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "keywords": [
+    "ai",
+    "styling",
+    "fashion",
+    "virtual-stylist"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+
