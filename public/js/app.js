@@ -317,18 +317,46 @@ function renderHeadshotGrid() {
    STYLIST & OUTFIT GENERATION
    ---------------------------------------------------------------- */
 async function handleWardrobeUpload(input) {
-    if(input.files) {
-        const files = Array.from(input.files);
-        for (const file of files) {
-            const b64 = await toBase64(file);
-            state.wardrobe.push({ 
-                id: Date.now() + Math.random(), 
-                url: URL.createObjectURL(file), 
-                b64: b64, 
-                selected: true 
-            });
+    try {
+        if(input.files) {
+            const files = Array.from(input.files);
+            const successful = [];
+            const failed = [];
+            
+            for (const file of files) {
+                try {
+                    const b64 = await toBase64(file);
+                    state.wardrobe.push({ 
+                        id: Date.now() + Math.random(), 
+                        url: URL.createObjectURL(file), 
+                        b64: b64, 
+                        selected: true 
+                    });
+                    successful.push(file.name);
+                } catch (error) {
+                    console.error(`Error processing file ${file.name}:`, error);
+                    failed.push(file.name);
+                }
+            }
+            
+            renderWardrobeGrid();
+            
+            // Provide user feedback
+            if (failed.length > 0) {
+                const message = successful.length > 0 
+                    ? `Successfully uploaded ${successful.length} image(s). Failed to upload ${failed.length} image(s): ${failed.join(', ')}`
+                    : `Failed to upload ${failed.length} image(s): ${failed.join(', ')}. This may be due to file size limits or memory constraints.`;
+                alert(message);
+            } else if (successful.length > 0) {
+                // Silent success for single file, or show count for multiple
+                if (successful.length > 1) {
+                    console.log(`Successfully uploaded ${successful.length} images`);
+                }
+            }
         }
-        renderWardrobeGrid();
+    } catch (error) {
+        console.error('Error in handleWardrobeUpload:', error);
+        alert('An error occurred while uploading images. Please try again with fewer or smaller images.');
     }
 }
 
