@@ -9,14 +9,18 @@ const state = {
     previewHeadshotUrl: null,
     previewHeadshotB64: null,
 
+    previewBodyUrl: null,
+    previewBodyB64: null,
+
     savedLooks: [], 
     wardrobe: [],
     outfitHistory: [],
     
     selectedLookId: null,
-};
-
-const MODEL_ID = "gemini-3-pro-image-preview"; 
+    selectedModel: localStorage.getItem('selectedModel') || "gemini-2.5-flash-image",
+    modelPassword: "",
+    isModelLocked: false,
+}; 
 
 /* ----------------------------------------------------------------
    HELPERS
@@ -120,6 +124,7 @@ function goToStep(step) {
 // STEP 1: INITIAL HEADSHOT
 async function generateInitialHeadshot() {
     if(!state.rawSelfie) return alert("Please upload a selfie");
+    if(!validateModelAccess()) return;
 
     document.getElementById('msg-1').innerText = "Generating Headshot...";
     
@@ -148,17 +153,27 @@ async function generateInitialHeadshot() {
 // STEP 3: GENERATE STUDIO MODEL
 async function generateStudioModel() {
     if(!state.rawBody) return alert("Please upload a body photo");
+    if(!validateModelAccess()) return;
     document.getElementById('msg-3').innerText = "Creating Master Studio Model...";
 
     try {
         const bodyB64 = await runBodyGeneration(state.previewHeadshotB64, state.rawBody);
-        state.masterBodyB64 = bodyB64; // Set Master Ref
-        saveNewLook(state.previewHeadshotB64, bodyB64);
-        enterDashboard();
+        state.previewBodyB64 = bodyB64;
+        state.previewBodyUrl = `data:image/png;base64,${bodyB64}`;
+        document.getElementById('generated-body-preview').src = state.previewBodyUrl;
+        goToStep(4);
     } catch(e) {
         alert(e.message);
         document.getElementById('msg-3').innerText = "Error: " + e.message;
     }
+}
+
+// STEP 4: CONFIRM STUDIO MODEL
+function confirmStudioModel() {
+    if(!state.previewBodyB64) return alert("No studio model to confirm");
+    state.masterBodyB64 = state.previewBodyB64; // Set Master Ref
+    saveNewLook(state.previewHeadshotB64, state.previewBodyB64);
+    enterDashboard();
 }
 
 async function runBodyGeneration(headB64, referenceBodyB64) {
@@ -183,6 +198,10 @@ async function runBodyGeneration(headB64, referenceBodyB64) {
 function enterDashboard() {
     document.getElementById('onboarding-view').classList.add('hidden');
     document.getElementById('dashboard-view').classList.remove('hidden');
+    
+    // Initialize model selector
+    initModelSelector();
+    
     switchTab('stylist'); 
 }
 
@@ -233,6 +252,7 @@ function updateStageImage(tab) {
    ---------------------------------------------------------------- */
 async function generateNewHeadshot() {
     if(!state.rawSelfie) return alert("No selfie data found. Restart app.");
+    if(!validateModelAccess()) return;
 
     const h = document.getElementById('salon-hair').value || "Keep original hair";
     const m = document.getElementById('salon-makeup').value || "Natural look";
@@ -383,6 +403,7 @@ function renderWardrobeGrid() {
 async function generateOutfit() {
     const currentLook = state.savedLooks.find(l => l.id === state.selectedLookId);
     if(!currentLook) return alert("No Look selected.");
+    if(!validateModelAccess()) return;
 
     const activeClothes = state.wardrobe.filter(i => i.selected);
     const additionalDesc = document.getElementById('clothing-desc').value;
@@ -474,7 +495,8 @@ async function callGemini(promptText, b64Images) {
             },
             body: JSON.stringify({
                 prompt: promptText,
-                images: b64Images
+                images: b64Images,
+                model: state.selectedModel
             })
         });
 
@@ -582,4 +604,59 @@ document.addEventListener('keydown', (e) => {
         closeLightbox();
     }
 });
+
+// Model selector event handler
+function initModelSelector() {
+    const modelSelector = document.getElementById('model-selector');
+    const passwordContainer = document.getElementById('model-password-container');
+    const passwordInput = document.getElementById('model-password');
+    
+    if (modelSelector && !modelSelector.hasAttribute('data-listener-attached')) {
+        modelSelector.value = state.selectedModel;
+        updatePasswordFieldVisibility();
+        modelSelector.setAttribute('data-listener-attached', 'true');
+        
+        modelSelector.addEventListener('change', (e) => {
+            state.selectedModel = e.target.value;
+            state.modelPassword = ""; // Clear password when switching models
+            if (passwordInput) passwordInput.value = "";
+            updatePasswordFieldVisibility();
+            localStorage.setItem('selectedModel', state.selectedModel);
+        });
+        
+        if (passwordInput) {
+            passwordInput.addEventListener('input', (e) => {
+                state.modelPassword = e.target.value;
+            });
+        }
+    }
+}
+
+function updatePasswordFieldVisibility() {
+    const passwordContainer = document.getElementById('model-password-container');
+    const lockedModels = ['gemini-3-pro-image-preview', 'gemini-3-flash-preview'];
+    const isLocked = lockedModels.includes(state.selectedModel);
+    state.isModelLocked = isLocked;
+    
+    if (passwordContainer) {
+        passwordContainer.style.display = isLocked ? 'block' : 'none';
+    }
+}
+
+function validateModelAccess() {
+    if (state.isModelLocked) {
+        if (state.modelPassword !== 'abcxyz') {
+            alert('Incorrect password for this model.');
+            return false;
+        }
+    }
+    return true;
+}
+
+// Initialize on DOM ready or immediately if already loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initModelSelector);
+} else {
+    initModelSelector();
+}
 

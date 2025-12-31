@@ -36,7 +36,7 @@ exports.handler = async (event, context) => {
         }
 
         // Parse request body
-        const { prompt, images } = JSON.parse(event.body);
+        const { prompt, images, model } = JSON.parse(event.body);
 
         if (!prompt || !images || !Array.isArray(images)) {
             return {
@@ -45,6 +45,14 @@ exports.handler = async (event, context) => {
                 body: JSON.stringify({ error: 'Missing required fields: prompt and images array' }),
             };
         }
+
+        // Validate and set model (fallback to default for backward compatibility)
+        const validModels = [
+            'gemini-3-pro-image-preview',
+            'gemini-3-flash-preview',
+            'gemini-2.5-flash-image'
+        ];
+        const modelId = model && validModels.includes(model) ? model : 'gemini-2.5-flash-image';
 
         // Build request parts
         const parts = [{ text: prompt }];
@@ -57,11 +65,9 @@ exports.handler = async (event, context) => {
             });
         });
 
-        const MODEL_ID = "gemini-3-pro-image-preview";
-
         // Call Google Gemini API
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
                 headers: {

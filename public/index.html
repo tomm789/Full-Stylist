@@ -13,6 +13,19 @@
         <div id="step-1" class="step-card">
             <h1 style="color: var(--primary); margin-top:0;">1. Create Headshot</h1>
             
+            <div style="margin-bottom: 20px;">
+                <label>AI Model</label>
+                <select id="model-selector">
+                    <option value="gemini-3-pro-image-preview">Gemini 3 Pro (Image Preview) 🔒</option>
+                    <option value="gemini-3-flash-preview">Gemini 3 Flash (Preview) 🔒</option>
+                    <option value="gemini-2.5-flash-image">Gemini 2.5 Flash (Image)</option>
+                </select>
+                <div id="model-password-container" style="margin-top: 10px; display: none;">
+                    <label>Password</label>
+                    <input type="password" id="model-password" placeholder="Enter password" style="margin-bottom: 0;">
+                </div>
+            </div>
+            
             <div class="upload-box" onclick="document.getElementById('input-selfie').click()">
                 <div class="upload-text">Upload Selfie</div>
                 <img id="preview-selfie" class="hidden">
@@ -34,7 +47,7 @@
         <div id="step-2" class="step-card hidden">
             <h1 style="color: var(--accent-purple);">Headshot Ready</h1>
             <div style="text-align:center; margin: 20px 0;">
-                <img id="generated-headshot-preview" style="max-height:300px; border-radius:8px; border:1px solid #444;">
+                <img id="generated-headshot-preview" style="max-height:300px; border-radius:8px; border:1px solid #444; cursor: pointer;" onclick="openLightbox(document.getElementById('generated-headshot-preview').src)">
             </div>
             <button class="btn btn-primary" onclick="goToStep(3)">Looks Good - Continue</button>
             <button class="btn btn-outline" onclick="goToStep(1)">Try Again</button>
@@ -52,6 +65,15 @@
 
             <button class="btn btn-primary" onclick="generateStudioModel()">Generate Studio Model</button>
             <div id="msg-3" style="margin-top:10px; color:#888; font-size:0.8rem;"></div>
+        </div>
+
+        <div id="step-4" class="step-card hidden">
+            <h1 style="color: var(--accent-purple);">Studio Model Ready</h1>
+            <div style="text-align:center; margin: 20px 0;">
+                <img id="generated-body-preview" style="max-height:300px; border-radius:8px; border:1px solid #444; cursor: pointer;" onclick="openLightbox(document.getElementById('generated-body-preview').src)">
+            </div>
+            <button class="btn btn-primary" onclick="confirmStudioModel()">Looks Good - Continue</button>
+            <button class="btn btn-outline" onclick="goToStep(3)">Try Again</button>
         </div>
 
     </div>
