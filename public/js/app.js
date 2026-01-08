@@ -17,9 +17,20 @@ const state = {
     outfitHistory: [],
     
     selectedLookId: null,
-    selectedModel: localStorage.getItem('selectedModel') || "gemini-2.5-flash-image",
+    selectedModel: (() => {
+        const saved = localStorage.getItem('selectedModel');
+        const validModels = ['gemini-3-pro-image-preview', 'standard-plus', 'gemini-2.5-flash-image'];
+        return validModels.includes(saved) ? saved : "gemini-2.5-flash-image";
+    })(),
     modelPassword: "",
     isModelLocked: false,
+
+    // SESSION MANAGEMENT
+    currentSessionBaseB64: null, // The image we are currently editing
+    sessionHistory: [], // Stack of { baseB64, wardrobeIds }
+    lastAppliedWardrobeIds: new Set(), // Track which items are already in the image
+    salonPreviewB64: null, // For sequential salon refinements
+    currentMannequinB64: null, // Temporary storage for mannequin generation
 }; 
 
 /* ----------------------------------------------------------------
@@ -32,23 +43,114 @@ const toBase64 = file => new Promise((resolve, reject) => {
     reader.onerror = error => reject(error);
 });
 
-function showLoading(show, text="Processing...") {
-    const el = document.getElementById('loading-overlay');
-    const txt = document.getElementById('loading-text');
+function setupDragAndDrop(element, onFileDrop) {
+    if (!element) return;
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        element.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        element.addEventListener(eventName, () => {
+            element.classList.add('drag-over');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        element.addEventListener(eventName, () => {
+            element.classList.remove('drag-over');
+        }, false);
+    });
+
+    element.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length > 0) {
+            onFileDrop(files);
+        }
+    }, false);
+}
+
+/**
+ * Resizes a base64 image string if it exceeds maxDimension.
+ * Returns a base64 string (without prefix).
+ */
+async function resizeImage(b64, maxDimension = 1024) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            if (width <= maxDimension && height <= maxDimension) {
+                resolve(b64);
+                return;
+            }
+
+            if (width > height) {
+                if (width > maxDimension) {
+                    height *= maxDimension / width;
+                    width = maxDimension;
+                }
+            } else {
+                if (height > maxDimension) {
+                    width *= maxDimension / height;
+                    height = maxDimension;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Get base64 without the prefix
+            const resizedB64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+            resolve(resizedB64);
+        };
+        img.src = 'data:image/jpeg;base64,' + b64;
+    });
+}
+
+function showLoading(show, text="Processing...", containerId=null) {
+    const globalEl = document.getElementById('loading-overlay');
+    const globalTxt = document.getElementById('loading-text');
+    
+    if (containerId) {
+        const localEl = document.getElementById(containerId);
+        if (localEl) {
+            localEl.style.display = show ? 'flex' : 'none';
+            const localTxt = localEl.querySelector('.loading-text');
+            if (localTxt && text) localTxt.innerText = text;
+            return;
+        }
+    }
+
     if(show) {
-        el.style.display = 'block';
-        txt.innerText = text;
+        globalEl.style.display = 'block';
+        globalTxt.innerText = text;
     } else {
-        el.style.display = 'none';
+        globalEl.style.display = 'none';
     }
 }
 
 // DOWNLOAD FEATURE
+async function downloadImageById(id) {
+    const img = document.getElementById(id);
+    if (!img) return;
+    return downloadImageBySrc(img.src);
+}
+
 async function downloadCurrentImage() {
-    const img = document.getElementById('stage-image');
-    const src = img.src;
-    
-    if (!src || src === "") return alert("No image to download.");
+    return downloadImageBySrc(document.getElementById('stage-image').src);
+}
+
+async function downloadImageBySrc(src) {
+    if (!src || src === "" || src.startsWith('http://localhost') || src.length < 100) return alert("No image to download.");
     
     // Detect iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
@@ -105,14 +207,30 @@ async function downloadCurrentImage() {
 /* ----------------------------------------------------------------
    ONBOARDING LOGIC
    ---------------------------------------------------------------- */
+async function processFile(file, previewId, stateKey) {
+    if (!file) return;
+    
+    let b64 = await toBase64(file);
+    // Resize large mobile photos to ensure stability
+    b64 = await resizeImage(b64, 1280);
+    
+    if(stateKey === 'selfieBase64') state.rawSelfie = b64;
+    if(stateKey === 'bodyBase64') state.rawBody = b64;
+    
+    const img = document.getElementById(previewId);
+    if (img) {
+        img.src = 'data:image/jpeg;base64,' + b64;
+        img.classList.remove('hidden');
+        
+        // Add class to container
+        const box = img.closest('.upload-box');
+        if (box) box.classList.add('has-image');
+    }
+}
+
 async function handleFile(input, previewId, stateKey) {
     if (input.files && input.files[0]) {
-        const b64 = await toBase64(input.files[0]);
-        if(stateKey === 'selfieBase64') state.rawSelfie = b64;
-        if(stateKey === 'bodyBase64') state.rawBody = b64;
-        const img = document.getElementById(previewId);
-        img.src = URL.createObjectURL(input.files[0]);
-        img.classList.remove('hidden');
+        await processFile(input.files[0], previewId, stateKey);
     }
 }
 
@@ -126,7 +244,7 @@ async function generateInitialHeadshot() {
     if(!state.rawSelfie) return alert("Please upload a selfie");
     if(!validateModelAccess()) return;
 
-    document.getElementById('msg-1').innerText = "Generating Headshot...";
+    showLoading(true, "Generating...", "loading-selfie-upload");
     
     const hair = document.getElementById('setup-hair').value || "Keep original hair";
     const makeup = document.getElementById('setup-makeup').value || "Natural look";
@@ -146,7 +264,34 @@ async function generateInitialHeadshot() {
         goToStep(2);
     } catch(e) {
         alert(e.message);
-        document.getElementById('msg-1').innerText = "Error: " + e.message;
+    } finally {
+        showLoading(false, null, "loading-selfie-upload");
+    }
+}
+
+async function refineHeadshot() {
+    const desc = document.getElementById('refine-headshot-desc').value;
+    if (!desc) return alert("Please describe what to change.");
+    if (!validateModelAccess()) return;
+
+    showLoading(true, "Refining...", "loading-headshot");
+
+    const prompt = `Professional studio headshot.
+    SUBJECT: The person in Image 0.
+    REFINEMENT: Apply these changes: ${desc}.
+    CRITICAL: Maintain the exact framing, zoom, and head angle of Image 0.
+    STYLE: Photorealistic, 8k, soft lighting, light grey/white background.`;
+
+    try {
+        const headB64 = await callGemini(prompt, [state.previewHeadshotB64]);
+        state.previewHeadshotB64 = headB64;
+        state.previewHeadshotUrl = `data:image/png;base64,${headB64}`;
+        document.getElementById('generated-headshot-preview').src = state.previewHeadshotUrl;
+        document.getElementById('refine-headshot-desc').value = "";
+    } catch (e) {
+        alert(e.message);
+    } finally {
+        showLoading(false, null, "loading-headshot");
     }
 }
 
@@ -154,7 +299,8 @@ async function generateInitialHeadshot() {
 async function generateStudioModel() {
     if(!state.rawBody) return alert("Please upload a body photo");
     if(!validateModelAccess()) return;
-    document.getElementById('msg-3').innerText = "Creating Master Studio Model...";
+    
+    showLoading(true, "Generating...", "loading-body-upload");
 
     try {
         const bodyB64 = await runBodyGeneration(state.previewHeadshotB64, state.rawBody);
@@ -164,7 +310,8 @@ async function generateStudioModel() {
         goToStep(4);
     } catch(e) {
         alert(e.message);
-        document.getElementById('msg-3').innerText = "Error: " + e.message;
+    } finally {
+        showLoading(false, null, "loading-body-upload");
     }
 }
 
@@ -172,24 +319,59 @@ async function generateStudioModel() {
 function confirmStudioModel() {
     if(!state.previewBodyB64) return alert("No studio model to confirm");
     state.masterBodyB64 = state.previewBodyB64; // Set Master Ref
+    state.currentSessionBaseB64 = state.previewBodyB64; // Initialize session base
     saveNewLook(state.previewHeadshotB64, state.previewBodyB64);
     enterDashboard();
 }
 
+async function refineBodyModel() {
+    const desc = document.getElementById('refine-body-desc').value;
+    if (!desc) return alert("Please describe what to change.");
+    if (!validateModelAccess()) return;
+
+    showLoading(true, "Refining...", "loading-body");
+
+    const prompt = `
+    Refine the full-body studio photograph.
+    SUBJECT: The person in Image 0.
+    REFINEMENT: ${desc}.
+    INSTRUCTIONS:
+    1. Apply the requested changes while maintaining the facial identity and body framing of Image 0.
+    2. Background: Pure white infinite studio.
+    3. Output a Full Body Vertical Portrait.
+    `;
+
+    try {
+        const modelOverride = state.selectedModel === 'standard-plus' ? 'gemini-3-pro-image-preview' : null;
+        const bodyB64 = await callGemini(prompt, [state.previewBodyB64], modelOverride);
+        state.previewBodyB64 = bodyB64;
+        state.previewBodyUrl = `data:image/png;base64,${bodyB64}`;
+        document.getElementById('generated-body-preview').src = state.previewBodyUrl;
+        document.getElementById('refine-body-desc').value = "";
+    } catch (e) {
+        alert(e.message);
+    } finally {
+        showLoading(false, null, "loading-body");
+    }
+}
+
 async function runBodyGeneration(headB64, referenceBodyB64) {
     const prompt = `
-    Generate a photorealistic full-body studio photograph.
+    Generate a wide-shot, full-body studio photograph.
     SUBJECT: A person standing in grey boxer shorts and a white ribbed singlet.
     REFERENCES:
-    - Image 0: STRICT reference for facial identity (Headshot).
-    - Image 1: STRICT reference for body shape, pose, framing, and crop.
+    - Image 0: Source for facial features.
+    - Image 1: STRICT Source for body shape, pose, framing, and crop.
+
     INSTRUCTIONS:
-    1. Create a cohesive image where Head (Img 0) is seamlessly integrated onto Body (Img 1).
-    2. Match the lighting and skin tones perfectly.
-    3. CRITICAL: You MUST maintain the exact framing of Image 1. Output a Full Body Vertical Portrait.
-    4. Background: Pure white infinite studio.
+    1. COMPOSITION: Wide shot. The camera must be far enough back to show the feet and significant space above the head.
+    2. ANATOMY: Strictly enforce the "8-heads-tall" rule. The head must appear small relative to the broadness of the shoulders and length of the torso.
+    3. INTEGRATION: Seamlessly blend Head (Img 0) onto Body (Img 1) matching lighting and skin tone.
+    4. FRAMING: Maintain the exact framing of Image 1 (Full Body Vertical 3:4 or 9:16).
+    5. NEGATIVE CONSTRAINT: Significantly decrease the size of the head and the length of the neck. Do not create a bobblehead effect. The neck must be proportional to the shoulders.
     `;
-    return await callGemini(prompt, [headB64, referenceBodyB64]);
+    const modelOverride = state.selectedModel === 'standard-plus' ? 'gemini-3-pro-image-preview' : null;
+    return await callGemini(prompt, [headB64, referenceBodyB64], modelOverride);
 }
 
 /* ----------------------------------------------------------------
@@ -201,6 +383,8 @@ function enterDashboard() {
     
     // Initialize model selector
     initModelSelector();
+    updateCostDisplay();
+    renderWardrobeGrid();
     
     switchTab('stylist'); 
 }
@@ -214,15 +398,49 @@ function switchTab(tab) {
     // History Slider
     const slider = document.getElementById('history-slider');
     const stageArea = document.querySelector('.stage-area');
-    if(tab === 'stylist' && state.outfitHistory.length > 0) {
-        slider.classList.remove('hidden');
-        stageArea.classList.add('has-history');
+    const topControls = document.getElementById('top-session-controls');
+
+    if(tab === 'stylist') {
+        renderWardrobeGrid();
+        if (state.outfitHistory.length > 0) {
+            slider.classList.remove('hidden');
+            stageArea.classList.add('has-history');
+        }
+        if (state.currentSessionBaseB64) {
+            topControls.classList.remove('hidden');
+        }
     } else {
         slider.classList.add('hidden');
         stageArea.classList.remove('has-history');
+        topControls.classList.add('hidden');
     }
 
     updateStageImage(tab);
+}
+
+function undoGeneration() {
+    if (state.sessionHistory.length === 0) return alert("Nothing to undo.");
+    
+    const previous = state.sessionHistory.pop();
+    state.currentSessionBaseB64 = previous.baseB64;
+    
+    const url = `data:image/png;base64,${state.currentSessionBaseB64}`;
+    document.getElementById('stage-image').src = url;
+    
+    if (state.sessionHistory.length === 0) {
+        document.getElementById('top-session-controls').classList.add('hidden');
+    }
+}
+
+function resetSession() {
+    if (!confirm("Start a new outfit session? This will reset the current generation.")) return;
+    
+    const currentLook = state.savedLooks.find(l => l.id === state.selectedLookId);
+    state.currentSessionBaseB64 = null; // Reset to base look reference
+    state.sessionHistory = [];
+    
+    document.getElementById('top-session-controls').classList.add('hidden');
+    updateStageImage('stylist');
 }
 
 function updateStageImage(tab) {
@@ -239,8 +457,13 @@ function updateStageImage(tab) {
     if (!currentLook) return;
 
     if (tab === 'stylist') {
-        stageImg.src = currentLook.bodyUrl;
-        label.innerText = "Studio Base (Reference)";
+        if (state.currentSessionBaseB64) {
+            stageImg.src = `data:image/png;base64,${state.currentSessionBaseB64}`;
+            label.innerText = "Current Styling Session";
+        } else {
+            stageImg.src = currentLook.bodyUrl;
+            label.innerText = "Studio Base (Reference)";
+        }
     } else {
         stageImg.src = currentLook.headUrl;
         label.innerText = "Salon View (Headshot)";
@@ -257,38 +480,42 @@ async function generateNewHeadshot() {
     const h = document.getElementById('salon-hair').value || "Keep original hair";
     const m = document.getElementById('salon-makeup').value || "Natural look";
 
-    showLoading(true, "Generating Headshot Preview...");
+    showLoading(true, "Refining...", "loading-stage");
 
     try {
+        // Use salonPreviewB64 if it exists for sequential refinement
+        const baseB64 = state.salonPreviewB64 || state.rawSelfie;
+        const isRefining = !!state.salonPreviewB64;
+
         const headPrompt = `Professional studio headshot. 
         SUBJECT: The person in Image 0.
-        CLOTHING: Wearing a simple white ribbed singlet (wife beater).
-        MODIFICATIONS: ${h}, ${m}.
+        ${isRefining ? `REFINE: Apply these additional changes: ${h}, ${m}` : `CLOTHING: Wearing a simple white ribbed singlet (wife beater). MODIFICATIONS: ${h}, ${m}.`}
         CRITICAL: Maintain the EXACT framing and composition of Image 0.
-        Style: Light background.`;
+        Style: Photorealistic, light background.`;
 
-        const headB64 = await callGemini(headPrompt, [state.rawSelfie]);
+        const headB64 = await callGemini(headPrompt, [baseB64]);
         
-        state.previewHeadshotB64 = headB64;
+        state.salonPreviewB64 = headB64;
         state.previewHeadshotUrl = `data:image/png;base64,${headB64}`;
         
         document.getElementById('stage-image').src = state.previewHeadshotUrl;
-        document.getElementById('stage-label').innerText = "Preview (Click Save to Apply)";
+        document.getElementById('stage-label').innerText = "Salon Preview (Sequential Refinement)";
 
     } catch(e) {
         alert(e.message);
     } finally {
-        showLoading(false);
+        showLoading(false, null, "loading-stage");
     }
 }
 
 async function saveCurrentHeadshot() {
-    if(!state.previewHeadshotB64) return alert("Generate a look first!");
+    if(!state.salonPreviewB64) return alert("Generate a look first!");
     showLoading(true, "Generating Full Body Asset...");
     try {
-        const bodyB64 = await runBodyGeneration(state.previewHeadshotB64, state.masterBodyB64);
-        saveNewLook(state.previewHeadshotB64, bodyB64);
+        const bodyB64 = await runBodyGeneration(state.salonPreviewB64, state.masterBodyB64);
+        saveNewLook(state.salonPreviewB64, bodyB64);
         alert("Look Saved!");
+        state.salonPreviewB64 = null; 
         state.previewHeadshotUrl = null; 
         updateStageImage('salon');
     } catch(e) {
@@ -336,53 +563,67 @@ function renderHeadshotGrid() {
 /* ----------------------------------------------------------------
    STYLIST & OUTFIT GENERATION
    ---------------------------------------------------------------- */
-async function handleWardrobeUpload(input) {
-    try {
-        if(input.files) {
-            const files = Array.from(input.files);
-            const successful = [];
-            const failed = [];
+async function processWardrobeFiles(files) {
+    if (!files || files.length === 0) return;
+    
+    const filesArray = Array.from(files);
+    const successful = [];
+    const failed = [];
+    
+    for (const file of filesArray) {
+        try {
+            let b64 = await toBase64(file);
+            // Resize wardrobe items too
+            b64 = await resizeImage(b64, 1024);
             
-            for (const file of files) {
-                try {
-                    const b64 = await toBase64(file);
-                    state.wardrobe.push({ 
-                        id: Date.now() + Math.random(), 
-                        url: URL.createObjectURL(file), 
-                        b64: b64, 
-                        selected: true 
-                    });
-                    successful.push(file.name);
-                } catch (error) {
-                    console.error(`Error processing file ${file.name}:`, error);
-                    failed.push(file.name);
-                }
-            }
-            
-            renderWardrobeGrid();
-            
-            // Provide user feedback
-            if (failed.length > 0) {
-                const message = successful.length > 0 
-                    ? `Successfully uploaded ${successful.length} image(s). Failed to upload ${failed.length} image(s): ${failed.join(', ')}`
-                    : `Failed to upload ${failed.length} image(s): ${failed.join(', ')}. This may be due to file size limits or memory constraints.`;
-                alert(message);
-            } else if (successful.length > 0) {
-                // Silent success for single file, or show count for multiple
-                if (successful.length > 1) {
-                    console.log(`Successfully uploaded ${successful.length} images`);
-                }
-            }
+            state.wardrobe.push({ 
+                id: Date.now() + Math.random(), 
+                url: `data:image/jpeg;base64,${b64}`, 
+                b64: b64, 
+                selected: true 
+            });
+            successful.push(file.name);
+        } catch (error) {
+            console.error(`Error processing file ${file.name}:`, error);
+            failed.push(file.name);
         }
-    } catch (error) {
-        console.error('Error in handleWardrobeUpload:', error);
-        alert('An error occurred while uploading images. Please try again with fewer or smaller images.');
+    }
+    
+    renderWardrobeGrid();
+    updateCostDisplay();
+    
+    // Provide user feedback
+    if (failed.length > 0) {
+        const message = successful.length > 0 
+            ? `Successfully uploaded ${successful.length} image(s). Failed to upload ${failed.length} image(s): ${failed.join(', ')}`
+            : `Failed to upload ${failed.length} image(s): ${failed.join(', ')}. This may be due to file size limits or memory constraints.`;
+        alert(message);
+    } else if (successful.length > 0) {
+        if (successful.length > 1) {
+            console.log(`Successfully uploaded ${successful.length} images`);
+        }
+    }
+}
+
+async function handleWardrobeUpload(input) {
+    if(input.files) {
+        await processWardrobeFiles(input.files);
+        // Clear input so same file can be uploaded again if needed
+        input.value = '';
     }
 }
 
 function renderWardrobeGrid() {
     const grid = document.getElementById('wardrobe-grid');
     grid.innerHTML = '';
+
+    // Add Tile
+    const addTile = document.createElement('div');
+    addTile.className = 'add-thumb';
+    addTile.innerHTML = '+<span>Add</span>';
+    addTile.onclick = () => document.getElementById('wardrobe-upload').click();
+    grid.appendChild(addTile);
+
     state.wardrobe.forEach(item => {
         const img = document.createElement('img');
         img.src = item.url;
@@ -390,6 +631,7 @@ function renderWardrobeGrid() {
         img.onclick = () => {
             item.selected = !item.selected;
             renderWardrobeGrid();
+            updateCostDisplay();
         };
         // Double click for lightbox
         img.ondblclick = (e) => {
@@ -408,60 +650,156 @@ async function generateOutfit() {
     const activeClothes = state.wardrobe.filter(i => i.selected);
     const additionalDesc = document.getElementById('clothing-desc').value;
 
-    // Auto Prompting Logic
+    const isPro = state.selectedModel === 'gemini-3-pro-image-preview';
+    
+    // Pro limit check
+    if (isPro && activeClothes.length > 7) {
+        return alert("Pro model supports up to 7 wardrobe items.");
+    }
+
+    // Use current session base if available, otherwise fallback to look body
+    const baseB64 = state.currentSessionBaseB64 || currentLook.bodyB64;
+
+    // MANNEQUIN WORKFLOW logic
+    const threshold = (state.selectedModel === 'gemini-2.5-flash-image' || state.selectedModel === 'standard-plus') ? 2 : Infinity;
+    
+    if (!isPro && activeClothes.length > threshold) {
+        await triggerMannequinWorkflow(activeClothes, additionalDesc);
+        return;
+    }
+
+    // Normal generation logic...
+    await runOutfitGeneration(baseB64, activeClothes, additionalDesc);
+}
+
+async function triggerMannequinWorkflow(activeClothes, additionalDesc) {
+    showLoading(true, "Styling...", "loading-stage");
+    
+    const prompt = `
+    Generate a photorealistic image of a fashion outfit on a ghost mannequin.
+    INSTRUCTIONS:
+    - Combine all provided clothing items into a single cohesive outfit.
+    - BACKGROUND: Simple grey studio.
+    - STYLE: Ghost mannequin (invisible mannequin).
+    - CLOTHING: ${activeClothes.length} items provided.
+    - DETAILS: ${additionalDesc || "No additional details"}.
+    - ASPECT RATIO: Vertical Portrait.
+    `;
+
+    const images = activeClothes.map(c => c.b64);
+
+    try {
+        const mannequinB64 = await callGemini(prompt, images);
+        state.currentMannequinB64 = mannequinB64;
+        
+        document.getElementById('mannequin-preview').src = `data:image/jpeg;base64,${mannequinB64}`;
+        document.getElementById('mannequin-overlay').classList.remove('hidden');
+    } catch (e) {
+        alert("Mannequin generation failed: " + e.message);
+    } finally {
+        showLoading(false, null, "loading-stage");
+    }
+}
+
+function closeMannequinOverlay() {
+    document.getElementById('mannequin-overlay').classList.add('hidden');
+}
+
+async function approveMannequin() {
+    closeMannequinOverlay();
+    const currentLook = state.savedLooks.find(l => l.id === state.selectedLookId);
+    const baseB64 = state.currentSessionBaseB64 || currentLook.bodyB64;
+    
+    showLoading(true, "Applying...", "loading-stage");
+    
+    const prompt = `
+    DRESSING THE SUBJECT:
+    - IMAGE 0: The subject (base photo).
+    - IMAGE 1: The target outfit (on mannequin).
+    
+    TASK:
+    - Transfer the EXACT outfit from Image 1 onto the person in Image 0.
+    - Keep face, hair, and body pose of Image 0 EXACTLY the same.
+    - Ensure lighting and skin tones match perfectly.
+    - OUTPUT: Full Body Vertical Portrait.
+    `;
+
+    try {
+        const finalB64 = await callGemini(prompt, [baseB64, state.currentMannequinB64]);
+        applyGenerationResult(finalB64);
+    } catch (e) {
+        alert(e.message);
+    } finally {
+        showLoading(false, null, "loading-stage");
+    }
+}
+
+async function runOutfitGeneration(baseB64, activeClothes, additionalDesc) {
+    // Deduplication logic: filter out clothes already "in" the base image if needed
+    // (For now, we'll keep it simple and just send the active clothes)
+    
     let instructionText = "";
-    let images = [currentLook.bodyB64]; // Start with body
+    let images = [baseB64];
 
     if (activeClothes.length > 0) {
-        // Case A: Clothes + Optional Text
         instructionText = "Dress the subject in the provided clothing images.";
         if (additionalDesc) instructionText += ` Also include these details: ${additionalDesc}.`;
         activeClothes.forEach(c => images.push(c.b64));
-    } 
-    else if (additionalDesc) {
-        // Case B: Text Only
-        instructionText = `Design and generate a fashionable outfit for the subject based on this description: ${additionalDesc}`;
-    } 
-    else {
-        // Case C: Empty (Default)
-        instructionText = "Design a stylish, modern outfit that perfectly suits the subject's appearance.";
+    } else if (additionalDesc) {
+        instructionText = `Refine the current outfit or generate new details based on: ${additionalDesc}`;
     }
 
-    showLoading(true, "Styling Outfit...");
+    showLoading(true, "Styling...", "loading-stage");
 
-    let prompt = `Fashion Photography Generation.
+    const prompt = `Fashion Photography.
     OUTPUT FORMAT: Vertical Portrait (3:4 Aspect Ratio).
     
     SUBJECT REFERENCE:
-    - Image 0: Use this EXACT body pose, facial identity, and framing.
+    - Image 0: Current state of the subject. Use this EXACT pose, identity, and framing.
     
     CLOTHING INSTRUCTIONS:
     - ${instructionText}
     
-    TASK:
-    1. Dress the subject (Image 0).
-    2. Keep face, hair, makeup, and framing EXACTLY consistent with Image 0.
-    3. SCENE: Professional studio white background.
-    4. Do NOT output a landscape image. The output must be tall (Portrait).
+    CRITICAL:
+    1. Maintain EXACT facial identity, hair, and framing from Image 0.
+    2. Focus ONLY on applying/changing the clothes as requested.
+    3. Ensure head-to-body proportions are accurate. No long necks or large heads.
+    4. Background: Pure white infinite studio.
     `;
     
     try {
         const b64 = await callGemini(prompt, images);
-        const url = `data:image/png;base64,${b64}`;
-        
-        document.getElementById('stage-image').src = url;
-        document.getElementById('stage-label').innerText = "Generated Outfit";
-        addToHistory(url);
-
+        applyGenerationResult(b64);
     } catch(e) {
         alert(e.message);
     } finally {
-        showLoading(false);
+        showLoading(false, null, "loading-stage");
     }
 }
 
-function addToHistory(url) {
-    state.outfitHistory.unshift(url);
+function applyGenerationResult(b64) {
+    // Save to undo stack before updating
+    if (state.currentSessionBaseB64) {
+        state.sessionHistory.push({
+            baseB64: state.currentSessionBaseB64,
+            wardrobeIds: [...state.lastAppliedWardrobeIds]
+        });
+    }
+
+    state.currentSessionBaseB64 = b64;
+    const url = `data:image/png;base64,${b64}`;
+    
+    document.getElementById('stage-image').src = url;
+    document.getElementById('stage-label').innerText = "Generated Outfit";
+    document.getElementById('top-session-controls').classList.remove('hidden');
+    
+    addToHistory(b64);
+}
+
+function addToHistory(b64) {
+    const url = `data:image/png;base64,${b64}`;
+    state.outfitHistory.unshift({ url, b64 });
+    
     const slider = document.getElementById('history-slider');
     const track = document.getElementById('history-track');
     const stageArea = document.querySelector('.stage-area');
@@ -470,23 +808,47 @@ function addToHistory(url) {
     stageArea.classList.add('has-history');
     track.innerHTML = ''; 
 
-    state.outfitHistory.forEach(histUrl => {
+    state.outfitHistory.forEach((histItem, index) => {
+        const container = document.createElement('div');
+        container.className = 'history-item-container';
+        container.style.position = 'relative';
+        
         const img = document.createElement('img');
-        img.src = histUrl;
+        img.src = histItem.url;
         img.className = 'history-thumb';
         img.onclick = () => {
-            document.getElementById('stage-image').src = histUrl;
+            document.getElementById('stage-image').src = histItem.url;
             document.getElementById('stage-label').innerText = "History View";
         };
-        img.ondblclick = () => openLightbox(histUrl);
-        track.appendChild(img);
+        img.ondblclick = () => openLightbox(histItem.url);
+        
+        container.appendChild(img);
+        track.appendChild(container);
     });
+}
+
+function duplicateCurrentOutfit() {
+    if (!state.currentSessionBaseB64) return alert("Nothing to duplicate.");
+    
+    // We already have state.currentSessionBaseB64, just reset the session history branch
+    state.sessionHistory = []; 
+    
+    document.getElementById('top-session-controls').classList.remove('hidden');
+    updateStageImage('stylist');
+    alert("Duplicate created! You are now editing a new session based on this outfit.");
 }
 
 /* ----------------------------------------------------------------
    API FUNCTION
    ---------------------------------------------------------------- */
-async function callGemini(promptText, b64Images) {
+async function callGemini(promptText, b64Images, modelOverride = null) {
+    let targetModel = modelOverride || state.selectedModel;
+    
+    // Handle Standard Plus hybrid mapping
+    if (targetModel === 'standard-plus' && !modelOverride) {
+        targetModel = 'gemini-2.5-flash-image';
+    }
+
     try {
         const response = await fetch('/.netlify/functions/generate', {
             method: 'POST',
@@ -496,7 +858,7 @@ async function callGemini(promptText, b64Images) {
             body: JSON.stringify({
                 prompt: promptText,
                 images: b64Images,
-                model: state.selectedModel
+                model: targetModel
             })
         });
 
@@ -621,6 +983,7 @@ function initModelSelector() {
             state.modelPassword = ""; // Clear password when switching models
             if (passwordInput) passwordInput.value = "";
             updatePasswordFieldVisibility();
+            updateCostDisplay();
             localStorage.setItem('selectedModel', state.selectedModel);
         });
         
@@ -634,12 +997,47 @@ function initModelSelector() {
 
 function updatePasswordFieldVisibility() {
     const passwordContainer = document.getElementById('model-password-container');
-    const lockedModels = ['gemini-3-pro-image-preview', 'gemini-3-flash-preview'];
+    const lockedModels = ['gemini-3-pro-image-preview', 'standard-plus'];
     const isLocked = lockedModels.includes(state.selectedModel);
     state.isModelLocked = isLocked;
     
     if (passwordContainer) {
         passwordContainer.style.display = isLocked ? 'block' : 'none';
+    }
+}
+
+/**
+ * Calculates estimated cost based on selected model and number of images.
+ * Uses rough approximations for standard Gemini pricing.
+ */
+function getEstimatedCost(numImages, isBodyShot = false) {
+    const pricing = {
+        'gemini-3-pro-image-preview': { base: 0.002, perImage: 0.001 },
+        'gemini-2.5-flash-image': { base: 0.0001, perImage: 0.00005 }
+    };
+    
+    let model = state.selectedModel;
+    if (model === 'standard-plus') {
+        model = isBodyShot ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
+    }
+    
+    const config = pricing[model] || pricing['gemini-2.5-flash-image'];
+    const estimate = config.base + (numImages * config.perImage);
+    return estimate.toFixed(4);
+}
+
+function updateCostDisplay() {
+    const stylistBtn = document.querySelector('#tab-stylist .btn-primary');
+    const salonBtn = document.querySelector('#tab-salon .btn-purple');
+    
+    if (stylistBtn) {
+        const activeClothes = state.wardrobe.filter(i => i.selected).length;
+        const imagesCount = 1 + activeClothes; // Base image + clothing
+        stylistBtn.innerText = `Generate Outfit ($${getEstimatedCost(imagesCount, false)})`;
+    }
+    
+    if (salonBtn) {
+        salonBtn.innerText = `Generate New Look ($${getEstimatedCost(1, false)})`;
     }
 }
 
@@ -653,10 +1051,40 @@ function validateModelAccess() {
     return true;
 }
 
+function initDragAndDrop() {
+    // Step 1: Selfie upload
+    const selfieBox = document.querySelector('#step-1 .upload-box');
+    setupDragAndDrop(selfieBox, (files) => {
+        if (files.length > 0) {
+            processFile(files[0], 'preview-selfie', 'selfieBase64');
+        }
+    });
+
+    // Step 3: Body upload
+    const bodyBox = document.querySelector('#step-3 .upload-box');
+    setupDragAndDrop(bodyBox, (files) => {
+        if (files.length > 0) {
+            processFile(files[0], 'preview-body', 'bodyBase64');
+        }
+    });
+
+    // Dashboard: Wardrobe upload
+    const wardrobeGrid = document.getElementById('wardrobe-grid');
+    setupDragAndDrop(wardrobeGrid, (files) => {
+        if (files.length > 0) {
+            processWardrobeFiles(files);
+        }
+    });
+}
+
 // Initialize on DOM ready or immediately if already loaded
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initModelSelector);
+    document.addEventListener('DOMContentLoaded', () => {
+        initModelSelector();
+        initDragAndDrop();
+    });
 } else {
     initModelSelector();
+    initDragAndDrop();
 }
 

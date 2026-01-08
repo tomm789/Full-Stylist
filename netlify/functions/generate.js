@@ -49,10 +49,15 @@ exports.handler = async (event, context) => {
         // Validate and set model (fallback to default for backward compatibility)
         const validModels = [
             'gemini-3-pro-image-preview',
-            'gemini-3-flash-preview',
+            'standard-plus',
             'gemini-2.5-flash-image'
         ];
-        const modelId = model && validModels.includes(model) ? model : 'gemini-2.5-flash-image';
+        let modelId = model && validModels.includes(model) ? model : 'gemini-2.5-flash-image';
+
+        // Map frontend-only models to real Gemini IDs
+        if (modelId === 'standard-plus') {
+            modelId = 'gemini-2.5-flash-image';
+        }
 
         // Build request parts
         const parts = [{ text: prompt }];

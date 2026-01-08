@@ -27,21 +27,13 @@ The application uses a serverless architecture with:
 
 The application supports the following Gemini models for image generation:
 
-1. **`gemini-3-pro-image-preview`** (Default)
+1. **`gemini-3-pro-image-preview`** (Pro)
    - Highest quality image generation
    - Best for detailed, photorealistic results
 
-2. **`gemini-3-flash-preview`**
-   - Faster generation with good quality
-   - Balanced performance/quality
-
-3. **`gemini-2.5-flash-image`**
-   - Previous generation model
-   - Maintained for compatibility
-
-4. **`gemini-2.0-flash`**
-   - Legacy model support
-   - Fallback option
+2. **`gemini-2.5-flash-image`** (Standard)
+   - Reliable generation with good quality
+   - Fast and efficient performance
 
 **Model Selection**: Users can select models via a dropdown in the UI. The selected model is stored in `localStorage` and passed to the API on each request.
 

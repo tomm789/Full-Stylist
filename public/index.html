@@ -8,72 +8,159 @@
 </head>
 <body>
 
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text" style="color:white;">Processing...</div>
+    </div>
+
     <div id="onboarding-view" class="onboarding-container">
         
-        <div id="step-1" class="step-card">
+        <div id="step-1" class="step-card two-col">
             <h1 style="color: var(--primary); margin-top:0;">1. Create Headshot</h1>
             
-            <div style="margin-bottom: 20px;">
-                <label>AI Model</label>
-                <select id="model-selector">
-                    <option value="gemini-3-pro-image-preview">Gemini 3 Pro (Image Preview) 🔒</option>
-                    <option value="gemini-3-flash-preview">Gemini 3 Flash (Preview) 🔒</option>
-                    <option value="gemini-2.5-flash-image">Gemini 2.5 Flash (Image)</option>
-                </select>
-                <div id="model-password-container" style="margin-top: 10px; display: none;">
-                    <label>Password</label>
-                    <input type="password" id="model-password" placeholder="Enter password" style="margin-bottom: 0;">
+            <div class="step-grid">
+                <div class="step-left">
+                    <div class="upload-box" onclick="document.getElementById('input-selfie').click()">
+                        <div class="upload-text">Upload Selfie</div>
+                        <img id="preview-selfie" class="hidden" alt="Selfie preview">
+                        
+                        <div id="loading-selfie-upload" class="image-loading-overlay">
+                            <div class="spinner"></div>
+                            <div class="loading-text">Generating...</div>
+                        </div>
+
+                        <input type="file" id="input-selfie" hidden accept="image/*" onchange="handleFile(this, 'preview-selfie', 'selfieBase64')">
+                    </div>
+                </div>
+
+                <div class="step-right">
+                    <div style="margin-bottom: 20px;">
+                        <label>AI Model</label>
+                        <select id="model-selector">
+                            <option value="gemini-3-pro-image-preview">Pro 🔒</option>
+                            <option value="standard-plus">Standard Plus 🔒</option>
+                            <option value="gemini-2.5-flash-image" selected>Standard</option>
+                        </select>
+                        <div id="model-password-container" style="margin-top: 10px; display: none;">
+                            <label>Password</label>
+                            <input type="password" id="model-password" placeholder="Enter password" style="margin-bottom: 0;">
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <label>Hair Description</label>
+                        <input type="text" id="setup-hair" placeholder="e.g. Buzz cut, blonde, messy texture...">
+                        
+                        <label>Make-up Description</label>
+                        <input type="text" id="setup-makeup" placeholder="e.g. Natural look, red lipstick, clean skin...">
+                    </div>
+
+                    <button class="btn btn-primary" onclick="generateInitialHeadshot()">Generate Headshot</button>
                 </div>
             </div>
-            
-            <div class="upload-box" onclick="document.getElementById('input-selfie').click()">
-                <div class="upload-text">Upload Selfie</div>
-                <img id="preview-selfie" class="hidden">
-                <input type="file" id="input-selfie" hidden accept="image/*" onchange="handleFile(this, 'preview-selfie', 'selfieBase64')">
-            </div>
-
-            <div style="margin-top: 20px;">
-                <label>Hair Description</label>
-                <input type="text" id="setup-hair" placeholder="e.g. Buzz cut, blonde, messy texture...">
-                
-                <label>Make-up Description</label>
-                <input type="text" id="setup-makeup" placeholder="e.g. Natural look, red lipstick, clean skin...">
-            </div>
-
-            <button class="btn btn-primary" onclick="generateInitialHeadshot()">Generate Headshot</button>
-            <div id="msg-1" style="margin-top:10px; color:#888; font-size:0.8rem;"></div>
         </div>
 
-        <div id="step-2" class="step-card hidden">
+        <div id="step-2" class="step-card two-col hidden">
             <h1 style="color: var(--accent-purple);">Headshot Ready</h1>
-            <div style="text-align:center; margin: 20px 0;">
-                <img id="generated-headshot-preview" style="max-height:300px; border-radius:8px; border:1px solid #444; cursor: pointer;" onclick="openLightbox(document.getElementById('generated-headshot-preview').src)">
+            
+            <div class="step-grid">
+                <div class="step-left">
+                    <div class="image-wrapper" onclick="openLightbox(document.getElementById('generated-headshot-preview').src)">
+                        <img id="generated-headshot-preview" alt="Generated Headshot" style="width: 100%; border-radius:8px; border:1px solid #444; cursor: pointer;">
+                        
+                        <div id="loading-headshot" class="image-loading-overlay">
+                            <div class="spinner"></div>
+                            <div class="loading-text">Refining...</div>
+                        </div>
+
+                        <button class="download-btn" onclick="event.stopPropagation(); downloadImageById('generated-headshot-preview')" title="Download Image">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="step-right">
+                    <div style="margin-bottom: 20px;">
+                        <label>Refine Result</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="refine-headshot-desc" placeholder="e.g. Make my skin tone darker" style="flex: 1; margin-bottom: 0;">
+                            <button class="btn btn-outline" style="width: auto;" onclick="refineHeadshot()">Refine</button>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="goToStep(3)">Looks Good - Continue</button>
+                    <button class="btn btn-outline" onclick="goToStep(1)">Try Again</button>
+                </div>
             </div>
-            <button class="btn btn-primary" onclick="goToStep(3)">Looks Good - Continue</button>
-            <button class="btn btn-outline" onclick="goToStep(1)">Try Again</button>
         </div>
 
-        <div id="step-3" class="step-card hidden">
+        <div id="step-3" class="step-card two-col hidden">
             <h1 style="color: var(--primary);">2. Create Studio Model</h1>
             <p style="color:#888; font-size:0.9rem;">We will combine your new headshot with your body photo.</p>
             
-            <div class="upload-box" onclick="document.getElementById('input-body').click()">
-                <div class="upload-text">Upload Full Body Photo</div>
-                <img id="preview-body" class="hidden">
-                <input type="file" id="input-body" hidden accept="image/*" onchange="handleFile(this, 'preview-body', 'bodyBase64')">
-            </div>
+            <div class="step-grid">
+                <div class="step-left">
+                    <div class="upload-box" onclick="document.getElementById('input-body').click()">
+                        <div class="upload-text">Upload Full Body Photo</div>
+                        <img id="preview-body" class="hidden" alt="Body preview">
+                        
+                        <div id="loading-body-upload" class="image-loading-overlay">
+                            <div class="spinner"></div>
+                            <div class="loading-text">Generating...</div>
+                        </div>
 
-            <button class="btn btn-primary" onclick="generateStudioModel()">Generate Studio Model</button>
-            <div id="msg-3" style="margin-top:10px; color:#888; font-size:0.8rem;"></div>
+                        <input type="file" id="input-body" hidden accept="image/*" onchange="handleFile(this, 'preview-body', 'bodyBase64')">
+                    </div>
+                </div>
+
+                <div class="step-right">
+                    <div style="padding-top: 20px;">
+                        <button class="btn btn-primary" onclick="generateStudioModel()">Generate Studio Model</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div id="step-4" class="step-card hidden">
+        <div id="step-4" class="step-card two-col hidden">
             <h1 style="color: var(--accent-purple);">Studio Model Ready</h1>
-            <div style="text-align:center; margin: 20px 0;">
-                <img id="generated-body-preview" style="max-height:300px; border-radius:8px; border:1px solid #444; cursor: pointer;" onclick="openLightbox(document.getElementById('generated-body-preview').src)">
+            
+            <div class="step-grid">
+                <div class="step-left">
+                    <div class="image-wrapper" onclick="openLightbox(document.getElementById('generated-body-preview').src)">
+                        <img id="generated-body-preview" alt="Generated Studio Model" style="width: 100%; border-radius:8px; border:1px solid #444; cursor: pointer;">
+                        
+                        <div id="loading-body" class="image-loading-overlay">
+                            <div class="spinner"></div>
+                            <div class="loading-text">Refining...</div>
+                        </div>
+
+                        <button class="download-btn" onclick="event.stopPropagation(); downloadImageById('generated-body-preview')" title="Download Image">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="step-right">
+                    <div style="margin-bottom: 20px;">
+                        <label>Refine Result</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="refine-body-desc" placeholder="e.g. Adjust body height slightly" style="flex: 1; margin-bottom: 0;">
+                            <button class="btn btn-outline" style="width: auto;" onclick="refineBodyModel()">Refine</button>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="confirmStudioModel()">Looks Good - Continue</button>
+                    <button class="btn btn-outline" onclick="goToStep(3)">Try Again</button>
+                </div>
             </div>
-            <button class="btn btn-primary" onclick="confirmStudioModel()">Looks Good - Continue</button>
-            <button class="btn btn-outline" onclick="goToStep(3)">Try Again</button>
         </div>
 
     </div>
@@ -93,13 +180,20 @@
                     </div>
             </div>
 
-            <div id="loading-overlay" class="loading-overlay">
-                <div class="spinner"></div>
-                <div id="loading-text" style="color:white;">Processing...</div>
+            <div id="top-session-controls" class="session-controls top-controls hidden">
+                <button class="btn btn-outline" onclick="undoGeneration()">Undo</button>
+                <button class="btn btn-outline" onclick="duplicateCurrentOutfit()">Duplicate</button>
+                <button class="btn btn-outline" onclick="resetSession()">New Outfit</button>
             </div>
 
             <div class="image-wrapper" onclick="openLightbox(document.getElementById('stage-image').src)">
                 <img id="stage-image" src="" style="cursor: pointer;">
+                
+                <div id="loading-stage" class="image-loading-overlay">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Styling...</div>
+                </div>
+
                 <button class="download-btn" onclick="event.stopPropagation(); downloadCurrentImage()" title="Download Image">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -111,6 +205,17 @@
             
             <div id="stage-label" style="position: absolute; bottom: 20px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; color: #ccc;">
                 Studio View
+            </div>
+
+            <!-- Mannequin Overlay -->
+            <div id="mannequin-overlay" class="mannequin-overlay hidden">
+                <div class="mannequin-overlay-content">
+                    <img id="mannequin-preview" alt="Mannequin Preview">
+                    <div class="mannequin-actions">
+                        <button class="btn btn-primary" onclick="approveMannequin()">Accept Outfit</button>
+                        <button class="btn btn-outline" onclick="closeMannequinOverlay()">Reject</button>
+                    </div>
+                </div>
             </div>
         </main>
 
@@ -127,10 +232,7 @@
                     <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
 
                     <label>Wardrobe (Select Multiple)</label>
-                    <div class="upload-box" style="min-height: 60px; padding: 10px;" onclick="document.getElementById('wardrobe-upload').click()">
-                        <div style="font-size:0.8rem; color:#888;">+ Add Clothes</div>
-                        <input type="file" id="wardrobe-upload" hidden multiple accept="image/*" onchange="handleWardrobeUpload(this)">
-                    </div>
+                    <input type="file" id="wardrobe-upload" hidden multiple accept="image/*" onchange="handleWardrobeUpload(this)">
                     <div id="wardrobe-grid" class="grid-3"></div>
 
                     <div style="margin-top: 15px;">
