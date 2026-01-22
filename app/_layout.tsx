@@ -3,8 +3,38 @@ import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
+import { AddToHomeScreenBanner } from '@/app/components/AddToHomeScreenBanner';
 
 export default function RootLayout() {
+  // Register service worker for PWA support (web only)
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      // Register service worker
+      navigator.serviceWorker
+        .register('/service-worker.js')
+        .then((registration) => {
+          console.log('[PWA] Service Worker registered:', registration.scope);
+          
+          // Check for updates periodically
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New service worker available, prompt user to refresh
+                  console.log('[PWA] New service worker available. Reload to update.');
+                  // Optionally show a toast/notification to user
+                }
+              });
+            }
+          });
+        })
+        .catch((error) => {
+          console.warn('[PWA] Service Worker registration failed:', error);
+        });
+    }
+  }, []);
+
   // Suppress FontFaceObserver timeout errors on web (non-critical)
   useEffect(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -73,6 +103,7 @@ export default function RootLayout() {
           <Stack.Screen name="users/[id]" />
           <Stack.Screen name="account-settings" />
         </Stack>
+        <AddToHomeScreenBanner />
       </NotificationsProvider>
     </AuthProvider>
   );
