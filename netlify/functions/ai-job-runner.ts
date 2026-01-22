@@ -1128,7 +1128,10 @@ CRITICAL:
     finalImageB64 = await callGeminiAPI(directPrompt, allImages, preferredModel, 'IMAGE');
   }
   
+  console.log(`[OutfitRender] Gemini API call completed. Image data length: ${finalImageB64?.length || 0}`);
+  
   if (!finalImageB64) {
+    console.error(`[OutfitRender] ERROR: No image generated from Gemini API`);
     throw new Error('No image generated from Gemini API');
   }
   
