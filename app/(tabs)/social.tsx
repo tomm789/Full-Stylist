@@ -110,6 +110,7 @@ export default function SocialScreen() {
   const menuButtonRefs = useRef<Map<string, any>>(new Map());
   const menuButtonPositions = useRef<Map<string, { x: number; y: number; width: number; height: number }>>(new Map());
   const flatListRef = useRef<FlatList>(null);
+  const outfitDialogTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (user && !isLoadingFeed) {
@@ -704,13 +705,33 @@ export default function SocialScreen() {
       
       // Poll for completion in the background (120 attempts = ~10+ minutes)
       // This will automatically close the dialog when the job completes
+      // Also set a timeout to close dialog after 8 minutes if still running
+      if (outfitDialogTimeoutRef.current) {
+        clearTimeout(outfitDialogTimeoutRef.current);
+      }
+      outfitDialogTimeoutRef.current = setTimeout(() => {
+        if (generatingOutfitId === newOutfitId) {
+          setGeneratingOutfitId(null);
+          Alert.alert(
+            'Generation Taking Longer',
+            'The outfit is still generating. You can check your outfits page to see when it\'s ready.',
+            [{ text: 'OK' }]
+          );
+        }
+        outfitDialogTimeoutRef.current = null;
+      }, 480000); // 8 minutes
+
       pollAIJob(renderJob.id, 120, 2000).then(({ data: completedJob, error: pollError }) => {
+        if (outfitDialogTimeoutRef.current) {
+          clearTimeout(outfitDialogTimeoutRef.current);
+          outfitDialogTimeoutRef.current = null;
+        }
+        
         // If polling timed out, do one final check
         let finalJob = completedJob;
         if (pollError || !completedJob) {
           getAIJob(renderJob.id).then(({ data: finalCheck }) => {
             if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
-              finalJob = finalCheck;
               // Job completed - close dialog and navigate
               if (finalCheck.status === 'succeeded') {
                 setGeneratingOutfitId(null);
@@ -720,9 +741,17 @@ export default function SocialScreen() {
                 Alert.alert('Generation Failed', finalCheck.error || 'Outfit generation failed');
               }
             } else {
-              // Still running - keep dialog open, user can manually navigate
-              console.log('[Social] Outfit render still in progress');
+              // Still running - close dialog and let user check manually
+              setGeneratingOutfitId(null);
+              Alert.alert(
+                'Generation In Progress',
+                'The outfit is still generating. You can check your outfits page to see when it\'s ready.',
+                [{ text: 'OK' }]
+              );
             }
+          }).catch(() => {
+            // Error checking final status - close dialog
+            setGeneratingOutfitId(null);
           });
         } else if (finalJob) {
           // Job completed during polling
@@ -735,8 +764,13 @@ export default function SocialScreen() {
           }
         }
       }).catch((error) => {
+        if (outfitDialogTimeoutRef.current) {
+          clearTimeout(outfitDialogTimeoutRef.current);
+          outfitDialogTimeoutRef.current = null;
+        }
         console.error('[Social] Error polling outfit render:', error);
-        // Keep dialog open - user can manually navigate
+        // Close dialog on error - user can check manually
+        setGeneratingOutfitId(null);
       });
       
     } catch (error: any) {

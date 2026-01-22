@@ -154,8 +154,27 @@ export default function OutfitDetailScreen() {
         
         if (activeJob) {
           // Active job found - show loading and start polling
-          setIsGeneratingOutfitRender(true);
-          startPollingForOutfitRender(activeJob.id);
+          // But first check if job is very old (more than 10 minutes) - might be stuck
+          const jobAge = Date.now() - new Date(activeJob.created_at).getTime();
+          if (jobAge > 600000) { // 10 minutes
+            // Job is old - check one more time to see if it actually completed
+            const { data: currentJob } = await getAIJob(activeJob.id);
+            if (currentJob && (currentJob.status === 'succeeded' || currentJob.status === 'failed')) {
+              // Job actually completed - refresh and don't show loading
+              if (currentJob.status === 'succeeded') {
+                await refreshOutfit();
+              }
+              setIsGeneratingOutfitRender(false);
+            } else {
+              // Job is still running but old - show loading and poll
+              setIsGeneratingOutfitRender(true);
+              startPollingForOutfitRender(activeJob.id);
+            }
+          } else {
+            // Job is recent - show loading and start polling
+            setIsGeneratingOutfitRender(true);
+            startPollingForOutfitRender(activeJob.id);
+          }
         } else {
           // Check for recently completed job (within last 60 seconds)
           const { data: recentJob } = await getRecentOutfitRenderJob(id, user.id);
