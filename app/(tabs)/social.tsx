@@ -637,27 +637,22 @@ export default function SocialScreen() {
         throw new Error('Outfit not found or has no items');
       }
 
-      // Get wardrobe items to access their category information
-      const wardrobeItemIds = outfitData.items.map(item => item.wardrobe_item_id);
-      const { data: wardrobeItems } = await getWardrobeItemsByIds(wardrobeItemIds);
-      
-      if (!wardrobeItems || wardrobeItems.length === 0) {
-        throw new Error('Could not access outfit items');
-      }
-
-      // Get categories to map category_id to category name
+      // Get categories to map category_id to category name (needed for AI job)
       const { data: categories } = await getWardrobeCategories();
       const categoriesMap = new Map(categories?.map(cat => [cat.id, cat.name]) || []);
 
       // Create outfit items array with the same wardrobe_item_id values
       // These items remain in the original user's wardrobe
+      // Use category_id from original outfit items (they may be null, which is fine)
       const outfitItems = outfitData.items.map((item, index) => ({
         category_id: item.category_id,
         wardrobe_item_id: item.wardrobe_item_id,
         position: item.position ?? index,
       }));
 
-      // Create a new outfit for the current user
+      // CRITICAL FIX: Create the outfit FIRST so RLS policy applies
+      // This allows us to access wardrobe items from other users via the
+      // wardrobe_items_read_in_owned_outfits policy (migration 0034)
       const originalOutfitTitle = outfitData.outfit.title || 'Outfit';
       const { data: savedOutfit, error: saveError } = await saveOutfit(
         user.id,
@@ -674,6 +669,36 @@ export default function SocialScreen() {
 
       const newOutfitId = savedOutfit.outfit.id;
 
+      // NOW fetch wardrobe items - RLS policy now applies since outfit exists
+      const wardrobeItemIds = outfitData.items.map(item => item.wardrobe_item_id);
+      const { data: wardrobeItems, error: wardrobeError } = await getWardrobeItemsByIds(wardrobeItemIds);
+      
+      if (wardrobeError) {
+        // Clean up the outfit we just created
+        await supabase
+          .from('outfits')
+          .update({ archived_at: new Date().toISOString() })
+          .eq('id', newOutfitId);
+        console.error('[Social] Error fetching wardrobe items:', wardrobeError);
+        throw new Error('Failed to access outfit items. Please try again.');
+      }
+      
+      if (!wardrobeItems || wardrobeItems.length === 0) {
+        // Clean up the outfit we just created
+        await supabase
+          .from('outfits')
+          .update({ archived_at: new Date().toISOString() })
+          .eq('id', newOutfitId);
+        throw new Error('Could not access outfit items. The outfit may contain items from users you don\'t follow.');
+      }
+      
+      // Check if we got all items (some might be missing due to RLS)
+      if (wardrobeItems.length < wardrobeItemIds.length) {
+        const missingCount = wardrobeItemIds.length - wardrobeItems.length;
+        console.warn(`[Social] Only ${wardrobeItems.length} of ${wardrobeItemIds.length} wardrobe items accessible`);
+        // Continue anyway - we'll use what we have, but log the issue
+      }
+
       // Prepare selected items for the AI job (with category names)
       // IMPORTANT: Preserve the order from outfitData.items, not wardrobeItems
       // Create a map for quick lookup
@@ -681,7 +706,8 @@ export default function SocialScreen() {
       const selected = outfitData.items.map((outfitItem) => {
         const wardrobeItem = wardrobeItemsMap.get(outfitItem.wardrobe_item_id);
         // Handle items that may not have category_id yet (AI will recognize them)
-        const categoryId = wardrobeItem?.category_id;
+        // Prefer category_id from wardrobe item, fallback to outfit item
+        const categoryId = wardrobeItem?.category_id || outfitItem.category_id;
         return {
           category: categoryId ? (categoriesMap.get(categoryId) || '') : '',
           wardrobe_item_id: outfitItem.wardrobe_item_id,
@@ -702,8 +728,18 @@ export default function SocialScreen() {
       // Trigger the job execution
       const triggerResult = await triggerAIJobExecution(renderJob.id);
       if (triggerResult.error) {
-        console.warn('[Social] Job trigger returned error (may still work):', triggerResult.error);
-        // Continue anyway - job might still be triggered
+        console.error('[Social] Job trigger returned error:', triggerResult.error);
+        // Check if it's a configuration error (not just a timeout)
+        if (triggerResult.error.message?.includes('URL') || triggerResult.error.message?.includes('configuration')) {
+          // Clean up the outfit and job
+          await supabase
+            .from('outfits')
+            .update({ archived_at: new Date().toISOString() })
+            .eq('id', newOutfitId);
+          throw new Error('Failed to start outfit generation. Please check your network connection and try again.');
+        }
+        // For timeout errors, continue - job might still be triggered on server
+        console.warn('[Social] Job trigger may have timed out, but job might still be processing');
       }
 
       // Set the generating outfit ID to show the overlay
@@ -763,7 +799,23 @@ export default function SocialScreen() {
       }
       
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to try on outfit');
+      console.error('[Social] Error in handleTryOnOutfit:', error);
+      
+      // Provide user-friendly error messages
+      let errorMessage = 'Failed to try on outfit';
+      if (error.message) {
+        if (error.message.includes('access outfit items') || error.message.includes("don't follow")) {
+          errorMessage = 'Unable to access some items in this outfit. You may need to follow the outfit creator to try it on.';
+        } else if (error.message.includes('network') || error.message.includes('connection')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message.includes('URL') || error.message.includes('configuration')) {
+          errorMessage = 'Configuration error. Please contact support if this persists.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      Alert.alert('Error', errorMessage);
       setTryingOnOutfit(false);
       setGeneratingOutfitId(null);
     } finally {

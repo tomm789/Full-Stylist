@@ -198,8 +198,10 @@ exports.handler = async (event: any, context: any) => {
 
 /**
  * Download image from Supabase Storage and convert to base64
+ * Uses service role to download directly (bypasses RLS and CORS issues)
+ * Includes retry logic with exponential backoff
  */
-async function downloadImageFromStorage(supabase: any, imageId: string): Promise<string> {
+async function downloadImageFromStorage(supabase: any, imageId: string, retries: number = 3): Promise<string> {
   // Get image record
   const { data: image, error: imageError } = await supabase
     .from('images')
@@ -208,30 +210,90 @@ async function downloadImageFromStorage(supabase: any, imageId: string): Promise
     .single();
   
   if (imageError || !image) {
-    throw new Error(`Image not found: ${imageId}`);
+    throw new Error(`Image not found: ${imageId} - ${imageError?.message || 'No image record'}`);
   }
   
-  // Download from storage using public URL (more reliable than direct download)
+  // Validate image record has required fields
+  if (!image.storage_key) {
+    throw new Error(`Image record missing storage_key: ${imageId}`);
+  }
+  
   const bucket = image.storage_bucket || 'media';
-  const { data: urlData } = supabase.storage
-    .from(bucket)
-    .getPublicUrl(image.storage_key);
   
-  const publicUrl = urlData.publicUrl;
+  // Try downloading directly using service role (more reliable, bypasses CORS)
+  // Fallback to public URL if direct download fails
+  let lastError: Error | null = null;
   
-  // Fetch the file via HTTP
-  const response = await fetch(publicUrl);
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      // Method 1: Try direct download using service role (preferred)
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from(bucket)
+        .download(image.storage_key);
+      
+      if (!downloadError && fileData) {
+        // Convert Blob to base64
+        const arrayBuffer = await fileData.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64 = buffer.toString('base64');
+        console.log(`[DownloadImage] Successfully downloaded ${imageId} via direct download (attempt ${attempt + 1})`);
+        return base64;
+      }
+      
+      // If direct download fails, try public URL as fallback
+      if (attempt === 0) {
+        console.log(`[DownloadImage] Direct download failed for ${imageId}, trying public URL fallback`);
+      }
+      
+      const { data: urlData } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(image.storage_key);
+      
+      const publicUrl = urlData.publicUrl;
+      
+      // Fetch the file via HTTP with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      try {
+        const response = await fetch(publicUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // Convert to base64
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64 = buffer.toString('base64');
+        console.log(`[DownloadImage] Successfully downloaded ${imageId} via public URL (attempt ${attempt + 1})`);
+        return base64;
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          throw new Error(`Download timeout for ${imageId}`);
+        }
+        throw fetchError;
+      }
+    } catch (error: any) {
+      lastError = error;
+      const isLastAttempt = attempt === retries - 1;
+      
+      if (isLastAttempt) {
+        console.error(`[DownloadImage] Failed to download ${imageId} after ${retries} attempts:`, error.message);
+        throw new Error(`Failed to download image ${imageId} after ${retries} attempts: ${error.message}`);
+      }
+      
+      // Exponential backoff: wait 1s, 2s, 4s...
+      const waitTime = Math.pow(2, attempt) * 1000;
+      console.warn(`[DownloadImage] Download attempt ${attempt + 1} failed for ${imageId}, retrying in ${waitTime}ms:`, error.message);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
   }
   
-  // Convert to base64
-  const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const base64 = buffer.toString('base64');
-  
-  return base64;
+  // Should never reach here, but TypeScript needs it
+  throw lastError || new Error(`Failed to download image ${imageId}`);
 }
 
 /**

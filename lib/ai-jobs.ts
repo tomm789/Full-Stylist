@@ -487,16 +487,37 @@ export async function triggerAIJobExecution(jobId: string): Promise<{ error: any
     // In development, use the Netlify dev server URL; in production, use relative path
     const isDev = process.env.NODE_ENV === 'development' || __DEV__;
     let baseUrl = '';
+    
     if (isDev) {
       // Allow environment variable to override for physical devices (set to network IP, e.g., http://192.168.1.100:8888)
       baseUrl = process.env.EXPO_PUBLIC_NETLIFY_DEV_URL || 'http://localhost:8888';
     } else {
-      // In production, use relative URL or production domain
+      // In production, prioritize environment variable
       baseUrl = process.env.EXPO_PUBLIC_NETLIFY_URL || '';
+      
+      // Fallback: For web builds, use current origin if available
+      if (!baseUrl && typeof window !== 'undefined' && window.location) {
+        baseUrl = window.location.origin;
+        console.warn('[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set, using window.location.origin as fallback:', baseUrl);
+      }
+      
+      // If still empty, use relative URL (may work for same-origin requests)
+      if (!baseUrl) {
+        console.warn('[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set and window.location unavailable, using relative URL');
+        // Relative URL will be used
+      }
     }
+    
     const functionUrl = `${baseUrl}/.netlify/functions/ai-job-runner`;
+    
+    // Validate URL format
+    if (!isDev && baseUrl && !baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      console.error('[AIJobs] Invalid baseUrl format:', baseUrl);
+      return { error: new Error('Invalid Netlify function URL configuration') };
+    }
+    
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'URL resolution',data:{jobId,isDev,baseUrl,functionUrl,hasExpoPublicNetlifyUrl:!!process.env.EXPO_PUBLIC_NETLIFY_URL,hasExpoPublicNetlifyDevUrl:!!process.env.EXPO_PUBLIC_NETLIFY_DEV_URL,nodeEnv:process.env.NODE_ENV},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'URL resolution',data:{jobId,isDev,baseUrl,functionUrl,hasExpoPublicNetlifyUrl:!!process.env.EXPO_PUBLIC_NETLIFY_URL,hasExpoPublicNetlifyDevUrl:!!process.env.EXPO_PUBLIC_NETLIFY_DEV_URL,nodeEnv:process.env.NODE_ENV,hasWindow:typeof window !== 'undefined'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
     // #endregion
 
     // Call Netlify function to process the job (fire-and-forget with short timeout)
@@ -527,11 +548,29 @@ export async function triggerAIJobExecution(jobId: string): Promise<{ error: any
       return response;
     }).catch((error) => {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'fetch error caught',data:{jobId,errorMsg:error?.message,errorName:error?.name,errorStack:error?.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'fetch error caught',data:{jobId,errorMsg:error?.message,errorName:error?.name,errorStack:error?.stack?.substring(0,200),functionUrl},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
       // #endregion
+      
+      // Log error details for debugging
+      const errorDetails = {
+        message: error?.message,
+        name: error?.name,
+        functionUrl,
+        baseUrl,
+        hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL,
+      };
+      console.error('[AIJobs] Failed to trigger job execution:', errorDetails);
+      
+      // For network errors (not timeouts), this might be a configuration issue
+      if (error?.name === 'TypeError' && error?.message?.includes('fetch')) {
+        console.error('[AIJobs] Network error - check EXPO_PUBLIC_NETLIFY_URL configuration');
+      }
+      
       // Ignore timeout errors - the job will keep processing on the server
       // We'll check status via polling instead
-      console.log('Function triggered (may have timed out, will poll for status):', error.message);
+      if (error?.name === 'AbortError' || error?.message?.includes('timeout')) {
+        console.log('[AIJobs] Function trigger timed out (expected for long-running jobs), will poll for status');
+      }
     });
 
     // #region agent log

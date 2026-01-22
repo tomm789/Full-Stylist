@@ -20,6 +20,19 @@ They must be prefixed with `EXPO_PUBLIC_`.
   - Used by: Supabase client in Expo app
   - Scope: public, subject to RLS
 
+### Optional
+- EXPO_PUBLIC_NETLIFY_URL
+  - Value: Your Netlify site URL (e.g., https://your-site.netlify.app)
+  - Used by: `lib/ai-jobs.ts` to call Netlify functions in production
+  - Required for: Triggering AI job execution in production
+  - Note: If not set, the app will attempt to use `window.location.origin` as fallback (web only)
+
+- EXPO_PUBLIC_NETLIFY_DEV_URL
+  - Value: Local Netlify dev server URL (e.g., http://localhost:8888 or http://192.168.1.100:8888 for physical devices)
+  - Used by: `lib/ai-jobs.ts` to call Netlify functions in development
+  - Default: http://localhost:8888
+  - Note: Set to your network IP (e.g., http://192.168.1.100:8888) when testing on physical devices
+
 ### Optional (future)
 - EXPO_PUBLIC_APP_ENV
   - Values: development | staging | production
