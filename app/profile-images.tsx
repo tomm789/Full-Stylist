@@ -205,8 +205,10 @@ export default function ProfileImagesScreen() {
     
     setUploadingSelfie(true);
     setLoadingMessage('Uploading photo...');
-    
-    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadSelfie',message:'setUploadingSelfie(true), before upload',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
+
     try {
       // Convert URI to blob
       const response = await fetch(result.assets[0].uri);
@@ -214,6 +216,9 @@ export default function ProfileImagesScreen() {
 
       // Upload to storage
       const uploadResult = await uploadImageToStorage(user.id, blob, `selfie-${Date.now()}.jpg`);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadSelfie',message:'after upload',data:{hasError:!!uploadResult.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
       if (uploadResult.error) {
         throw uploadResult.error;
       }
@@ -247,29 +252,32 @@ export default function ProfileImagesScreen() {
       );
 
       if (headshotJob && !jobError) {
-        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadSelfie',message:'before trigger, before poll',data:{jobId:headshotJob.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3,H4'})}).catch(()=>{});
+        // #endregion
         // Auto-trigger the job
         await triggerAIJobExecution(headshotJob.id);
-        
-        
+
         setLoadingMessage('Generating professional headshot...\nThis may take 20-30 seconds.');
-        
+
         const { data: completedJob, error: pollError } = await pollAIJob(headshotJob.id, 30, 2000);
-        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadSelfie',message:'after poll',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+        // #endregion
+
         if (pollError || !completedJob) {
           throw new Error('Headshot generation timed out or failed');
         }
-        
+
         if (completedJob.status === 'failed') {
           throw new Error(`Generation failed: ${completedJob.error || 'Unknown error'}`);
         }
-        
-        
-        
+
+
         setUploadingSelfie(false);
         setLoadingMessage('');
-        
-        
+
+
         Alert.alert('Success', 'Headshot generated successfully!');
         // Clear input fields after successful generation
         setHairStyle('');
@@ -281,8 +289,9 @@ export default function ProfileImagesScreen() {
       // Reload data
       await loadData();
     } catch (error: any) {
-      
-      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadSelfie',message:'catch',data:{errorMsg:error?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3,H4'})}).catch(()=>{});
+      // #endregion
       setUploadingSelfie(false);
       setLoadingMessage('');
       Alert.alert('Error', error.message || 'Failed to upload selfie');
@@ -290,7 +299,9 @@ export default function ProfileImagesScreen() {
   };
 
   const handleUploadBodyPhoto = async () => {
-    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'entry',data:{hasUser:!!user,activeHeadshotId:activeHeadshotId||'null'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3,H4'})}).catch(()=>{});
+    // #endregion
     if (!user) return;
 
     // Check if user has generated headshot first
@@ -317,8 +328,10 @@ export default function ProfileImagesScreen() {
 
     setUploadingBody(true);
     setLoadingMessage('Uploading photo...');
-    
-    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'setUploadingBody(true), before upload',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
+
     try {
       // Convert URI to blob
       const response = await fetch(result.assets[0].uri);
@@ -326,6 +339,9 @@ export default function ProfileImagesScreen() {
 
       // Upload to storage
       const uploadResult = await uploadImageToStorage(user.id, blob, `body-${Date.now()}.jpg`);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'after upload',data:{hasError:!!uploadResult.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
       if (uploadResult.error) {
         throw uploadResult.error;
       }
@@ -349,6 +365,9 @@ export default function ProfileImagesScreen() {
       if (imageError || !imageRecord) {
         throw imageError || new Error('Failed to create image record');
       }
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'after image record, before trigger',data:{imageId:imageRecord.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
 
       // Create body shot generation job - pass activeHeadshotId explicitly
       const { data: bodyShotJob, error: jobError } = await triggerBodyShotGenerate(
@@ -358,28 +377,43 @@ export default function ProfileImagesScreen() {
       );
 
       if (bodyShotJob && !jobError) {
-        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'before triggerAIJobExecution',data:{jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+        // #endregion
         // Auto-trigger the job
         await triggerAIJobExecution(bodyShotJob.id);
-        
-        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'after trigger, before poll',data:{jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3,H4'})}).catch(()=>{});
+        // #endregion
+
         setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
-        
+
         const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 40, 2000);
-        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'after poll',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status||'null',error:completedJob?.error||pollError?.message||'none',jobId:bodyShotJob.id,uploadingBody},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H4,H5'})}).catch(()=>{});
+        // #endregion
+
         if (pollError || !completedJob) {
           throw new Error('Studio model generation timed out or failed');
         }
-        
+
         if (completedJob.status === 'failed') {
           throw new Error(`Generation failed: ${completedJob.error || 'Unknown error'}`);
         }
-        
-        
-        
+
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'before setUploadingBody(false) success',data:{uploadingBodyBefore:uploadingBody},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4,H5'})}).catch(()=>{});
+        // #endregion
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'Resetting state on success',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+        // #endregion
         setUploadingBody(false);
         setLoadingMessage('');
-        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'State reset complete, showing success alert',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+        // #endregion
+
         Alert.alert('Success', 'Studio model generated successfully!');
       } else {
         throw jobError || new Error('Failed to create body shot job');
@@ -388,9 +422,17 @@ export default function ProfileImagesScreen() {
       // Reload data
       await loadData();
     } catch (error: any) {
-      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'catch',data:{errorMsg:error?.message,uploadingBodyBefore:uploadingBody},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3,H4,H5'})}).catch(()=>{});
+      // #endregion
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'Resetting state in catch',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       setUploadingBody(false);
       setLoadingMessage('');
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'State reset complete, showing alert',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       Alert.alert('Error', error.message || 'Failed to upload body photo');
     }
   };

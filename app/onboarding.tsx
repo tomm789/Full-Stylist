@@ -191,10 +191,15 @@ export default function OnboardingScreen() {
         // Auto-trigger the job
         await triggerAIJobExecution(headshotJob.id);
         
-        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateHeadshot',message:'before poll',data:{jobId:headshotJob.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3'})}).catch(()=>{});
+        // #endregion
         setLoadingMessage('Generating professional headshot...\nThis may take 20-30 seconds.');
         
         const { data: completedJob, error: pollError } = await pollAIJob(headshotJob.id, 30, 2000);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateHeadshot',message:'after poll',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H4'})}).catch(()=>{});
+        // #endregion
         
         // If polling timed out, do one final check - job might have completed
         let finalJob = completedJob;
@@ -235,7 +240,9 @@ export default function OnboardingScreen() {
         throw jobError || new Error('Failed to create headshot job');
       }
     } catch (error: any) {
-      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateHeadshot',message:'catch',data:{errorMsg:error?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+      // #endregion
       setGeneratingHeadshot(false);
       setLoadingMessage('');
       Alert.alert('Error', error.message || 'Failed to generate headshot');
@@ -402,12 +409,10 @@ export default function OnboardingScreen() {
         // #endregion
         
         setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
-        
-        setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
-        
+
         const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 50, 2000);
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:380',message:'Polling completed',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status||'null',error:completedJob?.error||pollError?.message||'none',jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'Polling completed',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status||'null',error:completedJob?.error||pollError?.message||'none',jobId:bodyShotJob.id,generatingBodyShot},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H5'})}).catch(()=>{});
         // #endregion
         
         // If polling timed out, do one final check - job might have completed
@@ -439,11 +444,17 @@ export default function OnboardingScreen() {
         }
         
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:408',message:'Body shot generation succeeded, navigating',data:{jobId:bodyShotJob.id,result:finalJob.result?JSON.stringify(finalJob.result).substring(0,100):'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'Body shot generation succeeded, navigating',data:{jobId:bodyShotJob.id,result:finalJob.result?JSON.stringify(finalJob.result).substring(0,100):'null',generatingBodyShotBefore:generatingBodyShot},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H5'})}).catch(()=>{});
         // #endregion
         
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'Resetting state on success',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
+        // #endregion
         setGeneratingBodyShot(false);
         setLoadingMessage('');
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'State reset complete, showing success alert',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
+        // #endregion
         
         Alert.alert('Success', 'Studio model generated successfully!');
         // Complete onboarding - navigate to main app
@@ -459,11 +470,17 @@ export default function OnboardingScreen() {
       }
     } catch (error: any) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:384',message:'Body shot generation error caught',data:{error:error?.message||'Unknown error'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'Body shot generation error caught',data:{error:error?.message||'Unknown error',generatingBodyShotBefore:generatingBodyShot},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H5'})}).catch(()=>{});
       // #endregion
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'Resetting state in catch',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       setGeneratingBodyShot(false);
       setLoadingMessage('');
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'State reset complete, showing alert',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       Alert.alert('Error', error.message || 'Failed to generate studio model');
     }
   };
