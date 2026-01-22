@@ -250,10 +250,13 @@ export default function OnboardingScreen() {
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:248',message:'Skip headshot - navigating to wardrobe',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
             // #endregion
-            router.replace('/(tabs)/wardrobe');
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:250',message:'router.replace called for skip headshot',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-            // #endregion
+            // Use setTimeout to ensure navigation happens after Alert dismisses
+            setTimeout(() => {
+              router.replace('/(tabs)/wardrobe');
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:252',message:'router.replace called for skip headshot',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+              // #endregion
+            }, 100);
           }
         }
       ]
@@ -388,7 +391,15 @@ export default function OnboardingScreen() {
         
         setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
         
-        const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 40, 2000);
+        // Add timeout protection - if polling takes too long, allow user to continue
+        const pollingPromise = pollAIJob(bodyShotJob.id, 40, 2000);
+        const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) => {
+          setTimeout(() => {
+            resolve({ data: null, error: new Error('Generation is taking longer than expected. You can check your profile later to see if it completed.') });
+          }, 120000); // 2 minute hard timeout
+        });
+        
+        const { data: completedJob, error: pollError } = await Promise.race([pollingPromise, timeoutPromise]);
         // #region agent log
         fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:377',message:'Polling completed',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status||'null',error:completedJob?.error||pollError?.message||'none',jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
         // #endregion
@@ -453,10 +464,13 @@ export default function OnboardingScreen() {
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:373',message:'Skip body shot - navigating to wardrobe',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
             // #endregion
-            router.replace('/(tabs)/wardrobe');
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:375',message:'router.replace called for skip',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-            // #endregion
+            // Use setTimeout to ensure navigation happens after Alert dismisses
+            setTimeout(() => {
+              router.replace('/(tabs)/wardrobe');
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:377',message:'router.replace called for skip body shot',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+              // #endregion
+            }, 100);
           }
         }
       ]
