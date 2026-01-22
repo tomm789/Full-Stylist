@@ -301,9 +301,11 @@ export default function OnboardingScreen() {
       return;
     }
 
-    if (!headshotImageId) {
+    // Get headshot ID - check state first, then fallback to user_settings
+    let finalHeadshotId = headshotImageId;
+    if (!finalHeadshotId) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:285',message:'No headshotImageId in state, checking user_settings',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:287',message:'No headshotImageId in state, checking user_settings',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
       // #endregion
       // Try to get headshot from user_settings as fallback
       const { data: settings } = await supabase
@@ -313,21 +315,23 @@ export default function OnboardingScreen() {
         .single();
       
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:293',message:'Fetched headshot from user_settings',data:{headshotImageId:settings?.headshot_image_id||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:295',message:'Fetched headshot from user_settings',data:{headshotImageId:settings?.headshot_image_id||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
       // #endregion
       
       if (!settings?.headshot_image_id) {
         Alert.alert('Error', 'Headshot is required to generate studio model');
         return;
       }
-      // Update local state with headshot from settings
-      setHeadshotImageId(settings.headshot_image_id);
+      // Use the headshot from settings directly (don't rely on state update)
+      finalHeadshotId = settings.headshot_image_id;
+      // Update local state for future use
+      setHeadshotImageId(finalHeadshotId);
     }
 
     setGeneratingBodyShot(true);
     setLoadingMessage('Uploading photo...');
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:304',message:'Starting body shot generation',data:{headshotImageId:headshotImageId||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:315',message:'Starting body shot generation',data:{headshotImageId:finalHeadshotId||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
     // #endregion
     
     try {
@@ -364,14 +368,14 @@ export default function OnboardingScreen() {
 
       setLoadingMessage('Creating studio model job...');
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:335',message:'Calling triggerBodyShotGenerate',data:{userId:user.id,bodyPhotoImageId:imageRecord.id,headshotImageId:headshotImageId||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:347',message:'Calling triggerBodyShotGenerate',data:{userId:user.id,bodyPhotoImageId:imageRecord.id,headshotImageId:finalHeadshotId||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
       // #endregion
 
-      // Create body shot generation job - PASS headshotImageId explicitly
+      // Create body shot generation job - PASS headshotImageId explicitly (use finalHeadshotId, not state)
       const { data: bodyShotJob, error: jobError } = await triggerBodyShotGenerate(
         user.id,
         imageRecord.id,
-        headshotImageId || undefined
+        finalHeadshotId || undefined
       );
       
       // #region agent log
