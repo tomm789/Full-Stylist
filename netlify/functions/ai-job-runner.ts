@@ -1,5 +1,5 @@
-import { Handler } from '@netlify/functions';
-import { createClient } from '@supabase/supabase-js';
+// Use require for CommonJS compatibility with Netlify Functions
+const { createClient } = require('@supabase/supabase-js');
 
 // Environment variables (set in Netlify dashboard)
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -29,9 +29,14 @@ interface AIJobInput {
   selected?: Array<{ category: string; wardrobe_item_id: string }>;
   reference_image_id?: string | null;
   settings?: Record<string, any>;
+  hair_style?: string;
+  makeup_style?: string;
+  body_photo_image_id?: string;
+  headshot_image_id?: string;
 }
 
-export const handler: Handler = async (event, context) => {
+// Export handler using CommonJS for Netlify Functions compatibility
+exports.handler = async (event: any, context: any) => {
   // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -365,23 +370,23 @@ async function callGeminiAPI(
     }
   }
   
-  const parts = candidate.content?.parts || [];
-  if (parts.length === 0) {
+  const responseParts = candidate.content?.parts || [];
+  if (responseParts.length === 0) {
     console.error('[GeminiAPI] No parts in candidate content:', JSON.stringify(candidate, null, 2));
     throw new Error('No content parts in API response');
   }
   
   if (responseType === 'TEXT') {
     // For text, use first part with text
-    const textPart = parts.find((p: any) => p.text);
+    const textPart = responseParts.find((p: any) => p.text);
     if (!textPart?.text) {
-      console.error('[GeminiAPI] No text in parts:', JSON.stringify(parts, null, 2));
+      console.error('[GeminiAPI] No text in parts:', JSON.stringify(responseParts, null, 2));
       throw new Error('No text response from API');
     }
     return textPart.text.trim();
   } else {
     // For images, find first part with inline_data
-    const imagePart = parts.find((p: any) => p.inline_data || p.inlineData);
+    const imagePart = responseParts.find((p: any) => p.inline_data || p.inlineData);
     
     if (!imagePart) {
       // Check if there's a text part (model refusal)
@@ -392,7 +397,7 @@ async function callGeminiAPI(
       }
       
       // Log the actual response structure for debugging
-      console.error('[GeminiAPI] No image part found. Available parts:', JSON.stringify(parts, null, 2));
+      console.error('[GeminiAPI] No image part found. Available parts:', JSON.stringify(responseParts, null, 2));
       console.error('[GeminiAPI] Full candidate:', JSON.stringify(candidate, null, 2));
       throw new Error('No image data in API response. Check server logs for details.');
     }

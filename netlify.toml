@@ -16,9 +16,11 @@
   publish = "public"
 
 [functions]
-  # Ensure TypeScript functions are included
+  # Ensure TypeScript functions are included and compiled
   node_bundler = "esbuild"
   included_files = ["netlify/functions/**/*.ts"]
+  # Use external dependencies (Supabase, etc.) - don't bundle them
+  external_node_modules = ["@supabase/supabase-js"]
 
 # AI job runner needs extended timeout for image generation (60-90 seconds)
 [functions."ai-job-runner"]
