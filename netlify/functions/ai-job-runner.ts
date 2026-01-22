@@ -149,6 +149,8 @@ export const handler: Handler = async (event, context) => {
       }
     } catch (err: any) {
       error = err.message || 'Unknown error';
+      console.error(`[AIJobRunner] Error processing ${job.job_type} job ${job_id}:`, error);
+      console.error(`[AIJobRunner] Error stack:`, err.stack);
     }
 
     // Update job with result or error
@@ -332,36 +334,77 @@ async function callGeminiAPI(
     }
   );
   
-  const data = await response.json();if (!response.ok || data.error) {
+  const data = await response.json();
+  
+  if (!response.ok || data.error) {
+    console.error('[GeminiAPI] API error:', JSON.stringify(data, null, 2));
     throw new Error(data.error?.message || 'Gemini API error');
   }
   
   // Check for safety blocks
   if (data.promptFeedback?.blockReason) {
+    console.error('[GeminiAPI] Safety block:', data.promptFeedback);
     throw new Error(`Safety Block: ${data.promptFeedback.blockReason}`);
   }
   
   const candidate = data.candidates?.[0];
   if (!candidate) {
+    console.error('[GeminiAPI] No candidates in response:', JSON.stringify(data, null, 2));
     throw new Error('No candidates returned from API');
   }
   
-  const part = candidate.content?.parts?.[0];
+  // Check for finish reason (might indicate why generation failed)
+  if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+    console.warn('[GeminiAPI] Finish reason:', candidate.finishReason);
+    if (candidate.finishReason === 'SAFETY') {
+      throw new Error('Generation blocked by safety filters');
+    } else if (candidate.finishReason === 'RECITATION') {
+      throw new Error('Generation blocked due to recitation concerns');
+    } else if (candidate.finishReason === 'MAX_TOKENS') {
+      throw new Error('Generation stopped due to token limit');
+    }
+  }
+  
+  const parts = candidate.content?.parts || [];
+  if (parts.length === 0) {
+    console.error('[GeminiAPI] No parts in candidate content:', JSON.stringify(candidate, null, 2));
+    throw new Error('No content parts in API response');
+  }
   
   if (responseType === 'TEXT') {
-    const text = part?.text;
-    if (!text) {
+    // For text, use first part with text
+    const textPart = parts.find((p: any) => p.text);
+    if (!textPart?.text) {
+      console.error('[GeminiAPI] No text in parts:', JSON.stringify(parts, null, 2));
       throw new Error('No text response from API');
     }
-    return text.trim();
+    return textPart.text.trim();
   } else {
-    const inlineData = part?.inline_data || part?.inlineData;
-    if (!inlineData?.data) {
-      if (part?.text) {
-        throw new Error(`Model Refused: "${part.text}"`);
+    // For images, find first part with inline_data
+    const imagePart = parts.find((p: any) => p.inline_data || p.inlineData);
+    
+    if (!imagePart) {
+      // Check if there's a text part (model refusal)
+      const textPart = parts.find((p: any) => p.text);
+      if (textPart?.text) {
+        console.error('[GeminiAPI] Model returned text instead of image:', textPart.text);
+        throw new Error(`Model Refused: "${textPart.text}"`);
       }
-      throw new Error('No image data in API response');
+      
+      // Log the actual response structure for debugging
+      console.error('[GeminiAPI] No image part found. Available parts:', JSON.stringify(parts, null, 2));
+      console.error('[GeminiAPI] Full candidate:', JSON.stringify(candidate, null, 2));
+      throw new Error('No image data in API response. Check server logs for details.');
     }
+    
+    // Try multiple possible field names for image data
+    const inlineData = imagePart.inline_data || imagePart.inlineData;
+    if (!inlineData?.data) {
+      console.error('[GeminiAPI] inline_data found but no data field:', JSON.stringify(inlineData, null, 2));
+      console.error('[GeminiAPI] Full image part:', JSON.stringify(imagePart, null, 2));
+      throw new Error('Image data structure invalid. Check server logs for details.');
+    }
+    
     return inlineData.data;
   }
 }
@@ -1015,8 +1058,18 @@ TASK:
 - Ensure head-to-body proportions are accurate (8-heads-tall rule).
 - OUTPUT: Full Body Vertical Portrait.`;
     
-    // Use pro model for final render (better quality for applying outfit to body)
-    finalImageB64 = await callGeminiAPI(applyPrompt, [bodyB64, mannequinB64, headB64], 'gemini-3-pro-image-preview', 'IMAGE');
+    console.log(`[OutfitRender] Using mannequin workflow with ${[bodyB64, mannequinB64, headB64].length} images`);
+    console.log(`[OutfitRender] Using model: gemini-3-pro-image-preview`);
+    
+    try {
+      // Use pro model for final render (better quality for applying outfit to body)
+      finalImageB64 = await callGeminiAPI(applyPrompt, [bodyB64, mannequinB64, headB64], 'gemini-3-pro-image-preview', 'IMAGE');
+      console.log(`[OutfitRender] Gemini API returned image data (${finalImageB64.length} chars)`);
+    } catch (error: any) {
+      console.error(`[OutfitRender] Gemini API error:`, error.message);
+      console.error(`[OutfitRender] Error stack:`, error.stack);
+      throw error;
+    }
   } else {
     // Direct workflow
     const directPrompt = `Fashion Photography.
@@ -1038,14 +1091,31 @@ CRITICAL:
 5. Background: Pure white infinite studio.`;
     
     const allImages = [bodyB64, headB64, ...itemImages];
-    // Use preferred model for direct workflow
-    finalImageB64 = await callGeminiAPI(directPrompt, allImages, preferredModel, 'IMAGE');
+    console.log(`[OutfitRender] Calling Gemini API with ${allImages.length} images (body, head, ${itemImages.length} items)`);
+    console.log(`[OutfitRender] Using model: ${preferredModel}`);
+    console.log(`[OutfitRender] Prompt length: ${directPrompt.length} chars`);
+    
+    try {
+      // Use preferred model for direct workflow
+      finalImageB64 = await callGeminiAPI(directPrompt, allImages, preferredModel, 'IMAGE');
+      console.log(`[OutfitRender] Gemini API returned image data (${finalImageB64.length} chars)`);
+    } catch (error: any) {
+      console.error(`[OutfitRender] Gemini API error:`, error.message);
+      console.error(`[OutfitRender] Error stack:`, error.stack);
+      throw error;
+    }
   }
   
+  if (!finalImageB64) {
+    throw new Error('No image generated from Gemini API');
+  }
+  
+  console.log(`[OutfitRender] Uploading generated image to storage...`);
   // Upload generated image
   const timestamp = Date.now();
   const storagePath = `${userId}/ai/outfits/${outfit_id}/${timestamp}.jpg`;
   const { imageId, storageKey } = await uploadImageToStorage(supabase, userId, finalImageB64, storagePath);
+  console.log(`[OutfitRender] Image uploaded: ${imageId}, path: ${storagePath}`);
   
   // Create outfit_renders record
   const { data: render } = await supabase
