@@ -355,6 +355,9 @@ async function callGeminiAPI(
   model: string = 'gemini-2.5-flash-image',
   responseType: 'IMAGE' | 'TEXT' = 'IMAGE'
 ): Promise<string> {
+  const startTime = Date.now();
+  console.log(`[GeminiAPI] Starting API call - model: ${model}, images: ${images.length}, responseType: ${responseType}`);
+  
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY not configured');
   }
@@ -362,7 +365,10 @@ async function callGeminiAPI(
   // Build request parts
   const parts: any[] = [{ text: prompt }];
   
+  let totalImageSize = 0;
   for (const imageB64 of images) {
+    const imageSize = imageB64?.length || 0;
+    totalImageSize += imageSize;
     parts.push({
       inline_data: {
         mime_type: 'image/jpeg',
@@ -370,6 +376,8 @@ async function callGeminiAPI(
       }
     });
   }
+  
+  console.log(`[GeminiAPI] Request prepared - prompt length: ${prompt.length}, total image size: ${totalImageSize} bytes`);
   
   // Generation config
   const generationConfig: any = {
@@ -380,10 +388,18 @@ async function callGeminiAPI(
     generationConfig.response_modalities = ['IMAGE'];
   }
   
-  // Call API
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
-    {
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+  console.log(`[GeminiAPI] Calling API: ${apiUrl.replace(GEMINI_API_KEY, '***')}`);
+  
+  // Call API with timeout handling
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+    console.error(`[GeminiAPI] Request timeout after 90 seconds`);
+  }, 90000); // 90 second timeout (less than function timeout of 120s)
+  
+  try {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -397,28 +413,34 @@ async function callGeminiAPI(
           { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
           { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
         ]
-      })
-    }
-  );
-  
-  const data = await response.json();
-  
-  // Log full response for debugging (truncate large data fields)
-  const logData = { ...data };
-  if (logData.candidates?.[0]?.content?.parts) {
-    logData.candidates[0].content.parts = logData.candidates[0].content.parts.map((p: any) => {
-      if (p.inline_data?.data) {
-        return { ...p, inline_data: { ...p.inline_data, data: '[TRUNCATED]' } };
-      }
-      return p;
+      }),
+      signal: controller.signal
     });
-  }
-  console.log('[GeminiAPI] Full API response structure:', JSON.stringify(logData, null, 2));
+    
+    clearTimeout(timeoutId);
+    const elapsed = Date.now() - startTime;
+    console.log(`[GeminiAPI] Response received after ${elapsed}ms, status: ${response.status}`);
   
-  if (!response.ok || data.error) {
-    console.error('[GeminiAPI] API error:', JSON.stringify(data, null, 2));
-    throw new Error(data.error?.message || 'Gemini API error');
-  }
+    const data = await response.json();
+    const totalElapsed = Date.now() - startTime;
+    console.log(`[GeminiAPI] Response parsed after ${totalElapsed}ms total`);
+  
+    // Log full response for debugging (truncate large data fields)
+    const logData = { ...data };
+    if (logData.candidates?.[0]?.content?.parts) {
+      logData.candidates[0].content.parts = logData.candidates[0].content.parts.map((p: any) => {
+        if (p.inline_data?.data) {
+          return { ...p, inline_data: { ...p.inline_data, data: '[TRUNCATED]' } };
+        }
+        return p;
+      });
+    }
+    console.log('[GeminiAPI] Full API response structure:', JSON.stringify(logData, null, 2));
+  
+    if (!response.ok || data.error) {
+      console.error('[GeminiAPI] API error:', JSON.stringify(data, null, 2));
+      throw new Error(data.error?.message || 'Gemini API error');
+    }
   
   // Check for safety blocks
   if (data.promptFeedback?.blockReason) {
@@ -506,7 +528,21 @@ async function callGeminiAPI(
       throw new Error('Image data structure invalid. Check server logs for details.');
     }
     
+    const finalElapsed = Date.now() - startTime;
+    console.log(`[GeminiAPI] Successfully extracted image data after ${finalElapsed}ms total`);
     return inlineData.data;
+  }
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    const elapsed = Date.now() - startTime;
+    
+    if (error.name === 'AbortError' || error.message?.includes('timeout')) {
+      console.error(`[GeminiAPI] Request timed out after ${elapsed}ms`);
+      throw new Error(`Gemini API request timed out after ${elapsed}ms. The request may be too large or the API is slow.`);
+    }
+    
+    console.error(`[GeminiAPI] Error after ${elapsed}ms:`, error.message);
+    throw error;
   }
 }
 
@@ -1116,11 +1152,17 @@ async function processOutfitRender(
   }
   
   // Download user's headshot and body shot
+  console.log(`[OutfitRender] Downloading headshot: ${headshotImageIdToUse}`);
   const headB64 = await downloadImageFromStorage(supabase, headshotImageIdToUse);
+  console.log(`[OutfitRender] Headshot downloaded, length: ${headB64?.length || 0}`);
+  
+  console.log(`[OutfitRender] Downloading body shot: ${userSettings.body_shot_image_id}`);
   const bodyB64 = await downloadImageFromStorage(supabase, userSettings.body_shot_image_id);
+  console.log(`[OutfitRender] Body shot downloaded, length: ${bodyB64?.length || 0}`);
   
   // Get user's preferred model (default to gemini-2.5-flash-image)
   const preferredModel = userSettings.ai_model_preference || 'gemini-2.5-flash-image';
+  console.log(`[OutfitRender] Using model: ${preferredModel}`);
   
   // Determine workflow based on item count and model limits
   const itemCount = itemImages.length;
@@ -1129,10 +1171,13 @@ async function processOutfitRender(
   const modelLimit = preferredModel.includes('pro') ? proLimit : standardLimit;
   const useMannequin = itemCount > modelLimit;
   
+  console.log(`[OutfitRender] Workflow decision: ${itemCount} items, limit: ${modelLimit}, useMannequin: ${useMannequin}`);
+  
   let finalImageB64: string;
   
   if (useMannequin) {
     // Step 1: Generate mannequin
+    console.log(`[OutfitRender] Starting mannequin workflow (${itemCount} items)`);
     const mannequinPrompt = `Generate a photorealistic image of a fashion outfit on a ghost mannequin.
 INSTRUCTIONS:
 - Combine all provided clothing items into a single cohesive outfit.
@@ -1142,8 +1187,10 @@ INSTRUCTIONS:
 - DETAILS: ${prompt || "No additional details"}.
 - ASPECT RATIO: Vertical Portrait.`;
     
+    console.log(`[OutfitRender] Calling Gemini API for mannequin generation with ${itemImages.length} item images`);
     // Use preferred model for mannequin generation
     const mannequinB64 = await callGeminiAPI(mannequinPrompt, itemImages, preferredModel, 'IMAGE');
+    console.log(`[OutfitRender] Mannequin generated, length: ${mannequinB64?.length || 0}`);
     
     // Step 2: Apply to body
     const applyPrompt = `DRESSING THE SUBJECT:
@@ -1159,10 +1206,13 @@ TASK:
 - Ensure head-to-body proportions are accurate (8-heads-tall rule).
 - OUTPUT: Full Body Vertical Portrait.`;
     
+    console.log(`[OutfitRender] Calling Gemini API for final render (applying outfit to body)`);
     // Use pro model for final render (better quality for applying outfit to body)
     finalImageB64 = await callGeminiAPI(applyPrompt, [bodyB64, mannequinB64, headB64], 'gemini-3-pro-image-preview', 'IMAGE');
+    console.log(`[OutfitRender] Final render completed, length: ${finalImageB64?.length || 0}`);
   } else {
     // Direct workflow
+    console.log(`[OutfitRender] Starting direct workflow (${itemCount} items)`);
     const directPrompt = `Fashion Photography.
 OUTPUT FORMAT: Vertical Portrait (3:4 Aspect Ratio).
 
@@ -1185,9 +1235,12 @@ CRITICAL:
     console.log(`[OutfitRender] Calling Gemini API with ${allImages.length} images (body, head, ${itemImages.length} items)`);
     console.log(`[OutfitRender] Using model: ${preferredModel}`);
     console.log(`[OutfitRender] Prompt length: ${directPrompt.length} chars`);
+    console.log(`[OutfitRender] Image sizes: body=${bodyB64?.length || 0}, head=${headB64?.length || 0}, items=${itemImages.map(img => img?.length || 0).join(',')}`);
     
     // Use preferred model for direct workflow
+    console.log(`[OutfitRender] Starting Gemini API call...`);
     finalImageB64 = await callGeminiAPI(directPrompt, allImages, preferredModel, 'IMAGE');
+    console.log(`[OutfitRender] Gemini API call completed successfully`);
   }
   
   console.log(`[OutfitRender] Gemini API call completed. Image data length: ${finalImageB64?.length || 0}`);
