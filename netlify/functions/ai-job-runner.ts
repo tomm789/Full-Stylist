@@ -1137,48 +1137,75 @@ CRITICAL:
   const logData = { outfit_id, userId, imageB64Length: finalImageB64?.length || 0, imageB64Prefix: finalImageB64?.substring(0, 50) || 'null' };
   console.log(`[OutfitRender] DEBUG: Before upload - ${JSON.stringify(logData)}`);
   // #endregion
-  // Upload generated image
-  const timestamp = Date.now();
-  const storagePath = `${userId}/ai/outfits/${outfit_id}/${timestamp}.jpg`;
-  const { imageId, storageKey } = await uploadImageToStorage(supabase, userId, finalImageB64, storagePath);
-  console.log(`[OutfitRender] Image uploaded: ${imageId}, path: ${storagePath}`);
-  // #region agent log
-  console.log(`[OutfitRender] DEBUG: After upload - imageId: ${imageId}, storageKey: ${storageKey}`);
-  // #endregion
   
-  // Create outfit_renders record
-  const { data: render, error: renderError } = await supabase
-    .from('outfit_renders')
-    .insert({
-      outfit_id,
-      image_id: imageId,
-      prompt: prompt || null,
-      settings: settings || {},
-      status: 'succeeded'
-    })
-    .select()
-    .single();
-  // #region agent log
-  console.log(`[OutfitRender] DEBUG: outfit_renders insert - render: ${render?.id || 'null'}, error: ${renderError?.message || 'null'}`);
-  // #endregion
-  
-  // Always update outfit cover_image_id with the latest render
-  const { data: outfitUpdate, error: outfitUpdateError } = await supabase
-    .from('outfits')
-    .update({ cover_image_id: imageId })
-    .eq('id', outfit_id)
-    .select()
-    .single();
-  // #region agent log
-  console.log(`[OutfitRender] DEBUG: outfit update - updated: ${outfitUpdate?.id || 'null'}, cover_image_id: ${outfitUpdate?.cover_image_id || 'null'}, error: ${outfitUpdateError?.message || 'null'}`);
-  // #endregion
-  
-  return {
-    renders: [{
-      image_id: imageId,
-      storage_key: storageKey,
-      width: 1024, // Default, could extract from image
-      height: 1280
-    }]
-  };
+  try {
+    // Upload generated image
+    const timestamp = Date.now();
+    const storagePath = `${userId}/ai/outfits/${outfit_id}/${timestamp}.jpg`;
+    console.log(`[OutfitRender] Calling uploadImageToStorage with path: ${storagePath}`);
+    const { imageId, storageKey } = await uploadImageToStorage(supabase, userId, finalImageB64, storagePath);
+    console.log(`[OutfitRender] Image uploaded: ${imageId}, path: ${storagePath}`);
+    // #region agent log
+    console.log(`[OutfitRender] DEBUG: After upload - imageId: ${imageId}, storageKey: ${storageKey}`);
+    // #endregion
+    
+    // Create outfit_renders record
+    console.log(`[OutfitRender] Creating outfit_renders record...`);
+    const { data: render, error: renderError } = await supabase
+      .from('outfit_renders')
+      .insert({
+        outfit_id,
+        image_id: imageId,
+        prompt: prompt || null,
+        settings: settings || {},
+        status: 'succeeded'
+      })
+      .select()
+      .single();
+    // #region agent log
+    console.log(`[OutfitRender] DEBUG: outfit_renders insert - render: ${render?.id || 'null'}, error: ${renderError?.message || 'null'}`);
+    // #endregion
+    
+    if (renderError) {
+      console.error(`[OutfitRender] Error creating outfit_renders record: ${renderError.message}`);
+      throw new Error(`Failed to create outfit_renders record: ${renderError.message}`);
+    }
+    
+    // Always update outfit cover_image_id with the latest render
+    console.log(`[OutfitRender] Updating outfit cover_image_id...`);
+    const { data: outfitUpdate, error: outfitUpdateError } = await supabase
+      .from('outfits')
+      .update({ cover_image_id: imageId })
+      .eq('id', outfit_id)
+      .select()
+      .single();
+    // #region agent log
+    console.log(`[OutfitRender] DEBUG: outfit update - updated: ${outfitUpdate?.id || 'null'}, cover_image_id: ${outfitUpdate?.cover_image_id || 'null'}, error: ${outfitUpdateError?.message || 'null'}`);
+    // #endregion
+    
+    if (outfitUpdateError) {
+      console.error(`[OutfitRender] Error updating outfit cover_image_id: ${outfitUpdateError.message}`);
+      throw new Error(`Failed to update outfit cover_image_id: ${outfitUpdateError.message}`);
+    }
+    
+    if (!outfitUpdate || !outfitUpdate.cover_image_id) {
+      console.error(`[OutfitRender] Outfit update returned null or missing cover_image_id`);
+      throw new Error('Outfit update did not set cover_image_id');
+    }
+    
+    console.log(`[OutfitRender] Successfully completed - outfit ${outfit_id} now has cover_image_id: ${outfitUpdate.cover_image_id}`);
+    
+    return {
+      renders: [{
+        image_id: imageId,
+        storage_key: storageKey,
+        width: 1024, // Default, could extract from image
+        height: 1280
+      }]
+    };
+  } catch (error: any) {
+    console.error(`[OutfitRender] Error in upload/update phase: ${error.message}`);
+    console.error(`[OutfitRender] Error stack: ${error.stack}`);
+    throw error;
+  }
 }
