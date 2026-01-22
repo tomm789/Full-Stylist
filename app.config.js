@@ -6,6 +6,7 @@ module.exports = {
     slug: 'full-stylist',
     version: '1.0.0',
     orientation: 'portrait',
+    // Placeholder PNGs (valid 1x1) — replace with proper icon/splash/favicon via scripts/generate-assets.js
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
     splash: {
@@ -13,7 +14,7 @@ module.exports = {
       resizeMode: 'contain',
       backgroundColor: '#ffffff',
     },
-    assetBundlePatterns: ['**/*'],
+    assetBundlePatterns: ['assets/**'],
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.fullstylist.app',
