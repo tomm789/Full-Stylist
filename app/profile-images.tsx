@@ -350,10 +350,11 @@ export default function ProfileImagesScreen() {
         throw imageError || new Error('Failed to create image record');
       }
 
-      // Create body shot generation job
+      // Create body shot generation job - pass activeHeadshotId explicitly
       const { data: bodyShotJob, error: jobError } = await triggerBodyShotGenerate(
         user.id,
-        imageRecord.id
+        imageRecord.id,
+        activeHeadshotId || undefined
       );
 
       if (bodyShotJob && !jobError) {
