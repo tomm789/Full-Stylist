@@ -198,10 +198,8 @@ exports.handler = async (event: any, context: any) => {
 
 /**
  * Download image from Supabase Storage and convert to base64
- * Uses service role to download directly (bypasses RLS and CORS issues)
- * Includes retry logic with exponential backoff
  */
-async function downloadImageFromStorage(supabase: any, imageId: string, retries: number = 3): Promise<string> {
+async function downloadImageFromStorage(supabase: any, imageId: string): Promise<string> {
   // Get image record
   const { data: image, error: imageError } = await supabase
     .from('images')
@@ -210,90 +208,30 @@ async function downloadImageFromStorage(supabase: any, imageId: string, retries:
     .single();
   
   if (imageError || !image) {
-    throw new Error(`Image not found: ${imageId} - ${imageError?.message || 'No image record'}`);
+    throw new Error(`Image not found: ${imageId}`);
   }
   
-  // Validate image record has required fields
-  if (!image.storage_key) {
-    throw new Error(`Image record missing storage_key: ${imageId}`);
-  }
-  
+  // Download from storage using public URL (more reliable than direct download)
   const bucket = image.storage_bucket || 'media';
+  const { data: urlData } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(image.storage_key);
   
-  // Try downloading directly using service role (more reliable, bypasses CORS)
-  // Fallback to public URL if direct download fails
-  let lastError: Error | null = null;
+  const publicUrl = urlData.publicUrl;
   
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      // Method 1: Try direct download using service role (preferred)
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from(bucket)
-        .download(image.storage_key);
-      
-      if (!downloadError && fileData) {
-        // Convert Blob to base64
-        const arrayBuffer = await fileData.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const base64 = buffer.toString('base64');
-        console.log(`[DownloadImage] Successfully downloaded ${imageId} via direct download (attempt ${attempt + 1})`);
-        return base64;
-      }
-      
-      // If direct download fails, try public URL as fallback
-      if (attempt === 0) {
-        console.log(`[DownloadImage] Direct download failed for ${imageId}, trying public URL fallback`);
-      }
-      
-      const { data: urlData } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(image.storage_key);
-      
-      const publicUrl = urlData.publicUrl;
-      
-      // Fetch the file via HTTP with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
-      try {
-        const response = await fetch(publicUrl, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        // Convert to base64
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const base64 = buffer.toString('base64');
-        console.log(`[DownloadImage] Successfully downloaded ${imageId} via public URL (attempt ${attempt + 1})`);
-        return base64;
-      } catch (fetchError: any) {
-        clearTimeout(timeoutId);
-        if (fetchError.name === 'AbortError') {
-          throw new Error(`Download timeout for ${imageId}`);
-        }
-        throw fetchError;
-      }
-    } catch (error: any) {
-      lastError = error;
-      const isLastAttempt = attempt === retries - 1;
-      
-      if (isLastAttempt) {
-        console.error(`[DownloadImage] Failed to download ${imageId} after ${retries} attempts:`, error.message);
-        throw new Error(`Failed to download image ${imageId} after ${retries} attempts: ${error.message}`);
-      }
-      
-      // Exponential backoff: wait 1s, 2s, 4s...
-      const waitTime = Math.pow(2, attempt) * 1000;
-      console.warn(`[DownloadImage] Download attempt ${attempt + 1} failed for ${imageId}, retrying in ${waitTime}ms:`, error.message);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-    }
+  // Fetch the file via HTTP
+  const response = await fetch(publicUrl);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
   }
   
-  // Should never reach here, but TypeScript needs it
-  throw lastError || new Error(`Failed to download image ${imageId}`);
+  // Convert to base64
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const base64 = buffer.toString('base64');
+  
+  return base64;
 }
 
 /**
@@ -355,9 +293,6 @@ async function callGeminiAPI(
   model: string = 'gemini-2.5-flash-image',
   responseType: 'IMAGE' | 'TEXT' = 'IMAGE'
 ): Promise<string> {
-  const startTime = Date.now();
-  console.log(`[GeminiAPI] Starting API call - model: ${model}, images: ${images.length}, responseType: ${responseType}`);
-  
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY not configured');
   }
@@ -365,10 +300,7 @@ async function callGeminiAPI(
   // Build request parts
   const parts: any[] = [{ text: prompt }];
   
-  let totalImageSize = 0;
   for (const imageB64 of images) {
-    const imageSize = imageB64?.length || 0;
-    totalImageSize += imageSize;
     parts.push({
       inline_data: {
         mime_type: 'image/jpeg',
@@ -376,8 +308,6 @@ async function callGeminiAPI(
       }
     });
   }
-  
-  console.log(`[GeminiAPI] Request prepared - prompt length: ${prompt.length}, total image size: ${totalImageSize} bytes`);
   
   // Generation config
   const generationConfig: any = {
@@ -388,18 +318,10 @@ async function callGeminiAPI(
     generationConfig.response_modalities = ['IMAGE'];
   }
   
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-  console.log(`[GeminiAPI] Calling API: ${apiUrl.replace(GEMINI_API_KEY, '***')}`);
-  
-  // Call API with timeout handling
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => {
-    controller.abort();
-    console.error(`[GeminiAPI] Request timeout after 90 seconds`);
-  }, 90000); // 90 second timeout (less than function timeout of 120s)
-  
-  try {
-    const response = await fetch(apiUrl, {
+  // Call API
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+    {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -413,34 +335,28 @@ async function callGeminiAPI(
           { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
           { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
         ]
-      }),
-      signal: controller.signal
+      })
+    }
+  );
+  
+  const data = await response.json();
+  
+  // Log full response for debugging (truncate large data fields)
+  const logData = { ...data };
+  if (logData.candidates?.[0]?.content?.parts) {
+    logData.candidates[0].content.parts = logData.candidates[0].content.parts.map((p: any) => {
+      if (p.inline_data?.data) {
+        return { ...p, inline_data: { ...p.inline_data, data: '[TRUNCATED]' } };
+      }
+      return p;
     });
-    
-    clearTimeout(timeoutId);
-    const elapsed = Date.now() - startTime;
-    console.log(`[GeminiAPI] Response received after ${elapsed}ms, status: ${response.status}`);
+  }
+  console.log('[GeminiAPI] Full API response structure:', JSON.stringify(logData, null, 2));
   
-    const data = await response.json();
-    const totalElapsed = Date.now() - startTime;
-    console.log(`[GeminiAPI] Response parsed after ${totalElapsed}ms total`);
-  
-    // Log full response for debugging (truncate large data fields)
-    const logData = { ...data };
-    if (logData.candidates?.[0]?.content?.parts) {
-      logData.candidates[0].content.parts = logData.candidates[0].content.parts.map((p: any) => {
-        if (p.inline_data?.data) {
-          return { ...p, inline_data: { ...p.inline_data, data: '[TRUNCATED]' } };
-        }
-        return p;
-      });
-    }
-    console.log('[GeminiAPI] Full API response structure:', JSON.stringify(logData, null, 2));
-  
-    if (!response.ok || data.error) {
-      console.error('[GeminiAPI] API error:', JSON.stringify(data, null, 2));
-      throw new Error(data.error?.message || 'Gemini API error');
-    }
+  if (!response.ok || data.error) {
+    console.error('[GeminiAPI] API error:', JSON.stringify(data, null, 2));
+    throw new Error(data.error?.message || 'Gemini API error');
+  }
   
   // Check for safety blocks
   if (data.promptFeedback?.blockReason) {
@@ -528,21 +444,7 @@ async function callGeminiAPI(
       throw new Error('Image data structure invalid. Check server logs for details.');
     }
     
-    const finalElapsed = Date.now() - startTime;
-    console.log(`[GeminiAPI] Successfully extracted image data after ${finalElapsed}ms total`);
     return inlineData.data;
-  }
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-    const elapsed = Date.now() - startTime;
-    
-    if (error.name === 'AbortError' || error.message?.includes('timeout')) {
-      console.error(`[GeminiAPI] Request timed out after ${elapsed}ms`);
-      throw new Error(`Gemini API request timed out after ${elapsed}ms. The request may be too large or the API is slow.`);
-    }
-    
-    console.error(`[GeminiAPI] Error after ${elapsed}ms:`, error.message);
-    throw error;
   }
 }
 
@@ -1152,17 +1054,11 @@ async function processOutfitRender(
   }
   
   // Download user's headshot and body shot
-  console.log(`[OutfitRender] Downloading headshot: ${headshotImageIdToUse}`);
   const headB64 = await downloadImageFromStorage(supabase, headshotImageIdToUse);
-  console.log(`[OutfitRender] Headshot downloaded, length: ${headB64?.length || 0}`);
-  
-  console.log(`[OutfitRender] Downloading body shot: ${userSettings.body_shot_image_id}`);
   const bodyB64 = await downloadImageFromStorage(supabase, userSettings.body_shot_image_id);
-  console.log(`[OutfitRender] Body shot downloaded, length: ${bodyB64?.length || 0}`);
   
   // Get user's preferred model (default to gemini-2.5-flash-image)
   const preferredModel = userSettings.ai_model_preference || 'gemini-2.5-flash-image';
-  console.log(`[OutfitRender] Using model: ${preferredModel}`);
   
   // Determine workflow based on item count and model limits
   const itemCount = itemImages.length;
@@ -1171,13 +1067,10 @@ async function processOutfitRender(
   const modelLimit = preferredModel.includes('pro') ? proLimit : standardLimit;
   const useMannequin = itemCount > modelLimit;
   
-  console.log(`[OutfitRender] Workflow decision: ${itemCount} items, limit: ${modelLimit}, useMannequin: ${useMannequin}`);
-  
   let finalImageB64: string;
   
   if (useMannequin) {
     // Step 1: Generate mannequin
-    console.log(`[OutfitRender] Starting mannequin workflow (${itemCount} items)`);
     const mannequinPrompt = `Generate a photorealistic image of a fashion outfit on a ghost mannequin.
 INSTRUCTIONS:
 - Combine all provided clothing items into a single cohesive outfit.
@@ -1187,10 +1080,8 @@ INSTRUCTIONS:
 - DETAILS: ${prompt || "No additional details"}.
 - ASPECT RATIO: Vertical Portrait.`;
     
-    console.log(`[OutfitRender] Calling Gemini API for mannequin generation with ${itemImages.length} item images`);
     // Use preferred model for mannequin generation
     const mannequinB64 = await callGeminiAPI(mannequinPrompt, itemImages, preferredModel, 'IMAGE');
-    console.log(`[OutfitRender] Mannequin generated, length: ${mannequinB64?.length || 0}`);
     
     // Step 2: Apply to body
     const applyPrompt = `DRESSING THE SUBJECT:
@@ -1206,13 +1097,10 @@ TASK:
 - Ensure head-to-body proportions are accurate (8-heads-tall rule).
 - OUTPUT: Full Body Vertical Portrait.`;
     
-    console.log(`[OutfitRender] Calling Gemini API for final render (applying outfit to body)`);
     // Use pro model for final render (better quality for applying outfit to body)
     finalImageB64 = await callGeminiAPI(applyPrompt, [bodyB64, mannequinB64, headB64], 'gemini-3-pro-image-preview', 'IMAGE');
-    console.log(`[OutfitRender] Final render completed, length: ${finalImageB64?.length || 0}`);
   } else {
     // Direct workflow
-    console.log(`[OutfitRender] Starting direct workflow (${itemCount} items)`);
     const directPrompt = `Fashion Photography.
 OUTPUT FORMAT: Vertical Portrait (3:4 Aspect Ratio).
 
@@ -1235,95 +1123,47 @@ CRITICAL:
     console.log(`[OutfitRender] Calling Gemini API with ${allImages.length} images (body, head, ${itemImages.length} items)`);
     console.log(`[OutfitRender] Using model: ${preferredModel}`);
     console.log(`[OutfitRender] Prompt length: ${directPrompt.length} chars`);
-    console.log(`[OutfitRender] Image sizes: body=${bodyB64?.length || 0}, head=${headB64?.length || 0}, items=${itemImages.map(img => img?.length || 0).join(',')}`);
     
     // Use preferred model for direct workflow
-    console.log(`[OutfitRender] Starting Gemini API call...`);
     finalImageB64 = await callGeminiAPI(directPrompt, allImages, preferredModel, 'IMAGE');
-    console.log(`[OutfitRender] Gemini API call completed successfully`);
   }
   
-  console.log(`[OutfitRender] Gemini API call completed. Image data length: ${finalImageB64?.length || 0}`);
-  
   if (!finalImageB64) {
-    console.error(`[OutfitRender] ERROR: No image generated from Gemini API`);
     throw new Error('No image generated from Gemini API');
   }
   
   console.log(`[OutfitRender] Uploading generated image to storage...`);
-  // #region agent log
-  const logData = { outfit_id, userId, imageB64Length: finalImageB64?.length || 0, imageB64Prefix: finalImageB64?.substring(0, 50) || 'null' };
-  console.log(`[OutfitRender] DEBUG: Before upload - ${JSON.stringify(logData)}`);
-  // #endregion
+  // Upload generated image
+  const timestamp = Date.now();
+  const storagePath = `${userId}/ai/outfits/${outfit_id}/${timestamp}.jpg`;
+  const { imageId, storageKey } = await uploadImageToStorage(supabase, userId, finalImageB64, storagePath);
+  console.log(`[OutfitRender] Image uploaded: ${imageId}, path: ${storagePath}`);
   
-  try {
-    // Upload generated image
-    const timestamp = Date.now();
-    const storagePath = `${userId}/ai/outfits/${outfit_id}/${timestamp}.jpg`;
-    console.log(`[OutfitRender] Calling uploadImageToStorage with path: ${storagePath}`);
-    const { imageId, storageKey } = await uploadImageToStorage(supabase, userId, finalImageB64, storagePath);
-    console.log(`[OutfitRender] Image uploaded: ${imageId}, path: ${storagePath}`);
-    // #region agent log
-    console.log(`[OutfitRender] DEBUG: After upload - imageId: ${imageId}, storageKey: ${storageKey}`);
-    // #endregion
-    
-    // Create outfit_renders record
-    console.log(`[OutfitRender] Creating outfit_renders record...`);
-    const { data: render, error: renderError } = await supabase
-      .from('outfit_renders')
-      .insert({
-        outfit_id,
-        image_id: imageId,
-        prompt: prompt || null,
-        settings: settings || {},
-        status: 'succeeded'
-      })
-      .select()
-      .single();
-    // #region agent log
-    console.log(`[OutfitRender] DEBUG: outfit_renders insert - render: ${render?.id || 'null'}, error: ${renderError?.message || 'null'}`);
-    // #endregion
-    
-    if (renderError) {
-      console.error(`[OutfitRender] Error creating outfit_renders record: ${renderError.message}`);
-      throw new Error(`Failed to create outfit_renders record: ${renderError.message}`);
-    }
-    
-    // Always update outfit cover_image_id with the latest render
-    console.log(`[OutfitRender] Updating outfit cover_image_id...`);
-    const { data: outfitUpdate, error: outfitUpdateError } = await supabase
-      .from('outfits')
-      .update({ cover_image_id: imageId })
-      .eq('id', outfit_id)
-      .select()
-      .single();
-    // #region agent log
-    console.log(`[OutfitRender] DEBUG: outfit update - updated: ${outfitUpdate?.id || 'null'}, cover_image_id: ${outfitUpdate?.cover_image_id || 'null'}, error: ${outfitUpdateError?.message || 'null'}`);
-    // #endregion
-    
-    if (outfitUpdateError) {
-      console.error(`[OutfitRender] Error updating outfit cover_image_id: ${outfitUpdateError.message}`);
-      throw new Error(`Failed to update outfit cover_image_id: ${outfitUpdateError.message}`);
-    }
-    
-    if (!outfitUpdate || !outfitUpdate.cover_image_id) {
-      console.error(`[OutfitRender] Outfit update returned null or missing cover_image_id`);
-      throw new Error('Outfit update did not set cover_image_id');
-    }
-    
-    console.log(`[OutfitRender] Successfully completed - outfit ${outfit_id} now has cover_image_id: ${outfitUpdate.cover_image_id}`);
-    
-    return {
-      renders: [{
-        image_id: imageId,
-        storage_key: storageKey,
-        width: 1024, // Default, could extract from image
-        height: 1280
-      }]
-    };
-  } catch (error: any) {
-    console.error(`[OutfitRender] Error in upload/update phase: ${error.message}`);
-    console.error(`[OutfitRender] Error stack: ${error.stack}`);
-    throw error;
-  }
+  // Create outfit_renders record
+  const { data: render } = await supabase
+    .from('outfit_renders')
+    .insert({
+      outfit_id,
+      image_id: imageId,
+      prompt: prompt || null,
+      settings: settings || {},
+      status: 'succeeded'
+    })
+    .select()
+    .single();
+  
+  // Always update outfit cover_image_id with the latest render
+  await supabase
+    .from('outfits')
+    .update({ cover_image_id: imageId })
+    .eq('id', outfit_id);
+  
+  return {
+    renders: [{
+      image_id: imageId,
+      storage_key: storageKey,
+      width: 1024, // Default, could extract from image
+      height: 1280
+    }]
+  };
 }
