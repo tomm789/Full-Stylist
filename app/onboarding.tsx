@@ -410,7 +410,7 @@ export default function OnboardingScreen() {
         
         setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
 
-        const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 50, 2000);
+        const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 60, 2000);
         // #region agent log
         fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'Polling completed',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status||'null',error:completedJob?.error||pollError?.message||'none',jobId:bodyShotJob.id,generatingBodyShot},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H5'})}).catch(()=>{});
         // #endregion

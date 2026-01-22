@@ -220,18 +220,27 @@ export default function NewBodyshotScreen() {
         
         setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
         
-        const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 40, 2000);
+        const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 60, 2000);
         
+        // If polling timed out, do one final check - job might have completed
+        let finalJob = completedJob;
         if (pollError || !completedJob) {
-          throw new Error('Studio model generation timed out or failed');
+          console.log('[NewBodyshot] Body shot polling timed out, doing final check...');
+          const { getAIJob } = await import('@/lib/ai-jobs');
+          const { data: finalCheck } = await getAIJob(bodyShotJob.id);
+          if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
+            finalJob = finalCheck;
+          } else {
+            throw new Error('Studio model generation timed out. You can check your profile later to see if it completed.');
+          }
         }
         
-        if (completedJob.status === 'failed') {
-          throw new Error(`Generation failed: ${completedJob.error || 'Unknown error'}`);
+        if (finalJob.status === 'failed') {
+          throw new Error(`Generation failed: ${finalJob.error || 'Unknown error'}`);
         }
         
         // Get the generated body shot image ID from the job result
-        const generatedImageId = completedJob.result?.image_id || completedJob.result?.generated_image_id;
+        const generatedImageId = finalJob.result?.image_id || finalJob.result?.generated_image_id;
         
         setGenerating(false);
         setLoadingMessage('');

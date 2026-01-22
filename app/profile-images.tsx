@@ -388,17 +388,38 @@ export default function ProfileImagesScreen() {
 
         setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
 
-        const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 40, 2000);
+        const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 60, 2000);
         // #region agent log
         fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'after poll',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status||'null',error:completedJob?.error||pollError?.message||'none',jobId:bodyShotJob.id,uploadingBody},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H4,H5'})}).catch(()=>{});
         // #endregion
 
+        // If polling timed out, do one final check - job might have completed
+        let finalJob = completedJob;
         if (pollError || !completedJob) {
-          throw new Error('Studio model generation timed out or failed');
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'Polling timed out, doing final check',data:{jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+          // #endregion
+          console.log('[Profile] Body shot polling timed out, doing final check...');
+          const { getAIJob } = await import('@/lib/ai-jobs');
+          const { data: finalCheck } = await getAIJob(bodyShotJob.id);
+          if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
+            finalJob = finalCheck;
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'Final check found job completed',data:{status:finalCheck.status},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+            // #endregion
+          } else {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'Final check - job still not complete',data:{status:finalCheck?.status||'null'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+            // #endregion
+            throw new Error('Studio model generation timed out. You can check your profile later to see if it completed.');
+          }
         }
 
-        if (completedJob.status === 'failed') {
-          throw new Error(`Generation failed: ${completedJob.error || 'Unknown error'}`);
+        if (finalJob.status === 'failed') {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile-images.tsx:handleUploadBodyPhoto',message:'Job failed',data:{error:finalJob.error||'Unknown error',status:finalJob.status},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+          // #endregion
+          throw new Error(`Generation failed: ${finalJob.error || 'Unknown error'}`);
         }
 
 
