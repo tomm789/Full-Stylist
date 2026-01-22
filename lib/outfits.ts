@@ -297,7 +297,7 @@ export async function saveOutfit(
     notes?: string;
     visibility?: 'public' | 'followers' | 'private_link' | 'private' | 'inherit';
   },
-  items: Array<{ category_id: string; wardrobe_item_id: string; position?: number }>
+  items: Array<{ category_id: string | null; wardrobe_item_id: string; position?: number }>
 ): Promise<{
   data: { outfit: Outfit; items: OutfitItem[] } | null;
   error: any;
@@ -347,9 +347,10 @@ export async function saveOutfit(
     }
 
     // Create outfit items (enforced unique constraint at DB level)
+    // Allow null category_id for items that don't have categories yet
     const outfitItemsData = items.map((item, index) => ({
       outfit_id: outfitId,
-      category_id: item.category_id,
+      category_id: item.category_id || null,
       wardrobe_item_id: item.wardrobe_item_id,
       position: item.position ?? index,
     }));

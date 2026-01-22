@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +19,7 @@ import {
   getDefaultWardrobeId,
   createWardrobeItem,
 } from '@/lib/wardrobe';
-import { triggerAutoTag, triggerProductShot, triggerAIJobExecution } from '@/lib/ai-jobs';
+import { triggerAutoTag, triggerProductShot, triggerAIJobExecution, pollAIJob } from '@/lib/ai-jobs';
 
 export default function AddItemScreen() {
   const { user } = useAuth();
@@ -27,6 +28,8 @@ export default function AddItemScreen() {
   const [selectedImages, setSelectedImages] = useState<Array<{ uri: string; type: string; name: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [aiJobId, setAiJobId] = useState<string | null>(null);
 
   useEffect(() => {
     initialize();
@@ -178,20 +181,62 @@ export default function AddItemScreen() {
             // Auto-trigger the auto_tag job immediately
             if (autoTagJob && !autoTagError) {
               const execResult = await triggerAIJobExecution(autoTagJob.id);
+              if (!execResult.error) {
+                // Show loading dialog and poll for completion
+                setGeneratingAI(true);
+                setAiJobId(autoTagJob.id);
+                
+                // Poll for auto_tag completion (30 attempts = ~60 seconds)
+                // Wait for completion before navigating so user sees results immediately
+                try {
+                  const { data: completedJob, error: pollError } = await pollAIJob(autoTagJob.id, 30, 2000);
+                  
+                  // If polling timed out, do one final check
+                  let finalJob = completedJob;
+                  if (pollError || !completedJob) {
+                    const { getAIJob } = await import('@/lib/ai-jobs');
+                    const { data: finalCheck } = await getAIJob(autoTagJob.id);
+                    if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
+                      finalJob = finalCheck;
+                    }
+                  }
+                  
+                  // Navigate after polling completes (whether success, failure, or timeout)
+                  setGeneratingAI(false);
+                  setAiJobId(null);
+                  router.replace(`/wardrobe/item/${data.item.id}`);
+                } catch (error) {
+                  // Navigate even on error
+                  setGeneratingAI(false);
+                  setAiJobId(null);
+                  router.replace(`/wardrobe/item/${data.item.id}`);
+                }
+              } else {
+                // Trigger failed - navigate anyway
+                router.replace(`/wardrobe/item/${data.item.id}`);
+              }
             } else if (autoTagError) {
               console.warn('Failed to create auto-tag job:', autoTagError);
+              // Navigate even if job creation failed
+              router.replace(`/wardrobe/item/${data.item.id}`);
+            } else {
+              // No auto_tag job - navigate immediately
+              router.replace(`/wardrobe/item/${data.item.id}`);
             }
 
-            // Note: Jobs run asynchronously
+            // Note: Product shot job runs asynchronously
             // Results will be applied when jobs complete via Netlify function
           } catch (error) {
             console.warn('Error triggering AI jobs:', error);
             // Don't fail the whole operation if AI jobs fail
+            setGeneratingAI(false);
+            setAiJobId(null);
+            router.replace(`/wardrobe/item/${data.item.id}`);
           }
+        } else {
+          // No images - navigate immediately
+          router.replace(`/wardrobe/item/${data.item.id}`);
         }
-
-        // Navigate to the created item's detail page
-        router.replace(`/wardrobe/item/${data.item.id}`);
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'An unexpected error occurred');
@@ -299,6 +344,26 @@ export default function AddItemScreen() {
         )}
       </TouchableOpacity>
       </ScrollView>
+
+      {/* AI Generation Loading Modal */}
+      {generatingAI && (
+        <Modal
+          visible={generatingAI}
+          transparent={true}
+          animationType="fade"
+          statusBarTranslucent={true}
+        >
+          <View style={styles.loadingOverlay}>
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <Text style={styles.loadingTitle}>Analyzing Item</Text>
+              <Text style={styles.loadingMessage}>
+                AI is recognizing category, attributes, and generating details...
+              </Text>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -487,5 +552,33 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    minWidth: 280,
+    maxWidth: '80%',
+  },
+  loadingTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  loadingMessage: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

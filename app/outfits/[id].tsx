@@ -397,8 +397,9 @@ export default function OutfitEditorScreen() {
     setSaving(true);
 
     try {
+      // Allow null category_id for items that don't have categories yet
       const items = Array.from(outfitItems.entries()).map(([categoryId, item], index) => ({
-        category_id: categoryId,
+        category_id: categoryId || null,
         wardrobe_item_id: item.id,
         position: index,
       }));
@@ -580,8 +581,9 @@ export default function OutfitEditorScreen() {
       
       // Always save/update the outfit with current items before rendering
       // This ensures the saved outfit matches what's in the editor
+      // Allow null category_id for items that don't have categories yet
       const items = Array.from(outfitItems.entries()).map(([categoryId, item], index) => ({
-        category_id: categoryId,
+        category_id: categoryId || null,
         wardrobe_item_id: item.id,
         position: index,
       }));
@@ -608,8 +610,9 @@ export default function OutfitEditorScreen() {
       setOutfit(savedData.outfit);
       
       // Create outfit_render job with items from current editor state
+      // Handle items that may not have category_id yet (AI will recognize them)
       const selected = Array.from(outfitItems.entries()).map(([categoryId, item]) => ({
-        category: categories.find((c) => c.id === categoryId)?.name || '',
+        category: categoryId ? (categories.find((c) => c.id === categoryId)?.name || '') : '',
         wardrobe_item_id: item.id,
       }));
 

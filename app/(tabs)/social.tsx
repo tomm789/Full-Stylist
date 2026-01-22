@@ -680,8 +680,10 @@ export default function SocialScreen() {
       const wardrobeItemsMap = new Map(wardrobeItems.map(item => [item.id, item]));
       const selected = outfitData.items.map((outfitItem) => {
         const wardrobeItem = wardrobeItemsMap.get(outfitItem.wardrobe_item_id);
+        // Handle items that may not have category_id yet (AI will recognize them)
+        const categoryId = wardrobeItem?.category_id;
         return {
-          category: wardrobeItem ? (categoriesMap.get(wardrobeItem.category_id) || '') : '',
+          category: categoryId ? (categoriesMap.get(categoryId) || '') : '',
           wardrobe_item_id: outfitItem.wardrobe_item_id,
         };
       });

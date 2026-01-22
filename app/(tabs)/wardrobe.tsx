@@ -645,7 +645,7 @@ export default function WardrobeScreen() {
       console.log('[Wardrobe] Selected items for outfit:', JSON.stringify(selectedItemInfo, null, 2));
       
       const outfitItems = selectedItems.map((item, index) => ({
-        category_id: item.category_id,
+        category_id: item.category_id || null, // Allow null category_id
         wardrobe_item_id: item.id,
         position: index,
       }));
@@ -667,8 +667,9 @@ export default function WardrobeScreen() {
       const outfitId = savedOutfit.outfit.id;
 
       // Create outfit_render job with selected items
+      // Handle items that may not have category_id yet (AI will recognize them)
       const selected = selectedItems.map((item) => ({
-        category: categories.find((c) => c.id === item.category_id)?.name || '',
+        category: item.category_id ? (categories.find((c) => c.id === item.category_id)?.name || '') : '',
         wardrobe_item_id: item.id,
       }));
       

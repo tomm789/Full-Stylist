@@ -47,7 +47,22 @@ export default function ItemDetailScreen() {
       setCurrentScreenWidth(cappedWidth);
     });
     
-    return () => subscription?.remove();
+    return () => {
+      subscription?.remove();
+      // Cleanup polling intervals
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      if (autoTagPollingRef.current) {
+        clearInterval(autoTagPollingRef.current);
+        autoTagPollingRef.current = null;
+      }
+      if (attributeRefreshRef.current) {
+        clearInterval(attributeRefreshRef.current);
+        attributeRefreshRef.current = null;
+      }
+    };
   }, []);
   const [item, setItem] = useState<WardrobeItem | null>(null);
   const [category, setCategory] = useState<WardrobeCategory | null>(null);
@@ -66,6 +81,8 @@ export default function ItemDetailScreen() {
   const navigationScrollRef = useRef<ScrollView>(null);
   const [isGeneratingProductShot, setIsGeneratingProductShot] = useState(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoTagPollingRef = useRef<NodeJS.Timeout | null>(null);
+  const attributeRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -89,6 +106,14 @@ export default function ItemDetailScreen() {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
+      }
+      if (autoTagPollingRef.current) {
+        clearInterval(autoTagPollingRef.current);
+        autoTagPollingRef.current = null;
+      }
+      if (attributeRefreshRef.current) {
+        clearInterval(attributeRefreshRef.current);
+        attributeRefreshRef.current = null;
       }
     };
   }, [id, itemIds]);
@@ -184,6 +209,44 @@ export default function ItemDetailScreen() {
       if (itemAttributes) {
         setAttributes(itemAttributes);
       }
+      
+      // Check for active auto_tag job if attributes are empty or item has placeholder title
+      if (user && (!itemAttributes || itemAttributes.length === 0 || foundItem.title === 'New Item')) {
+        // Check for active auto_tag job
+        const { data: activeAutoTagJobs } = await supabase
+          .from('ai_jobs')
+          .select('*')
+          .eq('job_type', 'auto_tag')
+          .eq('owner_user_id', user.id)
+          .in('status', ['queued', 'running'])
+          .order('created_at', { ascending: false })
+          .limit(5);
+        
+        if (activeAutoTagJobs) {
+          // Filter to find job for this item
+          const itemAutoTagJob = activeAutoTagJobs.find((job: any) => {
+            try {
+              const input = job.input as any;
+              return input?.wardrobe_item_id === id;
+            } catch {
+              return false;
+            }
+          });
+          
+          if (itemAutoTagJob) {
+            // Start polling for auto_tag completion
+            startPollingForAutoTag(itemAutoTagJob.id);
+          } else {
+            // No active job - start periodic refresh to check for completed attributes
+            startPeriodicAttributeRefresh();
+          }
+        } else {
+          // No active jobs - start periodic refresh
+          startPeriodicAttributeRefresh();
+        }
+      } else if (user && itemAttributes && itemAttributes.length > 0 && foundItem.title !== 'New Item') {
+        // Attributes exist and title is set - AI has completed, no need to poll
+      }
 
       // Load tags
       const { data: tagLinks } = await supabase
@@ -257,6 +320,120 @@ export default function ItemDetailScreen() {
         setIsGeneratingProductShot(false);
       }
     }, 90000);
+  };
+
+  const startPeriodicAttributeRefresh = () => {
+    // Clear any existing attribute refresh
+    if (attributeRefreshRef.current) {
+      clearInterval(attributeRefreshRef.current);
+    }
+    
+    // Use a separate interval for attribute refresh (less frequent)
+    attributeRefreshRef.current = setInterval(async () => {
+      if (!id) return;
+      
+      // Refresh attributes and item data
+      const { data: itemAttributes } = await getEntityAttributes('wardrobe_item', id);
+      if (itemAttributes && itemAttributes.length > 0) {
+        setAttributes(itemAttributes);
+        // Also refresh item to get updated title/category
+        const { data: refreshedItem } = await getWardrobeItem(id);
+        if (refreshedItem) {
+          setItem(refreshedItem);
+          // Update category if it was set
+          if (refreshedItem.category_id) {
+            const { data: categories } = await getWardrobeCategories();
+            const foundCategory = categories?.find((c) => c.id === refreshedItem.category_id);
+            if (foundCategory) {
+              setCategory(foundCategory);
+            }
+          }
+        }
+        // Stop refreshing once we have attributes
+        if (attributeRefreshRef.current) {
+          clearInterval(attributeRefreshRef.current);
+          attributeRefreshRef.current = null;
+        }
+      }
+    }, 5000); // Check every 5 seconds
+
+    // Stop after 120 seconds (24 attempts)
+    setTimeout(() => {
+      if (attributeRefreshRef.current) {
+        clearInterval(attributeRefreshRef.current);
+        attributeRefreshRef.current = null;
+      }
+    }, 120000);
+  };
+
+  const startPollingForAutoTag = (jobId: string) => {
+    // Clear any existing auto_tag polling
+    if (autoTagPollingRef.current) {
+      clearInterval(autoTagPollingRef.current);
+    }
+    
+    // Poll for auto_tag job completion
+    autoTagPollingRef.current = setInterval(async () => {
+      if (!id || !user) return;
+
+      try {
+        const { data: job, error } = await getAIJob(jobId);
+        
+        if (error || !job) {
+          // Job not found or error - switch to periodic refresh
+          clearInterval(autoTagPollInterval);
+          startPeriodicAttributeRefresh();
+          return;
+        }
+
+        // Check if job completed
+        if (job.status === 'succeeded' || job.status === 'failed') {
+          // Clear polling
+          if (autoTagPollingRef.current) {
+            clearInterval(autoTagPollingRef.current);
+            autoTagPollingRef.current = null;
+          }
+
+          // Refresh attributes and item data
+          if (job.status === 'succeeded') {
+            const { data: itemAttributes } = await getEntityAttributes('wardrobe_item', id);
+            if (itemAttributes) {
+              setAttributes(itemAttributes);
+            }
+            // Refresh item to get updated title/category
+            const { data: refreshedItem } = await getWardrobeItem(id);
+            if (refreshedItem) {
+              setItem(refreshedItem);
+              // Update category if it was set
+              if (refreshedItem.category_id) {
+                const { data: categories } = await getWardrobeCategories();
+                const foundCategory = categories?.find((c) => c.id === refreshedItem.category_id);
+                if (foundCategory) {
+                  setCategory(foundCategory);
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for auto_tag:', error);
+        // Switch to periodic refresh on error
+        if (autoTagPollingRef.current) {
+          clearInterval(autoTagPollingRef.current);
+          autoTagPollingRef.current = null;
+        }
+        startPeriodicAttributeRefresh();
+      }
+    }, 2000); // Poll every 2 seconds
+
+    // Stop polling after 60 seconds (30 attempts) and switch to periodic refresh
+    setTimeout(() => {
+      if (autoTagPollingRef.current) {
+        clearInterval(autoTagPollingRef.current);
+        autoTagPollingRef.current = null;
+      }
+      startPeriodicAttributeRefresh();
+    }, 60000);
   };
 
   const startPollingForProductShot = (jobId: string) => {
