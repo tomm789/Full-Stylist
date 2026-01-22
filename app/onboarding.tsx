@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { initializeUserProfile } from '@/lib/user';
 import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
-import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, pollAIJob } from '@/lib/ai-jobs';
+import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, pollAIJob, getAIJob } from '@/lib/ai-jobs';
 
 type OnboardingStep = 'account' | 'headshot' | 'bodyshot';
 
@@ -196,12 +196,20 @@ export default function OnboardingScreen() {
         
         const { data: completedJob, error: pollError } = await pollAIJob(headshotJob.id, 30, 2000);
         
+        // If polling timed out, do one final check - job might have completed
+        let finalJob = completedJob;
         if (pollError || !completedJob) {
-          throw new Error('Headshot generation timed out or failed');
+          console.log('[Onboarding] Polling timed out, doing final check...');
+          const { data: finalCheck } = await getAIJob(headshotJob.id);
+          if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
+            finalJob = finalCheck;
+          } else {
+            throw new Error('Headshot generation timed out or failed');
+          }
         }
         
-        if (completedJob.status === 'failed') {
-          throw new Error(`Generation failed: ${completedJob.error || 'Unknown error'}`);
+        if (finalJob.status === 'failed') {
+          throw new Error(`Generation failed: ${finalJob.error || 'Unknown error'}`);
         }
         
         
@@ -395,35 +403,43 @@ export default function OnboardingScreen() {
         
         setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
         
-        // Add timeout protection - if polling takes too long, allow user to continue
-        const pollingPromise = pollAIJob(bodyShotJob.id, 40, 2000);
-        const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) => {
-          setTimeout(() => {
-            resolve({ data: null, error: new Error('Generation is taking longer than expected. You can check your profile later to see if it completed.') });
-          }, 120000); // 2 minute hard timeout
-        });
+        setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
         
-        const { data: completedJob, error: pollError } = await Promise.race([pollingPromise, timeoutPromise]);
+        const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 50, 2000);
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:377',message:'Polling completed',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status||'null',error:completedJob?.error||pollError?.message||'none',jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:380',message:'Polling completed',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status||'null',error:completedJob?.error||pollError?.message||'none',jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
         // #endregion
         
+        // If polling timed out, do one final check - job might have completed
+        let finalJob = completedJob;
         if (pollError || !completedJob) {
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:382',message:'Polling failed or timed out',data:{pollError:pollError?.message||'none',hasCompletedJob:!!completedJob},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:386',message:'Polling timed out, doing final check',data:{jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
           // #endregion
-          throw new Error('Studio model generation timed out or failed');
+          console.log('[Onboarding] Body shot polling timed out, doing final check...');
+          const { data: finalCheck } = await getAIJob(bodyShotJob.id);
+          if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
+            finalJob = finalCheck;
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:391',message:'Final check found job completed',data:{status:finalCheck.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+            // #endregion
+          } else {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:395',message:'Final check - job still not complete',data:{status:finalCheck?.status||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+            // #endregion
+            throw new Error('Studio model generation timed out. You can check your profile later to see if it completed.');
+          }
         }
         
-        if (completedJob.status === 'failed') {
+        if (finalJob.status === 'failed') {
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:388',message:'Job failed',data:{error:completedJob.error||'Unknown error',status:completedJob.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:402',message:'Job failed',data:{error:finalJob.error||'Unknown error',status:finalJob.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
           // #endregion
-          throw new Error(`Generation failed: ${completedJob.error || 'Unknown error'}`);
+          throw new Error(`Generation failed: ${finalJob.error || 'Unknown error'}`);
         }
         
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:393',message:'Body shot generation succeeded, navigating',data:{jobId:bodyShotJob.id,result:completedJob.result?JSON.stringify(completedJob.result).substring(0,100):'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:408',message:'Body shot generation succeeded, navigating',data:{jobId:bodyShotJob.id,result:finalJob.result?JSON.stringify(finalJob.result).substring(0,100):'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
         // #endregion
         
         setGeneratingBodyShot(false);
