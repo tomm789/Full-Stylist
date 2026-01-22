@@ -235,13 +235,27 @@ export default function OnboardingScreen() {
   };
 
   const handleSkipHeadshot = () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:237',message:'handleSkipHeadshot called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
     
     Alert.alert(
       'Skip Headshot?',
       'You can add your headshot later from your profile. Without it, you won\'t be able to create a studio model for outfit rendering.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Skip', onPress: () => router.replace('/(tabs)/wardrobe') }
+        { 
+          text: 'Skip', 
+          onPress: () => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:248',message:'Skip headshot - navigating to wardrobe',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+            // #endregion
+            router.replace('/(tabs)/wardrobe');
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:250',message:'router.replace called for skip headshot',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+            // #endregion
+          }
+        }
       ]
     );
   };
@@ -376,19 +390,25 @@ export default function OnboardingScreen() {
         
         const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 40, 2000);
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:360',message:'Polling completed',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status||'null',error:completedJob?.error||pollError?.message||'none'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:377',message:'Polling completed',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status||'null',error:completedJob?.error||pollError?.message||'none',jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
         // #endregion
         
         if (pollError || !completedJob) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:382',message:'Polling failed or timed out',data:{pollError:pollError?.message||'none',hasCompletedJob:!!completedJob},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+          // #endregion
           throw new Error('Studio model generation timed out or failed');
         }
         
         if (completedJob.status === 'failed') {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:388',message:'Job failed',data:{error:completedJob.error||'Unknown error',status:completedJob.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+          // #endregion
           throw new Error(`Generation failed: ${completedJob.error || 'Unknown error'}`);
         }
         
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:370',message:'Body shot generation succeeded, navigating',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:393',message:'Body shot generation succeeded, navigating',data:{jobId:bodyShotJob.id,result:completedJob.result?JSON.stringify(completedJob.result).substring(0,100):'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
         // #endregion
         
         setGeneratingBodyShot(false);
@@ -396,6 +416,9 @@ export default function OnboardingScreen() {
         
         Alert.alert('Success', 'Studio model generated successfully!');
         // Complete onboarding - navigate to main app
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:401',message:'Navigating to wardrobe after success',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
         router.replace('/(tabs)/wardrobe');
       } else {
         // #region agent log
@@ -415,13 +438,27 @@ export default function OnboardingScreen() {
   };
 
   const handleSkipBodyShot = () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:364',message:'handleSkipBodyShot called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
     
     Alert.alert(
       'Skip Studio Model?',
       'You can add your studio model later from your profile. Without it, you won\'t be able to render outfits on yourself.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Skip', onPress: () => router.replace('/(tabs)/wardrobe') }
+        { 
+          text: 'Skip', 
+          onPress: () => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:373',message:'Skip body shot - navigating to wardrobe',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+            // #endregion
+            router.replace('/(tabs)/wardrobe');
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:375',message:'router.replace called for skip',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+            // #endregion
+          }
+        }
       ]
     );
   };
