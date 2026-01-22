@@ -10,6 +10,13 @@ export const SUPABASE_CONFIG = {
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
+// #region agent log
+try {
+  const urlHost = supabaseUrl ? new URL(supabaseUrl).hostname : 'none';
+  fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/supabase.ts:init',message:'Supabase config at load',data:{urlHost,anonKeySet:!!supabaseAnonKey,urlSet:!!supabaseUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H2,H5'})}).catch(()=>{});
+} catch (_) {}
+// #endregion
+
 if (SUPABASE_CONFIG.DEV_MODE && !SUPABASE_CONFIG.ENABLED) {
   console.warn('[Supabase] DISABLED in development');
 }

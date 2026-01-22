@@ -19,7 +19,7 @@ export interface Save {
 export interface Comment {
   id: string;
   user_id: string;
-  entity_type: 'post' | 'outfit' | 'lookbook';
+  entity_type: 'post' | 'outfit' | 'lookbook' | 'feedback_thread';
   entity_id: string;
   parent_comment_id?: string;
   body: string;
@@ -39,7 +39,7 @@ export interface Comment {
  */
 export async function likeEntity(
   userId: string,
-  entityType: 'post' | 'outfit' | 'lookbook',
+  entityType: 'post' | 'outfit' | 'lookbook' | 'feedback_thread',
   entityId: string
 ): Promise<{
   data: Like | null;
@@ -269,7 +269,7 @@ export async function getSaveCount(
  */
 export async function createComment(
   userId: string,
-  entityType: 'post' | 'outfit' | 'lookbook',
+  entityType: 'post' | 'outfit' | 'lookbook' | 'feedback_thread',
   entityId: string,
   body: string,
   parentCommentId?: string
@@ -309,7 +309,7 @@ export async function createComment(
  * Get comments for an entity
  */
 export async function getComments(
-  entityType: 'post' | 'outfit' | 'lookbook',
+  entityType: 'post' | 'outfit' | 'lookbook' | 'feedback_thread',
   entityId: string
 ): Promise<{
   data: Comment[];
@@ -344,7 +344,7 @@ export async function getComments(
  * Get comment count for an entity
  */
 export async function getCommentCount(
-  entityType: 'post' | 'outfit' | 'lookbook',
+  entityType: 'post' | 'outfit' | 'lookbook' | 'feedback_thread',
   entityId: string
 ): Promise<number> {
   const { count } = await supabase

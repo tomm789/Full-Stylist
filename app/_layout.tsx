@@ -102,6 +102,7 @@ export default function RootLayout() {
           <Stack.Screen name="search" />
           <Stack.Screen name="users/[id]" />
           <Stack.Screen name="account-settings" />
+          <Stack.Screen name="feedback" />
         </Stack>
         <AddToHomeScreenBanner />
       </NotificationsProvider>

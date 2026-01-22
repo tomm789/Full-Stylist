@@ -103,6 +103,10 @@ function HeaderRight() {
         // Navigate to account settings
         router.push('/account-settings' as any);
         break;
+      case 'feedback':
+        // Navigate to feedback forum
+        router.push('/feedback' as any);
+        break;
       case 'logout':
         // #region agent log
         fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'_layout.tsx:106',message:'Header menu logout clicked',data:{currentRoute:'tabs'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
@@ -177,6 +181,13 @@ function HeaderRight() {
             >
               <Ionicons name="settings-outline" size={20} color="#000" />
               <Text style={styles.menuItemText}>Account Settings</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => handleMenuOption('feedback')}
+            >
+              <Ionicons name="chatbubbles-outline" size={20} color="#000" />
+              <Text style={styles.menuItemText}>Feedback</Text>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
             <TouchableOpacity
