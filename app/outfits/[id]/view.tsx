@@ -21,7 +21,7 @@ import { getLookbook, getSystemLookbookOutfits } from '@/lib/lookbooks';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { getActiveOutfitRenderJob, getRecentOutfitRenderJob, getAIJob } from '@/lib/ai-jobs';
+import { getActiveOutfitRenderJob, getRecentOutfitRenderJob, getAIJob, pollAIJob } from '@/lib/ai-jobs';
 import {
   likeEntity,
   unlikeEntity,
@@ -172,12 +172,18 @@ export default function OutfitDetailScreen() {
             } else {
               // Job status unclear - show loading and poll
               setIsGeneratingOutfitRender(true);
-              startPollingForOutfitRender(activeJob.id);
+              startPollingForOutfitRender(activeJob.id).catch((error) => {
+                console.error('[OutfitView] Error starting polling:', error);
+                setIsGeneratingOutfitRender(false);
+              });
             }
           } else {
             // Job is recent - show loading and start polling
             setIsGeneratingOutfitRender(true);
-            startPollingForOutfitRender(activeJob.id);
+            startPollingForOutfitRender(activeJob.id).catch((error) => {
+              console.error('[OutfitView] Error starting polling:', error);
+              setIsGeneratingOutfitRender(false);
+            });
           }
         } else {
           // Check for recently completed job (within last 60 seconds)
@@ -341,73 +347,53 @@ export default function OutfitDetailScreen() {
     }, 10000); // Check every 10 seconds
   };
 
-  const startPollingForOutfitRender = (jobId: string) => {
+  const startPollingForOutfitRender = async (jobId: string) => {
     // Clear any existing polling
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
     }
 
-    // Poll every 2 seconds for job completion
-    pollingIntervalRef.current = setInterval(async () => {
-      if (!id || !user) return;
-
-      try {
-        const { data: job, error } = await getAIJob(jobId);
-        
-        if (error || !job) {
-          // Job not found or error - switch to periodic refresh
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
+    // Use await pollAIJob pattern like body shot generation for consistency
+    // This provides better timeout handling and final check
+    try {
+      const { pollAIJob } = await import('@/lib/ai-jobs');
+      const { data: completedJob, error: pollError } = await pollAIJob(jobId, 120, 2000);
+      
+      // If polling timed out, do one final check - job might have completed
+      let finalJob = completedJob;
+      if (pollError || !completedJob) {
+        console.log('[OutfitView] Outfit render polling timed out, doing final check...');
+        const { data: finalCheck } = await getAIJob(jobId);
+        if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
+          finalJob = finalCheck;
+        } else {
+          // Job still running after timeout - switch to periodic refresh
+          setIsGeneratingOutfitRender(false);
           startPeriodicOutfitRefresh();
           return;
         }
-
-        // Check if job completed
-        if (job.status === 'succeeded' || job.status === 'failed') {
+      }
+      
+      // Handle job completion
+      if (finalJob.status === 'succeeded') {
+        setIsGeneratingOutfitRender(false);
+        await refreshOutfit();
+        // Double-check that cover image exists
+        const { data: refreshedData } = await getOutfit(id);
+        if (refreshedData?.coverImage) {
           setIsGeneratingOutfitRender(false);
-          
-          // Clear polling
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-
-          // Refresh outfit to show the new render
-          if (job.status === 'succeeded') {
-            await refreshOutfit();
-            // Double-check that cover image exists and clear loading state
-            const { data: refreshedData } = await getOutfit(id);
-            if (refreshedData?.coverImage) {
-              setIsGeneratingOutfitRender(false);
-            }
-          } else if (job.status === 'failed') {
-            // Job failed - clear loading state
-            setIsGeneratingOutfitRender(false);
-          }
         }
-      } catch (error) {
-        console.error('Error polling for outfit render:', error);
-        // Switch to periodic refresh on error
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
-        startPeriodicOutfitRefresh();
+      } else if (finalJob.status === 'failed') {
+        setIsGeneratingOutfitRender(false);
+        console.log('[OutfitView] Outfit render job failed:', finalJob.error);
       }
-    }, 2000); // Poll every 2 seconds
-
-    // Stop polling after 600 seconds (300 attempts) and switch to periodic refresh
-    // Outfit renders can take longer in production
-    setTimeout(() => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
-      // Switch to periodic refresh as fallback
+    } catch (error) {
+      console.error('[OutfitView] Error polling for outfit render:', error);
+      setIsGeneratingOutfitRender(false);
+      // Switch to periodic refresh on error
       startPeriodicOutfitRefresh();
-    }, 600000); // 10 minutes
+    }
   };
 
   const loadLookbookOutfits = async () => {

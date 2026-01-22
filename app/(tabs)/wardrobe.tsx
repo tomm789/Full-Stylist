@@ -723,7 +723,9 @@ export default function WardrobeScreen() {
       }
       
       if (finalJob.status === 'failed') {
-        throw new Error(`Generation failed: ${finalJob.error || 'Unknown error'}`);
+        const errorMessage = finalJob.error || 'Unknown error';
+        console.error('[Wardrobe] Outfit generation failed:', errorMessage);
+        throw new Error(`Generation failed: ${errorMessage}`);
       }
 
       // Success! Show success message briefly, then navigate

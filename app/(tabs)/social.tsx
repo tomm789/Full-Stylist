@@ -1314,13 +1314,9 @@ export default function SocialScreen() {
                 onPress={() => {
                   if (generatingOutfitId) {
                     const outfitId = generatingOutfitId;
-                    // Clear timeout and close dialog before navigating
-                    if (outfitDialogTimeoutRef.current) {
-                      clearTimeout(outfitDialogTimeoutRef.current);
-                      outfitDialogTimeoutRef.current = null;
-                    }
+                    // Clear any pending polling/timeouts and close dialog before navigating
                     setGeneratingOutfitId(null);
-                    // Navigate - view page will detect active job and show its own dialog
+                    // Navigate - view page will detect active job and poll properly
                     router.push(`/outfits/${outfitId}/view`);
                   }
                 }}
