@@ -310,7 +310,7 @@ export default function OutfitDetailScreen() {
       clearInterval(pollingIntervalRef.current);
     }
 
-    // Check for outfit render every 3 seconds
+    // Check for outfit render every 10 seconds (less frequent than active polling)
     pollingIntervalRef.current = setInterval(async () => {
       if (!id) return;
       const { data, error } = await getOutfit(id);
@@ -334,7 +334,7 @@ export default function OutfitDetailScreen() {
         pollingIntervalRef.current = null;
         setIsGeneratingOutfitRender(false);
       }
-    }, 180000);
+    }, 10000); // Check every 10 seconds
   };
 
   const startPollingForOutfitRender = (jobId: string) => {
@@ -683,7 +683,7 @@ export default function OutfitDetailScreen() {
                 Creating a professional outfit visualization...
               </Text>
               <Text style={styles.loadingDialogSubtext}>
-                This may take 60-90 seconds. If it takes longer, the job may have failed.
+                This may take 60-90 seconds. You can cancel and check back later - the outfit will update automatically when ready.
               </Text>
               <TouchableOpacity
                 style={styles.cancelRenderButton}
@@ -693,6 +693,8 @@ export default function OutfitDetailScreen() {
                     clearInterval(pollingIntervalRef.current);
                     pollingIntervalRef.current = null;
                   }
+                  // Switch to periodic refresh so outfit will update when job completes
+                  startPeriodicOutfitRefresh();
                 }}
               >
                 <Text style={styles.cancelRenderButtonText}>Cancel</Text>
