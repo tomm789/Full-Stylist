@@ -700,80 +700,56 @@ export default function SocialScreen() {
       }
 
       // Trigger the job execution
-      await triggerAIJobExecution(renderJob.id);
+      const triggerResult = await triggerAIJobExecution(renderJob.id);
+      if (triggerResult.error) {
+        console.warn('[Social] Job trigger returned error (may still work):', triggerResult.error);
+        // Continue anyway - job might still be triggered
+      }
 
       // Set the generating outfit ID to show the overlay
       setGeneratingOutfitId(newOutfitId);
       
-      // Poll for completion in the background (120 attempts = ~10+ minutes)
-      // This will automatically close the dialog when the job completes
-      // Also set a timeout to close dialog after 8 minutes if still running
-      if (outfitDialogTimeoutRef.current) {
-        clearTimeout(outfitDialogTimeoutRef.current);
-      }
-      outfitDialogTimeoutRef.current = setTimeout(() => {
-        if (generatingOutfitId === newOutfitId) {
-          setGeneratingOutfitId(null);
-          Alert.alert(
-            'Generation Taking Longer',
-            'The outfit is still generating. You can check your outfits page to see when it\'s ready.',
-            [{ text: 'OK' }]
-          );
-        }
-        outfitDialogTimeoutRef.current = null;
-      }, 480000); // 8 minutes
-
-      pollAIJob(renderJob.id, 120, 2000).then(({ data: completedJob, error: pollError }) => {
-        if (outfitDialogTimeoutRef.current) {
-          clearTimeout(outfitDialogTimeoutRef.current);
-          outfitDialogTimeoutRef.current = null;
-        }
+      // Poll for completion (120 attempts = ~10+ minutes)
+      // Use await pattern like body shot generation for consistency
+      try {
+        const { data: completedJob, error: pollError } = await pollAIJob(renderJob.id, 120, 2000);
         
         // If polling timed out, do one final check
         let finalJob = completedJob;
         if (pollError || !completedJob) {
-          getAIJob(renderJob.id).then(({ data: finalCheck }) => {
-            if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
-              // Job completed - close dialog and navigate
-              if (finalCheck.status === 'succeeded') {
-                setGeneratingOutfitId(null);
-                router.push(`/outfits/${newOutfitId}/view`);
-              } else {
-                setGeneratingOutfitId(null);
-                Alert.alert('Generation Failed', finalCheck.error || 'Outfit generation failed');
-              }
-            } else {
-              // Still running - close dialog and let user check manually
-              setGeneratingOutfitId(null);
-              Alert.alert(
-                'Generation In Progress',
-                'The outfit is still generating. You can check your outfits page to see when it\'s ready.',
-                [{ text: 'OK' }]
-              );
-            }
-          }).catch(() => {
-            // Error checking final status - close dialog
-            setGeneratingOutfitId(null);
-          });
-        } else if (finalJob) {
-          // Job completed during polling
-          if (finalJob.status === 'succeeded') {
-            setGeneratingOutfitId(null);
-            router.push(`/outfits/${newOutfitId}/view`);
+          console.log('[Social] Outfit render polling timed out, doing final check...');
+          const { data: finalCheck } = await getAIJob(renderJob.id);
+          if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
+            finalJob = finalCheck;
           } else {
+            // Job still running - let user know they can check later
             setGeneratingOutfitId(null);
-            Alert.alert('Generation Failed', finalJob.error || 'Outfit generation failed');
+            Alert.alert(
+              'Generation In Progress',
+              'The outfit is still generating. You can check your outfits page to see when it\'s ready.',
+              [{ text: 'OK' }]
+            );
+            return;
           }
         }
-      }).catch((error) => {
-        if (outfitDialogTimeoutRef.current) {
-          clearTimeout(outfitDialogTimeoutRef.current);
-          outfitDialogTimeoutRef.current = null;
+        
+        // Handle job completion
+        if (finalJob.status === 'succeeded') {
+          setGeneratingOutfitId(null);
+          router.push(`/outfits/${newOutfitId}/view`);
+        } else if (finalJob.status === 'failed') {
+          setGeneratingOutfitId(null);
+          Alert.alert('Generation Failed', finalJob.error || 'Outfit generation failed');
         }
+      } catch (error: any) {
         console.error('[Social] Error polling outfit render:', error);
-        // Close dialog on error - user can check manually
         setGeneratingOutfitId(null);
-      });
+        Alert.alert(
+          'Generation Error',
+          'An error occurred while generating the outfit. You can check your outfits page to see if it completed.',
+          [{ text: 'OK' }]
+        );
+      }
       
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to try on outfit');

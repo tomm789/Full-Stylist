@@ -13,6 +13,7 @@ import {
   ScrollView,
   Switch,
   Pressable,
+  Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -686,7 +687,13 @@ export default function WardrobeScreen() {
       }
 
       // Trigger the job execution
-      await triggerAIJobExecution(renderJob.id);
+      const triggerResult = await triggerAIJobExecution(renderJob.id);
+      if (triggerResult.error) {
+        console.warn('[Wardrobe] Job trigger returned error (may still work):', triggerResult.error);
+        // Continue anyway - job might still be triggered
+      }
+      
+      setGenerationStatus('Generating outfit...\nThis may take 60-90 seconds.');
       
       // Poll for completion (120 attempts = ~10+ minutes with exponential backoff)
       const { data: completedJob, error: pollError } = await pollAIJob(renderJob.id, 120, 2000);
@@ -700,7 +707,18 @@ export default function WardrobeScreen() {
         if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
           finalJob = finalCheck;
         } else {
-          throw new Error('Outfit generation timed out. You can check your outfits later to see if it completed.');
+          // Job still running - let user know they can check later
+          setIsGenerating(false);
+          setGenerationStatus('');
+          Alert.alert(
+            'Generation In Progress',
+            'Outfit generation is taking longer than expected. You can check your outfits page to see when it\'s ready.',
+            [{ text: 'OK', onPress: () => {
+              setOutfitCreatorMode(false);
+              setSelectedOutfitItems([]);
+            }}]
+          );
+          return;
         }
       }
       
@@ -715,14 +733,14 @@ export default function WardrobeScreen() {
         setIsGenerating(false);
         setOutfitCreatorMode(false);
         setSelectedOutfitItems([]);
-        router.push(`/outfits/${outfitId}`);
+        router.push(`/outfits/${outfitId}/view`);
       }, 500);
 
     } catch (error: any) {
       console.error('Outfit generation error:', error);
-      alert(`Failed to generate outfit: ${error.message}`);
       setIsGenerating(false);
       setGenerationStatus('');
+      Alert.alert('Error', error.message || 'Failed to generate outfit');
     }
   };
 
