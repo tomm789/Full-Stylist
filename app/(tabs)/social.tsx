@@ -735,9 +735,20 @@ export default function SocialScreen() {
         
         // Handle job completion
         if (finalJob.status === 'succeeded') {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:handleTryOnOutfit',message:'job succeeded, before navigation',data:{jobId:renderJob.id,outfitId:newOutfitId,result:finalJob.result?JSON.stringify(finalJob.result).substring(0,200):'null',hasResult:!!finalJob.result},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H2,H3'})}).catch(()=>{});
+          // #endregion
+          // Refresh outfit data before navigation to ensure cover image is loaded
+          const { data: outfitData } = await getOutfit(newOutfitId);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:handleTryOnOutfit',message:'after getOutfit before navigation',data:{outfitId:newOutfitId,hasOutfit:!!outfitData?.outfit,hasCoverImage:!!outfitData?.coverImage,coverImageId:outfitData?.outfit?.cover_image_id,coverImageStorageKey:outfitData?.coverImage?.storage_key},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3,H5'})}).catch(()=>{});
+          // #endregion
           setGeneratingOutfitId(null);
           router.push(`/outfits/${newOutfitId}/view`);
         } else if (finalJob.status === 'failed') {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:handleTryOnOutfit',message:'job failed',data:{jobId:renderJob.id,outfitId:newOutfitId,error:finalJob.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+          // #endregion
           setGeneratingOutfitId(null);
           Alert.alert('Generation Failed', finalJob.error || 'Outfit generation failed');
         }

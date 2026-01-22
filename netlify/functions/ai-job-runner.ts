@@ -1133,14 +1133,21 @@ CRITICAL:
   }
   
   console.log(`[OutfitRender] Uploading generated image to storage...`);
+  // #region agent log
+  const logData = { outfit_id, userId, imageB64Length: finalImageB64?.length || 0, imageB64Prefix: finalImageB64?.substring(0, 50) || 'null' };
+  console.log(`[OutfitRender] DEBUG: Before upload - ${JSON.stringify(logData)}`);
+  // #endregion
   // Upload generated image
   const timestamp = Date.now();
   const storagePath = `${userId}/ai/outfits/${outfit_id}/${timestamp}.jpg`;
   const { imageId, storageKey } = await uploadImageToStorage(supabase, userId, finalImageB64, storagePath);
   console.log(`[OutfitRender] Image uploaded: ${imageId}, path: ${storagePath}`);
+  // #region agent log
+  console.log(`[OutfitRender] DEBUG: After upload - imageId: ${imageId}, storageKey: ${storageKey}`);
+  // #endregion
   
   // Create outfit_renders record
-  const { data: render } = await supabase
+  const { data: render, error: renderError } = await supabase
     .from('outfit_renders')
     .insert({
       outfit_id,
@@ -1151,12 +1158,20 @@ CRITICAL:
     })
     .select()
     .single();
+  // #region agent log
+  console.log(`[OutfitRender] DEBUG: outfit_renders insert - render: ${render?.id || 'null'}, error: ${renderError?.message || 'null'}`);
+  // #endregion
   
   // Always update outfit cover_image_id with the latest render
-  await supabase
+  const { data: outfitUpdate, error: outfitUpdateError } = await supabase
     .from('outfits')
     .update({ cover_image_id: imageId })
-    .eq('id', outfit_id);
+    .eq('id', outfit_id)
+    .select()
+    .single();
+  // #region agent log
+  console.log(`[OutfitRender] DEBUG: outfit update - updated: ${outfitUpdate?.id || 'null'}, cover_image_id: ${outfitUpdate?.cover_image_id || 'null'}, error: ${outfitUpdateError?.message || 'null'}`);
+  // #endregion
   
   return {
     renders: [{
