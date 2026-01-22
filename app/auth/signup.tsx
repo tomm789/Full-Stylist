@@ -18,12 +18,25 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp, session, user } = useAuth();
+  const [hasJustSignedUp, setHasJustSignedUp] = useState(false);
+  const { signUp, signOut, session, user } = useAuth();
   const router = useRouter();
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSignUp = async () => {
-    if (!email.trim()) {
+    const trimmedEmail = email.trim();
+    
+    if (!trimmedEmail) {
       Alert.alert('Error', 'Please enter your email');
+      return;
+    }
+
+    if (!validateEmail(trimmedEmail)) {
+      Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
@@ -45,9 +58,14 @@ export default function SignUpScreen() {
     setLoading(true);
 
     try {
-      const { error, user: signUpUser, session: signUpSession } = await signUp(email, password);
+      const { error, user: signUpUser, session: signUpSession } = await signUp(trimmedEmail, password);
 
       if (error) {
+        // If signup fails, make sure we don't have a partial session
+        // Sign out any existing session to prevent navigation issues
+        if (session) {
+          await signOut();
+        }
         Alert.alert('Error', error.message || 'Failed to sign up');
         setLoading(false);
         return;
@@ -56,6 +74,8 @@ export default function SignUpScreen() {
       // Check if user was automatically signed in (email confirmation disabled)
       if (signUpSession && signUpUser) {
         console.log('[SignUp] User automatically signed in, navigating to onboarding');
+        // Set flag so useEffect knows we just signed up
+        setHasJustSignedUp(true);
         // Clear form
         setEmail('');
         setPassword('');
@@ -91,13 +111,15 @@ export default function SignUpScreen() {
   };
 
   // Listen for auth state changes after signup (for email confirmation flow)
+  // Only navigate if we just signed up, not if there's an existing session from a previous invalid signup
   useEffect(() => {
-    if (session && user) {
+    if (hasJustSignedUp && session && user) {
       console.log('[SignUp] Session detected after signup, navigating to onboarding');
       // User confirmed email or was auto-signed in
+      setHasJustSignedUp(false); // Reset flag
       router.replace('/onboarding');
     }
-  }, [session, user, router]);
+  }, [hasJustSignedUp, session, user, router]);
 
   const navigateToLogin = () => {
     router.push('/auth/login');
