@@ -1071,119 +1071,61 @@ async function processOutfitRender(
   
   if (useMannequin) {
     // Step 1: Generate mannequin
-    const mannequinPrompt = `Fashion Photography - Outfit on Mannequin.
-TASK: Create a photorealistic image showing a complete outfit on a fashion mannequin.
-
+    const mannequinPrompt = `Generate a photorealistic image of a fashion outfit on a ghost mannequin.
 INSTRUCTIONS:
-- Combine all ${itemCount} provided clothing items into a single cohesive outfit.
-- Display the outfit on a standard fashion mannequin (ghost/invisible style preferred).
-- Ensure all items are properly fitted and styled together.
-- Maintain professional fashion photography quality.
-- Use a clean, simple grey or white studio background.
-- Vertical portrait format (3:4 aspect ratio).
-${prompt ? `\nADDITIONAL STYLING:\n${prompt}` : ''}`;
+- Combine all provided clothing items into a single cohesive outfit.
+- BACKGROUND: Simple grey studio.
+- STYLE: Ghost mannequin (invisible mannequin).
+- CLOTHING: ${itemCount} items provided.
+- DETAILS: ${prompt || "No additional details"}.
+- ASPECT RATIO: Vertical Portrait.`;
     
-    console.log(`[OutfitRender] Generating mannequin with ${itemImages.length} item images`);
-    // Use preferred model for mannequin generation, with pro model fallback
-    let mannequinB64: string;
-    try {
-      mannequinB64 = await callGeminiAPI(mannequinPrompt, itemImages, preferredModel, 'IMAGE');
-      console.log(`[OutfitRender] Mannequin generated successfully`);
-    } catch (error: any) {
-      if (error.message.includes('Image generation failed') && preferredModel !== 'gemini-3-pro-image-preview') {
-        console.log(`[OutfitRender] Mannequin generation failed with preferred model, trying pro model...`);
-        mannequinB64 = await callGeminiAPI(mannequinPrompt, itemImages, 'gemini-3-pro-image-preview', 'IMAGE');
-        console.log(`[OutfitRender] Mannequin generated with pro model fallback`);
-      } else {
-        throw error;
-      }
-    }
+    // Use preferred model for mannequin generation
+    const mannequinB64 = await callGeminiAPI(mannequinPrompt, itemImages, preferredModel, 'IMAGE');
     
     // Step 2: Apply to body
-    const applyPrompt = `Fashion Photography - Apply Outfit to Subject.
-IMAGE REFERENCES:
-- Image 0: Body reference - use this EXACT body pose, proportions, and framing.
-- Image 1: Outfit reference - transfer this complete outfit onto the subject.
-- Image 2: Face reference - apply this EXACT facial identity, hair, and head features.
+    const applyPrompt = `DRESSING THE SUBJECT:
+- IMAGE 0: The body/pose reference (base photo).
+- IMAGE 1: The target outfit (on mannequin).
+- IMAGE 2: The facial identity reference (headshot).
 
 TASK:
-1. Transfer the complete outfit from Image 1 onto the person in Image 0.
-2. Apply the face, hair, and head from Image 2 to the body in Image 0.
-3. Maintain the exact body pose and framing from Image 0.
-4. Ensure natural proportions - head proportional to body (8-heads-tall rule).
-5. Match lighting and skin tones between all elements.
-6. Create a seamless, realistic composite.
-
-OUTPUT:
-- Full body vertical portrait (3:4 aspect ratio)
-- Professional fashion photography quality
-- Clean white studio background
-- Natural, realistic appearance`;
+- Transfer the EXACT outfit from Image 1 onto the person in Image 0.
+- Use the face, hair, and head from Image 2.
+- Maintain the body pose and framing from Image 0.
+- Ensure lighting and skin tones match perfectly.
+- Ensure head-to-body proportions are accurate (8-heads-tall rule).
+- OUTPUT: Full Body Vertical Portrait.`;
     
-    console.log(`[OutfitRender] Using mannequin workflow with ${[bodyB64, mannequinB64, headB64].length} images`);
-    console.log(`[OutfitRender] Using model: gemini-3-pro-image-preview`);
-    
-    try {
-      // Use pro model for final render (better quality for applying outfit to body)
-      finalImageB64 = await callGeminiAPI(applyPrompt, [bodyB64, mannequinB64, headB64], 'gemini-3-pro-image-preview', 'IMAGE');
-      console.log(`[OutfitRender] Gemini API returned image data (${finalImageB64.length} chars)`);
-    } catch (error: any) {
-      console.error(`[OutfitRender] Gemini API error:`, error.message);
-      console.error(`[OutfitRender] Error stack:`, error.stack);
-      // If pro model fails, the error message will be more descriptive now
-      throw error;
-    }
+    // Use pro model for final render (better quality for applying outfit to body)
+    finalImageB64 = await callGeminiAPI(applyPrompt, [bodyB64, mannequinB64, headB64], 'gemini-3-pro-image-preview', 'IMAGE');
   } else {
-    // Direct workflow - try with improved prompt
-    const directPrompt = `Fashion Photography - Full Body Portrait.
+    // Direct workflow
+    const directPrompt = `Fashion Photography.
 OUTPUT FORMAT: Vertical Portrait (3:4 Aspect Ratio).
 
-IMAGE REFERENCES:
-- Image 0: Body reference - use this EXACT body pose, proportions, and framing.
-- Image 1: Face reference - apply this EXACT facial identity, hair, and head features.
-- Images 2+: Clothing items - dress the subject in these items.
+SUBJECT REFERENCE:
+- Image 0: Current body state, pose, and framing.
+- Image 1: STRICT Facial Identity reference. Use the face, hair, and head from this image.
 
-TASK:
-1. Combine the face from Image 1 with the body from Image 0.
-2. Dress the subject in the clothing items provided (Images 2+).
-3. Maintain the exact body pose and framing from Image 0.
-4. Ensure natural proportions - head should be proportional to body (8-heads-tall rule).
-5. Match lighting and skin tones between face and body.
-6. Create a cohesive, realistic outfit from all provided clothing items.
+CLOTHING INSTRUCTIONS:
+- Dress the subject in the provided clothing images.
+- ${prompt || "No additional details"}
 
-STYLE:
-- Professional fashion photography
-- Clean white studio background
-- Natural lighting
-- Realistic proportions and anatomy
-${prompt ? `\nADDITIONAL REQUIREMENTS:\n${prompt}` : ''}`;
+CRITICAL:
+1. Apply the exact facial identity, hair, and head from Image 1 onto the body in Image 0.
+2. Maintain the EXACT pose and framing from Image 0.
+3. Focus ONLY on applying/changing the clothes as requested.
+4. Ensure head-to-body proportions are accurate (8-heads-tall rule). No long necks or large heads.
+5. Background: Pure white infinite studio.`;
     
     const allImages = [bodyB64, headB64, ...itemImages];
     console.log(`[OutfitRender] Calling Gemini API with ${allImages.length} images (body, head, ${itemImages.length} items)`);
     console.log(`[OutfitRender] Using model: ${preferredModel}`);
     console.log(`[OutfitRender] Prompt length: ${directPrompt.length} chars`);
     
-    try {
-      // Use preferred model for direct workflow
-      finalImageB64 = await callGeminiAPI(directPrompt, allImages, preferredModel, 'IMAGE');
-      console.log(`[OutfitRender] Gemini API returned image data (${finalImageB64.length} chars)`);
-    } catch (error: any) {
-      // If the preferred model fails with IMAGE_OTHER, try the pro model as fallback
-      if (error.message.includes('Image generation failed') && preferredModel !== 'gemini-3-pro-image-preview') {
-        console.log(`[OutfitRender] Preferred model failed, trying pro model as fallback...`);
-        try {
-          finalImageB64 = await callGeminiAPI(directPrompt, allImages, 'gemini-3-pro-image-preview', 'IMAGE');
-          console.log(`[OutfitRender] Pro model fallback succeeded (${finalImageB64.length} chars)`);
-        } catch (fallbackError: any) {
-          console.error(`[OutfitRender] Pro model fallback also failed:`, fallbackError.message);
-          throw error; // Throw original error with better context
-        }
-      } else {
-        console.error(`[OutfitRender] Gemini API error:`, error.message);
-        console.error(`[OutfitRender] Error stack:`, error.stack);
-        throw error;
-      }
-    }
+    // Use preferred model for direct workflow
+    finalImageB64 = await callGeminiAPI(directPrompt, allImages, preferredModel, 'IMAGE');
   }
   
   if (!finalImageB64) {
