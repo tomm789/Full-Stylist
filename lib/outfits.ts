@@ -225,7 +225,7 @@ export async function getOutfit(outfitId: string): Promise<{
     .single();
 
   // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'outfits.ts:getOutfit',message:'after outfit query',data:{outfitId,hasError:!!outfitError,errorMsg:outfitError?.message,hasOutfit:!!outfit,coverImageId:outfit?.cover_image_id,hasCoverImage:!!outfit?.cover_image},coverImageIdFromJoin:outfit?.cover_image?.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3'})}).catch(()=>{});
+  fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'outfits.ts:getOutfit',message:'after outfit query',data:{outfitId,hasError:!!outfitError,errorMsg:outfitError?.message,hasOutfit:!!outfit,coverImageId:outfit?.cover_image_id,hasCoverImage:!!outfit?.cover_image,coverImageIdFromJoin:outfit?.cover_image?.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3'})}).catch(()=>{});
   // #endregion
 
   if (outfitError || !outfit) {
