@@ -687,15 +687,24 @@ export default function WardrobeScreen() {
       // Trigger the job execution
       await triggerAIJobExecution(renderJob.id);
       
-      // Poll for completion (90 attempts = 180 seconds)
-      const { data: completedJob, error: pollError } = await pollAIJob(renderJob.id, 90, 2000);
+      // Poll for completion (120 attempts = ~10+ minutes with exponential backoff)
+      const { data: completedJob, error: pollError } = await pollAIJob(renderJob.id, 120, 2000);
       
+      // If polling timed out, do one final check - job might have completed
+      let finalJob = completedJob;
       if (pollError || !completedJob) {
-        throw new Error('Polling timeout - outfit may still be generating');
+        console.log('[Wardrobe] Outfit render polling timed out, doing final check...');
+        const { getAIJob } = await import('@/lib/ai-jobs');
+        const { data: finalCheck } = await getAIJob(renderJob.id);
+        if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
+          finalJob = finalCheck;
+        } else {
+          throw new Error('Outfit generation timed out. You can check your outfits later to see if it completed.');
+        }
       }
       
-      if (completedJob.status === 'failed') {
-        throw new Error(`Generation failed: ${completedJob.error || 'Unknown error'}`);
+      if (finalJob.status === 'failed') {
+        throw new Error(`Generation failed: ${finalJob.error || 'Unknown error'}`);
       }
 
       // Success! Show success message briefly, then navigate

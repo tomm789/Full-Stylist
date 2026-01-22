@@ -40,7 +40,7 @@ import { createRepost, removeRepost, hasReposted, getRepostCount } from '@/lib/r
 import { getLookbook } from '@/lib/lookbooks';
 import { getUserOutfits, getOutfit, saveOutfit } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
-import { createAIJob, triggerAIJobExecution, pollAIJob } from '@/lib/ai-jobs';
+import { createAIJob, triggerAIJobExecution, pollAIJob, getAIJob } from '@/lib/ai-jobs';
 import { supabase } from '@/lib/supabase';
 import { getWardrobeCategories, getWardrobeItemsByIds } from '@/lib/wardrobe';
 import { unfollowUser, isFollowing } from '@/lib/user';
@@ -702,9 +702,47 @@ export default function SocialScreen() {
       // Set the generating outfit ID to show the overlay
       setGeneratingOutfitId(newOutfitId);
       
+      // Poll for completion in the background (120 attempts = ~10+ minutes)
+      // This will automatically close the dialog when the job completes
+      pollAIJob(renderJob.id, 120, 2000).then(({ data: completedJob, error: pollError }) => {
+        // If polling timed out, do one final check
+        let finalJob = completedJob;
+        if (pollError || !completedJob) {
+          getAIJob(renderJob.id).then(({ data: finalCheck }) => {
+            if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
+              finalJob = finalCheck;
+              // Job completed - close dialog and navigate
+              if (finalCheck.status === 'succeeded') {
+                setGeneratingOutfitId(null);
+                router.push(`/outfits/${newOutfitId}/view`);
+              } else {
+                setGeneratingOutfitId(null);
+                Alert.alert('Generation Failed', finalCheck.error || 'Outfit generation failed');
+              }
+            } else {
+              // Still running - keep dialog open, user can manually navigate
+              console.log('[Social] Outfit render still in progress');
+            }
+          });
+        } else if (finalJob) {
+          // Job completed during polling
+          if (finalJob.status === 'succeeded') {
+            setGeneratingOutfitId(null);
+            router.push(`/outfits/${newOutfitId}/view`);
+          } else {
+            setGeneratingOutfitId(null);
+            Alert.alert('Generation Failed', finalJob.error || 'Outfit generation failed');
+          }
+        }
+      }).catch((error) => {
+        console.error('[Social] Error polling outfit render:', error);
+        // Keep dialog open - user can manually navigate
+      });
+      
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to try on outfit');
       setTryingOnOutfit(false);
+      setGeneratingOutfitId(null);
     } finally {
       setTryingOnOutfit(false);
     }

@@ -375,7 +375,8 @@ export default function OutfitDetailScreen() {
       }
     }, 2000); // Poll every 2 seconds
 
-    // Stop polling after 180 seconds (90 attempts) and switch to periodic refresh
+    // Stop polling after 600 seconds (300 attempts) and switch to periodic refresh
+    // Outfit renders can take longer in production
     setTimeout(() => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
@@ -383,7 +384,7 @@ export default function OutfitDetailScreen() {
       }
       // Switch to periodic refresh as fallback
       startPeriodicOutfitRefresh();
-    }, 180000);
+    }, 600000); // 10 minutes
   };
 
   const loadLookbookOutfits = async () => {
