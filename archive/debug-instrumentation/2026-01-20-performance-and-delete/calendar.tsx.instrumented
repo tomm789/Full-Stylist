@@ -1,0 +1,382 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  getSlotPresets,
+  getCalendarEntriesForDate,
+  getCalendarEntries,
+  createCalendarEntry,
+  CalendarEntry,
+  CalendarSlotPreset,
+} from '@/lib/calendar';
+import { getUserOutfits } from '@/lib/outfits';
+
+export default function CalendarScreen() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [slotPresets, setSlotPresets] = useState<CalendarSlotPreset[]>([]);
+  const [entries, setEntries] = useState<Map<string, CalendarEntry[]>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  useEffect(() => {
+    if (user) {
+      initialize();
+    }
+  }, [user, year, month]);
+
+  const initialize = async () => {
+    if (!user) return;
+
+    setLoading(true);
+
+    // Load slot presets
+    const { data: presets } = await getSlotPresets(user.id);
+    if (presets) {
+      setSlotPresets(presets);
+    }
+
+    // Load entries for current month
+    await loadMonthEntries();
+
+    setLoading(false);
+  };
+
+  const loadMonthEntries = async () => {
+    if (!user) return;
+
+    // #region agent log
+    const calendarStartTime = Date.now();
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'calendar.tsx:58',message:'loadMonthEntries START (batch)',data:{year,month},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
+
+    // Get all dates in current month
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    
+    const startDate = firstDay.toISOString().split('T')[0];
+    const endDate = lastDay.toISOString().split('T')[0];
+    
+    // Batch load all entries for the entire month in one query
+    const { data: monthEntries } = await getCalendarEntries(user.id, startDate, endDate);
+    
+    // Group entries by date
+    const entriesMap = new Map<string, CalendarEntry[]>();
+    if (monthEntries) {
+      monthEntries.forEach((entry) => {
+        const date = entry.calendar_day?.date;
+        if (date) {
+          const existing = entriesMap.get(date) || [];
+          existing.push(entry);
+          entriesMap.set(date, existing);
+        }
+      });
+    }
+    
+    setEntries(entriesMap);
+    
+    // #region agent log
+    const calendarEndTime = Date.now();
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'calendar.tsx:76',message:'loadMonthEntries END (batch)',data:{entriesLoaded:monthEntries?.length||0,durationMs:calendarEndTime-calendarStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadMonthEntries();
+    setRefreshing(false);
+  };
+
+  const navigateMonth = (direction: number) => {
+    const newDate = new Date(year, month + direction, 1);
+    setCurrentDate(newDate);
+  };
+
+  const formatDateKey = (date: Date): string => {
+    return date.toISOString().split('T')[0];
+  };
+
+  const formatDayLabel = (date: Date): string => {
+    return date.getDate().toString();
+  };
+
+  const getDaysInMonth = (): Date[] => {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const days: Date[] = [];
+
+    // Add padding days from previous month
+    const startPadding = firstDay.getDay();
+    for (let i = startPadding - 1; i >= 0; i--) {
+      const date = new Date(year, month, -i);
+      days.push(date);
+    }
+
+    // Add days in current month
+    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+      days.push(new Date(d));
+    }
+
+    // Add padding days from next month to fill week
+    const endPadding = 6 - lastDay.getDay();
+    for (let i = 1; i <= endPadding; i++) {
+      const date = new Date(year, month + 1, i);
+      days.push(date);
+    }
+
+    return days;
+  };
+
+  const isCurrentMonth = (date: Date): boolean => {
+    return date.getMonth() === month && date.getFullYear() === year;
+  };
+
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+  };
+
+  const getDayEntries = (date: Date): CalendarEntry[] => {
+    const dateKey = formatDateKey(date);
+    return entries.get(dateKey) || [];
+  };
+
+  const handleDayPress = (date: Date) => {
+    const dateKey = formatDateKey(date);
+    router.push(`/calendar/day/${dateKey}`);
+  };
+
+  const monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const days = getDaysInMonth();
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" style={styles.loader} />
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
+      {/* Month Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigateMonth(-1)} style={styles.navButton}>
+          <Text style={styles.navButtonText}>‹</Text>
+        </TouchableOpacity>
+        <Text style={styles.monthTitle}>
+          {monthNames[month]} {year}
+        </Text>
+        <TouchableOpacity onPress={() => navigateMonth(1)} style={styles.navButton}>
+          <Text style={styles.navButtonText}>›</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Week Days Header */}
+      <View style={styles.weekDaysRow}>
+        {weekDays.map((day) => (
+          <View key={day} style={styles.weekDay}>
+            <Text style={styles.weekDayText}>{day}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Calendar Grid */}
+      <View style={styles.calendarGrid}>
+        {days.map((date, index) => {
+          const dateKey = formatDateKey(date);
+          const dayEntries = getDayEntries(date);
+          const inCurrentMonth = isCurrentMonth(date);
+          const today = isToday(date);
+
+          return (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.dayCell,
+                !inCurrentMonth && styles.dayCellOtherMonth,
+                today && styles.dayCellToday,
+              ]}
+              onPress={() => handleDayPress(date)}
+            >
+              <Text
+                style={[
+                  styles.dayNumber,
+                  !inCurrentMonth && styles.dayNumberOtherMonth,
+                  today && styles.dayNumberToday,
+                ]}
+              >
+                {formatDayLabel(date)}
+              </Text>
+              {dayEntries.length > 0 && (
+                <View style={styles.entriesIndicator}>
+                  <Text style={styles.entriesCount}>{dayEntries.length}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Add Entry Button */}
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => {
+          const today = new Date();
+          router.push(`/calendar/day/${formatDateKey(today)}`);
+        }}
+      >
+        <Text style={styles.addButtonText}>+ Add Entry</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    padding: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  navButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navButtonText: {
+    fontSize: 24,
+    color: '#000',
+    fontWeight: 'bold',
+  },
+  monthTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  weekDaysRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  weekDay: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  weekDayText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    textTransform: 'uppercase',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dayCell: {
+    width: `${100 / 7}%`,
+    aspectRatio: 1,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    padding: 4,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  dayCellOtherMonth: {
+    backgroundColor: '#f9f9f9',
+  },
+  dayCellToday: {
+    backgroundColor: '#fff3e0',
+    borderColor: '#ff9800',
+    borderWidth: 2,
+  },
+  dayNumber: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000',
+  },
+  dayNumberOtherMonth: {
+    color: '#999',
+  },
+  dayNumberToday: {
+    fontWeight: 'bold',
+    color: '#ff9800',
+  },
+  entriesIndicator: {
+    marginTop: 2,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    minWidth: 16,
+    alignItems: 'center',
+  },
+  entriesCount: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  addButton: {
+    marginTop: 24,
+    backgroundColor: '#000',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});

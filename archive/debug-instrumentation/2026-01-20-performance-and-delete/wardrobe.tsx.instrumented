@@ -1,0 +1,1172 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  Image,
+  ActivityIndicator,
+  RefreshControl,
+  Modal,
+  ScrollView,
+  Switch,
+  Pressable,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  getDefaultWardrobeId,
+  getWardrobeCategories,
+  getWardrobeItems,
+  getWardrobeItemImages,
+  getWardrobeItemsImages,
+  getSubcategories,
+  repairWardrobeItemImageLinks,
+  WardrobeCategory,
+  WardrobeSubcategory,
+  WardrobeItem,
+} from '@/lib/wardrobe';
+import { Image as ExpoImage } from 'expo-image';
+import { supabase } from '@/lib/supabase';
+
+interface FilterState {
+  subcategoryId: string | null;
+  color: string | null;
+  material: string | null;
+  size: string | null;
+  season: string | null;
+  tagIds: string[];
+  favorites: boolean | null;
+}
+
+export default function WardrobeScreen() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [wardrobeId, setWardrobeId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<WardrobeCategory[]>([]);
+  const [subcategories, setSubcategories] = useState<WardrobeSubcategory[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [items, setItems] = useState<WardrobeItem[]>([]);
+  const [allItems, setAllItems] = useState<WardrobeItem[]>([]);
+  const [itemImagesCache, setItemImagesCache] = useState<Map<string, string | null>>(new Map());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+  const [availableTags, setAvailableTags] = useState<Array<{ id: string; name: string }>>([]);
+  const [filters, setFilters] = useState<FilterState>({
+    subcategoryId: null,
+    color: null,
+    material: null,
+    size: null,
+    season: null,
+    tagIds: [],
+    favorites: null,
+  });
+
+  useEffect(() => {
+    if (user) {
+      loadWardrobe();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (wardrobeId && items.length > 0 && user) {
+      // Check migration status once after items are loaded
+      checkMigrationStatus();
+      // Auto-repair disabled for performance - images are now batch loaded
+      // autoRepairMissingLinks();
+    }
+  }, [wardrobeId, items, user]);
+
+  const autoRepairMissingLinks = async () => {
+    // #region agent log
+    const autoRepairStartTime = Date.now();
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.tsx:82',message:'autoRepairMissingLinks START',data:{itemsCount:items.length},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
+    
+    // Only run once per session
+    if ((window as any).__wardrobeAutoRepairRun) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.tsx:82',message:'autoRepair already run, SKIPPED',data:{durationMs:Date.now()-autoRepairStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      return;
+    }
+    (window as any).__wardrobeAutoRepairRun = true;
+
+    if (!user) return;
+
+    try {
+      // Check if any items are missing images by trying to get images for first few items
+      const itemsToCheck = items.slice(0, 3);
+      let itemsWithoutImages = 0;
+      
+      for (const item of itemsToCheck) {
+        const { data: images } = await getWardrobeItemImages(item.id);
+        if (!images || images.length === 0) {
+          itemsWithoutImages++;
+        }
+      }
+
+      // If we found items without images, trigger repair
+      if (itemsWithoutImages > 0) {
+        const { data: repairResult, error: repairError } = await repairWardrobeItemImageLinks(user.id);
+        if (!repairError && repairResult && repairResult.repaired > 0) {
+          // Reload items to refresh the UI
+          loadItems();
+        }
+      }
+      
+      // #region agent log
+      const autoRepairEndTime = Date.now();
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.tsx:134',message:'autoRepairMissingLinks END',data:{durationMs:autoRepairEndTime-autoRepairStartTime,itemsWithoutImages},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.tsx:116',message:'autoRepair error',data:{error:error?.message||String(error),durationMs:Date.now()-autoRepairStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      console.error('[WardrobeScreen] Error in auto-repair:', error);
+    }
+  };
+
+  const checkMigrationStatus = async () => {
+    // Check migration status only once per session
+    if ((window as any).__wardrobeMigrationChecked) {
+      return;
+    }
+    (window as any).__wardrobeMigrationChecked = true;
+
+    // Try to check if the migration has been applied by querying for images
+    // through wardrobe_item_images join
+    try {
+      if (items && items.length > 0) {
+        // Try to get images for the first item to test if migration is working
+        const testItemId = items[0].id;
+        const { data: testImages } = await getWardrobeItemImages(testItemId);
+        
+        if (testImages && testImages.length > 0 && testImages[0].image === null) {
+          console.warn('[WardrobeScreen] ⚠️  Migration 0008_fix_images_rls_for_wardrobe_items.sql may not be applied. Image data is inaccessible.');
+        }
+      }
+    } catch (error) {
+      // Silent fail
+    }
+  };
+
+  useEffect(() => {
+    if (wardrobeId) {
+      loadItems();
+      loadTags();
+    }
+  }, [wardrobeId, selectedCategoryId, searchQuery]);
+
+  useEffect(() => {
+    if (selectedCategoryId) {
+      loadSubcategories(selectedCategoryId);
+    } else {
+      setSubcategories([]);
+    }
+  }, [selectedCategoryId]);
+
+  // Use useMemo to avoid recalculating filters on every render
+  const filteredItems = useMemo(() => {
+    // #region agent log
+    const filterStartTime = Date.now();
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.tsx:177',message:'useMemo filter START',data:{allItemsCount:allItems.length,filters},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
+    
+    let filtered = [...allItems];
+
+    // Subcategory filter
+    if (filters.subcategoryId) {
+      filtered = filtered.filter((item) => item.subcategory_id === filters.subcategoryId);
+    }
+
+    // Color filter
+    if (filters.color) {
+      const filterColor = filters.color.toLowerCase();
+      filtered = filtered.filter(
+        (item) =>
+          item.color_primary?.toLowerCase() === filterColor ||
+          (item.color_palette &&
+            typeof item.color_palette === 'object' &&
+            JSON.stringify(item.color_palette).toLowerCase().includes(filterColor))
+      );
+    }
+
+    // Material filter (JSON field - client-side)
+    if (filters.material) {
+      filtered = filtered.filter((item) => {
+        if (!item.material) return false;
+        const materialStr =
+          typeof item.material === 'string'
+            ? item.material
+            : JSON.stringify(item.material);
+        return materialStr.toLowerCase().includes(filters.material!.toLowerCase());
+      });
+    }
+
+    // Size filter (JSON field - client-side)
+    if (filters.size) {
+      filtered = filtered.filter((item) => {
+        if (!item.size) return false;
+        const sizeStr = typeof item.size === 'string' ? item.size : JSON.stringify(item.size);
+        return sizeStr.toLowerCase().includes(filters.size!.toLowerCase());
+      });
+    }
+
+    // Season filter (JSON field - client-side)
+    if (filters.season) {
+      filtered = filtered.filter((item) => {
+        if (!item.seasonality) return false;
+        const seasonStr =
+          typeof item.seasonality === 'string'
+            ? item.seasonality
+            : JSON.stringify(item.seasonality);
+        return seasonStr.toLowerCase().includes(filters.season!.toLowerCase());
+      });
+    }
+
+    // Favorites filter
+    if (filters.favorites !== null) {
+      filtered = filtered.filter((item) => item.is_favorite === filters.favorites);
+    }
+
+    // Tags filter (will need to load tag links for items)
+    if (filters.tagIds.length > 0) {
+      // For MVP, we'll need to load tag links for all items and filter
+      // This can be optimized later
+      filtered = filtered.filter((item) => {
+        // Simplified - in production, would need to check tag_links table
+        return true; // Placeholder - requires additional query
+      });
+    }
+
+    // #region agent log
+    const filterEndTime = Date.now();
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.tsx:244',message:'useMemo filter END',data:{filteredCount:filtered.length,durationMs:filterEndTime-filterStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
+    
+    return filtered;
+  }, [allItems, filters]);
+  
+  // Update items when filtered results change
+  useEffect(() => {
+    setItems(filteredItems);
+  }, [filteredItems]);
+
+  const loadWardrobe = async () => {
+    if (!user) return;
+
+    // #region agent log
+    const startTime = Date.now();
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.tsx:179',message:'loadWardrobe START',data:{userId:user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+
+    setLoading(true);
+    
+    const { data: defaultWardrobeId, error: wardrobeError } = await getDefaultWardrobeId(user.id);
+    if (wardrobeError || !defaultWardrobeId) {
+      setLoading(false);
+      return;
+    }
+    
+    setWardrobeId(defaultWardrobeId);
+
+    const { data: categoriesData, error: categoriesError } = await getWardrobeCategories();
+    if (!categoriesError) {
+      setCategories(categoriesData);
+    }
+
+    setLoading(false);
+    
+    // #region agent log
+    const endTime = Date.now();
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.tsx:198',message:'loadWardrobe END',data:{durationMs:endTime-startTime},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+  };
+
+  const loadSubcategories = async (categoryId: string) => {
+    const { data: subs } = await getSubcategories(categoryId);
+    if (subs) {
+      setSubcategories(subs);
+    }
+  };
+
+  const loadTags = async () => {
+    if (!user || !wardrobeId) return;
+
+    // Get all tags used in this wardrobe
+    const { data: tagLinks } = await supabase
+      .from('tag_links')
+      .select('tag_id, tags(id, name)')
+      .eq('entity_type', 'wardrobe_item')
+      .in('entity_id', allItems.map((i) => i.id));
+
+    if (tagLinks) {
+      const uniqueTags = new Map<string, { id: string; name: string }>();
+      tagLinks.forEach((link: any) => {
+        if (link.tags) {
+          uniqueTags.set(link.tags.id, { id: link.tags.id, name: link.tags.name });
+        }
+      });
+      setAvailableTags(Array.from(uniqueTags.values()));
+    }
+  };
+
+  const loadItems = async () => {
+    if (!wardrobeId) return;
+
+    // #region agent log
+    const startTime = Date.now();
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.tsx:228',message:'loadItems START',data:{wardrobeId,categoryId:selectedCategoryId,searchQuery},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+
+    setLoading(true);
+    const { data, error } = await getWardrobeItems(wardrobeId, {
+      category_id: selectedCategoryId || undefined,
+      search: searchQuery || undefined,
+    });
+
+    if (!error && data.length > 0) {
+      setAllItems(data);
+      
+      // #region agent log
+      const batchImagesStart = Date.now();
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.tsx:246',message:'Batch loading images START',data:{itemCount:data.length},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      
+      // Batch load all images at once
+      const itemIds = data.map(item => item.id);
+      const { data: imagesMap } = await getWardrobeItemsImages(itemIds);
+      
+      // Build URL cache
+      const newCache = new Map<string, string | null>();
+      for (const itemId of itemIds) {
+        const images = imagesMap.get(itemId);
+        if (images && images.length > 0 && images[0].image?.storage_key) {
+          const storageBucket = images[0].image.storage_bucket || 'media';
+          const { data: urlData } = supabase.storage
+            .from(storageBucket)
+            .getPublicUrl(images[0].image.storage_key);
+          newCache.set(itemId, urlData?.publicUrl || null);
+        } else {
+          newCache.set(itemId, null);
+        }
+      }
+      setItemImagesCache(newCache);
+      
+      // #region agent log
+      const batchImagesEnd = Date.now();
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.tsx:267',message:'Batch loading images END',data:{itemCount:data.length,cachedUrls:newCache.size,durationMs:batchImagesEnd-batchImagesStart},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      
+      // #region agent log
+      const endTime = Date.now();
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.tsx:241',message:'loadItems END',data:{itemsLoaded:data.length,durationMs:endTime-startTime},timestamp:Date.now(),sessionId:'debug-session',runId:'perf1',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+    } else if (!error) {
+      setAllItems(data);
+    }
+
+    setLoading(false);
+  };
+
+  // Removed applyFilters - now using useMemo above
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadItems();
+    setRefreshing(false);
+  };
+
+  const getItemImageUrl = async (itemId: string): Promise<string | null> => {
+    try {
+      const { data, error } = await getWardrobeItemImages(itemId);
+      
+      if (error) {
+        console.error(`[Wardrobe] Failed to get images for item ${itemId}:`, error.message);
+        return null;
+      }
+
+      if (!data || data.length === 0) {
+        // Already logged in getWardrobeItemImages
+        return null;
+      }
+
+      const imageData = data[0].image;
+      if (!imageData) {
+        // Already logged in getWardrobeItemImages as NULL
+        return null;
+      }
+
+      if (!imageData.storage_key) {
+        // Already logged in getWardrobeItemImages
+        return null;
+      }
+
+      const storageBucket = imageData.storage_bucket || 'media';
+      const { data: urlData } = supabase.storage
+        .from(storageBucket)
+        .getPublicUrl(imageData.storage_key);
+
+      if (!urlData?.publicUrl) {
+        console.warn(`[Wardrobe] Failed to generate URL for item ${itemId}, key: ${imageData.storage_key}`);
+        return null;
+      }
+
+      return urlData.publicUrl;
+    } catch (error: any) {
+      console.error(`[Wardrobe] Exception getting image URL for item ${itemId}:`, error.message);
+      return null;
+    }
+  };
+
+  // Memoize available values to avoid recalculating on every render
+  const availableColors = useMemo(() => {
+    const values = new Set<string>();
+    allItems.forEach((item) => {
+      if (item.color_primary) values.add(item.color_primary);
+    });
+    return Array.from(values).filter((v) => v).slice(0, 20);
+  }, [allItems]);
+
+  const availableMaterials = useMemo(() => {
+    const values = new Set<string>();
+    allItems.forEach((item) => {
+      if (item.material) {
+        const str = typeof item.material === 'string' ? item.material : JSON.stringify(item.material);
+        if (str) values.add(str);
+      }
+    });
+    return Array.from(values).filter((v) => v).slice(0, 10);
+  }, [allItems]);
+
+  const availableSizes = useMemo(() => {
+    const values = new Set<string>();
+    allItems.forEach((item) => {
+      if (item.size) {
+        const str = typeof item.size === 'string' ? item.size : JSON.stringify(item.size);
+        if (str) values.add(str);
+      }
+    });
+    return Array.from(values).filter((v) => v).slice(0, 10);
+  }, [allItems]);
+
+  const availableSeasons = useMemo(() => {
+    const values = new Set<string>();
+    allItems.forEach((item) => {
+      if (item.seasonality) {
+        const str = typeof item.seasonality === 'string' ? item.seasonality : JSON.stringify(item.seasonality);
+        if (str) values.add(str);
+      }
+    });
+    return Array.from(values).filter((v) => v).slice(0, 10);
+  }, [allItems]);
+
+  const clearFilters = () => {
+    setFilters({
+      subcategoryId: null,
+      color: null,
+      material: null,
+      size: null,
+      season: null,
+      tagIds: [],
+      favorites: null,
+    });
+  };
+
+  const hasActiveFilters = () => {
+    return (
+      filters.subcategoryId !== null ||
+      filters.color !== null ||
+      filters.material !== null ||
+      filters.size !== null ||
+      filters.season !== null ||
+      filters.tagIds.length > 0 ||
+      filters.favorites !== null
+    );
+  };
+
+  const renderCategoryPill = ({ item }: { item: WardrobeCategory }) => {
+    const isSelected = selectedCategoryId === item.id;
+    return (
+      <TouchableOpacity
+        style={[styles.categoryPill, isSelected && styles.categoryPillSelected]}
+        onPress={() => setSelectedCategoryId(isSelected ? null : item.id)}
+      >
+        <Text style={[styles.categoryPillText, isSelected && styles.categoryPillTextSelected]}>
+          {item.name}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // Item Card Component - Memoized to prevent unnecessary re-renders
+  const ItemCard = React.memo(({ item }: { item: WardrobeItem }) => {
+    // Use cached image URL instead of querying per item
+    const imageUrl = itemImagesCache.get(item.id) || null;
+    const imageLoading = !itemImagesCache.has(item.id);
+
+    return (
+      <TouchableOpacity
+        style={styles.itemCard}
+        onPress={() => router.push(`/wardrobe/item/${item.id}`)}
+      >
+        {imageLoading ? (
+          <View style={styles.itemImagePlaceholder}>
+            <ActivityIndicator size="small" />
+          </View>
+        ) : imageUrl ? (
+          <ExpoImage
+            source={{ uri: imageUrl }}
+            style={styles.itemImage}
+            contentFit="cover"
+          />
+        ) : (
+          <View style={styles.itemImagePlaceholder}>
+            <Text style={styles.itemImagePlaceholderText}>No Image</Text>
+          </View>
+        )}
+        <Text style={styles.itemTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+      </TouchableOpacity>
+    );
+  });
+
+  const renderItem = ({ item }: { item: WardrobeItem }) => {
+    return <ItemCard item={item} />;
+  };
+
+  if (loading && !items.length) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" style={styles.loader} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search wardrobe..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+        />
+        <TouchableOpacity
+          style={[styles.filterButton, hasActiveFilters() && styles.filterButtonActive]}
+          onPress={() => setShowFilterDrawer(true)}
+        >
+          <Text style={[styles.filterButtonText, hasActiveFilters() && styles.filterButtonTextActive]}>
+            Filter
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => router.push('/wardrobe/add')}
+        >
+          <Text style={styles.addButtonText}>+ Add</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Category Pills */}
+      <View style={styles.categoriesContainer}>
+        <FlatList
+          horizontal
+          data={categories}
+          renderItem={renderCategoryPill}
+          keyExtractor={(item) => item.id}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesList}
+        />
+      </View>
+
+      {/* Items Grid */}
+      {items.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            {searchQuery || selectedCategoryId || hasActiveFilters()
+              ? 'No items found'
+              : 'Your wardrobe is empty'}
+          </Text>
+          <TouchableOpacity
+            style={styles.emptyButton}
+            onPress={() => router.push('/wardrobe/add')}
+          >
+            <Text style={styles.emptyButtonText}>Add your first item</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={items}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          contentContainerStyle={styles.itemsList}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        />
+      )}
+
+      {/* Filter Drawer */}
+      <Modal
+        visible={showFilterDrawer}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowFilterDrawer(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.drawer}>
+            <View style={styles.drawerHeader}>
+              <Text style={styles.drawerTitle}>Filters</Text>
+              <TouchableOpacity onPress={() => setShowFilterDrawer(false)}>
+                <Text style={styles.drawerClose}>×</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.drawerContent}>
+              {/* Subcategory Filter */}
+              {selectedCategoryId && subcategories.length > 0 && (
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterLabel}>Subcategory</Text>
+                  <View style={styles.optionsList}>
+                    <Pressable
+                      style={[
+                        styles.optionPill,
+                        filters.subcategoryId === null && styles.optionPillSelected,
+                      ]}
+                      onPress={() => setFilters({ ...filters, subcategoryId: null })}
+                    >
+                      <Text
+                        style={[
+                          styles.optionPillText,
+                          filters.subcategoryId === null && styles.optionPillTextSelected,
+                        ]}
+                      >
+                        All
+                      </Text>
+                    </Pressable>
+                    {subcategories.map((sub) => (
+                      <Pressable
+                        key={sub.id}
+                        style={[
+                          styles.optionPill,
+                          filters.subcategoryId === sub.id && styles.optionPillSelected,
+                        ]}
+                        onPress={() =>
+                          setFilters({ ...filters, subcategoryId: sub.id })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.optionPillText,
+                            filters.subcategoryId === sub.id && styles.optionPillTextSelected,
+                          ]}
+                        >
+                          {sub.name}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Color Filter */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Color</Text>
+                <View style={styles.optionsList}>
+                  <Pressable
+                    style={[
+                      styles.optionPill,
+                      filters.color === null && styles.optionPillSelected,
+                    ]}
+                    onPress={() => setFilters({ ...filters, color: null })}
+                  >
+                    <Text
+                      style={[
+                        styles.optionPillText,
+                        filters.color === null && styles.optionPillTextSelected,
+                      ]}
+                    >
+                      All
+                    </Text>
+                  </Pressable>
+                  {availableColors.map((color) => (
+                    <Pressable
+                      key={color}
+                      style={[
+                        styles.optionPill,
+                        filters.color === color && styles.optionPillSelected,
+                      ]}
+                      onPress={() =>
+                        setFilters({ ...filters, color: color === filters.color ? null : color })
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.optionPillText,
+                          filters.color === color && styles.optionPillTextSelected,
+                        ]}
+                      >
+                        {color}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {/* Material Filter */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Material</Text>
+                <View style={styles.optionsList}>
+                  <Pressable
+                    style={[
+                      styles.optionPill,
+                      filters.material === null && styles.optionPillSelected,
+                    ]}
+                    onPress={() => setFilters({ ...filters, material: null })}
+                  >
+                    <Text
+                      style={[
+                        styles.optionPillText,
+                        filters.material === null && styles.optionPillTextSelected,
+                      ]}
+                    >
+                      All
+                    </Text>
+                  </Pressable>
+                  {availableMaterials.map((material) => (
+                    <Pressable
+                      key={material}
+                      style={[
+                        styles.optionPill,
+                        filters.material === material && styles.optionPillSelected,
+                      ]}
+                      onPress={() =>
+                        setFilters({
+                          ...filters,
+                          material: material === filters.material ? null : material,
+                        })
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.optionPillText,
+                          filters.material === material && styles.optionPillTextSelected,
+                        ]}
+                      >
+                        {material.length > 20 ? `${material.substring(0, 20)}...` : material}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {/* Size Filter */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Size</Text>
+                <View style={styles.optionsList}>
+                  <Pressable
+                    style={[
+                      styles.optionPill,
+                      filters.size === null && styles.optionPillSelected,
+                    ]}
+                    onPress={() => setFilters({ ...filters, size: null })}
+                  >
+                    <Text
+                      style={[
+                        styles.optionPillText,
+                        filters.size === null && styles.optionPillTextSelected,
+                      ]}
+                    >
+                      All
+                    </Text>
+                  </Pressable>
+                  {availableSizes.map((size) => (
+                    <Pressable
+                      key={size}
+                      style={[
+                        styles.optionPill,
+                        filters.size === size && styles.optionPillSelected,
+                      ]}
+                      onPress={() =>
+                        setFilters({
+                          ...filters,
+                          size: size === filters.size ? null : size,
+                        })
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.optionPillText,
+                          filters.size === size && styles.optionPillTextSelected,
+                        ]}
+                      >
+                        {size.length > 20 ? `${size.substring(0, 20)}...` : size}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {/* Season Filter */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Season</Text>
+                <View style={styles.optionsList}>
+                  <Pressable
+                    style={[
+                      styles.optionPill,
+                      filters.season === null && styles.optionPillSelected,
+                    ]}
+                    onPress={() => setFilters({ ...filters, season: null })}
+                  >
+                    <Text
+                      style={[
+                        styles.optionPillText,
+                        filters.season === null && styles.optionPillTextSelected,
+                      ]}
+                    >
+                      All
+                    </Text>
+                  </Pressable>
+                  {availableSeasons.map((season) => (
+                    <Pressable
+                      key={season}
+                      style={[
+                        styles.optionPill,
+                        filters.season === season && styles.optionPillSelected,
+                      ]}
+                      onPress={() =>
+                        setFilters({
+                          ...filters,
+                          season: season === filters.season ? null : season,
+                        })
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.optionPillText,
+                          filters.season === season && styles.optionPillTextSelected,
+                        ]}
+                      >
+                        {season.length > 20 ? `${season.substring(0, 20)}...` : season}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {/* Tags Filter */}
+              {availableTags.length > 0 && (
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterLabel}>Tags</Text>
+                  <View style={styles.optionsList}>
+                    {availableTags.map((tag) => {
+                      const isSelected = filters.tagIds.includes(tag.id);
+                      return (
+                        <Pressable
+                          key={tag.id}
+                          style={[styles.optionPill, isSelected && styles.optionPillSelected]}
+                          onPress={() => {
+                            const newTagIds = isSelected
+                              ? filters.tagIds.filter((id) => id !== tag.id)
+                              : [...filters.tagIds, tag.id];
+                            setFilters({ ...filters, tagIds: newTagIds });
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.optionPillText,
+                              isSelected && styles.optionPillTextSelected,
+                            ]}
+                          >
+                            {tag.name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* Favorites Toggle */}
+              <View style={styles.filterSection}>
+                <View style={styles.toggleRow}>
+                  <Text style={styles.filterLabel}>Favorites Only</Text>
+                  <Switch
+                    value={filters.favorites === true}
+                    onValueChange={(value) =>
+                      setFilters({ ...filters, favorites: value ? true : null })
+                    }
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.drawerFooter}>
+              <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
+                <Text style={styles.clearButtonText}>Clear All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={() => setShowFilterDrawer(false)}
+              >
+                <Text style={styles.applyButtonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  searchInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  filterButton: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: 'center',
+  },
+  filterButtonActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  filterButtonText: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  filterButtonTextActive: {
+    color: '#fff',
+  },
+  addButton: {
+    backgroundColor: '#000',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: 'center',
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  categoriesContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  categoriesList: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  categoryPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginRight: 8,
+  },
+  categoryPillSelected: {
+    backgroundColor: '#000',
+    borderColor: '#000',
+  },
+  categoryPillText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  categoryPillTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  itemsList: {
+    padding: 8,
+  },
+  itemCard: {
+    flex: 1,
+    margin: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#f9f9f9',
+  },
+  itemImage: {
+    width: '100%',
+    aspectRatio: 1,
+  },
+  itemImagePlaceholder: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  itemImagePlaceholderText: {
+    color: '#999',
+    fontSize: 12,
+  },
+  itemTitle: {
+    padding: 8,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  emptyButton: {
+    backgroundColor: '#000',
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  emptyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  drawer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  drawerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  drawerClose: {
+    fontSize: 28,
+    color: '#666',
+  },
+  drawerContent: {
+    padding: 20,
+  },
+  filterSection: {
+    marginBottom: 24,
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  optionsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+  },
+  optionPillSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  optionPillText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  optionPillTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  drawerFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    gap: 12,
+  },
+  clearButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+  },
+  clearButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  applyButton: {
+    flex: 1,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+});

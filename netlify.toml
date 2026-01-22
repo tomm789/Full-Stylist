@@ -1,6 +1,28 @@
 [build]
-  publish = "public"
+  command = "npx expo export --platform web"
+  publish = "web-build"
   functions = "netlify/functions"
+
+[dev]
+  # Use static framework - we only need functions, not a dev server
+  framework = "#static"
+  # Netlify dev server port
+  port = 8888
+  # Functions directory
+  functions = "netlify/functions"
+  # Disable auto-launch of browser
+  autoLaunch = false
+  # Serve public directory for static files
+  publish = "public"
+
+[functions]
+  # Ensure TypeScript functions are included
+  node_bundler = "esbuild"
+  included_files = ["netlify/functions/**/*.ts"]
+
+# AI job runner needs extended timeout for image generation (60-90 seconds)
+[functions."ai-job-runner"]
+  timeout = 120
 
 [[redirects]]
   from = "/*"

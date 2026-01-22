@@ -1,0 +1,925 @@
+import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import { supabase } from './supabase';
+
+export interface WardrobeItem {
+  id: string;
+  wardrobe_id: string;
+  owner_user_id: string;
+  title: string;
+  description?: string;
+  category_id: string;
+  subcategory_id?: string;
+  brand?: string;
+  color_primary?: string;
+  color_palette?: any;
+  size?: any;
+  material?: any;
+  seasonality?: any;
+  is_favorite: boolean;
+  visibility_override: 'public' | 'followers' | 'private_link' | 'private' | 'inherit';
+  condition?: string;
+  is_sellable: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WardrobeCategory {
+  id: string;
+  name: string;
+  sort_order: number;
+}
+
+export interface WardrobeSubcategory {
+  id: string;
+  category_id: string;
+  name: string;
+  sort_order: number;
+}
+
+/**
+ * Get user's default wardrobe ID
+ */
+export async function getDefaultWardrobeId(userId: string): Promise<{
+  data: string | null;
+  error: any;
+}> {
+  const { data, error } = await supabase
+    .from('wardrobes')
+    .select('id')
+    .eq('owner_user_id', userId)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .single();
+
+  return { data: data?.id || null, error };
+}
+
+/**
+ * Get all wardrobe categories
+ */
+export async function getWardrobeCategories(): Promise<{
+  data: WardrobeCategory[];
+  error: any;
+}> {
+  const { data, error } = await supabase
+    .from('wardrobe_categories')
+    .select('*')
+    .order('sort_order', { ascending: true });
+
+  return { data: data || [], error };
+}
+
+/**
+ * Get subcategories for a category
+ */
+export async function getSubcategories(categoryId: string): Promise<{
+  data: WardrobeSubcategory[];
+  error: any;
+}> {
+  const { data, error } = await supabase
+    .from('wardrobe_subcategories')
+    .select('*')
+    .eq('category_id', categoryId)
+    .order('sort_order', { ascending: true });
+
+  return { data: data || [], error };
+}
+
+/**
+ * Check if the images RLS migration has been applied
+ * This checks for the presence of the new RLS policies
+ */
+async function checkImagesRLSMigration(): Promise<boolean> {
+  try {
+    // Try to query the policy information from pg_policies
+    // Note: This requires admin access, so we'll try a different approach
+    // We'll check if we can access images through a test query pattern
+    const { data: testData, error: testError } = await supabase
+      .from('wardrobe_item_images')
+      .select('id')
+      .limit(1);
+    
+    // If we can't even query wardrobe_item_images, there's a bigger issue
+    if (testError) {
+      console.warn('[checkImagesRLSMigration] Could not query wardrobe_item_images:', testError);
+      return false;
+    }
+    
+    // The migration check is best done by attempting the actual query pattern
+    // If images are accessible through the join, migration is likely applied
+    return true;
+  } catch (error) {
+    console.error('[checkImagesRLSMigration] Error checking migration status:', error);
+    return false;
+  }
+}
+
+/**
+ * Get wardrobe items for a user
+ */
+export async function getWardrobeItems(
+  wardrobeId: string,
+  filters?: {
+    category_id?: string;
+    search?: string;
+    is_favorite?: boolean;
+  }
+): Promise<{
+  data: WardrobeItem[];
+  error: any;
+}> {
+  let query = supabase
+    .from('wardrobe_items')
+    .select('*')
+    .eq('wardrobe_id', wardrobeId)
+    .is('archived_at', null)
+    .order('created_at', { ascending: false });
+
+  if (filters?.category_id) {
+    query = query.eq('category_id', filters.category_id);
+  }
+
+  if (filters?.search) {
+    query = query.ilike('title', `%${filters.search}%`);
+  }
+
+  if (filters?.is_favorite !== undefined) {
+    query = query.eq('is_favorite', filters.is_favorite);
+  }
+
+  const { data, error } = await query;
+
+  return { data: data || [], error };
+}
+
+/**
+ * Upload image to Supabase Storage
+ */
+export async function uploadImageToStorage(
+  userId: string,
+  file: Blob | File,
+  fileName: string
+): Promise<{
+  data: { path: string; fullPath: string } | null;
+  error: any;
+}> {
+  const fileExt = fileName.split('.').pop();
+  const filePath = `${userId}/${Date.now()}.${fileExt}`;
+
+  const { data, error } = await supabase.storage
+    .from('media')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+    });
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from('media').getPublicUrl(data.path);
+
+  return { data: { path: data.path, fullPath: publicUrl }, error: null };
+}
+
+/**
+ * Convert image URI to Blob
+ * Handles file:// URIs on native platforms using expo-file-system
+ * Falls back to fetch() for web and other URI formats
+ */
+async function uriToBlob(uri: string, mimeType: string): Promise<Blob> {
+  // Check if this is a file:// URI on native platform
+  if (uri.startsWith('file://') && Platform.OS !== 'web') {
+    // Read file as base64 using expo-file-system
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: 'base64' as any,
+    });
+    
+    // Convert base64 to blob
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mimeType });
+  } else {
+    // Use fetch for web (blob:, data:, http:) and other formats
+    const response = await fetch(uri);
+    return await response.blob();
+  }
+}
+
+/**
+ * Create wardrobe item with images
+ */
+export async function createWardrobeItem(
+  userId: string,
+  wardrobeId: string,
+  itemData: {
+    title: string;
+    description?: string;
+    category_id: string;
+    subcategory_id?: string;
+    brand?: string;
+    visibility_override?: 'public' | 'followers' | 'private_link' | 'private' | 'inherit';
+  },
+  imageFiles: Array<{ uri: string; type: string; name: string }>
+): Promise<{
+  data: { item: WardrobeItem; images: any[] } | null;
+  error: any;
+}> {
+  try {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:219',message:'createWardrobeItem entry',data:{userId,wardrobeId,imageFilesCount:imageFiles.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+    // First, upload all images and create image records
+    const imageIds: string[] = [];
+
+    for (const imageFile of imageFiles) {
+      // Convert URI to blob for upload (handles native file:// URIs)
+      const blob = await uriToBlob(imageFile.uri, imageFile.type);
+
+      // Upload to storage
+      const uploadResult = await uploadImageToStorage(userId, blob, imageFile.name);
+      if (uploadResult.error) {
+        throw uploadResult.error;
+      }
+
+      // Create image record
+      const { data: imageRecord, error: imageError } = await supabase
+        .from('images')
+        .insert({
+          owner_user_id: userId,
+          storage_bucket: 'media',
+          storage_key: uploadResult.data!.path,
+          mime_type: imageFile.type,
+          source: 'upload',
+        })
+        .select()
+        .single();
+
+      if (imageError) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:262',message:'image insert error',data:{error:imageError?.message||String(imageError),code:imageError?.code},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+        throw imageError;
+      }
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:266',message:'image created',data:{imageId:imageRecord.id,imageCount:imageIds.length+1},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      imageIds.push(imageRecord.id);
+    }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:269',message:'all images created',data:{totalImageIds:imageIds.length,imageIds:imageIds.slice(0,3)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+    // Create wardrobe item
+    const { data: item, error: itemError } = await supabase
+      .from('wardrobe_items')
+      .insert({
+        wardrobe_id: wardrobeId,
+        owner_user_id: userId,
+        ...itemData,
+      })
+      .select()
+      .single();
+
+    if (itemError) {
+      throw itemError;
+    }
+
+    // Link images to wardrobe item
+    const imageLinks = imageIds.map((imageId, index) => ({
+      wardrobe_item_id: item.id,
+      image_id: imageId,
+      type: 'original' as const,
+      sort_order: index,
+    }));
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:292',message:'before link insert',data:{itemId:item.id,linksToInsert:imageLinks.length,imageIds:imageLinks.map(l=>l.image_id)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    const { data: itemImages, error: linkError } = await supabase
+      .from('wardrobe_item_images')
+      .insert(imageLinks)
+      .select();
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:296',message:'link insert result',data:{itemId:item.id,insertedCount:itemImages?.length||0,hasError:!!linkError,errorCode:linkError?.code,errorMessage:linkError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
+    if (linkError) {
+      // Enhanced error logging for link creation failures
+      console.error('[createWardrobeItem] Failed to create image links. Item ID:', item.id);
+      
+      // Check if links were actually created despite the error (might be a constraint error if duplicates)
+      // or RLS readback issue
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:306',message:'verifying links exist after error',data:{itemId:item.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      const { data: existingLinks } = await supabase
+        .from('wardrobe_item_images')
+        .select('*, images(*)')
+        .eq('wardrobe_item_id', item.id)
+        .order('sort_order', { ascending: true });
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:312',message:'verification query result',data:{itemId:item.id,foundLinks:existingLinks?.length||0,hasImageData:existingLinks?.some(l=>l.image)||false},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
+      if (existingLinks && existingLinks.length > 0) {
+        return { data: { item, images: existingLinks }, error: null };
+      }
+      
+      // Attempt automatic repair for this specific item
+      try {
+        const repairResult = await repairWardrobeItemImageLinks(userId, item.id);
+        if (!repairResult.error && repairResult.data && repairResult.data.repaired > 0) {
+          // Fetch the newly linked images
+          const { data: repairedImages } = await supabase
+            .from('wardrobe_item_images')
+            .select('*, images(*)')
+            .eq('wardrobe_item_id', item.id)
+            .order('sort_order', { ascending: true });
+          
+          if (repairedImages && repairedImages.length > 0) {
+            return { data: { item, images: repairedImages }, error: null };
+          }
+        }
+      } catch (repairError) {
+        // Silent fail, repair didn't work
+      }
+      
+      // Return partial success - item and images were created, but links failed
+      // This allows the caller to potentially repair the links later
+      return {
+        data: {
+          item,
+          images: [], // No linked images, but item exists
+        } as any,
+        error: {
+          ...linkError,
+          message: `Item created successfully but image links failed: ${linkError.message}`,
+          partialSuccess: true,
+        } as any,
+      };
+    }
+
+    if (!itemImages || itemImages.length === 0) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:360',message:'select returned no links, verifying',data:{itemId:item.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      // Verify links were actually created by querying separately
+      const { data: verifiedLinks } = await supabase
+        .from('wardrobe_item_images')
+        .select('*, images(*)')
+        .eq('wardrobe_item_id', item.id)
+        .order('sort_order', { ascending: true });
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:368',message:'verification after empty select',data:{itemId:item.id,verifiedLinksCount:verifiedLinks?.length||0,hasImageData:verifiedLinks?.some(l=>l.image)||false},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
+      if (verifiedLinks && verifiedLinks.length > 0) {
+        return { data: { item, images: verifiedLinks }, error: null };
+      } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:376',message:'links not created despite success',data:{itemId:item.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+      }
+    }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:378',message:'createWardrobeItem success',data:{itemId:item.id,imagesCount:itemImages?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
+    return { data: { item, images: itemImages || [] }, error: null };
+  } catch (error: any) {
+    console.error('[createWardrobeItem] Error creating wardrobe item:', error?.message || error);
+    
+    return { data: null, error };
+  }
+}
+
+/**
+ * Find orphaned images (images not linked to any wardrobe item)
+ */
+export async function findOrphanedImages(userId: string): Promise<{
+  data: {
+    orphanedImages: Array<{ id: string; storage_key: string; created_at: string }>;
+    itemsWithoutImages: Array<{ id: string; title: string; created_at: string }>;
+  } | null;
+  error: any;
+}> {
+  try {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:354',message:'findOrphanedImages entry',data:{userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    // Get all images owned by user
+    const { data: allImages, error: imagesError } = await supabase
+      .from('images')
+      .select('id, storage_key, created_at, owner_user_id')
+      .eq('owner_user_id', userId)
+      .order('created_at', { ascending: false });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:365',message:'images query result',data:{imagesCount:allImages?.length||0,imagesError:imagesError?{code:imagesError.code,message:imagesError.message}:null,firstImageId:allImages?.[0]?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+
+    if (imagesError) {
+      throw imagesError;
+    }
+
+    // Get all image links
+    const imageIds = allImages?.map(img => img.id) || [];
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:371',message:'before links query',data:{imageIdsCount:imageIds.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+    const { data: allLinks, error: linksError } = await supabase
+      .from('wardrobe_item_images')
+      .select('image_id')
+      .in('image_id', imageIds.length > 0 ? imageIds : ['00000000-0000-0000-0000-000000000000']); // Dummy ID to avoid empty IN clause
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:377',message:'links query result',data:{linksCount:allLinks?.length||0,linksError:linksError?{code:linksError.code,message:linksError.message}:null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+
+    if (linksError) {
+      throw linksError;
+    }
+
+    const linkedImageIds = new Set((allLinks || []).map(link => link.image_id));
+    const orphanedImages = (allImages || []).filter(img => !linkedImageIds.has(img.id));
+
+    // Get all wardrobe items owned by user
+    const { data: allItems, error: itemsError } = await supabase
+      .from('wardrobe_items')
+      .select('id, title, created_at, owner_user_id')
+      .eq('owner_user_id', userId)
+      .is('archived_at', null)
+      .order('created_at', { ascending: false });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:390',message:'items query result',data:{itemsCount:allItems?.length||0,itemsError:itemsError?{code:itemsError.code,message:itemsError.message}:null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+
+    if (itemsError) {
+      throw itemsError;
+    }
+
+    // Get all item links to find items without images
+    const itemIds = allItems?.map(item => item.id) || [];
+    const { data: itemLinks, error: itemLinksError } = await supabase
+      .from('wardrobe_item_images')
+      .select('wardrobe_item_id')
+      .in('wardrobe_item_id', itemIds.length > 0 ? itemIds : ['00000000-0000-0000-0000-000000000000']);
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:401',message:'item links query result',data:{itemLinksCount:itemLinks?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
+    if (itemLinksError) {
+      throw itemLinksError;
+    }
+
+    const linkedItemIds = new Set((itemLinks || []).map(link => link.wardrobe_item_id));
+    const itemsWithoutImages = (allItems || []).filter(item => !linkedItemIds.has(item.id));
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:406',message:'findOrphanedImages exit',data:{orphanedImagesCount:orphanedImages.length,itemsWithoutImagesCount:itemsWithoutImages.length,orphanedImageIds:orphanedImages.slice(0,3).map(i=>i.id),itemIdsWithoutImages:itemsWithoutImages.slice(0,3).map(i=>i.id)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+
+    return {
+      data: {
+        orphanedImages: orphanedImages.map(img => ({
+          id: img.id,
+          storage_key: img.storage_key,
+          created_at: img.created_at,
+        })),
+        itemsWithoutImages: itemsWithoutImages.map(item => ({
+          id: item.id,
+          title: item.title,
+          created_at: item.created_at,
+        })),
+      },
+      error: null,
+    };
+  } catch (error: any) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:424',message:'findOrphanedImages error',data:{error:error?.message||String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    console.error('[findOrphanedImages] Error finding orphaned images:', error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Repair wardrobe item image links by matching orphaned images to items
+ * This attempts to link images to items based on creation time proximity
+ */
+export async function repairWardrobeItemImageLinks(
+  userId: string,
+  itemId?: string
+): Promise<{
+  data: { repaired: number; linked: Array<{ itemId: string; imageId: string }> } | null;
+  error: any;
+}> {
+  try {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:440',message:'repairWardrobeItemImageLinks entry',data:{userId,itemId:itemId||null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
+    // Find orphaned images and items without images
+    const { data: diagnostic, error: diagnosticError } = await findOrphanedImages(userId);
+    if (diagnosticError || !diagnostic) {
+      throw diagnosticError || new Error('Failed to find orphaned images');
+    }
+
+    const { orphanedImages, itemsWithoutImages } = diagnostic;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:451',message:'diagnostic received',data:{orphanedCount:orphanedImages.length,itemsWithoutCount:itemsWithoutImages.length,orphanedSample:orphanedImages.slice(0,2).map(i=>({id:i.id,created_at:i.created_at})),itemsSample:itemsWithoutImages.slice(0,2).map(i=>({id:i.id,title:i.title,created_at:i.created_at}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+
+    if (orphanedImages.length === 0 || itemsWithoutImages.length === 0) {
+      return { data: { repaired: 0, linked: [] }, error: null };
+    }
+
+    // Filter to specific item if provided
+    const itemsToRepair = itemId
+      ? itemsWithoutImages.filter(item => item.id === itemId)
+      : itemsWithoutImages;
+
+    if (itemsToRepair.length === 0) {
+      return { data: { repaired: 0, linked: [] }, error: null };
+    }
+
+    const linked: Array<{ itemId: string; imageId: string }> = [];
+    let repaired = 0;
+    const linkedImageIds = new Set<string>(); // Track images that have been linked to avoid duplicates
+
+    // Match images to items based on creation time proximity (within 5 minutes)
+    for (const item of itemsToRepair) {
+      const itemCreatedAt = new Date(item.created_at).getTime();
+
+      // Find images created within 5 minutes of item creation that haven't been linked yet
+      const matchingImages = orphanedImages
+        .filter(img => !linkedImageIds.has(img.id)) // Only consider images that haven't been linked
+        .filter(img => {
+          const imageCreatedAt = new Date(img.created_at).getTime();
+          const timeDiff = Math.abs(imageCreatedAt - itemCreatedAt);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:482',message:'timing match check',data:{itemId:item.id,itemCreatedAt,imageId:img.id,imageCreatedAt,timeDiffMinutes:(timeDiff/1000/60).toFixed(2),matches:timeDiff <= 5 * 60 * 1000},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          return timeDiff <= 5 * 60 * 1000; // 5 minutes in milliseconds
+        });
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:486',message:'matching images found',data:{itemId:item.id,matchingCount:matchingImages.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+
+      if (matchingImages.length > 0) {
+        // Check if this item already has links (might have been created in parallel)
+        const { data: existingLinks } = await supabase
+          .from('wardrobe_item_images')
+          .select('image_id')
+          .eq('wardrobe_item_id', item.id);
+        
+        if (existingLinks && existingLinks.length > 0) {
+          // Mark these images as linked to avoid processing them again
+          existingLinks.forEach(link => linkedImageIds.add(link.image_id));
+          continue;
+        }
+
+        // Link the first matching image (or all if multiple)
+        const imagesToLink = matchingImages.slice(0, 3); // Max 3 images per item to avoid over-linking
+
+        const imageLinks = imagesToLink.map((img, index) => ({
+          wardrobe_item_id: item.id,
+          image_id: img.id,
+          type: 'original' as const,
+          sort_order: index,
+        }));
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:496',message:'before insert links',data:{itemId:item.id,linksToInsert:imageLinks.length,imageIds:imageLinks.map(l=>l.image_id)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        const { data: insertedLinks, error: insertError } = await supabase
+          .from('wardrobe_item_images')
+          .insert(imageLinks)
+          .select();
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:500',message:'insert links result',data:{itemId:item.id,insertedCount:insertedLinks?.length||0,insertError:insertError?{code:insertError.code,message:insertError.message}:null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+
+        if (insertError) {
+          // Check if it's a duplicate key error (23505) - links might already exist
+          if (insertError.code === '23505') {
+            // Mark these images as linked
+            imagesToLink.forEach(img => linkedImageIds.add(img.id));
+            // Verify links exist
+            const { data: verifiedLinks } = await supabase
+              .from('wardrobe_item_images')
+              .select('image_id')
+              .eq('wardrobe_item_id', item.id);
+            if (verifiedLinks && verifiedLinks.length > 0) {
+              repaired++;
+            }
+          }
+          continue;
+        }
+
+        // Mark images as linked and track the links
+        imagesToLink.forEach(img => {
+          linkedImageIds.add(img.id);
+          linked.push({ itemId: item.id, imageId: img.id });
+        });
+
+        // If insert succeeded but select returned no data, verify links were actually created
+        if (!insertedLinks || insertedLinks.length === 0) {
+          const { data: verifiedLinks } = await supabase
+            .from('wardrobe_item_images')
+            .select('image_id')
+            .eq('wardrobe_item_id', item.id);
+          if (!verifiedLinks || verifiedLinks.length === 0) {
+            continue;
+          }
+        }
+
+        repaired++;
+      }
+    }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:521',message:'repairWardrobeItemImageLinks exit',data:{repaired,linkedCount:linked.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
+    return { data: { repaired, linked }, error: null };
+  } catch (error: any) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:525',message:'repairWardrobeItemImageLinks error',data:{error:error?.message||String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    return { data: null, error };
+  }
+}
+
+/**
+ * Diagnostic function to check if wardrobe_item_images records exist and diagnose RLS issues
+ */
+async function diagnoseWardrobeItemImages(itemId: string): Promise<void> {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:689',message:'diagnoseWardrobeItemImages entry',data:{itemId},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
+  
+  // Step 1: Check if wardrobe_item_images records exist (without join)
+  const { data: linkData, error: linkError } = await supabase
+    .from('wardrobe_item_images')
+    .select('id, image_id, wardrobe_item_id, type, sort_order')
+    .eq('wardrobe_item_id', itemId);
+
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:697',message:'diagnose links query',data:{itemId,linksFound:linkData?.length||0,hasError:!!linkError,errorMessage:linkError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
+
+  if (linkError) {
+    console.error('[diagnoseWardrobeItemImages] Error querying wardrobe_item_images - RLS policy issue');
+    return;
+  }
+
+  if (!linkData || linkData.length === 0) {
+    console.warn(`[diagnoseWardrobeItemImages] No image links found for item ${itemId}`);
+    return;
+  }
+
+  // Step 2: Check if we can access the image records directly
+  const imageIds = linkData.map(link => link.image_id);
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:713',message:'before images query',data:{itemId,imageIdsCount:imageIds.length,imageIds:imageIds.slice(0,3)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
+  
+  const { data: imageData, error: imageError } = await supabase
+    .from('images')
+    .select('id, storage_bucket, storage_key, owner_user_id')
+    .in('id', imageIds);
+
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:720',message:'images query result',data:{itemId,imagesReturned:imageData?.length||0,hasError:!!imageError,errorCode:imageError?.code,errorMessage:imageError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
+
+  if (imageError) {
+    console.error('[diagnoseWardrobeItemImages] Error querying images table - RLS policy issue');
+    return;
+  }
+
+  if (!imageData || imageData.length === 0) {
+    console.warn(`[diagnoseWardrobeItemImages] Found ${linkData.length} links but no accessible images - RLS blocking`);
+  } else if (imageData.length < imageIds.length) {
+    console.warn(`[diagnoseWardrobeItemImages] Some images blocked by RLS (${imageData.length}/${imageIds.length} accessible)`);
+  }
+}
+
+// Debug flag - set to true to enable verbose logging
+const DEBUG_IMAGES = false;
+
+// Track which items we've logged to avoid console spam
+const loggedItems = new Set<string>();
+
+/**
+ * Get images for multiple wardrobe items at once (batch query)
+ */
+export async function getWardrobeItemsImages(itemIds: string[]): Promise<{
+  data: Map<string, Array<{ id: string; image_id: string; type: string; sort_order: number; image: any }>>;
+  error: any;
+}> {
+  if (itemIds.length === 0) {
+    return { data: new Map(), error: null };
+  }
+
+  try {
+    // Fetch all links for all items at once
+    const { data: links, error: linksError } = await supabase
+      .from('wardrobe_item_images')
+      .select('*')
+      .in('wardrobe_item_id', itemIds)
+      .order('sort_order', { ascending: true });
+
+    if (linksError) {
+      return { data: new Map(), error: linksError };
+    }
+
+    if (!links || links.length === 0) {
+      return { data: new Map(), error: null };
+    }
+
+    // Get all unique image IDs
+    const imageIds = [...new Set(links.map(link => link.image_id))];
+    
+    // Fetch all images at once
+    const { data: images, error: imagesError } = await supabase
+      .from('images')
+      .select('*')
+      .in('id', imageIds);
+
+    if (imagesError) {
+      return { data: new Map(), error: imagesError };
+    }
+
+    // Create a map of image ID to image data
+    const imagesMap = new Map(images?.map(img => [img.id, img]) || []);
+
+    // Group links by wardrobe_item_id and attach image data
+    const itemImagesMap = new Map<string, Array<any>>();
+    links.forEach(link => {
+      const itemImages = itemImagesMap.get(link.wardrobe_item_id) || [];
+      itemImages.push({
+        ...link,
+        image: imagesMap.get(link.image_id) || null
+      });
+      itemImagesMap.set(link.wardrobe_item_id, itemImages);
+    });
+
+    return { data: itemImagesMap, error: null };
+  } catch (error: any) {
+    return { data: new Map(), error };
+  }
+}
+
+/**
+ * Get images for a wardrobe item
+ */
+export async function getWardrobeItemImages(itemId: string): Promise<{
+  data: Array<{ id: string; image_id: string; type: string; sort_order: number; image: any }>;
+  error: any;
+}> {
+  // #region agent log H1
+  const{data:{user}}=await supabase.auth.getUser();fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:741',message:'H1: Current auth user',data:{itemId,userId:user?.id,userEmail:user?.email},timestamp:Date.now(),sessionId:'debug-session',runId:'debug1',hypothesisId:'H1'})}).catch(()=>{});
+  // #endregion
+  
+  // #region agent log H3: Get link data first to see image IDs and then query images directly
+  const{data:linkData}=await supabase.from('wardrobe_item_images').select('id,image_id,wardrobe_item_id').eq('wardrobe_item_id',itemId);const imageIds=linkData?.map(l=>l.image_id)||[];fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:745',message:'H3: Link data fetched',data:{itemId,linksFound:linkData?.length||0,imageIds:imageIds.slice(0,3)},timestamp:Date.now(),sessionId:'debug-session',runId:'debug1',hypothesisId:'H3'})}).catch(()=>{});
+  // #endregion
+  
+  // #region agent log H3: Query images table directly to see owner_user_id
+  if(imageIds.length>0){const{data:directImages}=await supabase.from('images').select('id,owner_user_id,storage_key').in('id',imageIds);fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:749',message:'H3: Direct images query',data:{itemId,imagesAccessible:directImages?.length||0,ownerUserIds:directImages?.map(i=>i.owner_user_id)||[],hasStorageKeys:directImages?.every(i=>i.storage_key)||false},timestamp:Date.now(),sessionId:'debug-session',runId:'debug1',hypothesisId:'H3'})}).catch(()=>{});}
+  // #endregion
+  
+  // #region agent log H5: Test the IN subquery that the policy uses
+  if(user?.id&&imageIds.length>0){const{data:policyTest}=await supabase.from('wardrobe_item_images').select('image_id').eq('wardrobe_item_id',itemId);const{data:itemOwner}=await supabase.from('wardrobe_items').select('id,owner_user_id').eq('id',itemId).single();fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:754',message:'H5: Policy test data',data:{itemId,currentUserId:user.id,itemOwnerUserId:itemOwner?.owner_user_id,ownerMatch:user.id===itemOwner?.owner_user_id},timestamp:Date.now(),sessionId:'debug-session',runId:'debug1',hypothesisId:'H5'})}).catch(()=>{});}
+  // #endregion
+  
+  // Check migration status on first call (cache result)
+  if (!(window as any).__imagesRLSMigrationChecked) {
+    const migrationApplied = await checkImagesRLSMigration();
+    if (!migrationApplied) {
+      console.warn('[Images] ⚠️  RLS migration may not be applied - images may not be accessible');
+    }
+    (window as any).__imagesRLSMigrationChecked = true;
+  }
+  
+  // #region agent log H6: Fetch links and images separately (workaround for RLS join issue)
+  fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:768',message:'H6: Fetching links separately',data:{itemId},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'H6'})}).catch(()=>{});
+  // #endregion
+  
+  // Fetch wardrobe_item_images links first
+  const { data: links, error: linksError } = await supabase
+    .from('wardrobe_item_images')
+    .select('*')
+    .eq('wardrobe_item_id', itemId)
+    .order('sort_order', { ascending: true });
+  
+  if (linksError) {
+    // #region agent log H6: Links error
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:778',message:'H6: Links fetch error',data:{itemId,error:linksError.message},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'H6'})}).catch(()=>{});
+    // #endregion
+    return { data: [], error: linksError };
+  }
+  
+  if (!links || links.length === 0) {
+    // #region agent log H6: No links
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:786',message:'H6: No links found',data:{itemId},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'H6'})}).catch(()=>{});
+    // #endregion
+    return { data: [], error: null };
+  }
+  
+  // Fetch images directly using the image IDs
+  const linkImageIds = links.map(link => link.image_id);
+  const { data: images, error: imagesError } = await supabase
+    .from('images')
+    .select('*')
+    .in('id', linkImageIds);
+  
+  // #region agent log H6: Images fetch result
+  fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:800',message:'H6: Images fetch result',data:{itemId,linksCount:links.length,imagesCount:images?.length||0,hasError:!!imagesError,imageIds:linkImageIds.slice(0,3)},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'H6'})}).catch(()=>{});
+  // #endregion
+  
+  if (imagesError) {
+    // #region agent log H6: Images error
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:806',message:'H6: Images fetch error',data:{itemId,error:imagesError.message},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'H6'})}).catch(()=>{});
+    // #endregion
+    return { data: [], error: imagesError };
+  }
+  
+  // Manually join the data
+  const imagesMap = new Map(images?.map(img => [img.id, img]) || []);
+  const data = links.map(link => ({
+    ...link,
+    image: imagesMap.get(link.image_id) || null
+  }));
+  
+  const error = null;
+  
+  // #region agent log H6: Final combined data
+  fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:821',message:'H6: Final combined data',data:{itemId,recordsReturned:data?.length||0,hasImageData:data?.some(r=>r.image)||false,imageIsNull:data?.some(r=>!r.image)||false,firstRecord:data?.[0]?{hasImage:!!data[0].image,imageId:data[0].image_id,storageKey:data[0].image?.storage_key}:null},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'H6'})}).catch(()=>{});
+  // #endregion
+
+  if (error) {
+    if (!loggedItems.has(itemId)) {
+      console.error(`[Images] Error fetching images for item ${itemId}:`, error.message || error);
+      loggedItems.add(itemId);
+    }
+    await diagnoseWardrobeItemImages(itemId);
+    return { data: [], error };
+  }
+
+  if (!data || data.length === 0) {
+    if (!loggedItems.has(itemId)) {
+      console.log(`[Images] No image links found for item ${itemId}`);
+      loggedItems.add(itemId);
+    }
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'wardrobe.ts:819',message:'no images found, running diagnostics',data:{itemId},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    if (DEBUG_IMAGES) {
+      await diagnoseWardrobeItemImages(itemId);
+    }
+    return { data: [], error: null };
+  }
+
+  // Validate image data structure and log any issues
+  const validatedData = data.map((item, index) => {
+    if (!item.image) {
+      if (!loggedItems.has(`${itemId}-null`)) {
+        console.warn(`[Images] Item ${itemId}: Image data is NULL (RLS may be blocking access)`);
+        loggedItems.add(`${itemId}-null`);
+      }
+      return item;
+    }
+
+    if (!item.image.storage_key) {
+      if (!loggedItems.has(`${itemId}-no-key`)) {
+        console.warn(`[Images] Item ${itemId}: Missing storage_key`);
+        loggedItems.add(`${itemId}-no-key`);
+      }
+    }
+
+    return item;
+  });
+  
+  return { data: validatedData, error: null };
+}

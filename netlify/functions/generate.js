@@ -36,17 +36,19 @@ exports.handler = async (event, context) => {
         }
 
         // Parse request body
-        const { prompt, images, model } = JSON.parse(event.body);
+        const { prompt, images, model, responseType } = JSON.parse(event.body);
 
-        if (!prompt || !images || !Array.isArray(images)) {
+        console.log(`Incoming request: model=${model}, images=${images?.length}, responseType=${responseType || 'IMAGE'}, prompt="${prompt?.substring(0, 100)}..."`);
+
+        if (!prompt || (!images && responseType !== 'TEXT')) {
             return {
                 statusCode: 400,
                 headers,
-                body: JSON.stringify({ error: 'Missing required fields: prompt and images array' }),
+                body: JSON.stringify({ error: 'Missing required fields' }),
             };
         }
 
-        // Validate and set model (fallback to default for backward compatibility)
+        // Validate and set model
         const validModels = [
             'gemini-3-pro-image-preview',
             'standard-plus',
@@ -54,21 +56,33 @@ exports.handler = async (event, context) => {
         ];
         let modelId = model && validModels.includes(model) ? model : 'gemini-2.5-flash-image';
 
-        // Map frontend-only models to real Gemini IDs
         if (modelId === 'standard-plus') {
             modelId = 'gemini-2.5-flash-image';
         }
 
         // Build request parts
         const parts = [{ text: prompt }];
-        images.forEach(b64 => {
-            parts.push({
-                inline_data: {
-                    mime_type: "image/jpeg",
-                    data: b64
-                }
+        if (images && Array.isArray(images)) {
+            images.forEach(b64 => {
+                parts.push({
+                    inline_data: {
+                        mime_type: "image/jpeg",
+                        data: b64
+                    }
+                });
             });
-        });
+        }
+
+        // Set up generation config
+        const generationConfig = {
+            temperature: 0.4
+        };
+
+        if (responseType === 'TEXT') {
+            // Text only response
+        } else {
+            generationConfig.response_modalities = ["IMAGE"];
+        }
 
         // Call Google Gemini API
         const response = await fetch(
@@ -80,10 +94,7 @@ exports.handler = async (event, context) => {
                 },
                 body: JSON.stringify({
                     contents: [{ parts }],
-                    generationConfig: {
-                        response_modalities: ["IMAGE"],
-                        temperature: 0.4
-                    },
+                    generationConfig,
                     safetySettings: [
                         { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
                         { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
@@ -94,10 +105,21 @@ exports.handler = async (event, context) => {
             }
         );
 
-        const data = await response.json();
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            console.error('Failed to parse Google API response as JSON:', await response.text());
+            return {
+                statusCode: 500,
+                headers,
+                body: JSON.stringify({ error: 'Invalid response from Google API' }),
+            };
+        }
 
         // Handle API errors
         if (!response.ok || data.error) {
+            console.error('Google API Error:', JSON.stringify(data, null, 2));
             const errorMessage = data.error?.message || 'Unknown API error';
             return {
                 statusCode: response.status || 500,
@@ -126,7 +148,19 @@ exports.handler = async (event, context) => {
             };
         }
 
-        const part = data.candidates[0].content?.parts?.[0];
+        const candidate = data.candidates[0];
+        
+        // Handle TEXT response
+        if (responseType === 'TEXT') {
+            const textResult = candidate.content?.parts?.[0]?.text;
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({ text: textResult }),
+            };
+        }
+
+        const part = candidate.content?.parts?.[0];
         if (!part) {
             return {
                 statusCode: 400,
@@ -135,20 +169,17 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // Check if model refused (returned text instead of image)
-        if (part.text) {
-            return {
-                statusCode: 400,
-                headers,
-                body: JSON.stringify({ 
-                    error: `Model Refused: "${part.text}"` 
-                }),
-            };
-        }
-
         // Extract image data
         const inlineData = part.inline_data || part.inlineData;
         if (!inlineData?.data) {
+            // Check if it returned text instead (refusal)
+            if (part.text) {
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ error: `Model Refused: "${part.text}"` }),
+                };
+            }
             return {
                 statusCode: 400,
                 headers,

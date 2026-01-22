@@ -1,611 +1,717 @@
-# Full Stylist - Image Generation Documentation
+# Full Stylist - Technical Documentation
 
-This document provides a comprehensive overview of all code related to image generation through the Google Gemini API. Use this documentation when consulting with Gemini to get advice on improving image generation accuracy and display.
+## 1. Project Overview
 
-## Table of Contents
-1. [Architecture Overview](#architecture-overview)
-2. [Supported Models](#supported-models)
-3. [API Configuration](#api-configuration)
-4. [Image Generation Prompts](#image-generation-prompts)
-5. [API Implementation](#api-implementation)
-6. [Frontend Implementation](#frontend-implementation)
-7. [Image Processing Flow](#image-processing-flow)
-8. [Error Handling](#error-handling)
+**Full Stylist** is a web application for AI-powered virtual styling and outfit generation. The app enables users to create professional headshots with customizable hair and makeup, combine headshots with body photos to create studio models, and generate outfit variations using wardrobe items and AI image generation.
 
----
+### Primary Purpose
+- Generate professional studio headshots with customizable hair and makeup modifications
+- Create full-body studio models by combining headshots with body reference photos
+- Generate outfit variations on studio models using uploaded wardrobe items or text descriptions
+- Manage wardrobe collections with categorization, grouping, and organization features
+- Save and organize generated outfits into lookbooks and calendar views
 
-## Architecture Overview
+### Target Users
+- Individuals seeking virtual styling and outfit visualization
+- Fashion enthusiasts experimenting with different looks
+- Users wanting to preview how clothing items would look without physical try-ons
 
-The application uses a serverless architecture with:
-- **Backend**: Netlify Function (`netlify/functions/generate.js`) - Handles API calls to Gemini
-- **Frontend**: Vanilla JavaScript (`public/js/app.js`) - Manages UI, state, and prompt construction
-- **API Endpoint**: `https://generativelanguage.googleapis.com/v1beta/models/{MODEL_ID}:generateContent`
+### Target Platforms
+- **Primary**: Web browsers (desktop and mobile)
+- **Responsive Support**: Mobile phones, tablets, and desktop browsers
+- **No native mobile apps**: Web-only application
 
----
+### Current Development Status
+**Production/Active Development** (Version 3.1.0)
 
-## Supported Models
-
-The application supports the following Gemini models for image generation:
-
-1. **`gemini-3-pro-image-preview`** (Pro)
-   - Highest quality image generation
-   - Best for detailed, photorealistic results
-
-2. **`gemini-2.5-flash-image`** (Standard)
-   - Reliable generation with good quality
-   - Fast and efficient performance
-
-**Model Selection**: Users can select models via a dropdown in the UI. The selected model is stored in `localStorage` and passed to the API on each request.
-
-**Location**: Model selection is defined in:
-- `public/index.html` (lines 17-23) - UI dropdown
-- `public/js/app.js` (line 20) - State management
-- `netlify/functions/generate.js` (lines 50-56) - Model validation
+The application is functional and deployed. Features include:
+- Complete onboarding flow (headshot and studio model generation)
+- Wardrobe management with categories and groups
+- Outfit generation using AI
+- Outfit saving and organization
+- Home page with calendar/planner view
+- Salon tab for generating new headshot variations
 
 ---
 
-## API Configuration
+## 2. Tech Stack
 
-### Generation Configuration
+### Frontend
+- **Expo (React Native + Web)**: Single codebase for iOS, Android, and Web
+- **Expo Router**: File-based routing system
+- **TypeScript**: Type safety across the application
+- **React Native Web**: Web compatibility for React Native components
+- **React**: UI library (v19.1.0)
 
-Located in `netlify/functions/generate.js` (lines 79-82):
+### Backend
+- **Supabase**: 
+  - PostgreSQL database with Row Level Security (RLS)
+  - Authentication (email/password, magic links)
+  - Storage for images and media
+- **Netlify Functions**: Serverless functions for:
+  - Gemini API calls (AI image generation and tagging)
+  - Privileged operations requiring service role access
 
-```javascript
-generationConfig: {
-    response_modalities: ["IMAGE"],
-    temperature: 0.4
-}
-```
+### AI/ML
+- **Google Gemini API**: AI capabilities including:
+  - `auto_tag`: Automatic wardrobe item attribute extraction
+  - `outfit_suggest`: AI-powered outfit suggestions per category
+  - `reference_match`: Reference image matching for outfit creation
+  - `outfit_render`: Full outfit image generation
 
-**Parameters**:
-- `response_modalities: ["IMAGE"]` - Forces image-only responses
-- `temperature: 0.4` - Lower temperature for more consistent, deterministic outputs
+### Tooling
+- **Package Manager**: npm
+- **Dev Server**: Expo CLI (`expo start --web`)
+- **Build Tool**: Expo Metro bundler
+- **Deployment**: Netlify (for production builds: `expo export --platform web`)
 
-### Safety Settings
-
-Located in `netlify/functions/generate.js` (lines 83-88):
-
-```javascript
-safetySettings: [
-    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
-    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
-    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
-    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
-]
-```
-
-**Safety Threshold**: `BLOCK_ONLY_HIGH` - Only blocks high-risk content, allowing more creative freedom.
-
-### API Key Management
-
-- **Backend**: Stored in environment variable `GEMINI_API_KEY`
-- **Location**: `netlify/functions/generate.js` (line 29)
-- **Validation**: Checked before API calls (lines 30-36)
+### Runtime Targets
+- **Web**: Modern browsers (Chrome, Firefox, Safari, Edge)
+- **Mobile Web**: iOS Safari, Chrome Mobile, Android browsers
+- **iOS/Android**: Native app support via Expo (future)
 
 ---
 
-## Image Generation Prompts
+## 3. App Architecture
 
-The application uses four distinct prompts for different use cases:
+### Architecture Type
+**Cross-platform React Native application** with Expo Router for file-based routing
 
-### 1. Initial Headshot Generation
+### High-Level Architecture
 
-**Location**: `public/js/app.js` (lines 131-136)
-
-**Function**: `generateInitialHeadshot()`
-
-**Prompt Template**:
 ```
-Professional studio headshot. 
-SUBJECT: The person in Image 0. 
-CLOTHING: Wearing a simple white ribbed singlet (wife beater).
-MODIFICATIONS: ${hair}, ${makeup}.
-CRITICAL: Maintain the EXACT framing, zoom level, and head angle of Image 0.
-STYLE: Photorealistic, 8k, soft lighting, light grey/white background.
+┌─────────────────────────────────────────┐
+│         Client (Expo App)               │
+│  ┌──────────────────────────────────┐   │
+│  │  Expo Router (file-based)        │   │
+│  │  - app/index.tsx (entry)         │   │
+│  │  - app/(tabs)/ (navigation)      │   │
+│  │  - app/auth/ (auth screens)      │   │
+│  └──────────────────────────────────┘   │
+│  ┌──────────────────────────────────┐   │
+│  │  React Components (TypeScript)   │   │
+│  │  - State management (React hooks)│   │
+│  │  - UI components                 │   │
+│  └──────────────────────────────────┘   │
+│  ┌──────────────────────────────────┐   │
+│  │  Supabase Client                 │   │
+│  │  - Auth                          │   │
+│  │  - Database queries              │   │
+│  │  - Storage                       │   │
+│  └──────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+              │
+              │ HTTPS
+              ▼
+┌─────────────────────────────────────────┐
+│      Supabase (Backend)                 │
+│  ┌──────────────────────────────────┐   │
+│  │  PostgreSQL Database             │   │
+│  │  - Row Level Security (RLS)      │   │
+│  └──────────────────────────────────┘   │
+│  ┌──────────────────────────────────┐   │
+│  │  Authentication                  │   │
+│  │  - Email/password                │   │
+│  │  - Magic links                   │   │
+│  └──────────────────────────────────┘   │
+│  ┌──────────────────────────────────┐   │
+│  │  Storage (Images)                │   │
+│  └──────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+              │
+              │ HTTPS
+              ▼
+┌─────────────────────────────────────────┐
+│      Netlify Functions                  │
+│  ┌──────────────────────────────────┐   │
+│  │  ai-job-runner.ts                │   │
+│  │  - Gemini API calls              │   │
+│  │  - Service role operations       │   │
+│  └──────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+              │
+              │ HTTPS
+              ▼
+┌─────────────────────────────────────────┐
+│    Google Gemini API                    │
+│    (Image Generation)                   │
+└─────────────────────────────────────────┘
 ```
-
-**Input Images**: 
-- Image 0: User's selfie (rawSelfie)
-
-**User Inputs**:
-- `hair`: Hair description (e.g., "Buzz cut, blonde, messy texture")
-- `makeup`: Makeup description (e.g., "Natural look, red lipstick")
-
-**Purpose**: Creates a professional headshot with specified hair/makeup modifications while maintaining original framing.
-
----
-
-### 2. Studio Model Generation (Body + Headshot)
-
-**Location**: `public/js/app.js` (lines 175-189)
-
-**Function**: `runBodyGeneration(headB64, referenceBodyB64)`
-
-**Prompt Template**:
-```
-Generate a photorealistic full-body studio photograph.
-SUBJECT: A person standing in grey boxer shorts and a white ribbed singlet.
-REFERENCES:
-- Image 0: STRICT reference for facial identity (Headshot).
-- Image 1: STRICT reference for body shape, pose, framing, and crop.
-INSTRUCTIONS:
-1. Create a cohesive image where Head (Img 0) is seamlessly integrated onto Body (Img 1).
-2. Match the lighting and skin tones perfectly.
-3. CRITICAL: You MUST maintain the exact framing of Image 1. Output a Full Body Vertical Portrait.
-4. Background: Pure white infinite studio.
-```
-
-**Input Images**:
-- Image 0: Generated headshot (headB64)
-- Image 1: User's body photo (referenceBodyB64)
-
-**Purpose**: Combines a generated headshot with a body reference to create a full-body studio model. Critical for maintaining consistent body proportions and framing.
-
-**Used In**:
-- Initial onboarding: `generateStudioModel()` (line 151)
-- Saving new headshots: `saveCurrentHeadshot()` (line 284)
-
----
-
-### 3. New Headshot Generation (Salon Tab)
-
-**Location**: `public/js/app.js` (lines 258-263)
-
-**Function**: `generateNewHeadshot()`
-
-**Prompt Template**:
-```
-Professional studio headshot. 
-SUBJECT: The person in Image 0.
-CLOTHING: Wearing a simple white ribbed singlet (wife beater).
-MODIFICATIONS: ${h}, ${m}.
-CRITICAL: Maintain the EXACT framing and composition of Image 0.
-Style: Light background.
-```
-
-**Input Images**:
-- Image 0: Original selfie (rawSelfie)
-
-**User Inputs**:
-- `h`: Hair description from salon tab
-- `m`: Makeup description from salon tab
-
-**Purpose**: Generates new headshot variations with different hair/makeup while maintaining consistency with the original selfie.
-
----
-
-### 4. Outfit Generation
-
-**Location**: `public/js/app.js` (lines 426-440)
-
-**Function**: `generateOutfit()`
-
-**Prompt Template**:
-```
-Fashion Photography Generation.
-OUTPUT FORMAT: Vertical Portrait (3:4 Aspect Ratio).
-
-SUBJECT REFERENCE:
-- Image 0: Use this EXACT body pose, facial identity, and framing.
-
-CLOTHING INSTRUCTIONS:
-- ${instructionText}
-
-TASK:
-1. Dress the subject (Image 0).
-2. Keep face, hair, makeup, and framing EXACTLY consistent with Image 0.
-3. SCENE: Professional studio white background.
-4. Do NOT output a landscape image. The output must be tall (Portrait).
-```
-
-**Input Images**:
-- Image 0: Current look's body image (bodyB64)
-- Image 1+: Selected wardrobe items (optional, multiple)
-
-**Dynamic Instruction Text** (lines 406-422):
-
-**Case A - Clothes + Optional Text**:
-```
-"Dress the subject in the provided clothing images."
-+ (if additionalDesc) " Also include these details: ${additionalDesc}."
-```
-
-**Case B - Text Only**:
-```
-"Design and generate a fashionable outfit for the subject based on this description: ${additionalDesc}"
-```
-
-**Case C - Empty (Default)**:
-```
-"Design a stylish, modern outfit that perfectly suits the subject's appearance."
-```
-
-**Purpose**: Generates outfit variations on the studio model. Supports both clothing image references and text descriptions.
-
-**Key Constraints**:
-- Must maintain exact body pose and facial identity
-- Must output vertical portrait (3:4 aspect ratio)
-- Must use white studio background
-
----
-
-## API Implementation
-
-### Backend Function: `netlify/functions/generate.js`
-
-**Endpoint**: `/.netlify/functions/generate`
-
-**Method**: POST
-
-**Request Body**:
-```javascript
-{
-    prompt: string,
-    images: string[],  // Array of base64-encoded images (without data URI prefix)
-    model: string      // Model ID (optional, defaults to gemini-3-pro-image-preview)
-}
-```
-
-**Request Construction** (lines 58-67):
-```javascript
-const parts = [{ text: prompt }];
-images.forEach(b64 => {
-    parts.push({
-        inline_data: {
-            mime_type: "image/jpeg",
-            data: b64
-        }
-    });
-});
-```
-
-**API Call** (lines 70-91):
-```javascript
-const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`,
-    {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            contents: [{ parts }],
-            generationConfig: { ... },
-            safetySettings: [ ... ]
-        })
-    }
-);
-```
-
-**Response Handling** (lines 125-153):
-1. Validates response structure
-2. Checks for safety blocks
-3. Detects if model returned text instead of image
-4. Extracts image data from `inline_data` or `inlineData`
-5. Returns base64 image data
-
-**Response Format**:
-```javascript
-{
-    imageData: string  // Base64-encoded image (without data URI prefix)
-}
-```
-
-**Error Responses**:
-- `400`: Missing fields, safety blocks, model refusal, no image data
-- `405`: Method not allowed
-- `500`: API key missing, API errors, internal errors
-
----
-
-## Frontend Implementation
-
-### API Call Function: `callGemini()`
-
-**Location**: `public/js/app.js` (lines 483-517)
-
-**Function Signature**:
-```javascript
-async function callGemini(promptText, b64Images)
-```
-
-**Implementation**:
-1. Constructs request with prompt and images
-2. Sends POST to `/.netlify/functions/generate`
-3. Includes selected model from state
-4. Handles errors and extracts image data
-5. Returns base64 image string
-
-**Usage Pattern**:
-```javascript
-const b64 = await callGemini(prompt, [image1, image2, ...]);
-const url = `data:image/png;base64,${b64}`;
-```
-
-### Image Processing Utilities
-
-**Base64 Conversion** (lines 26-31):
-```javascript
-const toBase64 = file => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result.split(',')[1]); // Removes data URI prefix
-    reader.onerror = error => reject(error);
-});
-```
-
-**Note**: The function strips the `data:image/...;base64,` prefix, sending only the base64 string to the API.
 
 ### State Management
 
-**Image State Variables** (lines 4-13):
-```javascript
-const state = {
-    rawSelfie: null,              // Original selfie (base64)
-    rawBody: null,                // Original body photo (base64)
-    masterBodyB64: null,          // Master studio model reference
-    
-    previewHeadshotUrl: null,      // Current headshot preview (data URI)
-    previewHeadshotB64: null,      // Current headshot (base64)
-    
-    previewBodyUrl: null,          // Current body preview (data URI)
-    previewBodyB64: null,      // Current body (base64)
-    
-    savedLooks: [],                // Array of saved looks
-    wardrobe: [],                  // Array of wardrobe items
-    outfitHistory: [],             // Array of generated outfit URLs
-    
-    selectedLookId: null,          // Currently selected look ID
-    selectedModel: "gemini-3-pro-image-preview"  // Selected model
-};
+**Pattern**: React hooks and context-based state management
+
+**Primary State Management**:
+- **AuthContext**: Provides authentication state throughout the app
+- **React Hooks**: `useState`, `useEffect` for component-level state
+- **Supabase**: Database as source of truth for persistent data
+
+**Authentication Flow**:
+1. User authenticates via Supabase Auth (email/password or magic link)
+2. `AuthContext` provides `user` and `session` throughout the app
+3. On first login, user profile is created via `initializeUserProfile()`
+4. Route guards in `app/index.tsx` redirect based on auth/onboarding status
+
+---
+
+## 4. Project Structure
+
+```
+full-stylist/
+├── app/                         # Expo Router app directory
+│   ├── _layout.tsx             # Root layout with AuthProvider
+│   ├── index.tsx               # Entry point (auth routing)
+│   ├── (tabs)/                 # Tab navigation screens
+│   │   ├── _layout.tsx
+│   │   ├── calendar.tsx        # Calendar month view
+│   │   ├── wardrobe.tsx        # Wardrobe list screen
+│   │   ├── lookbooks.tsx       # Lookbooks screen
+│   │   ├── social.tsx          # Social feed screen
+│   │   └── profile.tsx         # Profile screen
+│   ├── auth/                   # Authentication screens
+│   │   ├── login.tsx           # Login screen
+│   │   └── signup.tsx          # Signup screen
+│   ├── onboarding.tsx          # Onboarding screen
+│   ├── wardrobe/               # Wardrobe screens
+│   │   ├── add.tsx             # Add item screen
+│   │   └── item/[id].tsx       # Item detail screen
+│   ├── outfits/                # Outfit screens
+│   │   └── [id].tsx            # Outfit editor screen
+│   ├── calendar/               # Calendar screens
+│   │   └── day/[date].tsx      # Day detail screen
+│   └── components/             # Reusable components
+├── lib/                        # Utility libraries
+│   ├── supabase.ts             # Supabase client initialization
+│   ├── user.ts                 # User profile management
+│   ├── wardrobe.ts             # Wardrobe item management
+│   ├── outfits.ts              # Outfit management
+│   ├── ai-jobs.ts              # AI job creation and polling
+│   └── ...                     # Other utility libraries
+├── contexts/                   # React contexts
+│   └── AuthContext.tsx         # Authentication context
+├── supabase/                   # Database migrations and seeds
+│   ├── migrations/
+│   └── seed/
+├── netlify/                    # Netlify Functions
+│   └── functions/
+│       └── ai-job-runner.ts    # AI job processing
+├── public/                     # Static assets (images, etc.)
+├── docs/                       # Documentation
+├── app.json                    # Expo configuration
+├── package.json                # npm configuration
+└── tsconfig.json               # TypeScript configuration
 ```
 
-**Saved Look Structure**:
-```javascript
-{
-    id: number,
-    headB64: string,      // Base64 headshot
-    headUrl: string,      // Data URI for display
-    bodyB64: string,     // Base64 body image
-    bodyUrl: string       // Data URI for display
+### Directory Purposes
+
+**`/app`**: 
+- Expo Router file-based routing directory
+- Entry point: `app/index.tsx` (imports `expo-router/entry` from `index.js`)
+- Each file/folder represents a route
+
+**`/lib`**: 
+- Utility libraries and helper functions
+- Supabase client initialization
+- Data management functions (wardrobe, outfits, etc.)
+
+**`/contexts`**: 
+- React contexts for global state (e.g., authentication)
+
+**`/supabase`**: 
+- Database migrations and seed data
+- Schema definitions and RLS policies
+
+**`/netlify/functions`**: 
+- Serverless functions for AI processing
+- Accessible via `/.netlify/functions/{function-name}`
+
+**`/public`**: 
+- Static assets (images, etc.)
+- Note: Expo generates its own HTML; `public/index.html` is not used
+
+### Monorepo/Workspace Structure
+**No monorepo**: Single application in root directory
+
+---
+
+## 5. Routing & Navigation
+
+### Routing Mechanism
+**Expo Router**: File-based routing system built on React Navigation
+
+### Implementation
+- **File-based routes**: Each file in `app/` directory represents a route
+- **Route structure**: Follows directory structure
+- **Layouts**: `_layout.tsx` files define nested layouts
+- **Dynamic routes**: Use brackets in filename (e.g., `[id].tsx`)
+- **Groups**: Parentheses create route groups without adding to URL (e.g., `(tabs)`)
+
+### Route Definitions
+
+**Root Route** (`app/index.tsx`):
+- Entry point that handles authentication routing
+- Redirects to `/auth/login` if not authenticated
+- Redirects to `/onboarding` if profile incomplete
+- Redirects to `/(tabs)/wardrobe` if authenticated and profile complete
+
+**Auth Routes** (`app/auth/`):
+- `/auth/login` - Login screen
+- `/auth/signup` - Signup screen
+
+**Tab Routes** (`app/(tabs)/`):
+- `/(tabs)/calendar` - Calendar month view
+- `/(tabs)/wardrobe` - Wardrobe list screen
+- `/(tabs)/lookbooks` - Lookbooks screen
+- `/(tabs)/social` - Social feed screen
+- `/(tabs)/profile` - Profile screen
+
+**Onboarding** (`app/onboarding.tsx`):
+- Onboarding flow for new users
+
+**Wardrobe Routes** (`app/wardrobe/`):
+- `/wardrobe/add` - Add new wardrobe item
+- `/wardrobe/item/[id]` - Item detail screen
+
+**Outfit Routes** (`app/outfits/`):
+- `/outfits/[id]` - Outfit editor/viewer screen
+
+**Calendar Routes** (`app/calendar/`):
+- `/calendar/day/[date]` - Day detail screen
+
+### Navigation Patterns
+
+**Programmatic Navigation**:
+```typescript
+import { useRouter } from 'expo-router';
+
+const router = useRouter();
+router.push('/wardrobe/add');
+router.replace('/auth/login');
+router.back();
+```
+
+**Link Navigation**:
+```typescript
+import { Link } from 'expo-router';
+
+<Link href="/wardrobe/item/123">View Item</Link>
+```
+
+### URL Structure
+- **Web**: Full URLs with path (e.g., `/wardrobe/add`)
+- **Deep linking**: Supported - can bookmark and share URLs
+- **Browser history**: Full support for back/forward navigation
+
+---
+
+## 6. Layout & Responsiveness
+
+### Responsive Strategy
+**CSS Media Queries** with breakpoint-based layout changes
+
+### Breakpoints
+Defined in `public/css/style.css`:
+
+- **Mobile**: `@media (max-width: 480px)`
+- **Tablet**: `@media (max-width: 768px)` and `@media (min-width: 481px) and (max-width: 768px)`
+- **Desktop**: `@media (min-width: 769px)`
+
+### Layout Handling by Viewport
+
+**Desktop (> 768px)**:
+- Dashboard: 3-column grid (`nav-rail` | `stage-area` | `controls-panel`)
+- Grid columns: `grid-template-columns: 70px 35% 1fr`
+
+**Tablet (481px - 768px)**:
+- Dashboard: 2-column grid (`nav-rail` | `stage-area`)
+- Controls panel: Moves below stage area
+- Grid: `grid-template-columns: 60px 1fr`
+
+**Mobile (≤ 480px)**:
+- Dashboard: Single column, stacked layout
+- Nav rail: Horizontal bottom bar (`flex-direction: row`)
+- Stage area: Full width, reduced height
+- Controls panel: Full width below stage
+
+**Home View**:
+- Mobile: Full width, scrolling day cards
+- Tablet/Desktop: Max-width 600px, centered
+
+### Platform Detection
+**None**: Relies solely on CSS media queries (no JavaScript platform detection)
+
+### Viewport Meta Tag
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+```
+- Prevents zoom on mobile
+- Sets initial scale to 1.0
+
+---
+
+## 7. UI & Styling
+
+### Styling System
+**Pure CSS** (no CSS-in-JS, no preprocessors, no CSS frameworks)
+
+### Theme/Token Setup
+**CSS Custom Properties** (CSS Variables) defined in `:root`:
+
+```css
+:root {
+    --bg-color: #0d0e12;          /* Dark background */
+    --surface: #1e1f26;            /* Card/surface background */
+    --surface-light: #2a2b35;      /* Lighter surface */
+    --primary: #c3ec52;            /* Primary accent (lime green) */
+    --accent-purple: #d452ec;      /* Secondary accent (purple) */
+    --text-main: #ffffff;          /* Primary text */
+    --text-muted: #8b92a5;         /* Muted text */
+    --border: #333;                /* Border color */
+    --danger: #ff6b6b;             /* Error/danger color */
 }
+```
+
+**Location**: `public/css/style.css` lines 1-11
+
+### Component Styling Approach
+**Utility Classes + Component Classes**:
+
+**Utility Classes**:
+- `.hidden` - `display: none`
+- `.btn`, `.btn-primary`, `.btn-purple`, `.btn-outline`
+- `.grid-3`, `.grid-4`, `.grid-2`
+- `.thumb`, `.selected`
+
+**Component Classes**:
+- `.step-card` - Onboarding steps
+- `.upload-box` - File upload areas
+- `.wardrobe-item-card` - Wardrobe item display
+- `.outfit-card` - Outfit display
+- `.modal` - Modal dialogs
+- `.lightbox` - Full-screen image viewer
+
+### Shared vs Screen-Specific Components
+**All styles in one file**: `public/css/style.css` (~2500+ lines)
+
+**View-Specific Styles**:
+- `.login-container`, `.login-card` - Login view
+- `.onboarding-container` - Onboarding view
+- `.app-layout`, `.nav-rail`, `.stage-area`, `.controls-panel` - Dashboard
+- `.home-view`, `.home-top-nav`, `.home-bottom-nav` - Home view
+
+**Shared Components**:
+- Buttons, inputs, modals, lightbox
+- Grid layouts, cards, tabs
+
+### Font
+```css
+font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 ```
 
 ---
 
-## Image Processing Flow
+## 8. Platform-Specific Logic
 
-### 1. Initial Headshot Flow
+### Platform Detection
+**None**: No JavaScript-based platform detection
 
-```
-User uploads selfie
-  ↓
-Convert to base64 (rawSelfie)
-  ↓
-User enters hair/makeup preferences
-  ↓
-Generate prompt with modifications
-  ↓
-callGemini(prompt, [rawSelfie])
-  ↓
-Store previewHeadshotB64 & previewHeadshotUrl
-  ↓
-Display in UI
-```
+### Feature Flags
+**None**: No feature flag system
 
-### 2. Studio Model Flow
+### Code Path Differences
+**None**: All code paths are identical across platforms
 
-```
-User uploads body photo
-  ↓
-Convert to base64 (rawBody)
-  ↓
-runBodyGeneration(previewHeadshotB64, rawBody)
-  ↓
-callGemini(bodyPrompt, [headB64, bodyB64])
-  ↓
-Store previewBodyB64 & previewBodyUrl
-  ↓
-Confirm → Save as masterBodyB64
-  ↓
-Enter dashboard
-```
+### Browser Compatibility
+- Relies on modern browser APIs:
+  - `localStorage` API
+  - `FileReader` API
+  - `fetch` API
+  - CSS Grid and Flexbox
+  - CSS Custom Properties
 
-### 3. Outfit Generation Flow
-
-```
-User selects look (body image)
-  ↓
-User selects wardrobe items (optional)
-  ↓
-User enters description (optional)
-  ↓
-Build dynamic instruction text
-  ↓
-Construct images array: [bodyB64, ...wardrobeB64]
-  ↓
-callGemini(outfitPrompt, images)
-  ↓
-Display generated outfit
-  ↓
-Add to outfitHistory
-```
-
-### 4. Salon Headshot Flow
-
-```
-User enters hair/makeup in salon tab
-  ↓
-generateNewHeadshot()
-  ↓
-callGemini(headshotPrompt, [rawSelfie])
-  ↓
-Store as preview (not saved yet)
-  ↓
-User clicks "Save to Profile"
-  ↓
-runBodyGeneration(newHeadshotB64, masterBodyB64)
-  ↓
-Save as new look
-```
+**No polyfills**: Assumes modern browser support
 
 ---
 
-## Error Handling
+## 9. Data & State
 
-### Backend Error Handling (`netlify/functions/generate.js`)
+### Data Sources
 
-**API Key Validation** (lines 30-36):
-```javascript
-if (!apiKey) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'API key not configured' }) };
-}
-```
+**1. Supabase Database**:
+- PostgreSQL database with Row Level Security (RLS)
+- Tables: `users`, `wardrobes`, `wardrobe_items`, `outfits`, `lookbooks`, `posts`, etc.
+- Real-time capabilities available (future enhancement)
 
-**Request Validation** (lines 41-47):
-```javascript
-if (!prompt || !images || !Array.isArray(images)) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields' }) };
-}
-```
+**2. Supabase Storage**:
+- Image storage for wardrobe items, outfits, and user profiles
+- Bucket: `media` (with RLS policies)
+- Images referenced via URLs, not stored as Base64 in database
 
-**Safety Block Detection** (lines 106-114):
-```javascript
-if (data.promptFeedback?.blockReason) {
-    return { statusCode: 400, body: JSON.stringify({ error: `Safety Block: ${blockReason}` }) };
-}
-```
+**3. Supabase Auth**:
+- User authentication (email/password, magic links)
+- Session management
+- User profiles linked to auth users
 
-**Model Refusal Detection** (lines 135-143):
-```javascript
-if (part.text) {
-    return { statusCode: 400, body: JSON.stringify({ error: `Model Refused: "${part.text}"` }) };
-}
-```
+**4. Google Gemini API**:
+- AI image generation and processing
+- Accessed via Netlify Functions (`ai-job-runner.ts`)
+- Jobs tracked in `ai_jobs` database table
 
-**Image Data Validation** (lines 145-153):
-```javascript
-if (!inlineData?.data) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'No image data found' }) };
-}
-```
+**5. Netlify Functions**:
+- `/.netlify/functions/ai-job-runner` - AI job processing (Gemini API calls)
+- Service role access for privileged operations
 
-### Frontend Error Handling (`public/js/app.js`)
+### Data Format
 
-**API Call Errors** (lines 497-516):
-```javascript
-if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-}
+**Images**: 
+- Stored in Supabase Storage bucket `media`
+- Metadata stored in `images` table
+- URLs used for display (not Base64 strings)
+- Original files preserved
 
-if (data.error) {
-    throw new Error(`API Error: ${data.error}`);
-}
+**Wardrobe Items**:
+- Stored in `wardrobe_items` table
+- Images linked via `wardrobe_item_images` table
+- Attributes stored in `entity_attributes` table
+- Categories, groups, and other metadata in database
 
-if (!data.imageData) {
-    throw new Error("No image data returned from server.");
-}
-```
+**Outfits**:
+- Stored in `outfits` table
+- Linked to wardrobe items via `outfit_items` junction table
+- Images stored in Supabase Storage
+- Metadata (categories, visibility) in database
 
-**User-Facing Errors**:
-- All errors are caught and displayed via `alert()` or status messages
-- Loading states are managed via `showLoading()` function
+### State Management
 
----
+**Global State**:
+- **AuthContext**: Provides authentication state (`user`, `session`) throughout app
+- **React Hooks**: Component-level state using `useState`, `useEffect`
+- **Supabase Client**: Real-time queries and mutations
 
-## Key Technical Details
+**Data Persistence**:
+- **Primary**: Supabase PostgreSQL database
+- **Storage**: Supabase Storage for images
+- **Local Caching**: React Query or similar (optional, future enhancement)
+- **Offline Support**: Not currently implemented (future enhancement)
 
-### Image Format
-- **Input**: JPEG (specified as `mime_type: "image/jpeg"` in API calls)
-- **Output**: PNG (converted to data URI with `data:image/png;base64,` prefix)
-- **Storage**: Base64 strings (without data URI prefix) in state
-
-### Image Size Constraints
-- No explicit size limits are enforced in code
-- Large images may cause memory issues or API timeouts
-- Wardrobe upload handles multiple files with error handling (lines 334-376)
-
-### Aspect Ratio Control
-- **Outfit Generation**: Explicitly requests "Vertical Portrait (3:4 Aspect Ratio)"
-- **Other Generations**: Relies on prompt instructions to maintain framing
-
-### Consistency Mechanisms
-1. **Facial Identity**: Uses "STRICT reference" language in prompts
-2. **Framing**: "CRITICAL: Maintain the EXACT framing" instructions
-3. **Body Pose**: References master body image for consistency
-4. **Lighting**: "Match the lighting and skin tones perfectly" in body generation
+**Persistence Triggers**:
+- User actions trigger database mutations via Supabase client
+- AI jobs created in database, polled for status updates
+- Real-time updates available via Supabase subscriptions (future)
 
 ---
 
-## Areas for Improvement
+## 10. Environment & Configuration
 
-When consulting with Gemini, consider discussing:
+### Environment Variables
 
-1. **Prompt Engineering**:
-   - More specific framing instructions
-   - Better aspect ratio enforcement
-   - Enhanced consistency keywords
+**Backend (Netlify Functions)**:
+- `GEMINI_API_KEY` - Google Gemini API key
+  - **Location**: Netlify environment variables (not in code)
+  - **Usage**: `netlify/functions/generate.js` line 29
+  - **Required**: Yes (function fails if missing)
 
-2. **Model Parameters**:
-   - Temperature tuning (currently 0.4)
-   - Additional generation config options
-   - Safety threshold adjustments
+**Frontend**:
+- **None**: No environment variables in client-side code
 
-3. **Image Quality**:
-   - Resolution specifications
-   - Compression handling
-   - Format optimization
+### Config Files
 
-4. **Error Recovery**:
-   - Retry logic for failed generations
-   - Fallback model selection
-   - Better error messages for users
+**`netlify.toml`**:
+```toml
+[build]
+  command = "npx expo export --platform web"
+  publish = "web-build"
+  functions = "netlify/functions"
 
-5. **Consistency**:
-   - Face matching improvements
-   - Body proportion preservation
-   - Lighting consistency across generations
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+```
+- Build command: Exports Expo web app to `web-build` directory
+- Publish directory: `web-build` (Expo-generated static files)
+- Functions directory: `netlify/functions`
+- SPA fallback redirect (all routes → index.html)
 
----
+**`app.config.js`** / **`app.json`**:
+- Expo configuration
+- Entry point: `index.js` (imports `expo-router/entry`)
+- Web bundler: Metro
+- Router plugin: Expo Router enabled
 
-## File Locations Summary
-
-- **Backend API**: `netlify/functions/generate.js`
-- **Frontend Logic**: `public/js/app.js`
-- **UI Template**: `public/index.html`
-- **Model Selection**: `public/index.html` (lines 17-23), `public/js/app.js` (line 20, 603-613)
-
----
-
-## API Endpoint Details
-
-**Base URL**: `https://generativelanguage.googleapis.com/v1beta/models/{MODEL_ID}:generateContent`
-
-**Authentication**: Query parameter `key={API_KEY}`
-
-**Content-Type**: `application/json`
-
-**Request Format**:
+**`package.json`**:
 ```json
 {
-    "contents": [{
-        "parts": [
-            { "text": "prompt text" },
-            { "inline_data": { "mime_type": "image/jpeg", "data": "base64string" } },
-            ...
-        ]
-    }],
-    "generationConfig": {
-        "response_modalities": ["IMAGE"],
-        "temperature": 0.4
-    },
-    "safetySettings": [...]
+  "scripts": {
+    "start": "expo start",
+    "web": "expo start --web",
+    "ios": "expo start --ios",
+    "android": "expo start --android",
+    "dev": "netlify dev"
+  }
 }
 ```
 
+### Build-Time vs Runtime Configuration
+
+**Build-Time**:
+- Expo exports web app to `web-build` directory
+- Metro bundler compiles TypeScript/React to JavaScript
+- Static assets bundled
+
+**Runtime Configuration**:
+- Supabase connection: Environment variables (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`)
+- User preferences: Stored in Supabase database
+- AI job endpoints: Defined in `lib/ai-jobs.ts`
+
 ---
 
-*Last Updated: Based on codebase analysis*
-*Version: 3.1.0*
+## 11. Dev & Preview Workflow
 
+### Running Locally
+
+**Frontend Development (Recommended)**:
+```bash
+npm run web
+```
+or
+```bash
+expo start --web
+```
+
+**What it does**:
+- Starts Expo development server with Metro bundler
+- Serves the Expo Router app
+- Hot reloading enabled (automatic refresh on code changes)
+- Typically runs on `http://localhost:8081` (web) or shows QR code for mobile
+
+**Full Stack Development (with Netlify Functions)**:
+```bash
+npm run dev
+```
+or
+```bash
+netlify dev
+```
+
+**What it does**:
+- Starts Netlify CLI development server
+- Proxies Netlify functions locally
+- Typically runs on `http://localhost:8888`
+- Note: For Expo Router app, use `npm run web` instead. This is primarily for testing functions.
+
+### Preview Methods
+
+**Web Browser**:
+- Open `http://localhost:8081` in browser (when running `npm run web`)
+- Full Expo Router app functionality
+- Hot reloading enabled
+
+**Mobile Device Preview**:
+- Run `expo start` and scan QR code with Expo Go app (iOS/Android)
+- Or connect device to same network and access via local IP
+
+**iOS Simulator**:
+```bash
+npm run ios
+```
+
+**Android Emulator**:
+```bash
+npm run android
+```
+
+### Requirements
+
+- Node.js installed
+- Expo CLI (installed via npm with expo package)
+- For Netlify Functions testing: Netlify CLI (`npm install -g netlify-cli`)
+- Environment variables: Create `.env` file with `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+
+---
+
+## 12. Known Constraints & Assumptions
+
+### Hard Constraints
+
+1. **Expo Router Dependency**: App relies on Expo Router for routing
+   - **Implication**: Routing structure tied to file system
+
+2. **Supabase Backend**: All persistent data stored in Supabase
+   - **Implication**: Requires Supabase project and valid credentials
+
+3. **Row Level Security**: Database security enforced via RLS policies
+   - **Implication**: Must maintain RLS policies for data access
+
+4. **Google Gemini API Dependency**: Core AI functionality requires external API
+   - **Implication**: App non-functional if API unavailable or quota exceeded
+
+5. **Netlify Functions**: AI jobs processed via Netlify Functions
+   - **Implication**: Requires Netlify deployment or local Netlify CLI for function testing
+
+6. **Cross-Platform Support**: Single codebase for web, iOS, and Android
+   - **Implication**: Must use React Native compatible components and APIs
+
+### Architectural Assumptions
+
+1. **Modern JavaScript/TypeScript**: Uses ES6+, TypeScript, React hooks
+   - **Must respect**: Maintain compatibility with React Native Web
+
+2. **Expo Router File-Based Routing**: Routing structure follows file system
+   - **Must respect**: File organization determines routes
+
+3. **Supabase as Backend**: All data persistence via Supabase
+   - **Must respect**: Database schema changes require migrations
+
+4. **React Native Components**: UI built with React Native components
+   - **Must respect**: Use cross-platform compatible components
+
+5. **Metro Bundler**: Uses Expo's Metro bundler for web builds
+   - **Must respect**: Metro bundler configuration and limitations
+
+6. **Serverless Architecture**: AI processing via serverless functions
+   - **Must respect**: Function execution time and memory limits
+
+### Technical Debt / Constraints
+
+1. **Type Safety**: TypeScript used but may have `any` types
+2. **Testing**: Limited or no test coverage
+3. **Error Handling**: May need improved error boundaries
+4. **Loading States**: Some operations may need better loading indicators
+5. **Offline Support**: Not currently implemented
+6. **Real-time Updates**: AI job polling could be replaced with WebSockets (future)
+
+---
+
+## Additional Notes
+
+### File Locations Summary
+
+- **Entry Point**: `index.js` (imports `expo-router/entry`)
+- **Root Layout**: `app/_layout.tsx`
+- **Main Routes**: `app/` directory (file-based routing)
+- **Utility Libraries**: `lib/` directory
+- **Auth Context**: `contexts/AuthContext.tsx`
+- **API Functions**: `netlify/functions/ai-job-runner.ts`
+- **Config**: `app.config.js`, `netlify.toml`, `package.json`
+
+### API Endpoints
+
+**Client → Supabase**:
+- Direct client access using anon key
+- Tables: `wardrobes`, `wardrobe_items`, `outfits`, `lookbooks`, etc.
+- Storage: `media` bucket for images
+
+**Client → Netlify Functions**:
+- `/.netlify/functions/ai-job-runner` - AI job processing
+- Jobs created in `ai_jobs` table, polled for status
+
+**Netlify Functions → External**:
+- `https://generativelanguage.googleapis.com/v1beta/models/{MODEL_ID}:generateContent` - Gemini API
+
+---
+
+*Document Version: 1.0*  
+*Last Updated: Based on codebase analysis*  
+*Application Version: 3.1.0*

@@ -1,0 +1,1421 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { Image as ExpoImage } from 'expo-image';
+import { useAuth } from '@/contexts/AuthContext';
+import { getUserSettings, updateUserSettings, UserSettings } from '@/lib/settings';
+import { getUserProfile, updateUserProfile, initializeUserProfile } from '@/lib/user';
+import { uploadImageToStorage } from '@/lib/wardrobe';
+import { supabase } from '@/lib/supabase';
+import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, pollAIJob } from '@/lib/ai-jobs';
+
+export default function ProfileScreen() {
+  const { user, signOut } = useAuth();
+  const router = useRouter();
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [profile, setProfile] = useState<{ handle: string; display_name: string } | null>(null);
+  const [handle, setHandle] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [aiModelPreference, setAiModelPreference] = useState<string>('gemini-2.5-flash-image');
+  const [modelPassword, setModelPassword] = useState('');
+  const [showPasswordInput, setShowPasswordInput] = useState(false);
+  const [uploadingSelfie, setUploadingSelfie] = useState(false);
+  const [uploadingBody, setUploadingBody] = useState(false);
+  const [headshotImageUrl, setHeadshotImageUrl] = useState<string | null>(null);
+  const [bodyShotImageUrl, setBodyShotImageUrl] = useState<string | null>(null);
+  
+  // Gallery state for all generated images
+  const [allHeadshots, setAllHeadshots] = useState<Array<{ id: string; url: string; created_at: string }>>([]);
+  const [allBodyShots, setAllBodyShots] = useState<Array<{ id: string; url: string; created_at: string }>>([]);
+  const [loadingGallery, setLoadingGallery] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, [user]);
+
+  const loadData = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    
+    // Load settings
+    const { data: settingsData, error: settingsError } = await getUserSettings(user.id);
+    if (settingsError) {
+      console.log('[Profile] Settings not found, user may need to complete onboarding');
+      setSettings(null);
+    } else {
+      setSettings(settingsData);
+      if (settingsData) {
+        setAiModelPreference(settingsData.ai_model_preference || 'gemini-2.5-flash-image');
+        
+        // Load active headshot and body shot images if they exist
+        if (settingsData.headshot_image_id) {
+          loadImageUrl(settingsData.headshot_image_id).then(setHeadshotImageUrl);
+        } else {
+          setHeadshotImageUrl(null);
+        }
+        if (settingsData.body_shot_image_id) {
+          loadImageUrl(settingsData.body_shot_image_id).then(setBodyShotImageUrl);
+        } else {
+          setBodyShotImageUrl(null);
+        }
+      }
+    }
+    
+    // Load all generated headshots and body shots
+    await loadAllGeneratedImages();
+    
+    // Load profile
+    const { data: profileData, error: profileError } = await getUserProfile(user.id);
+    if (profileError) {
+      // Profile might not exist yet (user hasn't completed onboarding)
+      console.log('[Profile] Profile not found, user may need to complete onboarding');
+      setProfile(null);
+      setHandle('');
+      setDisplayName('');
+    } else {
+      setProfile(profileData);
+      setHandle(profileData?.handle || '');
+      setDisplayName(profileData?.display_name || '');
+    }
+    
+    setLoading(false);
+  };
+
+  const validateHandle = (h: string): boolean => {
+    const handleRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    return handleRegex.test(h);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+
+    if (!handle.trim()) {
+      Alert.alert('Error', 'Please enter a handle');
+      return;
+    }
+
+    if (!validateHandle(handle.trim())) {
+      Alert.alert(
+        'Invalid Handle',
+        'Handle must be 3-20 characters and contain only letters, numbers, and underscores'
+      );
+      return;
+    }
+
+    if (!displayName.trim()) {
+      Alert.alert('Error', 'Please enter a display name');
+      return;
+    }
+
+    setSavingProfile(true);
+
+    try {
+      let error;
+      
+      // If profile doesn't exist, use initializeUserProfile (idempotent)
+      // Otherwise, use updateUserProfile
+      if (!profile) {
+        const { error: initError } = await initializeUserProfile(
+          user.id,
+          handle.trim(),
+          displayName.trim(),
+          {
+            account_privacy: settings?.account_privacy || 'public',
+            search_visibility: settings?.search_visibility || 'visible',
+            default_visibility: settings?.default_visibility || 'followers',
+            allow_external_sharing: settings?.allow_external_sharing ?? true,
+          }
+        );
+        error = initError;
+      } else {
+        const { error: updateError } = await updateUserProfile(user.id, {
+          handle: handle.trim(),
+          display_name: displayName.trim(),
+        });
+        error = updateError;
+      }
+
+      if (error) {
+        if (error.code === '23505') {
+          Alert.alert('Error', 'This handle is already taken. Please choose another.');
+        } else {
+          Alert.alert('Error', error.message || 'Failed to save profile');
+        }
+      } else {
+        Alert.alert('Success', 'Profile saved successfully');
+        // Reload data to get updated values
+        await loadData();
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'An unexpected error occurred');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleUpdateSetting = async <K extends keyof UserSettings>(
+    key: K,
+    value: UserSettings[K]
+  ) => {
+    if (!user || !settings) return;
+
+    setSaving(true);
+    
+    try {
+      const { error } = await updateUserSettings(user.id, { [key]: value });
+
+      if (error) {
+        Alert.alert('Error', 'Failed to update setting');
+      } else {
+        setSettings({ ...settings, [key]: value });
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'An unexpected error occurred');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const loadImageUrl = async (imageId: string): Promise<string | null> => {
+    const { data: image } = await supabase
+      .from('images')
+      .select('*')
+      .eq('id', imageId)
+      .single();
+    
+    if (image) {
+      const { data: urlData } = supabase.storage
+        .from(image.storage_bucket || 'media')
+        .getPublicUrl(image.storage_key);
+      return urlData.publicUrl;
+    }
+    return null;
+  };
+
+  const loadAllGeneratedImages = async () => {
+    if (!user) return;
+    
+    setLoadingGallery(true);
+    try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:220',message:'Loading all generated images',data:{userId:user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'J'})}).catch(()=>{});
+      // #endregion
+      
+      // Load all headshots (images with storage_key containing 'ai/headshots/')
+      const { data: headshotImages, error: headshotError } = await supabase
+        .from('images')
+        .select('id, storage_bucket, storage_key, created_at')
+        .eq('owner_user_id', user.id)
+        .like('storage_key', '%/ai/headshots/%')
+        .order('created_at', { ascending: false });
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:232',message:'Headshots query result',data:{count:headshotImages?.length,hasError:!!headshotError,errorMsg:headshotError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'J'})}).catch(()=>{});
+      // #endregion
+      
+      if (!headshotError && headshotImages) {
+        const headshotsWithUrls = await Promise.all(
+          headshotImages.map(async (img) => {
+            const { data } = supabase.storage
+              .from(img.storage_bucket)
+              .getPublicUrl(img.storage_key);
+            return {
+              id: img.id,
+              url: data.publicUrl,
+              created_at: img.created_at
+            };
+          })
+        );
+        setAllHeadshots(headshotsWithUrls);
+      }
+      
+      // Load all body shots (images with storage_key containing 'ai/body_shots/')
+      const { data: bodyImages, error: bodyError } = await supabase
+        .from('images')
+        .select('id, storage_bucket, storage_key, created_at')
+        .eq('owner_user_id', user.id)
+        .like('storage_key', '%/ai/body_shots/%')
+        .order('created_at', { ascending: false });
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:257',message:'Body shots query result',data:{count:bodyImages?.length,hasError:!!bodyError,errorMsg:bodyError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'K'})}).catch(()=>{});
+      // #endregion
+      
+      if (!bodyError && bodyImages) {
+        const bodyShotsWithUrls = await Promise.all(
+          bodyImages.map(async (img) => {
+            const { data } = supabase.storage
+              .from(img.storage_bucket)
+              .getPublicUrl(img.storage_key);
+            return {
+              id: img.id,
+              url: data.publicUrl,
+              created_at: img.created_at
+            };
+          })
+        );
+        setAllBodyShots(bodyShotsWithUrls);
+      }
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:277',message:'Error loading gallery images',data:{errorMsg:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'J,K'})}).catch(()=>{});
+      // #endregion
+      console.error('Error loading generated images:', error);
+    } finally {
+      setLoadingGallery(false);
+    }
+  };
+
+  const handleClearHeadshot = async () => {
+    if (!user || !settings) return;
+    
+    try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:290',message:'Clearing headshot selection',data:{userId:user.id,currentHeadshotId:settings.headshot_image_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'L'})}).catch(()=>{});
+      // #endregion
+      
+      // Clear headshot_image_id in user_settings (image remains in storage)
+      const { error } = await updateUserSettings(user.id, {
+        headshot_image_id: null
+      } as any);
+      
+      if (error) {
+        throw error;
+      }
+      
+      Alert.alert('Success', 'Headshot selection cleared. Image is still saved.');
+      await loadData();
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:305',message:'Error clearing headshot',data:{errorMsg:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'L'})}).catch(()=>{});
+      // #endregion
+      Alert.alert('Error', error.message || 'Failed to clear headshot');
+    }
+  };
+
+  const handleClearBodyShot = async () => {
+    if (!user || !settings) return;
+    
+    try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:318',message:'Clearing body shot selection',data:{userId:user.id,currentBodyShotId:settings.body_shot_image_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'M'})}).catch(()=>{});
+      // #endregion
+      
+      // Clear body_shot_image_id in user_settings (image remains in storage)
+      const { error } = await updateUserSettings(user.id, {
+        body_shot_image_id: null
+      } as any);
+      
+      if (error) {
+        throw error;
+      }
+      
+      Alert.alert('Success', 'Body shot selection cleared. Image is still saved.');
+      await loadData();
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:333',message:'Error clearing body shot',data:{errorMsg:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'M'})}).catch(()=>{});
+      // #endregion
+      Alert.alert('Error', error.message || 'Failed to clear body shot');
+    }
+  };
+
+  const handleSelectHeadshot = async (imageId: string) => {
+    if (!user) return;
+    
+    try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:346',message:'Selecting headshot',data:{userId:user.id,imageId},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'N'})}).catch(()=>{});
+      // #endregion
+      
+      // Set headshot_image_id in user_settings
+      const { error } = await updateUserSettings(user.id, {
+        headshot_image_id: imageId
+      } as any);
+      
+      if (error) {
+        throw error;
+      }
+      
+      Alert.alert('Success', 'Headshot selected as active');
+      await loadData();
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:361',message:'Error selecting headshot',data:{errorMsg:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'N'})}).catch(()=>{});
+      // #endregion
+      Alert.alert('Error', error.message || 'Failed to select headshot');
+    }
+  };
+
+  const handleSelectBodyShot = async (imageId: string) => {
+    if (!user) return;
+    
+    try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:374',message:'Selecting body shot',data:{userId:user.id,imageId},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'O'})}).catch(()=>{});
+      // #endregion
+      
+      // Set body_shot_image_id in user_settings
+      const { error } = await updateUserSettings(user.id, {
+        body_shot_image_id: imageId
+      } as any);
+      
+      if (error) {
+        throw error;
+      }
+      
+      Alert.alert('Success', 'Studio model selected as active');
+      await loadData();
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:389',message:'Error selecting body shot',data:{errorMsg:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'O'})}).catch(()=>{});
+      // #endregion
+      Alert.alert('Error', error.message || 'Failed to select studio model');
+    }
+  };
+
+  const handleUploadSelfie = async () => {
+    if (!user) return;
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:197',message:'handleUploadSelfie started',data:{userId:user.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+// #endregion
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant camera roll permissions');
+      return;
+    }
+
+    // On web, MediaType may not exist, so use string fallback
+    const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    setUploadingSelfie(true);
+    try {
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:218',message:'Image selected, starting upload',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+// #endregion
+      // Convert URI to blob
+      const response = await fetch(result.assets[0].uri);
+      const blob = await response.blob();
+
+      // Upload to storage
+      const uploadResult = await uploadImageToStorage(user.id, blob, `selfie-${Date.now()}.jpg`);
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:227',message:'Storage upload result',data:{hasError:!!uploadResult.error,hasData:!!uploadResult.data,errorMsg:uploadResult.error?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C'})}).catch(()=>{});
+// #endregion
+      if (uploadResult.error) {
+        throw uploadResult.error;
+      }
+
+      // Create image record
+      const { data: imageRecord, error: imageError } = await supabase
+        .from('images')
+        .insert({
+          owner_user_id: user.id,
+          storage_bucket: 'media',
+          storage_key: uploadResult.data!.path,
+          mime_type: 'image/jpeg',
+          source: 'upload',
+        })
+        .select()
+        .single();
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:244',message:'Image record insert result',data:{hasError:!!imageError,hasRecord:!!imageRecord,imageId:imageRecord?.id,errorMsg:imageError?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C'})}).catch(()=>{});
+// #endregion
+
+      if (imageError || !imageRecord) {
+        throw imageError || new Error('Failed to create image record');
+      }
+
+      // Create headshot generation job
+      const { data: headshotJob, error: jobError } = await triggerHeadshotGenerate(
+        user.id,
+        imageRecord.id
+      );
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:258',message:'Headshot job creation result',data:{hasError:!!jobError,hasJob:!!headshotJob,jobId:headshotJob?.id,errorMsg:jobError?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,D'})}).catch(()=>{});
+// #endregion
+
+      if (headshotJob && !jobError) {
+        // Auto-trigger the job
+        await triggerAIJobExecution(headshotJob.id);
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:265',message:'Job execution triggered',data:{jobId:headshotJob.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+// #endregion
+        
+        // Poll for completion
+        Alert.alert('Generating', 'Generating professional headshot. This may take 20-30 seconds...');
+        
+        const { data: completedJob, error: pollError } = await pollAIJob(headshotJob.id, 30, 2000);
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:273',message:'Poll result',data:{hasError:!!pollError,hasJob:!!completedJob,jobStatus:completedJob?.status,errorMsg:pollError?.message||completedJob?.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+// #endregion
+        
+        if (pollError || !completedJob) {
+          throw new Error('Headshot generation timed out or failed');
+        }
+        
+        if (completedJob.status === 'failed') {
+          throw new Error(`Generation failed: ${completedJob.error || 'Unknown error'}`);
+        }
+        
+        Alert.alert('Success', 'Headshot generated successfully!');
+      } else {
+        throw jobError || new Error('Failed to create headshot job');
+      }
+
+      // Reload settings to get updated headshot_image_id
+      await loadData();
+    } catch (error: any) {
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:293',message:'handleUploadSelfie CAUGHT ERROR',data:{errorMsg:error.message,errorStack:error.stack},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B,C,D'})}).catch(()=>{});
+// #endregion
+      Alert.alert('Error', error.message || 'Failed to upload selfie');
+    } finally {
+      setUploadingSelfie(false);
+    }
+  };
+
+  const handleUploadBodyPhoto = async () => {
+    if (!user) return;
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:302',message:'handleUploadBodyPhoto started',data:{userId:user.id,hasHeadshot:!!settings?.headshot_image_id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+// #endregion
+
+    // Check if user has generated headshot first
+    if (!settings?.headshot_image_id) {
+      Alert.alert('Headshot Required', 'Please generate your professional headshot first before uploading a body photo.');
+      return;
+    }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant camera roll permissions');
+      return;
+    }
+
+    // On web, MediaType may not exist, so use string fallback
+    const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    setUploadingBody(true);
+    try {
+      // Convert URI to blob
+      const response = await fetch(result.assets[0].uri);
+      const blob = await response.blob();
+
+      // Upload to storage
+      const uploadResult = await uploadImageToStorage(user.id, blob, `body-${Date.now()}.jpg`);
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:331',message:'Body storage upload result',data:{hasError:!!uploadResult.error,hasData:!!uploadResult.data,errorMsg:uploadResult.error?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C'})}).catch(()=>{});
+// #endregion
+      if (uploadResult.error) {
+        throw uploadResult.error;
+      }
+
+      // Create image record
+      const { data: imageRecord, error: imageError } = await supabase
+        .from('images')
+        .insert({
+          owner_user_id: user.id,
+          storage_bucket: 'media',
+          storage_key: uploadResult.data!.path,
+          mime_type: 'image/jpeg',
+          source: 'upload',
+        })
+        .select()
+        .single();
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:348',message:'Body image record insert result',data:{hasError:!!imageError,hasRecord:!!imageRecord,imageId:imageRecord?.id,errorMsg:imageError?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C'})}).catch(()=>{});
+// #endregion
+
+      if (imageError || !imageRecord) {
+        throw imageError || new Error('Failed to create image record');
+      }
+
+      // Create body shot generation job (studio model)
+      const { data: bodyShotJob, error: jobError } = await triggerBodyShotGenerate(
+        user.id,
+        imageRecord.id
+      );
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:365',message:'Body shot job creation result',data:{hasError:!!jobError,hasJob:!!bodyShotJob,jobId:bodyShotJob?.id,errorMsg:jobError?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H'})}).catch(()=>{});
+// #endregion
+
+      if (bodyShotJob && !jobError) {
+        // Auto-trigger the job
+        await triggerAIJobExecution(bodyShotJob.id);
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:373',message:'Body shot job execution triggered',data:{jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H'})}).catch(()=>{});
+// #endregion
+        
+        // Poll for completion
+        Alert.alert('Generating', 'Generating studio model. This may take 30-40 seconds...');
+        
+        const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 40, 2000);
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:381',message:'Body shot poll result',data:{hasError:!!pollError,hasJob:!!completedJob,jobStatus:completedJob?.status,errorMsg:pollError?.message||completedJob?.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'I'})}).catch(()=>{});
+// #endregion
+        
+        if (pollError || !completedJob) {
+          throw new Error('Studio model generation timed out or failed');
+        }
+        
+        if (completedJob.status === 'failed') {
+          throw new Error(`Generation failed: ${completedJob.error || 'Unknown error'}`);
+        }
+        
+        Alert.alert('Success', 'Studio model generated successfully!');
+      } else {
+        throw jobError || new Error('Failed to create body shot job');
+      }
+
+      // Reload settings to get updated body_shot_image_id
+      await loadData();
+    } catch (error: any) {
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:376',message:'handleUploadBodyPhoto CAUGHT ERROR',data:{errorMsg:error.message,errorStack:error.stack},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C'})}).catch(()=>{});
+// #endregion
+      Alert.alert('Error', error.message || 'Failed to upload body photo');
+    } finally {
+      setUploadingBody(false);
+    }
+  };
+
+  const handleModelSelection = async (model: string) => {
+    if (!user || !settings) return;
+
+    // Check if advanced model requires password
+    if (model.includes('pro') && model !== aiModelPreference) {
+      // Check if password is already set
+      if (!settings.ai_model_password) {
+        // Require password entry
+        if (!modelPassword.trim()) {
+          setShowPasswordInput(true);
+          return;
+        }
+        // Verify password (in production, you'd hash and verify)
+        // For now, just save it
+        const { error: updateError } = await updateUserSettings(user.id, {
+          ai_model_preference: model,
+          ai_model_password: modelPassword, // In production, hash this
+        } as any);
+        if (updateError) {
+          Alert.alert('Error', 'Failed to update model preference');
+          return;
+        }
+        setShowPasswordInput(false);
+        setModelPassword('');
+      } else {
+        // Password already set, just update model
+        const { error: updateError } = await updateUserSettings(user.id, {
+          ai_model_preference: model,
+        } as any);
+        if (updateError) {
+          Alert.alert('Error', 'Failed to update model preference');
+          return;
+        }
+      }
+    } else {
+      // Standard model, no password needed
+      const { error: updateError } = await updateUserSettings(user.id, {
+        ai_model_preference: model,
+      } as any);
+      if (updateError) {
+        Alert.alert('Error', 'Failed to update model preference');
+        return;
+      }
+    }
+
+    setAiModelPreference(model);
+    await loadData();
+  };
+
+  const handleSignOut = async () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          await signOut();
+          router.replace('/auth/login');
+        },
+      },
+    ]);
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  // If settings don't exist, user hasn't completed onboarding
+  // Show profile fields so they can complete it
+  if (!settings) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Profile</Text>
+        <Text style={styles.warningText}>
+          Complete your profile to access all features
+        </Text>
+
+        {/* Onboarding Fields */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Profile Information</Text>
+          
+          <Text style={styles.label}>Handle (username)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="yourhandle"
+            value={handle}
+            onChangeText={setHandle}
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!savingProfile}
+          />
+          <Text style={styles.hint}>3-20 characters, letters, numbers, and underscores only</Text>
+
+          <Text style={styles.label}>Display Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Your Name"
+            value={displayName}
+            onChangeText={setDisplayName}
+            editable={!savingProfile}
+          />
+
+          <TouchableOpacity
+            style={[styles.saveButton, savingProfile && styles.saveButtonDisabled]}
+            onPress={handleSaveProfile}
+            disabled={savingProfile}
+          >
+            {savingProfile ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Complete Profile</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.title}>Profile</Text>
+
+      {/* Onboarding Fields */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Profile Information</Text>
+        
+        <Text style={styles.label}>Handle (username)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="yourhandle"
+          value={handle}
+          onChangeText={setHandle}
+          autoCapitalize="none"
+          autoCorrect={false}
+          editable={!savingProfile}
+        />
+        <Text style={styles.hint}>3-20 characters, letters, numbers, and underscores only</Text>
+
+        <Text style={styles.label}>Display Name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Your Name"
+          value={displayName}
+          onChangeText={setDisplayName}
+          editable={!savingProfile}
+        />
+
+        <TouchableOpacity
+          style={[styles.saveButton, savingProfile && styles.saveButtonDisabled]}
+          onPress={handleSaveProfile}
+          disabled={savingProfile}
+        >
+          {savingProfile ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.saveButtonText}>Save Profile</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account Privacy</Text>
+        <View style={styles.radioGroup}>
+          <TouchableOpacity
+            style={[
+              styles.radioOption,
+              settings.account_privacy === 'public' && styles.radioSelected,
+            ]}
+            onPress={() => handleUpdateSetting('account_privacy', 'public')}
+            disabled={saving}
+          >
+            <Text
+              style={[
+                styles.radioText,
+                settings.account_privacy === 'public' && styles.radioTextSelected,
+              ]}
+            >
+              Public
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.radioOption,
+              settings.account_privacy === 'private' && styles.radioSelected,
+            ]}
+            onPress={() => handleUpdateSetting('account_privacy', 'private')}
+            disabled={saving}
+          >
+            <Text
+              style={[
+                styles.radioText,
+                settings.account_privacy === 'private' && styles.radioTextSelected,
+              ]}
+            >
+              Private
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Search Visibility</Text>
+        <View style={styles.radioGroup}>
+          <TouchableOpacity
+            style={[
+              styles.radioOption,
+              settings.search_visibility === 'visible' && styles.radioSelected,
+            ]}
+            onPress={() => handleUpdateSetting('search_visibility', 'visible')}
+            disabled={saving}
+          >
+            <Text
+              style={[
+                styles.radioText,
+                settings.search_visibility === 'visible' && styles.radioTextSelected,
+              ]}
+            >
+              Visible
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.radioOption,
+              settings.search_visibility === 'hidden' && styles.radioSelected,
+            ]}
+            onPress={() => handleUpdateSetting('search_visibility', 'hidden')}
+            disabled={saving}
+          >
+            <Text
+              style={[
+                styles.radioText,
+                settings.search_visibility === 'hidden' && styles.radioTextSelected,
+              ]}
+            >
+              Hidden
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Default Visibility</Text>
+        <View style={styles.optionsList}>
+          {['public', 'followers', 'private_link', 'private'].map((visibility) => (
+            <TouchableOpacity
+              key={visibility}
+              style={[
+                styles.option,
+                settings.default_visibility === visibility && styles.optionSelected,
+              ]}
+              onPress={() =>
+                handleUpdateSetting('default_visibility', visibility as any)
+              }
+              disabled={saving}
+            >
+              <Text
+                style={[
+                  styles.optionText,
+                  settings.default_visibility === visibility && styles.optionTextSelected,
+                ]}
+              >
+                {visibility.charAt(0).toUpperCase() + visibility.slice(1).replace('_', ' ')}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>External Sharing</Text>
+        <TouchableOpacity
+          style={styles.toggleContainer}
+          onPress={() =>
+            handleUpdateSetting('allow_external_sharing', !settings.allow_external_sharing)
+          }
+          disabled={saving}
+        >
+          <Text style={styles.toggleLabel}>Allow external sharing</Text>
+          <View
+            style={[
+              styles.toggle,
+              settings.allow_external_sharing && styles.toggleActive,
+            ]}
+          >
+            <View
+              style={[
+                styles.toggleThumb,
+                settings.allow_external_sharing && styles.toggleThumbActive,
+              ]}
+            />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Profile Images</Text>
+        <Text style={styles.hint}>
+          Upload a selfie to generate your headshot and a body photo for outfit rendering
+        </Text>
+        
+        <View style={styles.imageUploadContainer}>
+          <View style={styles.imageUploadItem}>
+            <Text style={styles.imageUploadLabel}>Selfie (for headshot)</Text>
+            {headshotImageUrl ? (
+              <ExpoImage source={{ uri: headshotImageUrl }} style={styles.imagePreview} contentFit="cover" />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Text style={styles.imagePlaceholderText}>No headshot</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={handleUploadSelfie}
+              disabled={uploadingSelfie}
+            >
+              {uploadingSelfie ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.uploadButtonText}>
+                  {headshotImageUrl ? 'Regenerate Headshot' : 'Upload Selfie'}
+                </Text>
+              )}
+            </TouchableOpacity>
+            
+            {headshotImageUrl && (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={handleClearHeadshot}
+              >
+                <Text style={styles.clearButtonText}>Clear Selection</Text>
+              </TouchableOpacity>
+            )}
+            
+            {allHeadshots.length > 0 && (
+              <View style={styles.galleryContainer}>
+                <Text style={styles.galleryLabel}>All Generated Headshots ({allHeadshots.length})</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
+                  {allHeadshots.map((headshot) => (
+                    <TouchableOpacity
+                      key={headshot.id}
+                      style={[
+                        styles.galleryItem,
+                        settings?.headshot_image_id === headshot.id && styles.galleryItemActive
+                      ]}
+                      onPress={() => handleSelectHeadshot(headshot.id)}
+                    >
+                      <ExpoImage 
+                        source={{ uri: headshot.url }} 
+                        style={styles.galleryImage} 
+                        contentFit="cover" 
+                      />
+                      {settings?.headshot_image_id === headshot.id && (
+                        <View style={styles.galleryActiveBadge}>
+                          <Text style={styles.galleryActiveBadgeText}>Active</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.imageUploadItem}>
+            <Text style={styles.imageUploadLabel}>Body Photo</Text>
+            {bodyShotImageUrl ? (
+              <ExpoImage source={{ uri: bodyShotImageUrl }} style={styles.imagePreview} contentFit="cover" />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Text style={styles.imagePlaceholderText}>No body photo</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={handleUploadBodyPhoto}
+              disabled={uploadingBody}
+            >
+              {uploadingBody ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.uploadButtonText}>
+                  {bodyShotImageUrl ? 'Regenerate Studio Model' : 'Upload Body Photo'}
+                </Text>
+              )}
+            </TouchableOpacity>
+            
+            {bodyShotImageUrl && (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={handleClearBodyShot}
+              >
+                <Text style={styles.clearButtonText}>Clear Selection</Text>
+              </TouchableOpacity>
+            )}
+            
+            {allBodyShots.length > 0 && (
+              <View style={styles.galleryContainer}>
+                <Text style={styles.galleryLabel}>All Generated Studio Models ({allBodyShots.length})</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
+                  {allBodyShots.map((bodyShot) => (
+                    <TouchableOpacity
+                      key={bodyShot.id}
+                      style={[
+                        styles.galleryItem,
+                        settings?.body_shot_image_id === bodyShot.id && styles.galleryItemActive
+                      ]}
+                      onPress={() => handleSelectBodyShot(bodyShot.id)}
+                    >
+                      <ExpoImage 
+                        source={{ uri: bodyShot.url }} 
+                        style={styles.galleryImage} 
+                        contentFit="cover" 
+                      />
+                      {settings?.body_shot_image_id === bodyShot.id && (
+                        <View style={styles.galleryActiveBadge}>
+                          <Text style={styles.galleryActiveBadgeText}>Active</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>AI Model Selection</Text>
+        <Text style={styles.hint}>
+          Choose the AI model for outfit generation. Advanced models require a password.
+        </Text>
+        
+        <View style={styles.optionsList}>
+          <TouchableOpacity
+            style={[
+              styles.option,
+              aiModelPreference === 'gemini-2.5-flash-image' && styles.optionSelected,
+            ]}
+            onPress={() => handleModelSelection('gemini-2.5-flash-image')}
+            disabled={saving}
+          >
+            <Text
+              style={[
+                styles.optionText,
+                aiModelPreference === 'gemini-2.5-flash-image' && styles.optionTextSelected,
+              ]}
+            >
+              Standard (gemini-2.5-flash-image)
+            </Text>
+            <Text style={styles.optionSubtext}>Up to 2 items, always available</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.option,
+              aiModelPreference === 'gemini-3-pro-image-preview' && styles.optionSelected,
+            ]}
+            onPress={() => handleModelSelection('gemini-3-pro-image-preview')}
+            disabled={saving}
+          >
+            <Text
+              style={[
+                styles.optionText,
+                aiModelPreference === 'gemini-3-pro-image-preview' && styles.optionTextSelected,
+              ]}
+            >
+              Pro (gemini-3-pro-image-preview)
+            </Text>
+            <Text style={styles.optionSubtext}>Up to 7 items, password required</Text>
+          </TouchableOpacity>
+        </View>
+
+        {showPasswordInput && (
+          <View style={styles.passwordContainer}>
+            <Text style={styles.label}>Enter Password for Advanced Model</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              value={modelPassword}
+              onChangeText={setModelPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+            <View style={styles.passwordButtons}>
+              <TouchableOpacity
+                style={[styles.passwordButton, styles.passwordButtonCancel]}
+                onPress={() => {
+                  setShowPasswordInput(false);
+                  setModelPassword('');
+                }}
+              >
+                <Text style={[styles.passwordButtonText, { color: '#000' }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.passwordButton, styles.passwordButtonConfirm]}
+                onPress={() => handleModelSelection('gemini-3-pro-image-preview')}
+                disabled={!modelPassword.trim()}
+              >
+                <Text style={[styles.passwordButtonText, { color: '#fff' }]}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
+
+      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+        <Text style={styles.signOutText}>Sign Out</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    padding: 20,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 24,
+    marginTop: 20,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  hint: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  saveButton: {
+    backgroundColor: '#000',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#ff9500',
+    marginBottom: 16,
+    textAlign: 'center',
+    padding: 12,
+    backgroundColor: '#fff3e0',
+    borderRadius: 8,
+  },
+  radioGroup: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  radioOption: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  radioSelected: {
+    borderColor: '#000',
+    backgroundColor: '#000',
+  },
+  radioText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  radioTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  optionsList: {
+    gap: 8,
+  },
+  option: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+  },
+  optionSelected: {
+    borderColor: '#000',
+    backgroundColor: '#f0f0f0',
+  },
+  optionText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  optionTextSelected: {
+    color: '#000',
+    fontWeight: '600',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  toggleLabel: {
+    fontSize: 16,
+    color: '#000',
+  },
+  toggle: {
+    width: 50,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#ddd',
+    justifyContent: 'center',
+    padding: 2,
+  },
+  toggleActive: {
+    backgroundColor: '#000',
+  },
+  toggleThumb: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#fff',
+    alignSelf: 'flex-start',
+  },
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
+  },
+  signOutButton: {
+    marginTop: 40,
+    padding: 16,
+    backgroundColor: '#ff3b30',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  signOutText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  imageUploadContainer: {
+    gap: 16,
+    marginTop: 12,
+  },
+  imageUploadItem: {
+    gap: 8,
+  },
+  imageUploadLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePlaceholderText: {
+    color: '#999',
+    fontSize: 14,
+  },
+  uploadButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  uploadButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  optionSubtext: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+  },
+  passwordContainer: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    gap: 12,
+  },
+  passwordButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  passwordButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  passwordButtonCancel: {
+    backgroundColor: '#ddd',
+  },
+  passwordButtonConfirm: {
+    backgroundColor: '#007AFF',
+  },
+  passwordButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  clearButton: {
+    padding: 10,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  clearButtonText: {
+    color: '#666',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  galleryContainer: {
+    marginTop: 12,
+    gap: 8,
+  },
+  galleryLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  galleryScroll: {
+    flexDirection: 'row',
+  },
+  galleryItem: {
+    width: 80,
+    height: 120,
+    marginRight: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    position: 'relative',
+  },
+  galleryItemActive: {
+    borderColor: '#000',
+  },
+  galleryImage: {
+    width: '100%',
+    height: '100%',
+  },
+  galleryActiveBadge: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#000',
+    paddingVertical: 2,
+    alignItems: 'center',
+  },
+  galleryActiveBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+});
