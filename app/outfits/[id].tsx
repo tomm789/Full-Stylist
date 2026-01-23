@@ -633,6 +633,12 @@ export default function OutfitEditorScreen() {
       console.log('[OutfitEditor] Creating render job with items:', JSON.stringify(itemDetails, null, 2));
 
       const { data: userSettings } = await getUserSettings(user.id);
+      if (!userSettings?.body_shot_image_id) {
+        Alert.alert('Setup Required', 'Please upload a body photo before generating outfits.');
+        setRendering(false);
+        return;
+      }
+
       const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
       const renderLimit = getOutfitRenderItemLimit(modelPreference);
       let mannequinImageId;
@@ -703,7 +709,8 @@ export default function OutfitEditorScreen() {
         outfit_id: currentOutfitId,
         selected,
         prompt: notes.trim() || undefined,
-        headshot_image_id: selectedHeadshotId || undefined, // Pass selected headshot
+        body_shot_image_id: userSettings.body_shot_image_id,
+        model_preference: modelPreference,
         mannequin_image_id: mannequinImageId,
       });
 

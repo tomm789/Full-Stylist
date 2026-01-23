@@ -590,12 +590,11 @@ export default function ItemDetailScreen() {
   };
 
   const handleAddToOutfit = () => {
-    if (!item || !category) {
+    if (!item) {
       Alert.alert('Error', 'Item data not loaded');
       return;
     }
-    // Navigate to outfit editor with item preselected
-    router.push(`/outfits/new?category_id=${item.category_id}&item_id=${item.id}`);
+    router.replace(`/(tabs)/wardrobe?addItemId=${item.id}`);
   };
 
   const handleSaveItem = async () => {

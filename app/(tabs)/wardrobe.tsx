@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  Image,
   ActivityIndicator,
   RefreshControl,
   Modal,
@@ -14,8 +13,9 @@ import {
   Switch,
   Pressable,
   Alert,
+  Platform,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getDefaultWardrobeId,
@@ -51,6 +51,7 @@ interface FilterState {
 export default function WardrobeScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { addItemId } = useLocalSearchParams<{ addItemId?: string }>();
   const [wardrobeId, setWardrobeId] = useState<string | null>(null);
   const [categories, setCategories] = useState<WardrobeCategory[]>([]);
   const [subcategories, setSubcategories] = useState<WardrobeSubcategory[]>([]);
@@ -80,12 +81,30 @@ export default function WardrobeScreen() {
   const [selectedOutfitItems, setSelectedOutfitItems] = useState<string[]>([]);
   const [isLoadingWardrobe, setIsLoadingWardrobe] = useState(false);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [isItemModalVisible, setIsItemModalVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<WardrobeItem | null>(null);
+  const categoryNameById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category.name])),
+    [categories]
+  );
+  const wardrobeItemsById = useMemo(
+    () => new Map(allItems.map((item) => [item.id, item])),
+    [allItems]
+  );
 
   useEffect(() => {
     if (user && !isLoadingWardrobe) {
       loadWardrobe();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!addItemId || typeof addItemId !== 'string') return;
+    const item = wardrobeItemsById.get(addItemId);
+    if (!item) return;
+    handleOutfitSelectionAttempt(item, false);
+    router.replace('/(tabs)/wardrobe');
+  }, [addItemId, wardrobeItemsById]);
 
   // Reload items when page comes into focus (e.g., after deleting an item)
   useFocusEffect(
@@ -621,6 +640,164 @@ export default function WardrobeScreen() {
     setSelectedOutfitItems([]);
   };
 
+  const multiSelectCategoryNames = new Set([
+    'activewear',
+    'accessories',
+    'jewellery',
+    'jewelry',
+    'intimates',
+    'sleepwear',
+  ]);
+
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return '';
+    return categoryNameById.get(categoryId)?.toLowerCase().trim() || '';
+  };
+
+  const isMultiSelectCategory = (categoryId: string | null) => {
+    if (!categoryId) return false;
+    return multiSelectCategoryNames.has(getCategoryName(categoryId));
+  };
+
+  const findConflictingSelectedItem = (item: WardrobeItem) => {
+    if (!outfitCreatorMode) return null;
+    const selectedItems = selectedOutfitItems
+      .map((id) => wardrobeItemsById.get(id))
+      .filter((selected): selected is WardrobeItem => Boolean(selected));
+    if (selectedItems.length === 0) return null;
+    const allowMultipleSubcategories = isMultiSelectCategory(item.category_id);
+    return (
+      selectedItems.find((selected) => {
+        if (selected.id === item.id) return false;
+        if (selected.category_id !== item.category_id) return false;
+        if (!allowMultipleSubcategories) return true;
+        if (!selected.subcategory_id || !item.subcategory_id) return true;
+        return selected.subcategory_id === item.subcategory_id;
+      }) || null
+    );
+  };
+
+  const replaceSelectedOutfitItem = (itemId: string, replacementId: string) => {
+    setOutfitCreatorMode(true);
+    setSelectedOutfitItems((prev) => {
+      const withoutConflict = prev.filter(
+        (id) => id !== itemId && id !== replacementId
+      );
+      return [...withoutConflict, replacementId];
+    });
+  };
+
+  const handleOutfitSelectionAttempt = (
+    item: WardrobeItem,
+    promptOnConflict: boolean
+  ) => {
+    const conflictingItem = findConflictingSelectedItem(item);
+    if (conflictingItem && promptOnConflict) {
+      Alert.alert(
+        'Replace item?',
+        `Replace ${conflictingItem.title} with ${item.title}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Replace',
+            style: 'destructive',
+            onPress: () =>
+              replaceSelectedOutfitItem(conflictingItem.id, item.id),
+          },
+        ]
+      );
+      return;
+    }
+
+    if (conflictingItem) {
+      replaceSelectedOutfitItem(conflictingItem.id, item.id);
+      return;
+    }
+
+    ensureItemSelectedForOutfit(item.id);
+  };
+
+  const openItemModal = (item: WardrobeItem) => {
+    setSelectedItem(item);
+    setIsItemModalVisible(true);
+  };
+
+  const closeItemModal = () => {
+    setIsItemModalVisible(false);
+    setSelectedItem(null);
+  };
+
+  const ensureItemSelectedForOutfit = (itemId: string) => {
+    if (!outfitCreatorMode) {
+      setOutfitCreatorMode(true);
+    }
+    setSelectedOutfitItems(prev => (prev.includes(itemId) ? prev : [...prev, itemId]));
+  };
+
+  const handleModalAddToOutfit = () => {
+    if (!selectedItem) return;
+    ensureItemSelectedForOutfit(selectedItem.id);
+    Alert.alert(
+      'Added to outfit',
+      'Tip: Long hold an item in the grid to add it to your outfit.'
+    );
+  };
+
+  const handleModalOpenDetail = () => {
+    if (!selectedItem) return;
+    const itemIds = items.map(item => item.id).join(',');
+    closeItemModal();
+    router.push(`/wardrobe/item/${selectedItem.id}?itemIds=${itemIds}`);
+  };
+
+  const handleModalEdit = () => {
+    if (!selectedItem) return;
+    router.push(`/wardrobe/item/${selectedItem.id}/edit`);
+  };
+
+  const handleModalDelete = async () => {
+    if (!selectedItem || !user) return;
+    if (selectedItem.owner_user_id !== user.id) return;
+
+    const confirmDelete = async () => {
+      try {
+        const { error } = await supabase
+          .from('wardrobe_items')
+          .update({ archived_at: new Date().toISOString() })
+          .eq('id', selectedItem.id)
+          .eq('owner_user_id', user.id);
+
+        if (error) {
+          throw error;
+        }
+
+        Alert.alert('Success', 'Item deleted successfully');
+        closeItemModal();
+        loadItems();
+      } catch (error: any) {
+        Alert.alert('Error', error.message || 'Failed to delete item');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        'Are you sure you want to delete this item? This action cannot be undone.'
+      );
+      if (!confirmed) return;
+      await confirmDelete();
+      return;
+    }
+
+    Alert.alert(
+      'Delete Item',
+      'Are you sure you want to delete this item? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: confirmDelete },
+      ]
+    );
+  };
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState('');
   const [policyModalVisible, setPolicyModalVisible] = useState(false);
@@ -680,6 +857,13 @@ export default function WardrobeScreen() {
       }));
 
       const { data: userSettings } = await getUserSettings(user.id);
+      if (!userSettings?.body_shot_image_id) {
+        Alert.alert('Setup Required', 'Please upload a body photo before generating outfits.');
+        setIsGenerating(false);
+        setGenerationStatus('');
+        return;
+      }
+
       const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
       const renderLimit = getOutfitRenderItemLimit(modelPreference);
       let mannequinImageId;
@@ -716,6 +900,8 @@ export default function WardrobeScreen() {
         user_id: user.id,
         outfit_id: outfitId,
         selected,
+        body_shot_image_id: userSettings.body_shot_image_id,
+        model_preference: modelPreference,
         mannequin_image_id: mannequinImageId,
       });
 
@@ -800,24 +986,18 @@ export default function WardrobeScreen() {
     // Use cached image URL instead of querying per item
     const imageUrl = itemImagesCache.get(item.id) || null;
     const imageLoading = !itemImagesCache.has(item.id);
+    const conflictingItem = findConflictingSelectedItem(item);
 
     const handleItemPress = () => {
-      if (outfitCreatorMode) {
-        // In outfit creator mode, add/remove item from selection
-        toggleOutfitItemSelection(item.id);
-      } else {
-        // Normal mode - navigate to detail page
-        const itemIds = items.map(i => i.id).join(',');
-        router.push(`/wardrobe/item/${item.id}?itemIds=${itemIds}`);
+      if (conflictingItem) {
+        handleOutfitSelectionAttempt(item, true);
+        return;
       }
+      openItemModal(item);
     };
 
     const handleItemLongPress = () => {
-      // Activate outfit creator mode and select this item
-      if (!outfitCreatorMode) {
-        setOutfitCreatorMode(true);
-        setSelectedOutfitItems([item.id]);
-      }
+      handleOutfitSelectionAttempt(item, true);
     };
 
     const handleFavoritePress = (e: any) => {
@@ -826,10 +1006,15 @@ export default function WardrobeScreen() {
     };
 
     const isSelectedForOutfit = outfitCreatorMode && selectedOutfitItems.includes(item.id);
+    const isDimmed = outfitCreatorMode && !isSelectedForOutfit && Boolean(conflictingItem);
 
     return (
       <TouchableOpacity
-        style={[styles.itemCard, isSelectedForOutfit && styles.itemCardSelected]}
+        style={[
+          styles.itemCard,
+          isSelectedForOutfit && styles.itemCardSelected,
+          isDimmed && styles.itemCardDimmed,
+        ]}
         onPress={handleItemPress}
         onLongPress={handleItemLongPress}
         delayLongPress={500}
@@ -880,6 +1065,10 @@ export default function WardrobeScreen() {
       </View>
     );
   }
+
+  const selectedItemImageUrl = selectedItem ? itemImagesCache.get(selectedItem.id) || null : null;
+  const isSelectedItemOwner =
+    selectedItem && user ? selectedItem.owner_user_id === user.id : false;
 
   return (
     <View style={styles.container}>
@@ -1492,6 +1681,85 @@ export default function WardrobeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Item Detail Modal */}
+      <Modal
+        visible={isItemModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeItemModal}
+      >
+        <Pressable style={styles.itemModalOverlay} onPress={closeItemModal}>
+          <Pressable style={styles.itemModalSheet} onPress={() => {}}>
+            <View style={styles.itemModalHeader}>
+              <TouchableOpacity
+                style={styles.addToOutfitButton}
+                onPress={handleModalAddToOutfit}
+              >
+                <Ionicons name="add-circle" size={20} color="#fff" />
+                <Text style={styles.addToOutfitButtonText}>Add to outfit</Text>
+              </TouchableOpacity>
+              <View style={styles.itemModalActions}>
+                <TouchableOpacity
+                  style={styles.itemModalActionButton}
+                  onPress={handleModalOpenDetail}
+                >
+                  <Ionicons name="open-outline" size={20} color="#333" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.itemModalActionButton,
+                    !isSelectedItemOwner && styles.itemModalActionButtonDisabled,
+                  ]}
+                  onPress={handleModalEdit}
+                  disabled={!isSelectedItemOwner}
+                >
+                  <Ionicons name="create-outline" size={20} color="#333" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.itemModalActionButton,
+                    !isSelectedItemOwner && styles.itemModalActionButtonDisabled,
+                  ]}
+                  onPress={handleModalDelete}
+                  disabled={!isSelectedItemOwner}
+                >
+                  <Ionicons name="trash-outline" size={20} color="#c0392b" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.itemModalActionButton}
+                  onPress={closeItemModal}
+                >
+                  <Ionicons name="close" size={22} color="#333" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={styles.itemModalContent}>
+              {selectedItemImageUrl ? (
+                <ExpoImage
+                  source={{ uri: selectedItemImageUrl }}
+                  style={styles.itemModalImage}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={styles.itemModalImagePlaceholder}>
+                  <Text style={styles.itemImagePlaceholderText}>No Image</Text>
+                </View>
+              )}
+              {selectedItem && (
+                <View style={styles.itemModalDetails}>
+                  <Text style={styles.itemModalTitle}>{selectedItem.title}</Text>
+                  {selectedItem.description ? (
+                    <Text style={styles.itemModalDescription}>
+                      {selectedItem.description}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -1673,6 +1941,9 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#007AFF',
   },
+  itemCardDimmed: {
+    opacity: 0.35,
+  },
   outfitCreatorBar: {
     flexDirection: 'row',
     backgroundColor: '#f0f0f0',
@@ -1807,6 +2078,90 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
+  },
+  itemModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
+  },
+  itemModalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 24,
+    maxHeight: '85%',
+  },
+  itemModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    gap: 12,
+  },
+  addToOutfitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  addToOutfitButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  itemModalActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  itemModalActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f2f2f2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemModalActionButtonDisabled: {
+    opacity: 0.4,
+  },
+  itemModalContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 16,
+  },
+  itemModalImage: {
+    width: '100%',
+    height: 320,
+    borderRadius: 16,
+  },
+  itemModalImagePlaceholder: {
+    width: '100%',
+    height: 320,
+    borderRadius: 16,
+    backgroundColor: '#f3f3f3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemModalDetails: {
+    gap: 8,
+  },
+  itemModalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111',
+  },
+  itemModalDescription: {
+    fontSize: 14,
+    color: '#444',
+    lineHeight: 20,
   },
   drawer: {
     backgroundColor: '#fff',
