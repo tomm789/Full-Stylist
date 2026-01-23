@@ -33,6 +33,7 @@ import {
 import { Image as ExpoImage } from 'expo-image';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { getUserSettings } from '@/lib/settings';
 
 interface FilterState {
   subcategoryId: string | null;
@@ -634,7 +635,7 @@ export default function WardrobeScreen() {
 
       // Import required functions
       const { saveOutfit } = await import('@/lib/outfits');
-      const { createAIJob, triggerAIJobExecution, pollAIJob } = await import('@/lib/ai-jobs');
+      const { createAIJob, triggerAIJobExecution, pollAIJobWithFinalCheck, getOutfitRenderItemLimit } = await import('@/lib/ai-jobs');
       
       const selectedItems = items.filter(item => selectedOutfitItems.includes(item.id));
       const selectedItemInfo = selectedItems.map(i => ({
@@ -667,6 +668,37 @@ export default function WardrobeScreen() {
 
       const outfitId = savedOutfit.outfit.id;
 
+      const { data: userSettings } = await getUserSettings(user.id);
+      const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
+      const renderLimit = getOutfitRenderItemLimit(modelPreference);
+      let mannequinImageId;
+
+      if (selected.length > renderLimit) {
+        const { data: mannequinJob, error: mannequinError } = await createAIJob(user.id, 'outfit_mannequin', {
+          user_id: user.id,
+          outfit_id: outfitId,
+          selected,
+        });
+
+        if (mannequinError || !mannequinJob) {
+          throw new Error('Failed to start mannequin generation');
+        }
+
+        await triggerAIJobExecution(mannequinJob.id);
+        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
+          mannequinJob.id,
+          60,
+          2000,
+          '[Wardrobe] Mannequin'
+        );
+
+        if (mannequinPollError || !mannequinResult?.result?.mannequin_image_id) {
+          throw new Error('Mannequin generation timed out. Please try again.');
+        }
+
+        mannequinImageId = mannequinResult.result.mannequin_image_id;
+      }
+
       // Create outfit_render job with selected items
       // Handle items that may not have category_id yet (AI will recognize them)
       const selected = selectedItems.map((item) => ({
@@ -680,6 +712,7 @@ export default function WardrobeScreen() {
         user_id: user.id,
         outfit_id: outfitId,
         selected,
+        mannequin_image_id: mannequinImageId,
       });
 
       if (jobError || !renderJob) {
@@ -696,30 +729,26 @@ export default function WardrobeScreen() {
       setGenerationStatus('Generating outfit...\nThis may take 60-90 seconds.');
       
       // Poll for completion (120 attempts = ~10+ minutes with exponential backoff)
-      const { data: completedJob, error: pollError } = await pollAIJob(renderJob.id, 120, 2000);
+      const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+        renderJob.id,
+        120,
+        2000,
+        '[Wardrobe]'
+      );
       
-      // If polling timed out, do one final check - job might have completed
-      let finalJob = completedJob;
-      if (pollError || !completedJob) {
-        console.log('[Wardrobe] Outfit render polling timed out, doing final check...');
-        const { getAIJob } = await import('@/lib/ai-jobs');
-        const { data: finalCheck } = await getAIJob(renderJob.id);
-        if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
-          finalJob = finalCheck;
-        } else {
-          // Job still running - let user know they can check later
-          setIsGenerating(false);
-          setGenerationStatus('');
-          Alert.alert(
-            'Generation In Progress',
-            'Outfit generation is taking longer than expected. You can check your outfits page to see when it\'s ready.',
-            [{ text: 'OK', onPress: () => {
-              setOutfitCreatorMode(false);
-              setSelectedOutfitItems([]);
-            }}]
-          );
-          return;
-        }
+      if (pollError || !finalJob) {
+        // Job still running - let user know they can check later
+        setIsGenerating(false);
+        setGenerationStatus('');
+        Alert.alert(
+          'Generation In Progress',
+          'Outfit generation is taking longer than expected. You can check your outfits page to see when it\'s ready.',
+          [{ text: 'OK', onPress: () => {
+            setOutfitCreatorMode(false);
+            setSelectedOutfitItems([]);
+          }}]
+        );
+        return;
       }
       
       if (finalJob.status === 'failed') {

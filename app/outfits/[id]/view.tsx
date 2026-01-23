@@ -21,7 +21,7 @@ import { getLookbook, getSystemLookbookOutfits } from '@/lib/lookbooks';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { getActiveOutfitRenderJob, getRecentOutfitRenderJob, getAIJob, pollAIJob } from '@/lib/ai-jobs';
+import { getActiveOutfitRenderJob, getRecentOutfitRenderJob, getAIJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
 import {
   likeEntity,
   unlikeEntity,
@@ -133,14 +133,8 @@ export default function OutfitDetailScreen() {
     setLoading(true);
 
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'outfits/[id]/view.tsx:loadOutfitData',message:'loadOutfitData entry',data:{outfitId:id,userId:user.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3,H5'})}).catch(()=>{});
-      // #endregion
       // Load outfit data
       const { data, error } = await getOutfit(id);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'outfits/[id]/view.tsx:loadOutfitData',message:'after getOutfit in loadOutfitData',data:{outfitId:id,hasError:!!error,errorMsg:error?.message,hasData:!!data,hasOutfit:!!data?.outfit,hasCoverImage:!!data?.coverImage,coverImageId:data?.outfit?.cover_image_id,coverImageStorageKey:data?.coverImage?.storage_key,coverImageStorageBucket:data?.coverImage?.storage_bucket},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3,H5'})}).catch(()=>{});
-      // #endregion
       if (error || !data) {
         Alert.alert('Error', 'Failed to load outfit');
         router.back();
@@ -303,13 +297,7 @@ export default function OutfitDetailScreen() {
   const refreshOutfit = async () => {
     if (!id) return;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'outfits/[id]/view.tsx:refreshOutfit',message:'refreshOutfit entry',data:{outfitId:id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3,H5'})}).catch(()=>{});
-    // #endregion
     const { data, error } = await getOutfit(id);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'outfits/[id]/view.tsx:refreshOutfit',message:'after getOutfit',data:{outfitId:id,hasError:!!error,errorMsg:error?.message,hasData:!!data,hasOutfit:!!data?.outfit,hasCoverImage:!!data?.coverImage,coverImageId:data?.outfit?.cover_image_id,coverImageStorageKey:data?.coverImage?.storage_key,coverImageStorageBucket:data?.coverImage?.storage_bucket},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3,H5'})}).catch(()=>{});
-    // #endregion
     if (!error && data) {
       setOutfit(data.outfit);
       setCoverImage(data.coverImage);
@@ -369,22 +357,18 @@ export default function OutfitDetailScreen() {
     // Use await pollAIJob pattern like body shot generation for consistency
     // This provides better timeout handling and final check
     try {
-      const { pollAIJob } = await import('@/lib/ai-jobs');
-      const { data: completedJob, error: pollError } = await pollAIJob(jobId, 120, 2000);
+      const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+        jobId,
+        120,
+        2000,
+        '[OutfitView]'
+      );
       
-      // If polling timed out, do one final check - job might have completed
-      let finalJob = completedJob;
-      if (pollError || !completedJob) {
-        console.log('[OutfitView] Outfit render polling timed out, doing final check...');
-        const { data: finalCheck } = await getAIJob(jobId);
-        if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
-          finalJob = finalCheck;
-        } else {
-          // Job still running after timeout - switch to periodic refresh
-          setIsGeneratingOutfitRender(false);
-          startPeriodicOutfitRefresh();
-          return;
-        }
+      if (pollError || !finalJob) {
+        // Job still running after timeout - switch to periodic refresh
+        setIsGeneratingOutfitRender(false);
+        startPeriodicOutfitRefresh();
+        return;
       }
       
       // Handle job completion
@@ -667,11 +651,8 @@ export default function OutfitDetailScreen() {
   }
 
   const coverImageUrl = coverImage ? getImageUrl(coverImage) : null;
-  // #region agent log
   if (coverImageUrl || coverImage) {
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'outfits/[id]/view.tsx:render',message:'coverImageUrl computed',data:{outfitId:id,hasCoverImage:!!coverImage,coverImageUrl:coverImageUrl?.substring(0,100)||'null',coverImageStorageKey:coverImage?.storage_key,coverImageStorageBucket:coverImage?.storage_bucket},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3,H4'})}).catch(()=>{});
   }
-  // #endregion
 
   return (
     <View style={styles.container}>
@@ -750,14 +731,8 @@ export default function OutfitDetailScreen() {
               style={styles.coverImage}
               contentFit="contain"
               onLoad={() => {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'outfits/[id]/view.tsx:ExpoImage.onLoad',message:'image loaded successfully',data:{outfitId:id,coverImageUrl:coverImageUrl.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
-                // #endregion
               }}
               onError={(error) => {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'outfits/[id]/view.tsx:ExpoImage.onError',message:'image load error',data:{outfitId:id,coverImageUrl:coverImageUrl.substring(0,100),error:error?.message||'unknown'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
-                // #endregion
                 console.error('[OutfitView] Image load error:', error);
               }}
             />
