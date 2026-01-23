@@ -69,21 +69,12 @@ export async function pollAIJob(
   data: AIJob | null;
   error: any;
 }> {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:pollAIJob',message:'pollAIJob entry',data:{jobId,maxAttempts,alreadyPolling:activePollingJobs.has(jobId),failureCount:failureCountByJob.get(jobId)||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H4'})}).catch(()=>{});
-  // #endregion
   if (activePollingJobs.has(jobId)) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:pollAIJob',message:'skip: already polled',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
-    // #endregion
     return { data: null, error: new Error('Job already being polled') };
   }
 
   const failureCount = failureCountByJob.get(jobId) || 0;
   if (failureCount >= CIRCUIT_BREAKER_THRESHOLD) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:pollAIJob',message:'skip: circuit breaker',data:{jobId,failureCount},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
-    // #endregion
     return { data: null, error: new Error('Circuit breaker open: too many failures') };
   }
 
@@ -94,13 +85,7 @@ export async function pollAIJob(
     const maxIntervalMs = 10000;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:pollAIJob',message:'before getAIJob',data:{jobId,attempt,maxAttempts},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
       const { data, error } = await getAIJob(jobId);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:pollAIJob',message:'after getAIJob',data:{jobId,attempt,status:data?.status||'null',hasError:!!error,errorMsg:error?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
 
       if (error) {
         failureCountByJob.set(jobId, failureCount + 1);
@@ -113,24 +98,15 @@ export async function pollAIJob(
       }
 
       if (data.status === 'succeeded') {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:pollAIJob',message:'job succeeded',data:{jobId,attempt,status:data.status,result:data.result?JSON.stringify(data.result).substring(0,100):'null'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
         failureCountByJob.delete(jobId);
         return { data, error: null };
       }
 
       if (data.status === 'failed') {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:pollAIJob',message:'job failed',data:{jobId,attempt,status:data.status,error:data.error||'null'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
         failureCountByJob.set(jobId, failureCount + 1);
         return { data, error: null };
       }
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:pollAIJob',message:'job still in progress',data:{jobId,attempt,maxAttempts,status:data.status,intervalMs,willContinue:attempt<maxAttempts-1},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3'})}).catch(()=>{});
-      // #endregion
 
       if (attempt < maxAttempts - 1) {
         await new Promise((resolve) => setTimeout(resolve, intervalMs));
@@ -138,13 +114,40 @@ export async function pollAIJob(
       }
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:pollAIJob',message:'pollAIJob exit timeout',data:{jobId,maxAttempts},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
-    // #endregion
     return { data: null, error: new Error('Polling timeout') };
   } finally {
     activePollingJobs.delete(jobId);
   }
+}
+
+/**
+ * Poll AI job and perform a final status check on timeout.
+ */
+export async function pollAIJobWithFinalCheck(
+  jobId: string,
+  maxAttempts: number = SUPABASE_CONFIG.DEV_MODE ? 30 : 60,
+  initialIntervalMs: number = 2000,
+  logPrefix?: string
+): Promise<{
+  data: AIJob | null;
+  error: any;
+}> {
+  const { data: completedJob, error: pollError } = await pollAIJob(jobId, maxAttempts, initialIntervalMs);
+
+  if (!pollError && completedJob) {
+    return { data: completedJob, error: null };
+  }
+
+  if (logPrefix) {
+    console.log(`${logPrefix} polling timed out, doing final check...`);
+  }
+
+  const { data: finalCheck } = await getAIJob(jobId);
+  if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
+    return { data: finalCheck, error: null };
+  }
+
+  return { data: null, error: pollError || new Error('Polling timeout') };
 }
 
 /**
@@ -467,19 +470,10 @@ export async function getRecentOutfitRenderJob(outfitId: string, userId: string)
  * Trigger AI job execution by calling Netlify function
  */
 export async function triggerAIJobExecution(jobId: string): Promise<{ error: any }> {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'trigger entry',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-  // #endregion
   try {
     // Get current session for auth token
     const { data: { session } } = await supabase.auth.getSession();
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'after getSession',data:{jobId,hasSession:!!session},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
     if (!session) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'no session, returning error',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
       return { error: new Error('No active session') };
     }
 
@@ -516,16 +510,10 @@ export async function triggerAIJobExecution(jobId: string): Promise<{ error: any
       return { error: new Error('Invalid Netlify function URL configuration') };
     }
     
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'URL resolution',data:{jobId,isDev,baseUrl,functionUrl,hasExpoPublicNetlifyUrl:!!process.env.EXPO_PUBLIC_NETLIFY_URL,hasExpoPublicNetlifyDevUrl:!!process.env.EXPO_PUBLIC_NETLIFY_DEV_URL,nodeEnv:process.env.NODE_ENV,hasWindow:typeof window !== 'undefined'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
-    // #endregion
 
     // Call Netlify function to process the job (fire-and-forget with short timeout)
     // We don't wait for the response since outfit rendering can take 60+ seconds
     // Instead, we'll poll the job status separately
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'before fetch to function',data:{jobId,functionUrl},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
-    // #endregion
     fetch(functionUrl, {
       method: 'POST',
       headers: {
@@ -536,20 +524,16 @@ export async function triggerAIJobExecution(jobId: string): Promise<{ error: any
       // @ts-ignore - React Native fetch doesn't support signal in the same way
       signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined,
     }).then(async (response) => {
-      // #region agent log
-      const responseText = await response.text().catch(() => 'could not read response');
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'fetch response received',data:{jobId,status:response.status,ok:response.ok,statusText:response.statusText,responseText:responseText.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
-      // #endregion
       if (!response.ok) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'fetch response not ok',data:{jobId,status:response.status,statusText:response.statusText},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
-        // #endregion
+        const responseText = await response.text().catch(() => 'could not read response');
+        console.warn('[AIJobs] Function trigger returned non-OK response', {
+          status: response.status,
+          statusText: response.statusText,
+          responseText: responseText.substring(0, 200),
+        });
       }
       return response;
     }).catch((error) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'fetch error caught',data:{jobId,errorMsg:error?.message,errorName:error?.name,errorStack:error?.stack?.substring(0,200),functionUrl},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
-      // #endregion
       
       // Log error details for debugging
       const errorDetails = {
@@ -573,14 +557,8 @@ export async function triggerAIJobExecution(jobId: string): Promise<{ error: any
       }
     });
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'trigger returning',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
     return { error: null };
   } catch (error: any) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-jobs.ts:triggerAIJobExecution',message:'trigger catch',data:{jobId,errorMsg:error?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
     return { error };
   }
 }

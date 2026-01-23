@@ -89,31 +89,16 @@ export default function AccountSettingsScreen() {
   };
 
   const handleSignOut = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'account-settings.tsx:91',message:'Account settings logout clicked',data:{platform:Platform.OS},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     // On web, use window.confirm instead of Alert.alert since Alert callbacks don't work on web
     if (Platform.OS === 'web') {
       const confirmed = window.confirm('Are you sure you want to sign out?');
       
       if (confirmed) {
         try {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'account-settings.tsx:98',message:'Web signOut called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
           await signOut();
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'account-settings.tsx:99',message:'Web signOut completed, navigating to index',data:{target:'/'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
           router.replace('/');
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'account-settings.tsx:100',message:'Web router.replace to index called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
         } catch (error: any) {
           Alert.alert('Error', 'Failed to sign out. Please try again.');
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'account-settings.tsx:102',message:'Web signOut error',data:{error:error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
         }
       }
     } else {
@@ -128,22 +113,10 @@ export default function AccountSettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'account-settings.tsx:116',message:'Native signOut called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-              // #endregion
               await signOut();
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'account-settings.tsx:117',message:'Native signOut completed, navigating to index',data:{target:'/'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
-              // #endregion
               router.replace('/');
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'account-settings.tsx:118',message:'Native router.replace to index called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
-              // #endregion
             } catch (error: any) {
               Alert.alert('Error', 'Failed to sign out. Please try again.');
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'account-settings.tsx:120',message:'Native signOut error',data:{error:error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-              // #endregion
             }
           },
         },

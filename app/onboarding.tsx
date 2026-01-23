@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { initializeUserProfile } from '@/lib/user';
 import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
-import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, pollAIJob, getAIJob } from '@/lib/ai-jobs';
+import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
 
 type OnboardingStep = 'account' | 'headshot' | 'bodyshot';
 
@@ -191,28 +191,19 @@ export default function OnboardingScreen() {
         // Auto-trigger the job
         await triggerAIJobExecution(headshotJob.id);
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateHeadshot',message:'before poll',data:{jobId:headshotJob.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3'})}).catch(()=>{});
-        // #endregion
         setLoadingMessage('Generating professional headshot...\nThis may take 20-30 seconds.');
         
-        const { data: completedJob, error: pollError } = await pollAIJob(headshotJob.id, 30, 2000);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateHeadshot',message:'after poll',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H4'})}).catch(()=>{});
-        // #endregion
-        
-        // If polling timed out, do one final check - job might have completed
-        let finalJob = completedJob;
-        if (pollError || !completedJob) {
-          console.log('[Onboarding] Polling timed out, doing final check...');
-          const { data: finalCheck } = await getAIJob(headshotJob.id);
-          if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
-            finalJob = finalCheck;
-          } else {
-            throw new Error('Headshot generation timed out or failed');
-          }
+        const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+          headshotJob.id,
+          30,
+          2000,
+          '[Onboarding]'
+        );
+
+        if (pollError || !finalJob) {
+          throw new Error('Headshot generation timed out or failed');
         }
-        
+
         if (finalJob.status === 'failed') {
           throw new Error(`Generation failed: ${finalJob.error || 'Unknown error'}`);
         }
@@ -240,9 +231,6 @@ export default function OnboardingScreen() {
         throw jobError || new Error('Failed to create headshot job');
       }
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateHeadshot',message:'catch',data:{errorMsg:error?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
-      // #endregion
       setGeneratingHeadshot(false);
       setLoadingMessage('');
       Alert.alert('Error', error.message || 'Failed to generate headshot');
@@ -250,9 +238,6 @@ export default function OnboardingScreen() {
   };
 
   const handleSkipHeadshot = () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:237',message:'handleSkipHeadshot called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
     
     Alert.alert(
       'Skip Headshot?',
@@ -262,15 +247,9 @@ export default function OnboardingScreen() {
         { 
           text: 'Skip', 
           onPress: () => {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:248',message:'Skip headshot - navigating to wardrobe',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-            // #endregion
             // Use setTimeout to ensure navigation happens after Alert dismisses
             setTimeout(() => {
               router.replace('/(tabs)/wardrobe');
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:252',message:'router.replace called for skip headshot',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-              // #endregion
             }, 100);
           }
         }
@@ -307,9 +286,6 @@ export default function OnboardingScreen() {
   };
 
   const handleGenerateBodyShot = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:277',message:'handleGenerateBodyShot called',data:{hasUser:!!user,hasBodyPhotoBlob:!!bodyPhotoBlob,headshotImageId:headshotImageId||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
     
     if (!user || !bodyPhotoBlob) {
       Alert.alert('Error', 'Please upload a body photo first');
@@ -319,9 +295,6 @@ export default function OnboardingScreen() {
     // Get headshot ID - check state first, then fallback to user_settings
     let finalHeadshotId = headshotImageId;
     if (!finalHeadshotId) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:287',message:'No headshotImageId in state, checking user_settings',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
       // Try to get headshot from user_settings as fallback
       const { data: settings } = await supabase
         .from('user_settings')
@@ -329,9 +302,6 @@ export default function OnboardingScreen() {
         .eq('user_id', user.id)
         .single();
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:295',message:'Fetched headshot from user_settings',data:{headshotImageId:settings?.headshot_image_id||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
       
       if (!settings?.headshot_image_id) {
         Alert.alert('Error', 'Headshot is required to generate studio model');
@@ -345,16 +315,10 @@ export default function OnboardingScreen() {
 
     setGeneratingBodyShot(true);
     setLoadingMessage('Uploading photo...');
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:315',message:'Starting body shot generation',data:{headshotImageId:finalHeadshotId||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
     
     try {
       // Upload body photo to storage
       const uploadResult = await uploadImageToStorage(user.id, bodyPhotoBlob, `body-${Date.now()}.jpg`);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:310',message:'Body photo upload completed',data:{hasError:!!uploadResult.error,error:uploadResult.error?.message||'none'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
       if (uploadResult.error) {
         throw uploadResult.error;
       }
@@ -373,18 +337,12 @@ export default function OnboardingScreen() {
         .select()
         .single();
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:326',message:'Image record created',data:{hasError:!!imageError,imageId:imageRecord?.id||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
       if (imageError || !imageRecord) {
         throw imageError || new Error('Failed to create image record');
       }
 
 
       setLoadingMessage('Creating studio model job...');
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:347',message:'Calling triggerBodyShotGenerate',data:{userId:user.id,bodyPhotoImageId:imageRecord.id,headshotImageId:finalHeadshotId||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
 
       // Create body shot generation job - PASS headshotImageId explicitly (use finalHeadshotId, not state)
       const { data: bodyShotJob, error: jobError } = await triggerBodyShotGenerate(
@@ -393,102 +351,48 @@ export default function OnboardingScreen() {
         finalHeadshotId || undefined
       );
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:343',message:'triggerBodyShotGenerate completed',data:{hasJob:!!bodyShotJob,hasError:!!jobError,error:jobError?.message||'none',jobId:bodyShotJob?.id||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
 
       if (bodyShotJob && !jobError) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:350',message:'Body shot job created, triggering execution',data:{jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
         
         // Auto-trigger the job
         await triggerAIJobExecution(bodyShotJob.id);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:354',message:'Job execution triggered, starting polling',data:{jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
         
         setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
 
-        const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 60, 2000);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'Polling completed',data:{hasJob:!!completedJob,hasError:!!pollError,status:completedJob?.status||'null',error:completedJob?.error||pollError?.message||'none',jobId:bodyShotJob.id,generatingBodyShot},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H5'})}).catch(()=>{});
-        // #endregion
-        
-        // If polling timed out, do one final check - job might have completed
-        let finalJob = completedJob;
-        if (pollError || !completedJob) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:386',message:'Polling timed out, doing final check',data:{jobId:bodyShotJob.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-          // #endregion
-          console.log('[Onboarding] Body shot polling timed out, doing final check...');
-          const { data: finalCheck } = await getAIJob(bodyShotJob.id);
-          if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
-            finalJob = finalCheck;
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:391',message:'Final check found job completed',data:{status:finalCheck.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-            // #endregion
-          } else {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:395',message:'Final check - job still not complete',data:{status:finalCheck?.status||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-            // #endregion
-            throw new Error('Studio model generation timed out. You can check your profile later to see if it completed.');
-          }
+        const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+          bodyShotJob.id,
+          60,
+          2000,
+          '[Onboarding] Body shot'
+        );
+
+        if (pollError || !finalJob) {
+          throw new Error('Studio model generation timed out. You can check your profile later to see if it completed.');
         }
-        
+
         if (finalJob.status === 'failed') {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:402',message:'Job failed',data:{error:finalJob.error||'Unknown error',status:finalJob.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-          // #endregion
           throw new Error(`Generation failed: ${finalJob.error || 'Unknown error'}`);
         }
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'Body shot generation succeeded, navigating',data:{jobId:bodyShotJob.id,result:finalJob.result?JSON.stringify(finalJob.result).substring(0,100):'null',generatingBodyShotBefore:generatingBodyShot},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H5'})}).catch(()=>{});
-        // #endregion
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'Resetting state on success',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
-        // #endregion
         setGeneratingBodyShot(false);
         setLoadingMessage('');
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'State reset complete, showing success alert',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
-        // #endregion
         
         Alert.alert('Success', 'Studio model generated successfully!');
         // Complete onboarding - navigate to main app
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:401',message:'Navigating to wardrobe after success',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
         router.replace('/(tabs)/wardrobe');
       } else {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:380',message:'Body shot job creation failed',data:{error:jobError?.message||'Unknown error'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
         throw jobError || new Error('Failed to create body shot job');
       }
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'Body shot generation error caught',data:{error:error?.message||'Unknown error',generatingBodyShotBefore:generatingBodyShot},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H5'})}).catch(()=>{});
-      // #endregion
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'Resetting state in catch',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
-      // #endregion
       setGeneratingBodyShot(false);
       setLoadingMessage('');
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:handleGenerateBodyShot',message:'State reset complete, showing alert',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
-      // #endregion
       Alert.alert('Error', error.message || 'Failed to generate studio model');
     }
   };
 
   const handleSkipBodyShot = () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:364',message:'handleSkipBodyShot called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
     
     Alert.alert(
       'Skip Studio Model?',
@@ -498,15 +402,9 @@ export default function OnboardingScreen() {
         { 
           text: 'Skip', 
           onPress: () => {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:373',message:'Skip body shot - navigating to wardrobe',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-            // #endregion
             // Use setTimeout to ensure navigation happens after Alert dismisses
             setTimeout(() => {
               router.replace('/(tabs)/wardrobe');
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'onboarding.tsx:377',message:'router.replace called for skip body shot',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-              // #endregion
             }, 100);
           }
         }

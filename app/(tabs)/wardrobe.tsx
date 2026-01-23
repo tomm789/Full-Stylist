@@ -634,7 +634,7 @@ export default function WardrobeScreen() {
 
       // Import required functions
       const { saveOutfit } = await import('@/lib/outfits');
-      const { createAIJob, triggerAIJobExecution, pollAIJob } = await import('@/lib/ai-jobs');
+      const { createAIJob, triggerAIJobExecution, pollAIJobWithFinalCheck } = await import('@/lib/ai-jobs');
       
       const selectedItems = items.filter(item => selectedOutfitItems.includes(item.id));
       const selectedItemInfo = selectedItems.map(i => ({
@@ -696,30 +696,26 @@ export default function WardrobeScreen() {
       setGenerationStatus('Generating outfit...\nThis may take 60-90 seconds.');
       
       // Poll for completion (120 attempts = ~10+ minutes with exponential backoff)
-      const { data: completedJob, error: pollError } = await pollAIJob(renderJob.id, 120, 2000);
+      const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+        renderJob.id,
+        120,
+        2000,
+        '[Wardrobe]'
+      );
       
-      // If polling timed out, do one final check - job might have completed
-      let finalJob = completedJob;
-      if (pollError || !completedJob) {
-        console.log('[Wardrobe] Outfit render polling timed out, doing final check...');
-        const { getAIJob } = await import('@/lib/ai-jobs');
-        const { data: finalCheck } = await getAIJob(renderJob.id);
-        if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
-          finalJob = finalCheck;
-        } else {
-          // Job still running - let user know they can check later
-          setIsGenerating(false);
-          setGenerationStatus('');
-          Alert.alert(
-            'Generation In Progress',
-            'Outfit generation is taking longer than expected. You can check your outfits page to see when it\'s ready.',
-            [{ text: 'OK', onPress: () => {
-              setOutfitCreatorMode(false);
-              setSelectedOutfitItems([]);
-            }}]
-          );
-          return;
-        }
+      if (pollError || !finalJob) {
+        // Job still running - let user know they can check later
+        setIsGenerating(false);
+        setGenerationStatus('');
+        Alert.alert(
+          'Generation In Progress',
+          'Outfit generation is taking longer than expected. You can check your outfits page to see when it\'s ready.',
+          [{ text: 'OK', onPress: () => {
+            setOutfitCreatorMode(false);
+            setSelectedOutfitItems([]);
+          }}]
+        );
+        return;
       }
       
       if (finalJob.status === 'failed') {
