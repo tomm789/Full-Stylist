@@ -481,11 +481,19 @@ async function processOutfitRender(input, supabase, userId) {
   const useMannequin = itemImages.length > limit;
 
   let finalImageB64;
+  let fallbackImageId = null;
+  let fallbackStorageKey = null;
+  let usedMannequinFallback = false;
 
   if (mannequin_image_id) {
-    const mannequinB64 = await downloadImageFromStorage(supabase, mannequin_image_id);
-    const compositePrompt = PROMPTS.OUTFIT_COMPOSITE;
-    finalImageB64 = await callGeminiAPI(compositePrompt, [bodyB64, mannequinB64, headB64], 'gemini-3-pro-image-preview', 'IMAGE');
+    try {
+      const mannequinB64 = await downloadImageFromStorage(supabase, mannequin_image_id);
+      const compositePrompt = PROMPTS.OUTFIT_COMPOSITE;
+      finalImageB64 = await callGeminiAPI(compositePrompt, [bodyB64, mannequinB64, headB64], 'gemini-3-pro-image-preview', 'IMAGE');
+    } catch (error) {
+      usedMannequinFallback = true;
+      fallbackImageId = mannequin_image_id;
+    }
   } else if (useMannequin) {
     // Stage 1: Mannequin
     // Uses preferredModel (e.g. Flash)
@@ -497,7 +505,16 @@ async function processOutfitRender(input, supabase, userId) {
     // Uses hardcoded 'gemini-3-pro-image-preview' (as per original code)
     // Does NOT inject user prompt (as per original code)
     const compositePrompt = PROMPTS.OUTFIT_COMPOSITE;
-    finalImageB64 = await callGeminiAPI(compositePrompt, [bodyB64, mannequinB64, headB64], 'gemini-3-pro-image-preview', 'IMAGE');
+    try {
+      finalImageB64 = await callGeminiAPI(compositePrompt, [bodyB64, mannequinB64, headB64], 'gemini-3-pro-image-preview', 'IMAGE');
+    } catch (error) {
+      usedMannequinFallback = true;
+      const timestamp = Date.now();
+      const mannequinStoragePath = `${userId}/ai/outfits/${outfit_id}/mannequin/${timestamp}.jpg`;
+      const { imageId, storageKey } = await uploadImageToStorage(supabase, userId, mannequinB64, mannequinStoragePath);
+      fallbackImageId = imageId;
+      fallbackStorageKey = storageKey;
+    }
   } else {
     // Direct Generation
     // Uses preferredModel
@@ -507,15 +524,22 @@ async function processOutfitRender(input, supabase, userId) {
     finalImageB64 = await callGeminiAPI(directPrompt, allInputs, preferredModel, 'IMAGE');
   }
 
-  const timestamp = Date.now();
-  const storagePath = `${userId}/ai/outfits/${outfit_id}/${timestamp}.jpg`;
-  const { imageId, storageKey } = await uploadImageToStorage(supabase, userId, finalImageB64, storagePath);
+  let imageId = fallbackImageId;
+  let storageKey = fallbackStorageKey;
+
+  if (!usedMannequinFallback) {
+    const timestamp = Date.now();
+    const storagePath = `${userId}/ai/outfits/${outfit_id}/${timestamp}.jpg`;
+    const uploadResult = await uploadImageToStorage(supabase, userId, finalImageB64, storagePath);
+    imageId = uploadResult.imageId;
+    storageKey = uploadResult.storageKey;
+  }
 
   await supabase.from('outfit_renders').insert({
     outfit_id,
     image_id: imageId,
     prompt: prompt || null,
-    settings: settings || {},
+    settings: { ...(settings || {}), mannequin_fallback: usedMannequinFallback },
     status: 'succeeded'
   });
 
