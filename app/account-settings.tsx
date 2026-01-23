@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Platform,
   SafeAreaView,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,8 @@ export default function AccountSettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [aiModelPreference, setAiModelPreference] = useState<string>('gemini-2.5-flash-image');
+  const [modelPassword, setModelPassword] = useState('');
+  const [showPasswordInput, setShowPasswordInput] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -75,6 +78,12 @@ export default function AccountSettingsScreen() {
   const handleModelSelection = async (model: string) => {
     if (!user || !settings) return;
 
+    if (model.includes('pro') && !settings.ai_model_password) {
+      setShowPasswordInput(true);
+      Alert.alert('Password Required', 'Enter the Gemini Pro password to enable this model.');
+      return;
+    }
+
     const { error: updateError } = await updateUserSettings(user.id, {
       ai_model_preference: model,
     } as any);
@@ -86,6 +95,31 @@ export default function AccountSettingsScreen() {
 
     setAiModelPreference(model);
     await loadData();
+  };
+
+  const handleModelPasswordSubmit = async () => {
+    if (!user || !settings) return;
+    if (!modelPassword.trim()) {
+      Alert.alert('Password Required', 'Please enter the Gemini Pro password.');
+      return;
+    }
+
+    setSaving(true);
+    const { error: updateError } = await updateUserSettings(user.id, {
+      ai_model_password: modelPassword.trim(),
+      ai_model_preference: 'gemini-3-pro-image-preview',
+    } as any);
+
+    if (updateError) {
+      Alert.alert('Error', 'Failed to verify Gemini Pro password');
+      setSaving(false);
+      return;
+    }
+
+    setModelPassword('');
+    setShowPasswordInput(false);
+    await loadData();
+    setSaving(false);
   };
 
   const handleSignOut = async () => {
@@ -311,6 +345,31 @@ export default function AccountSettingsScreen() {
           <Text style={styles.hint}>
             Choose the AI model for outfit generation. Advanced models require a password.
           </Text>
+
+          {showPasswordInput && !settings.ai_model_password && (
+            <View style={styles.passwordContainer}>
+              <Text style={styles.passwordLabel}>Gemini Pro Password</Text>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter Gemini Pro password"
+                value={modelPassword}
+                onChangeText={setModelPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                editable={!saving}
+              />
+              <TouchableOpacity
+                style={[styles.passwordButton, saving && styles.optionDisabled]}
+                onPress={handleModelPasswordSubmit}
+                disabled={saving}
+              >
+                <Text style={styles.passwordButtonText}>Verify & Enable Pro</Text>
+              </TouchableOpacity>
+              <Text style={styles.passwordNote}>
+                Pro access is enabled only after password verification. Incorrect passwords will fall back to Standard.
+              </Text>
+            </View>
+          )}
           
           <View style={styles.optionsList}>
             <TouchableOpacity
@@ -464,10 +523,51 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: '600',
   },
+  optionDisabled: {
+    opacity: 0.6,
+  },
   optionSubtext: {
     fontSize: 12,
     color: '#999',
     marginTop: 4,
+  },
+  passwordContainer: {
+    marginTop: 12,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#f7f7f7',
+  },
+  passwordLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+    color: '#333',
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    backgroundColor: '#fff',
+  },
+  passwordButton: {
+    marginTop: 10,
+    backgroundColor: '#000',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  passwordButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  passwordNote: {
+    marginTop: 8,
+    fontSize: 11,
+    color: '#666',
   },
   toggleContainer: {
     flexDirection: 'row',

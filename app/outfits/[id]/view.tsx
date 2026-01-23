@@ -41,15 +41,19 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const IS_TABLET = SCREEN_WIDTH >= 768;
 
 export default function OutfitDetailScreen() {
-  const { id, lookbookId, lookbookTitle, outfitIndex, suppressGeneratingModal } = useLocalSearchParams<{ 
+  const { id, lookbookId, lookbookTitle, outfitIndex, suppressGeneratingModal, outfitIds, filters, returnTo } = useLocalSearchParams<{ 
     id: string; 
     lookbookId?: string; 
     lookbookTitle?: string;
     outfitIndex?: string;
     suppressGeneratingModal?: string;
+    outfitIds?: string;
+    filters?: string;
+    returnTo?: string;
   }>();
   const router = useRouter();
   const { user } = useAuth();
+  const filterSummary = typeof filters === 'string' ? decodeURIComponent(filters) : '';
   const [outfit, setOutfit] = useState<any>(null);
   const [coverImage, setCoverImage] = useState<any>(null);
   const [outfitItems, setOutfitItems] = useState<any[]>([]);
@@ -83,11 +87,51 @@ export default function OutfitDetailScreen() {
   const [isGeneratingOutfitRender, setIsGeneratingOutfitRender] = useState(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const shouldShowGeneratingModal = suppressGeneratingModal !== '1';
+  const [navigationOutfits, setNavigationOutfits] = useState<Array<{ id: string; title: string; imageUrl: string | null }>>([]);
+  const [currentOutfitIndex, setCurrentOutfitIndex] = useState(0);
+  const navigationScrollRef = useRef<ScrollView>(null);
+  const [generationStepIndex, setGenerationStepIndex] = useState(0);
+
+  const generationSteps = [
+    {
+      title: 'Lighting the Runway',
+      message: 'Analyzing your uploaded pieces for color, texture, and shine.',
+      subtext: 'Polishing the raw materials for a couture-ready render.',
+    },
+    {
+      title: 'Silhouette Sculpting',
+      message: 'Mapping shapes, seams, and movement for a perfect drape.',
+      subtext: 'Building the backbone of a refined, camera-ready outfit.',
+    },
+    {
+      title: 'Style Intelligence',
+      message: 'Calibrating proportions and style cues for a balanced look.',
+      subtext: 'Ensuring every item feels intentional and luxe.',
+    },
+    {
+      title: 'Fabric Physics',
+      message: 'Simulating folds, shadows, and layered textures.',
+      subtext: 'Adding depth so the outfit feels alive.',
+    },
+    {
+      title: 'Editorial Finishing',
+      message: 'Enhancing clarity, contrast, and fabric detail.',
+      subtext: 'Delivering a glossy, magazine-ready presentation.',
+    },
+    {
+      title: 'Final Reveal',
+      message: 'Assembling the full ensemble and exporting your render.',
+      subtext: 'Almost ready—putting the finishing touch on the look.',
+    },
+  ];
 
   useEffect(() => {
     if (id) {
       loadOutfitData();
       loadSocialEngagement();
+      if (outfitIds) {
+        loadNavigationOutfits();
+      }
     }
     
     // Cleanup polling on unmount
@@ -100,6 +144,38 @@ export default function OutfitDetailScreen() {
       setIsGeneratingOutfitRender(false);
     };
   }, [id]);
+
+  useEffect(() => {
+    if (!outfitIds || !id) return;
+    const idsArray = outfitIds.split(',').filter(Boolean);
+    const index = idsArray.indexOf(id);
+    if (index >= 0) {
+      setCurrentOutfitIndex(index);
+    }
+  }, [id, outfitIds]);
+
+  useEffect(() => {
+    if (navigationOutfits.length > 0 && currentOutfitIndex >= 0 && navigationScrollRef.current) {
+      const itemWidth = 60 + 12;
+      const scrollPosition = Math.max(0, currentOutfitIndex * itemWidth - SCREEN_WIDTH / 2 + itemWidth / 2);
+      setTimeout(() => {
+        navigationScrollRef.current?.scrollTo({ x: scrollPosition, animated: true });
+      }, 100);
+    }
+  }, [navigationOutfits, currentOutfitIndex]);
+
+  useEffect(() => {
+    if (!isGeneratingOutfitRender || !shouldShowGeneratingModal) {
+      setGenerationStepIndex(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setGenerationStepIndex((prev) => (prev + 1) % generationSteps.length);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isGeneratingOutfitRender, shouldShowGeneratingModal, generationSteps.length]);
 
   const loadSocialEngagement = async () => {
     if (!id || !user) return;
@@ -121,6 +197,68 @@ export default function OutfitDetailScreen() {
     } catch (error) {
       console.error('Failed to load social engagement', error);
     }
+  };
+
+  const loadNavigationOutfits = async () => {
+    if (!outfitIds || !user) return;
+    try {
+      const idsArray = outfitIds.split(',').filter(Boolean);
+      if (idsArray.length === 0) return;
+
+      const { data: outfitsData, error } = await supabase
+        .from('outfits')
+        .select('*')
+        .in('id', idsArray)
+        .eq('owner_user_id', user.id)
+        .is('archived_at', null);
+
+      if (error) {
+        console.error('Failed to load navigation outfits:', error);
+        return;
+      }
+
+      const outfitMap = new Map((outfitsData || []).map((outfit) => [outfit.id, outfit]));
+      const navItems = await Promise.all(
+        idsArray.map(async (outfitId) => {
+          const foundOutfit = outfitMap.get(outfitId);
+          if (!foundOutfit) return null;
+          const imageUrl = await getOutfitCoverImageUrl(foundOutfit);
+          return {
+            id: outfitId,
+            title: foundOutfit.title || 'Untitled Outfit',
+            imageUrl,
+          };
+        })
+      );
+
+      setNavigationOutfits(
+        navItems.filter(
+          (item): item is { id: string; title: string; imageUrl: string | null } => item !== null
+        )
+      );
+    } catch (error) {
+      console.error('Failed to load navigation outfits:', error);
+    }
+  };
+
+  const navigateToOutfit = (targetOutfitId: string) => {
+    if (!outfitIds) return;
+    const queryParts = [`outfitIds=${encodeURIComponent(outfitIds)}`];
+    if (filterSummary) {
+      queryParts.push(`filters=${encodeURIComponent(filterSummary)}`);
+    }
+    if (returnTo) {
+      queryParts.push(`returnTo=${encodeURIComponent(returnTo)}`);
+    }
+    router.replace(`/outfits/${targetOutfitId}/view?${queryParts.join('&')}`);
+  };
+
+  const handleBackPress = () => {
+    if (returnTo === 'outfits' || outfitIds) {
+      router.replace('/(tabs)/outfits');
+      return;
+    }
+    router.back();
   };
 
   useEffect(() => {
@@ -681,12 +819,39 @@ export default function OutfitDetailScreen() {
           <View style={styles.fullScreenOverlay}>
             <View style={styles.loadingDialog}>
               <ActivityIndicator size="large" color="#007AFF" />
-              <Text style={styles.loadingDialogTitle}>Generating Outfit</Text>
+              <Text style={styles.loadingDialogTitle}>{generationSteps[generationStepIndex].title}</Text>
               <Text style={styles.loadingDialogMessage}>
-                Creating a professional outfit visualization...
+                {generationSteps[generationStepIndex].message}
               </Text>
               <Text style={styles.loadingDialogSubtext}>
-                This may take 60-90 seconds. We will update the outfit as soon as it is ready.
+                {generationSteps[generationStepIndex].subtext}
+              </Text>
+              <Text style={styles.loadingDialogStep}>
+                Step {generationStepIndex + 1} of {generationSteps.length}
+              </Text>
+              <View style={styles.loadingDialogSteps}>
+                {generationSteps.map((step, index) => (
+                  <View
+                    key={`${step.title}-${index}`}
+                    style={[
+                      styles.loadingDialogStepRow,
+                      index === generationStepIndex && styles.loadingDialogStepRowActive,
+                    ]}
+                  >
+                    <View style={styles.loadingDialogStepDot} />
+                    <Text
+                      style={[
+                        styles.loadingDialogStepText,
+                        index === generationStepIndex && styles.loadingDialogStepTextActive,
+                      ]}
+                    >
+                      {step.title}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.loadingDialogFooter}>
+                Stay on this screen while we craft your look.
               </Text>
             </View>
           </View>
@@ -695,7 +860,7 @@ export default function OutfitDetailScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
           <Text style={styles.backButtonText}>‹ Back</Text>
         </TouchableOpacity>
         <View style={styles.headerActions}>
@@ -857,6 +1022,48 @@ export default function OutfitDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {navigationOutfits.length > 1 && (
+        <View style={styles.navigationContainer}>
+          {filterSummary ? (
+            <View style={styles.filtersBar}>
+              <Text style={styles.filtersText}>{filterSummary}</Text>
+            </View>
+          ) : null}
+          <ScrollView
+            horizontal
+            ref={navigationScrollRef}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.navigationScrollContent}
+          >
+            {navigationOutfits.map((navOutfit) => {
+              const isActive = navOutfit.id === id;
+              return (
+                <TouchableOpacity
+                  key={navOutfit.id}
+                  style={[styles.navigationItem, isActive && styles.navigationItemActive]}
+                  onPress={() => !isActive && navigateToOutfit(navOutfit.id)}
+                  disabled={isActive}
+                >
+                  {navOutfit.imageUrl ? (
+                    <ExpoImage
+                      source={{ uri: navOutfit.imageUrl }}
+                      style={styles.navigationImage}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={styles.navigationPlaceholder}>
+                      <Text style={styles.navigationPlaceholderText}>
+                        {navOutfit.title?.charAt(0) || 'O'}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Fullscreen Image Modal */}
       <Modal
@@ -1072,6 +1279,50 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  loadingDialogStep: {
+    marginTop: 16,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#007AFF',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  loadingDialogSteps: {
+    marginTop: 12,
+    width: '100%',
+  },
+  loadingDialogStepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  loadingDialogStepRowActive: {
+    backgroundColor: 'rgba(0, 122, 255, 0.08)',
+  },
+  loadingDialogStepDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#007AFF',
+    marginRight: 8,
+  },
+  loadingDialogStepText: {
+    fontSize: 12,
+    color: '#666',
+    flexShrink: 1,
+  },
+  loadingDialogStepTextActive: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  loadingDialogFooter: {
+    marginTop: 16,
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
   },
   cancelRenderButton: {
     marginTop: 20,
@@ -1458,6 +1709,52 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     lineHeight: 22,
+  },
+  navigationContainer: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#000',
+    paddingVertical: 10,
+  },
+  filtersBar: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  filtersText: {
+    color: '#fff',
+    fontSize: 12,
+    opacity: 0.8,
+  },
+  navigationScrollContent: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  navigationItem: {
+    width: 60,
+    height: 80,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    overflow: 'hidden',
+  },
+  navigationItemActive: {
+    borderColor: '#007AFF',
+  },
+  navigationImage: {
+    width: '100%',
+    height: '100%',
+  },
+  navigationPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navigationPlaceholderText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
   },
   leftArrow: {
     position: 'absolute',

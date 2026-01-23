@@ -17,8 +17,9 @@ import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
-import { triggerBodyShotGenerate, triggerAIJobExecution, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
+import { triggerBodyShotGenerate, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
 import { getUserSettings } from '@/lib/settings';
+import PolicyBlockModal from '../components/PolicyBlockModal';
 
 interface Headshot {
   id: string;
@@ -37,6 +38,8 @@ export default function NewBodyshotScreen() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [policyModalVisible, setPolicyModalVisible] = useState(false);
+  const [policyMessage, setPolicyMessage] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -220,7 +223,7 @@ export default function NewBodyshotScreen() {
         
         setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
         
-        const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+        const { data: finalJob, error: pollError } = await waitForAIJobCompletion(
           bodyShotJob.id,
           60,
           2000,
@@ -232,7 +235,15 @@ export default function NewBodyshotScreen() {
         }
         
         if (finalJob.status === 'failed') {
-          throw new Error(`Generation failed: ${finalJob.error || 'Unknown error'}`);
+          const failureMessage = finalJob.error || 'Unknown error';
+          if (isGeminiPolicyBlockError(failureMessage)) {
+            setGenerating(false);
+            setLoadingMessage('');
+            setPolicyMessage('Gemini could not generate this studio model because it conflicts with safety policy. No credits were charged.');
+            setPolicyModalVisible(true);
+            return;
+          }
+          throw new Error(`Generation failed: ${failureMessage}`);
         }
         
         // Get the generated body shot image ID from the job result
@@ -254,7 +265,13 @@ export default function NewBodyshotScreen() {
     } catch (error: any) {
       setGenerating(false);
       setLoadingMessage('');
-      Alert.alert('Error', error.message || 'Failed to generate studio model');
+      const message = error.message || 'Failed to generate studio model';
+      if (isGeminiPolicyBlockError(message)) {
+        setPolicyMessage('Gemini could not generate this studio model because it conflicts with safety policy. No credits were charged.');
+        setPolicyModalVisible(true);
+        return;
+      }
+      Alert.alert('Error', message);
     }
   };
 
@@ -423,9 +440,14 @@ export default function NewBodyshotScreen() {
               </TouchableOpacity>
             </View>
           )}
-        </ScrollView>
+      </ScrollView>
       </SafeAreaView>
       {renderLoadingOverlay()}
+      <PolicyBlockModal
+        visible={policyModalVisible}
+        message={policyMessage}
+        onClose={() => setPolicyModalVisible(false)}
+      />
     </>
   );
 }

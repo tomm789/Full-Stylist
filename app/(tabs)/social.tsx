@@ -40,7 +40,8 @@ import { createRepost, removeRepost, hasReposted, getRepostCount } from '@/lib/r
 import { getLookbook } from '@/lib/lookbooks';
 import { getUserOutfits, getOutfit, saveOutfit } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
-import { createAIJob, triggerAIJobExecution, pollAIJobWithFinalCheck, getOutfitRenderItemLimit } from '@/lib/ai-jobs';
+import { createAIJob, triggerAIJobExecution, waitForAIJobCompletion, getOutfitRenderItemLimit, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
+import PolicyBlockModal from '../components/PolicyBlockModal';
 import { supabase } from '@/lib/supabase';
 import { getWardrobeCategories, getWardrobeItemsByIds } from '@/lib/wardrobe';
 import { unfollowUser, isFollowing } from '@/lib/user';
@@ -104,6 +105,8 @@ export default function SocialScreen() {
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
   const [tryingOnOutfit, setTryingOnOutfit] = useState(false);
   const [generatingOutfitId, setGeneratingOutfitId] = useState<string | null>(null);
+  const [policyModalVisible, setPolicyModalVisible] = useState(false);
+  const [policyMessage, setPolicyMessage] = useState('');
   const [menuButtonPosition, setMenuButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [followStatuses, setFollowStatuses] = useState<Map<string, boolean>>(new Map()); // Map of owner_user_id -> isFollowing
   const [unfollowingUserId, setUnfollowingUserId] = useState<string | null>(null);
@@ -730,7 +733,7 @@ export default function SocialScreen() {
         }
 
         await triggerAIJobExecution(mannequinJob.id);
-        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
+        const { data: mannequinResult, error: mannequinPollError } = await waitForAIJobCompletion(
           mannequinJob.id,
           60,
           2000,
@@ -781,7 +784,7 @@ export default function SocialScreen() {
       try {
         let finalJob: any | null = null;
         while (!finalJob) {
-          const { data: pollResult, error: pollError } = await pollAIJobWithFinalCheck(
+          const { data: pollResult, error: pollError } = await waitForAIJobCompletion(
             renderJob.id,
             120,
             2000,
@@ -804,17 +807,25 @@ export default function SocialScreen() {
           setGeneratingOutfitId(null);
           router.push(`/outfits/${newOutfitId}/view`);
         } else if (finalJob.status === 'failed') {
+          const failureMessage = finalJob.error || 'Outfit generation failed';
           setGeneratingOutfitId(null);
-          Alert.alert('Generation Failed', finalJob.error || 'Outfit generation failed');
+          if (isGeminiPolicyBlockError(failureMessage)) {
+            setPolicyMessage('Gemini could not generate this outfit because it conflicts with safety policy. No credits were charged.');
+            setPolicyModalVisible(true);
+            return;
+          }
+          Alert.alert('Generation Failed', failureMessage);
         }
       } catch (error: any) {
         console.error('[Social] Error polling outfit render:', error);
         setGeneratingOutfitId(null);
-        Alert.alert(
-          'Generation Error',
-          'An error occurred while generating the outfit. Please try again.',
-          [{ text: 'OK' }]
-        );
+        const message = error.message || 'An error occurred while generating the outfit. Please try again.';
+        if (isGeminiPolicyBlockError(message)) {
+          setPolicyMessage('Gemini could not generate this outfit because it conflicts with safety policy. No credits were charged.');
+          setPolicyModalVisible(true);
+          return;
+        }
+        Alert.alert('Generation Error', message, [{ text: 'OK' }]);
       }
       
     } catch (error: any) {
@@ -1370,6 +1381,11 @@ export default function SocialScreen() {
           </View>
         </View>
       </Modal>
+      <PolicyBlockModal
+        visible={policyModalVisible}
+        message={policyMessage}
+        onClose={() => setPolicyModalVisible(false)}
+      />
     </View>
   );
 }

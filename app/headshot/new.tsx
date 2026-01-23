@@ -19,7 +19,8 @@ import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
-import { triggerHeadshotGenerate, triggerAIJobExecution, pollAIJob } from '@/lib/ai-jobs';
+import { triggerHeadshotGenerate, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
+import PolicyBlockModal from '../components/PolicyBlockModal';
 
 export default function NewHeadshotScreen() {
   const { user } = useAuth();
@@ -30,6 +31,8 @@ export default function NewHeadshotScreen() {
   const [makeupStyle, setMakeupStyle] = useState('');
   const [generating, setGenerating] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [policyModalVisible, setPolicyModalVisible] = useState(false);
+  const [policyMessage, setPolicyMessage] = useState('');
 
   const handleTakePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -138,14 +141,22 @@ export default function NewHeadshotScreen() {
         
         setLoadingMessage('Generating professional headshot...\nThis may take 20-30 seconds.');
         
-        const { data: completedJob, error: pollError } = await pollAIJob(headshotJob.id, 30, 2000);
+        const { data: completedJob, error: pollError } = await waitForAIJobCompletion(headshotJob.id, 30, 2000, '[Headshot]');
         
         if (pollError || !completedJob) {
           throw new Error('Headshot generation timed out or failed');
         }
         
         if (completedJob.status === 'failed') {
-          throw new Error(`Generation failed: ${completedJob.error || 'Unknown error'}`);
+          const failureMessage = completedJob.error || 'Unknown error';
+          if (isGeminiPolicyBlockError(failureMessage)) {
+            setGenerating(false);
+            setLoadingMessage('');
+            setPolicyMessage('Gemini could not generate this headshot because it conflicts with safety policy. No credits were charged.');
+            setPolicyModalVisible(true);
+            return;
+          }
+          throw new Error(`Generation failed: ${failureMessage}`);
         }
         
         // Get the generated headshot image ID from the job result
@@ -167,7 +178,13 @@ export default function NewHeadshotScreen() {
     } catch (error: any) {
       setGenerating(false);
       setLoadingMessage('');
-      Alert.alert('Error', error.message || 'Failed to generate headshot');
+      const message = error.message || 'Failed to generate headshot';
+      if (isGeminiPolicyBlockError(message)) {
+        setPolicyMessage('Gemini could not generate this headshot because it conflicts with safety policy. No credits were charged.');
+        setPolicyModalVisible(true);
+        return;
+      }
+      Alert.alert('Error', message);
     }
   };
 
@@ -293,6 +310,11 @@ export default function NewHeadshotScreen() {
       </ScrollView>
       </SafeAreaView>
       {renderLoadingOverlay()}
+      <PolicyBlockModal
+        visible={policyModalVisible}
+        message={policyMessage}
+        onClose={() => setPolicyModalVisible(false)}
+      />
     </>
   );
 }

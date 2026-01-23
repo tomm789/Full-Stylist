@@ -4,6 +4,16 @@ import { SUPABASE_CONFIG } from './supabase';
 const activePollingJobs = new Set<string>();
 const failureCountByJob = new Map<string, number>();
 const CIRCUIT_BREAKER_THRESHOLD = 5;
+const POLICY_BLOCK_PATTERNS = [
+  'safety',
+  'blocked',
+  'policy',
+  'harassment',
+  'sexually explicit',
+  'dangerous content',
+  'generation blocked',
+  'safety block',
+];
 
 export interface AIJob {
   id: string;
@@ -152,6 +162,44 @@ export async function pollAIJobWithFinalCheck(
   }
 
   return { data: null, error: pollError || new Error('Polling timeout') };
+}
+
+export function isGeminiPolicyBlockError(message?: string | null): boolean {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  return POLICY_BLOCK_PATTERNS.some((pattern) => normalized.includes(pattern));
+}
+
+export async function waitForAIJobCompletion(
+  jobId: string,
+  maxAttempts: number = SUPABASE_CONFIG.DEV_MODE ? 30 : 60,
+  initialIntervalMs: number = 2000,
+  logPrefix?: string
+): Promise<{
+  data: AIJob | null;
+  error: any;
+}> {
+  while (true) {
+    const { data: completedJob, error } = await pollAIJobWithFinalCheck(
+      jobId,
+      maxAttempts,
+      initialIntervalMs,
+      logPrefix
+    );
+
+    if (completedJob) {
+      return { data: completedJob, error: null };
+    }
+
+    if (error?.message && error.message.toLowerCase().includes('timeout')) {
+      if (logPrefix) {
+        console.log(`${logPrefix} polling timed out, continuing to wait...`);
+      }
+      continue;
+    }
+
+    return { data: null, error };
+  }
 }
 
 /**

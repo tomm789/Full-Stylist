@@ -6,6 +6,11 @@ const { PROMPTS } = require('./prompts');
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_3_PASSWORD = process.env.GEMINI_3_PASSWORD || '';
+const GEMINI_3_DISABLED = ['true', '1', 'yes'].includes((process.env.GEMINI_3_DISABLED || '').toLowerCase());
+const GEMINI_3_BODY_SHOTS_DISABLED = ['true', '1', 'yes'].includes(
+  (process.env.GEMINI_3_BODY_SHOTS_DISABLED || '').toLowerCase()
+);
 
 // Create Supabase admin client (service role)
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -14,6 +19,18 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     persistSession: false,
   },
 });
+
+function isGemini3Allowed(userSettings) {
+  if (GEMINI_3_DISABLED) return false;
+  if (!userSettings?.ai_model_password) return false;
+  if (!GEMINI_3_PASSWORD) return true;
+  return userSettings.ai_model_password === GEMINI_3_PASSWORD;
+}
+
+function resolveGeminiModel(requestedModel, userSettings) {
+  if (requestedModel !== 'gemini-3-pro-image-preview') return requestedModel;
+  return isGemini3Allowed(userSettings) ? requestedModel : 'gemini-2.5-flash-image';
+}
 
 // --- HANDLER ---
 exports.handler = async (event, context) => {
@@ -404,6 +421,12 @@ async function processBodyShotGenerate(input, supabase, userId) {
   }
   if (!headId) throw new Error('No headshot available');
 
+  const { data: userSettings } = await supabase
+    .from('user_settings')
+    .select('ai_model_password')
+    .eq('user_id', userId)
+    .single();
+
   // Optimization: Parallel Download
   const [headB64, bodyB64] = await Promise.all([
     downloadImageFromStorage(supabase, headId),
@@ -412,7 +435,10 @@ async function processBodyShotGenerate(input, supabase, userId) {
 
   // Original model: gemini-3-pro-image-preview
   // Original Prompt logic: contained within PROMPTS.BODY_COMPOSITE
-  const studioModelB64 = await callGeminiAPI(PROMPTS.BODY_COMPOSITE, [headB64, bodyB64], 'gemini-3-pro-image-preview', 'IMAGE');
+  const bodyShotModel = GEMINI_3_BODY_SHOTS_DISABLED
+    ? 'gemini-2.5-flash-image'
+    : resolveGeminiModel('gemini-3-pro-image-preview', userSettings);
+  const studioModelB64 = await callGeminiAPI(PROMPTS.BODY_COMPOSITE, [headB64, bodyB64], bodyShotModel, 'IMAGE');
 
   const timestamp = Date.now();
   const storagePath = `${userId}/ai/body_shots/${timestamp}.jpg`;
@@ -428,7 +454,7 @@ async function processOutfitRender(input, supabase, userId) {
 
   const { data: userSettings } = await supabase
     .from('user_settings')
-    .select('headshot_image_id, body_shot_image_id, ai_model_preference')
+    .select('headshot_image_id, body_shot_image_id, ai_model_preference, ai_model_password')
     .eq('user_id', userId)
     .single();
 
@@ -476,7 +502,10 @@ async function processOutfitRender(input, supabase, userId) {
   const [headB64, bodyB64, ...itemImages] = await Promise.all(downloadPromises);
 
   // --- Logic matched to original ---
-  const preferredModel = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
+  const preferredModel = resolveGeminiModel(
+    userSettings?.ai_model_preference || 'gemini-2.5-flash-image',
+    userSettings
+  );
   const limit = preferredModel.includes('pro') ? 7 : 2;
   const useMannequin = itemImages.length > limit;
 
@@ -489,7 +518,8 @@ async function processOutfitRender(input, supabase, userId) {
     try {
       const mannequinB64 = await downloadImageFromStorage(supabase, mannequin_image_id);
       const compositePrompt = PROMPTS.OUTFIT_COMPOSITE;
-      finalImageB64 = await callGeminiAPI(compositePrompt, [bodyB64, mannequinB64, headB64], 'gemini-3-pro-image-preview', 'IMAGE');
+      const compositeModel = resolveGeminiModel('gemini-3-pro-image-preview', userSettings);
+      finalImageB64 = await callGeminiAPI(compositePrompt, [bodyB64, mannequinB64, headB64], compositeModel, 'IMAGE');
     } catch (error) {
       usedMannequinFallback = true;
       fallbackImageId = mannequin_image_id;
@@ -506,7 +536,8 @@ async function processOutfitRender(input, supabase, userId) {
     // Does NOT inject user prompt (as per original code)
     const compositePrompt = PROMPTS.OUTFIT_COMPOSITE;
     try {
-      finalImageB64 = await callGeminiAPI(compositePrompt, [bodyB64, mannequinB64, headB64], 'gemini-3-pro-image-preview', 'IMAGE');
+      const compositeModel = resolveGeminiModel('gemini-3-pro-image-preview', userSettings);
+      finalImageB64 = await callGeminiAPI(compositePrompt, [bodyB64, mannequinB64, headB64], compositeModel, 'IMAGE');
     } catch (error) {
       usedMannequinFallback = true;
       const timestamp = Date.now();
@@ -586,11 +617,14 @@ async function processOutfitMannequin(input, supabase, userId) {
 
   const { data: userSettings } = await supabase
     .from('user_settings')
-    .select('ai_model_preference')
+    .select('ai_model_preference, ai_model_password')
     .eq('user_id', userId)
     .single();
 
-  const preferredModel = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
+  const preferredModel = resolveGeminiModel(
+    userSettings?.ai_model_preference || 'gemini-2.5-flash-image',
+    userSettings
+  );
   const mannequinPrompt = PROMPTS.OUTFIT_MANNEQUIN(itemImages.length, prompt || "No additional details");
   const mannequinB64 = await callGeminiAPI(mannequinPrompt, itemImages, preferredModel, 'IMAGE');
 

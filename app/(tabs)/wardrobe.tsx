@@ -34,6 +34,8 @@ import { Image as ExpoImage } from 'expo-image';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { getUserSettings } from '@/lib/settings';
+import PolicyBlockModal from '../components/PolicyBlockModal';
+import { isGeminiPolicyBlockError } from '@/lib/ai-jobs';
 
 interface FilterState {
   subcategoryId: string | null;
@@ -621,6 +623,8 @@ export default function WardrobeScreen() {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState('');
+  const [policyModalVisible, setPolicyModalVisible] = useState(false);
+  const [policyMessage, setPolicyMessage] = useState('');
 
   const handleGenerateOutfit = async () => {
     
@@ -635,7 +639,7 @@ export default function WardrobeScreen() {
 
       // Import required functions
       const { saveOutfit } = await import('@/lib/outfits');
-      const { createAIJob, triggerAIJobExecution, pollAIJobWithFinalCheck, getOutfitRenderItemLimit } = await import('@/lib/ai-jobs');
+      const { createAIJob, triggerAIJobExecution, waitForAIJobCompletion, getOutfitRenderItemLimit } = await import('@/lib/ai-jobs');
       
       const selectedItems = items.filter(item => selectedOutfitItems.includes(item.id));
       const selectedItemInfo = selectedItems.map(i => ({
@@ -692,7 +696,7 @@ export default function WardrobeScreen() {
         }
 
         await triggerAIJobExecution(mannequinJob.id);
-        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
+        const { data: mannequinResult, error: mannequinPollError } = await waitForAIJobCompletion(
           mannequinJob.id,
           60,
           2000,
@@ -729,7 +733,7 @@ export default function WardrobeScreen() {
       setGenerationStatus('Generating outfit...\nThis may take 60-90 seconds.');
       
       // Poll for completion (120 attempts = ~10+ minutes with exponential backoff)
-      const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+      const { data: finalJob, error: pollError } = await waitForAIJobCompletion(
         renderJob.id,
         120,
         2000,
@@ -737,23 +741,19 @@ export default function WardrobeScreen() {
       );
       
       if (pollError || !finalJob) {
-        // Job still running - let user know they can check later
-        setIsGenerating(false);
-        setGenerationStatus('');
-        Alert.alert(
-          'Generation In Progress',
-          'Outfit generation is taking longer than expected. You can check your outfits page to see when it\'s ready.',
-          [{ text: 'OK', onPress: () => {
-            setOutfitCreatorMode(false);
-            setSelectedOutfitItems([]);
-          }}]
-        );
-        return;
+        throw new Error('Outfit generation timed out. Please try again.');
       }
       
       if (finalJob.status === 'failed') {
         const errorMessage = finalJob.error || 'Unknown error';
         console.error('[Wardrobe] Outfit generation failed:', errorMessage);
+        if (isGeminiPolicyBlockError(errorMessage)) {
+          setIsGenerating(false);
+          setGenerationStatus('');
+          setPolicyMessage('Gemini could not generate this outfit because it conflicts with safety policy. No credits were charged.');
+          setPolicyModalVisible(true);
+          return;
+        }
         throw new Error(`Generation failed: ${errorMessage}`);
       }
 
@@ -764,14 +764,20 @@ export default function WardrobeScreen() {
         setIsGenerating(false);
         setOutfitCreatorMode(false);
         setSelectedOutfitItems([]);
-        router.push(`/outfits/${outfitId}/view`);
+        router.push(`/outfits/${outfitId}/view?returnTo=outfits`);
       }, 500);
 
     } catch (error: any) {
       console.error('Outfit generation error:', error);
       setIsGenerating(false);
       setGenerationStatus('');
-      Alert.alert('Error', error.message || 'Failed to generate outfit');
+      const message = error.message || 'Failed to generate outfit';
+      if (isGeminiPolicyBlockError(message)) {
+        setPolicyMessage('Gemini could not generate this outfit because it conflicts with safety policy. No credits were charged.');
+        setPolicyModalVisible(true);
+        return;
+      }
+      Alert.alert('Error', message);
     }
   };
 
@@ -886,6 +892,11 @@ export default function WardrobeScreen() {
           </View>
         </View>
       )}
+      <PolicyBlockModal
+        visible={policyModalVisible}
+        message={policyMessage}
+        onClose={() => setPolicyModalVisible(false)}
+      />
 
       {/* Outfit Creator Bar */}
       {outfitCreatorMode && (
