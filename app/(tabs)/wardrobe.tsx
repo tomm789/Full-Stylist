@@ -622,8 +622,7 @@ export default function WardrobeScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState('');
 
-  const handleGenerateOutfit = async () => {
-    
+    const handleGenerateOutfit = async () => {
     if (!user || selectedOutfitItems.length === 0) {
       alert('Please select items for your outfit');
       return;
@@ -635,17 +634,23 @@ export default function WardrobeScreen() {
 
       // Import required functions
       const { saveOutfit } = await import('@/lib/outfits');
-      const { createAIJob, triggerAIJobExecution, pollAIJobWithFinalCheck, getOutfitRenderItemLimit } = await import('@/lib/ai-jobs');
-      
-      const selectedItems = items.filter(item => selectedOutfitItems.includes(item.id));
-      const selectedItemInfo = selectedItems.map(i => ({
+      const {
+        createAIJob,
+        triggerAIJobExecution,
+        pollAIJobWithFinalCheck,
+        getOutfitRenderItemLimit,
+      } = await import('@/lib/ai-jobs');
+
+      const selectedItems = items.filter((item) => selectedOutfitItems.includes(item.id));
+
+      const selectedItemInfo = selectedItems.map((i) => ({
         id: i.id,
         title: i.title,
         owner_user_id: i.owner_user_id,
-        isOwnItem: i.owner_user_id === user.id
+        isOwnItem: i.owner_user_id === user.id,
       }));
       console.log('[Wardrobe] Selected items for outfit:', JSON.stringify(selectedItemInfo, null, 2));
-      
+
       const outfitItems = selectedItems.map((item, index) => ({
         category_id: item.category_id || null, // Allow null category_id
         wardrobe_item_id: item.id,
@@ -661,74 +666,58 @@ export default function WardrobeScreen() {
         },
         outfitItems
       );
-      
+
       if (saveError || !savedOutfit?.outfit?.id) {
         throw new Error(saveError?.message || 'Failed to save outfit');
       }
 
       const outfitId = savedOutfit.outfit.id;
 
-      const { data: userSettings } = await getUserSettings(user.id);
-      const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
-      const renderLimit = getOutfitRenderItemLimit(modelPreference);
-      let mannequinImageId;
-
-      if (selected.length > renderLimit) {
-        const { data: mannequinJob, error: mannequinError } = await createAIJob(user.id, 'outfit_mannequin', {
-          user_id: user.id,
-          outfit_id: outfitId,
-          selected,
-        });
-
-        if (mannequinError || !mannequinJob) {
-          throw new Error('Failed to start mannequin generation');
-        }
-
-        await triggerAIJobExecution(mannequinJob.id);
-        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
-          mannequinJob.id,
-          60,
-          2000,
-          '[Wardrobe] Mannequin'
-        );
-
-        if (mannequinPollError || !mannequinResult?.result?.mannequin_image_id) {
-          throw new Error('Mannequin generation timed out. Please try again.');
-        }
-
-        mannequinImageId = mannequinResult.result.mannequin_image_id;
-      }
-
-      // Create outfit_render job with selected items
-      // Handle items that may not have category_id yet (AI will recognize them)
+      // Build the "selected" payload ONCE (used by mannequin + render jobs)
       const selected = selectedItems.map((item) => ({
-        category: item.category_id ? (categories.find((c) => c.id === item.category_id)?.name || '') : '',
+        category: item.category_id
+          ? categories.find((c) => c.id === item.category_id)?.name || ''
+          : '',
         wardrobe_item_id: item.id,
       }));
 
-      const { data: userSettings } = await getUserSettings(user.id);
-      const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
-      const renderLimit = getOutfitRenderItemLimit(modelPreference);
-      let mannequinImageId;
+      // Fetch user settings ONCE (fixes duplicate declaration)
+      const { data: userSettingsData, error: userSettingsError } = await getUserSettings(user.id);
+      if (userSettingsError) {
+        console.warn('[Wardrobe] Failed to load user settings, using defaults:', userSettingsError);
+      }
 
+      const modelPreference =
+        userSettingsData?.ai_model_preference || 'gemini-2.5-flash-image';
+      const renderLimit = getOutfitRenderItemLimit(modelPreference);
+
+      let mannequinImageId: string | undefined;
+
+      // If too many items, generate mannequin first
       if (selected.length > renderLimit) {
-        const { data: mannequinJob, error: mannequinError } = await createAIJob(user.id, 'outfit_mannequin', {
-          user_id: user.id,
-          outfit_id: outfitId,
-          selected,
-        });
+        const { data: mannequinJob, error: mannequinError } = await createAIJob(
+          user.id,
+          'outfit_mannequin',
+          {
+            user_id: user.id,
+            outfit_id: outfitId,
+            selected,
+          }
+        );
 
         if (mannequinError || !mannequinJob) {
-          throw new Error('Failed to start mannequin generation');
+          throw new Error(mannequinError?.message || 'Failed to start mannequin generation');
         }
 
         await triggerAIJobExecution(mannequinJob.id);
-        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
-          mannequinJob.id,
-          60,
-          2000,
-          '[Wardrobe] Mannequin'
-        );
+
+        const { data: mannequinResult, error: mannequinPollError } =
+          await pollAIJobWithFinalCheck(
+            mannequinJob.id,
+            60,
+            2000,
+            '[Wardrobe] Mannequin'
+          );
 
         if (mannequinPollError || !mannequinResult?.result?.mannequin_image_id) {
           throw new Error('Mannequin generation timed out. Please try again.');
@@ -737,72 +726,76 @@ export default function WardrobeScreen() {
         mannequinImageId = mannequinResult.result.mannequin_image_id;
       }
 
-      console.log('[Wardrobe] Creating outfit render job with item IDs:', JSON.stringify(selected.map(s => s.wardrobe_item_id), null, 2));
+      console.log(
+        '[Wardrobe] Creating outfit render job with item IDs:',
+        JSON.stringify(selected.map((s) => s.wardrobe_item_id), null, 2)
+      );
 
       const { data: renderJob, error: jobError } = await createAIJob(user.id, 'outfit_render', {
         user_id: user.id,
         outfit_id: outfitId,
         selected,
         mannequin_image_id: mannequinImageId,
+        // Optional: pass model preference if backend supports it
+        // model_preference: modelPreference,
       });
 
       if (jobError || !renderJob) {
-        throw new Error('Failed to start render job');
+        throw new Error(jobError?.message || 'Failed to start render job');
       }
 
-      // Trigger the job execution
       const triggerResult = await triggerAIJobExecution(renderJob.id);
-      if (triggerResult.error) {
+      if (triggerResult?.error) {
         console.warn('[Wardrobe] Job trigger returned error (may still work):', triggerResult.error);
-        // Continue anyway - job might still be triggered
       }
-      
+
       setGenerationStatus('Generating outfit...\nThis may take 60-90 seconds.');
-      
-      // Poll for completion (120 attempts = ~10+ minutes with exponential backoff)
+
       const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
         renderJob.id,
         120,
         2000,
         '[Wardrobe]'
       );
-      
+
       if (pollError || !finalJob) {
-        // Job still running - let user know they can check later
         setIsGenerating(false);
         setGenerationStatus('');
         Alert.alert(
           'Generation In Progress',
-          'Outfit generation is taking longer than expected. You can check your outfits page to see when it\'s ready.',
-          [{ text: 'OK', onPress: () => {
-            setOutfitCreatorMode(false);
-            setSelectedOutfitItems([]);
-          }}]
+          "Outfit generation is taking longer than expected. You can check your outfits page to see when it's ready.",
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setOutfitCreatorMode(false);
+                setSelectedOutfitItems([]);
+              },
+            },
+          ]
         );
         return;
       }
-      
+
       if (finalJob.status === 'failed') {
         const errorMessage = finalJob.error || 'Unknown error';
         console.error('[Wardrobe] Outfit generation failed:', errorMessage);
         throw new Error(`Generation failed: ${errorMessage}`);
       }
 
-      // Success! Show success message briefly, then navigate
       setGenerationStatus('Success! Loading outfit...');
-      
+
       setTimeout(() => {
         setIsGenerating(false);
         setOutfitCreatorMode(false);
         setSelectedOutfitItems([]);
         router.push(`/outfits/${outfitId}/view`);
       }, 500);
-
     } catch (error: any) {
       console.error('Outfit generation error:', error);
       setIsGenerating(false);
       setGenerationStatus('');
-      Alert.alert('Error', error.message || 'Failed to generate outfit');
+      Alert.alert('Error', error?.message || 'Failed to generate outfit');
     }
   };
 
