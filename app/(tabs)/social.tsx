@@ -40,7 +40,7 @@ import { createRepost, removeRepost, hasReposted, getRepostCount } from '@/lib/r
 import { getLookbook } from '@/lib/lookbooks';
 import { getUserOutfits, getOutfit, saveOutfit } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
-import { createAIJob, triggerAIJobExecution, pollAIJob, getAIJob } from '@/lib/ai-jobs';
+import { createAIJob, triggerAIJobExecution, pollAIJobWithFinalCheck, getOutfitRenderItemLimit } from '@/lib/ai-jobs';
 import { supabase } from '@/lib/supabase';
 import { getWardrobeCategories, getWardrobeItemsByIds } from '@/lib/wardrobe';
 import { unfollowUser, isFollowing } from '@/lib/user';
@@ -621,7 +621,7 @@ export default function SocialScreen() {
       // Check if user has body shot
       const { data: userSettings } = await supabase
         .from('user_settings')
-        .select('body_shot_image_id, headshot_image_id')
+        .select('body_shot_image_id, headshot_image_id, ai_model_preference')
         .eq('user_id', user.id)
         .single();
 
@@ -714,11 +714,42 @@ export default function SocialScreen() {
         };
       });
 
+      const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
+      const renderLimit = getOutfitRenderItemLimit(modelPreference);
+      let mannequinImageId: string | undefined;
+
+      if (selected.length > renderLimit) {
+        const { data: mannequinJob, error: mannequinError } = await createAIJob(user.id, 'outfit_mannequin', {
+          user_id: user.id,
+          outfit_id: newOutfitId,
+          selected,
+        });
+
+        if (mannequinError || !mannequinJob) {
+          throw new Error('Failed to start mannequin generation');
+        }
+
+        await triggerAIJobExecution(mannequinJob.id);
+        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
+          mannequinJob.id,
+          60,
+          2000,
+          '[Social] Mannequin'
+        );
+
+        if (mannequinPollError || !mannequinResult?.result?.mannequin_image_id) {
+          throw new Error('Mannequin generation timed out. Please try again.');
+        }
+
+        mannequinImageId = mannequinResult.result.mannequin_image_id;
+      }
+
       // Create outfit_render job
       const { data: renderJob, error: jobError } = await createAIJob(user.id, 'outfit_render', {
         user_id: user.id,
         outfit_id: newOutfitId,
         selected,
+        mannequin_image_id: mannequinImageId,
       });
 
       if (jobError || !renderJob) {
@@ -748,43 +779,31 @@ export default function SocialScreen() {
       // Poll for completion (120 attempts = ~10+ minutes)
       // Use await pattern like body shot generation for consistency
       try {
-        const { data: completedJob, error: pollError } = await pollAIJob(renderJob.id, 120, 2000);
+        const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+          renderJob.id,
+          120,
+          2000,
+          '[Social]'
+        );
         
-        // If polling timed out, do one final check
-        let finalJob = completedJob;
-        if (pollError || !completedJob) {
-          console.log('[Social] Outfit render polling timed out, doing final check...');
-          const { data: finalCheck } = await getAIJob(renderJob.id);
-          if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
-            finalJob = finalCheck;
-          } else {
-            // Job still running - let user know they can check later
-            setGeneratingOutfitId(null);
-            Alert.alert(
-              'Generation In Progress',
-              'The outfit is still generating. You can check your outfits page to see when it\'s ready.',
-              [{ text: 'OK' }]
-            );
-            return;
-          }
+        if (pollError || !finalJob) {
+          // Job still running - let user know they can check later
+          setGeneratingOutfitId(null);
+          Alert.alert(
+            'Generation In Progress',
+            'The outfit is still generating. You can check your outfits page to see when it\'s ready.',
+            [{ text: 'OK' }]
+          );
+          return;
         }
         
         // Handle job completion
         if (finalJob.status === 'succeeded') {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:handleTryOnOutfit',message:'job succeeded, before navigation',data:{jobId:renderJob.id,outfitId:newOutfitId,result:finalJob.result?JSON.stringify(finalJob.result).substring(0,200):'null',hasResult:!!finalJob.result},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H2,H3'})}).catch(()=>{});
-          // #endregion
           // Refresh outfit data before navigation to ensure cover image is loaded
           const { data: outfitData } = await getOutfit(newOutfitId);
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:handleTryOnOutfit',message:'after getOutfit before navigation',data:{outfitId:newOutfitId,hasOutfit:!!outfitData?.outfit,hasCoverImage:!!outfitData?.coverImage,coverImageId:outfitData?.outfit?.cover_image_id,coverImageStorageKey:outfitData?.coverImage?.storage_key},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3,H5'})}).catch(()=>{});
-          // #endregion
           setGeneratingOutfitId(null);
           router.push(`/outfits/${newOutfitId}/view`);
         } else if (finalJob.status === 'failed') {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:handleTryOnOutfit',message:'job failed',data:{jobId:renderJob.id,outfitId:newOutfitId,error:finalJob.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-          // #endregion
           setGeneratingOutfitId(null);
           Alert.alert('Generation Failed', finalJob.error || 'Outfit generation failed');
         }
@@ -888,9 +907,6 @@ export default function SocialScreen() {
                   if (buttonRef) {
                     buttonRef.measureInWindow((winX: number, winY: number, winWidth: number, winHeight: number) => {
                       menuButtonPositions.current.set(post.id, { x: winX, y: winY, width: winWidth, height: winHeight });
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:720',message:'Button layout captured',data:{x:winX,y:winY,width:winWidth,height:winHeight,platform:Platform.OS},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                      // #endregion
                     });
                   }
                 }}
@@ -899,9 +915,6 @@ export default function SocialScreen() {
                   // Use cached position if available, otherwise measure
                   const cachedPosition = menuButtonPositions.current.get(post.id);
                   if (cachedPosition) {
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:735',message:'Using cached button position',data:{...cachedPosition,platform:Platform.OS},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                    // #endregion
                     setMenuButtonPosition(cachedPosition);
                     setOpenMenuPostId(openMenuPostId === post.id ? null : post.id);
                   } else {
@@ -911,9 +924,6 @@ export default function SocialScreen() {
                       // Try measureInWindow first, fallback to measure if needed
                     try {
                       buttonRef.measureInWindow((x: number, y: number, width: number, height: number) => {
-                        // #region agent log
-                        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:745',message:'Button position measured on press (measureInWindow)',data:{x,y,width,height,platform:Platform.OS},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                        // #endregion
                         const position = { x, y, width, height };
                         menuButtonPositions.current.set(post.id, position);
                         setMenuButtonPosition(position);
@@ -922,9 +932,6 @@ export default function SocialScreen() {
                     } catch (error) {
                       // Fallback: use measure
                       buttonRef.measure((fx: number, fy: number, fwidth: number, fheight: number, pageX: number, pageY: number) => {
-                        // #region agent log
-                        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:755',message:'Button position measured on press (measure fallback)',data:{x:pageX,y:pageY,width:fwidth,height:fheight,platform:Platform.OS},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                        // #endregion
                         const position = { x: pageX, y: pageY, width: fwidth, height: fheight };
                         menuButtonPositions.current.set(post.id, position);
                         setMenuButtonPosition(position);
@@ -932,9 +939,6 @@ export default function SocialScreen() {
                       });
                     }
                     } else {
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:755',message:'Button ref not found',data:{postId:post.id,platform:Platform.OS},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                      // #endregion
                       setMenuButtonPosition(null);
                       setOpenMenuPostId(openMenuPostId === post.id ? null : post.id);
                     }
@@ -1124,16 +1128,10 @@ export default function SocialScreen() {
                       // Position below button
                       let top = menuButtonPosition.y + menuButtonPosition.height + spacing;
                       
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:910',message:'Calculating dropdown top position',data:{buttonY:menuButtonPosition.y,buttonHeight:menuButtonPosition.height,dropdownHeight,itemCount,initialTop:top,screenHeight:SCREEN_HEIGHT},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                      // #endregion
                       
                       // If dropdown would go off bottom, position above button
                       if (top + dropdownHeight > SCREEN_HEIGHT - 20) {
                         top = menuButtonPosition.y - dropdownHeight - spacing;
-                        // #region agent log
-                        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:920',message:'Positioning above button',data:{newTop:top},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                        // #endregion
                       }
                       
                       // Ensure minimum top margin
@@ -1151,9 +1149,6 @@ export default function SocialScreen() {
                       // Distance from screen right edge
                       let right = SCREEN_WIDTH - buttonRight;
                       
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'social.tsx:935',message:'Calculating dropdown right position',data:{buttonX:menuButtonPosition.x,buttonWidth:menuButtonPosition.width,buttonRight,initialRight:right,screenWidth:SCREEN_WIDTH,dropdownWidth},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                      // #endregion
                       
                       // Ensure dropdown stays on screen
                       if (right < 16) {

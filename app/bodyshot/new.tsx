@@ -17,7 +17,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
-import { triggerBodyShotGenerate, triggerAIJobExecution, pollAIJob } from '@/lib/ai-jobs';
+import { triggerBodyShotGenerate, triggerAIJobExecution, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
 import { getUserSettings } from '@/lib/settings';
 
 interface Headshot {
@@ -220,19 +220,15 @@ export default function NewBodyshotScreen() {
         
         setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
         
-        const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 60, 2000);
+        const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+          bodyShotJob.id,
+          60,
+          2000,
+          '[NewBodyshot]'
+        );
         
-        // If polling timed out, do one final check - job might have completed
-        let finalJob = completedJob;
-        if (pollError || !completedJob) {
-          console.log('[NewBodyshot] Body shot polling timed out, doing final check...');
-          const { getAIJob } = await import('@/lib/ai-jobs');
-          const { data: finalCheck } = await getAIJob(bodyShotJob.id);
-          if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
-            finalJob = finalCheck;
-          } else {
-            throw new Error('Studio model generation timed out. You can check your profile later to see if it completed.');
-          }
+        if (pollError || !finalJob) {
+          throw new Error('Studio model generation timed out. You can check your profile later to see if it completed.');
         }
         
         if (finalJob.status === 'failed') {

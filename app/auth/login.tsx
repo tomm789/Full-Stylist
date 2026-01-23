@@ -34,18 +34,12 @@ export default function LoginScreen() {
 
     setLoading(true);
     console.log('[Login] Attempting sign in with email:', email, 'Magic link:', useMagicLink);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'login.tsx:handleSignIn',message:'handleSignIn submit',data:{email,useMagicLink},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3,H5'})}).catch(()=>{});
-    // #endregion
 
     try {
       const { error } = await signIn(email, useMagicLink ? undefined : password);
 
       if (error) {
         console.error('[Login] Sign in error:', error);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'login.tsx:signInError',message:'signIn returned error',data:{email,errorMessage:error?.message,errorName:error?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3,H4'})}).catch(()=>{});
-        // #endregion
         const errorMessage = error.message || 'Failed to sign in';
         
         // Provide more helpful error messages
