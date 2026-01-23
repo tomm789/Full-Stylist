@@ -20,7 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { triggerHeadshotGenerate, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
-import PolicyBlockModal from '@/components/PolicyBlockModal';
+import PolicyBlockModal from '../components/PolicyBlockModal';
 
 export default function NewHeadshotScreen() {
   const { user } = useAuth();

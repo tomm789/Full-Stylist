@@ -19,7 +19,7 @@ import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
 import { getPublicImageUrl, getUserGeneratedImages } from '@/lib/images';
-import PolicyBlockModal from '@/components/PolicyBlockModal';
+import PolicyBlockModal from './components/PolicyBlockModal';
 
 export default function ProfileImagesScreen() {
   const { user } = useAuth();

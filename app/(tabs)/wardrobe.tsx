@@ -34,7 +34,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { getUserSettings } from '@/lib/settings';
-import PolicyBlockModal from '@/components/PolicyBlockModal';
+import PolicyBlockModal from '../components/PolicyBlockModal';
 import { isGeminiPolicyBlockError } from '@/lib/ai-jobs';
 
 interface FilterState {

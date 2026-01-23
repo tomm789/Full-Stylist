@@ -19,7 +19,7 @@ import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { triggerHeadshotGenerate, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError, getAIJob } from '@/lib/ai-jobs';
 import { updateUserSettings } from '@/lib/settings';
-import PolicyBlockModal from '@/components/PolicyBlockModal';
+import PolicyBlockModal from '../components/PolicyBlockModal';
 
 export default function HeadshotDetailScreen() {
   const { user } = useAuth();

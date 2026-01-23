@@ -19,7 +19,7 @@ import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { triggerBodyShotGenerate, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
 import { getUserSettings } from '@/lib/settings';
-import PolicyBlockModal from '@/components/PolicyBlockModal';
+import PolicyBlockModal from '../components/PolicyBlockModal';
 
 interface Headshot {
   id: string;

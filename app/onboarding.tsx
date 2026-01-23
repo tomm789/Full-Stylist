@@ -18,7 +18,7 @@ import { initializeUserProfile } from '@/lib/user';
 import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
-import PolicyBlockModal from '@/components/PolicyBlockModal';
+import PolicyBlockModal from './components/PolicyBlockModal';
 
 type OnboardingStep = 'account' | 'headshot' | 'bodyshot';
 

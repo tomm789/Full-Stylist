@@ -41,7 +41,7 @@ import { getLookbook } from '@/lib/lookbooks';
 import { getUserOutfits, getOutfit, saveOutfit } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { createAIJob, triggerAIJobExecution, waitForAIJobCompletion, getOutfitRenderItemLimit, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
-import PolicyBlockModal from '@/components/PolicyBlockModal';
+import PolicyBlockModal from '../components/PolicyBlockModal';
 import { supabase } from '@/lib/supabase';
 import { getWardrobeCategories, getWardrobeItemsByIds } from '@/lib/wardrobe';
 import { unfollowUser, isFollowing } from '@/lib/user';
