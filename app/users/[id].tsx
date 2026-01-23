@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
@@ -174,158 +173,70 @@ export default function UserProfileScreen() {
 
   const isOwnProfile = user?.id === userId;
 
-  const renderTabContent = () => {
-    if (activeTab === 'wardrobe') {
-      return <UserWardrobeScreen userId={typeof userId === 'string' ? userId : ''} />;
-    }
-
-    // Posts tab
-    return (
-      <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        <View style={styles.postsSection}>
-          <Text style={styles.sectionTitle}>Posts ({posts.length})</Text>
-          {posts.length === 0 ? (
-            <View style={styles.emptyPosts}>
-              <Ionicons name="images-outline" size={48} color="#ccc" />
-              <Text style={styles.emptyPostsText}>No posts yet</Text>
-            </View>
+  const renderProfileHeader = () => (
+    <View>
+      <View style={styles.profileSection}>
+        <View style={styles.avatarContainer}>
+          {profile.headshot_image_url ? (
+            <ExpoImage
+              source={{ uri: profile.headshot_image_url }}
+              style={styles.avatar}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
           ) : (
-            <View style={styles.postsGrid}>
-              {posts.map((item) => {
-                const isOutfit = item.type === 'post' 
-                  ? item.post?.entity_type === 'outfit' 
-                  : item.repost?.original_post?.entity_type === 'outfit';
-                const entity = item.entity?.outfit || item.entity?.lookbook;
-                
-                if (!entity) return null;
-
-                const imageUrl = postImagesCache.get(entity.id);
-
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.postGridItem}
-                    onPress={() => router.push(`/users/${userId}/feed?postId=${item.id}`)}
-                  >
-                    <View style={styles.postItemContainer}>
-                      {imageUrl ? (
-                        <ExpoImage
-                          source={{ uri: imageUrl }}
-                          style={styles.postImage}
-                          contentFit="cover"
-                          cachePolicy="memory-disk"
-                        />
-                      ) : postImagesCache.has(entity.id) ? (
-                        <View style={styles.postImagePlaceholder}>
-                          <ActivityIndicator size="small" color="#999" />
-                        </View>
-                      ) : (
-                        <View style={styles.postImagePlaceholder}>
-                          <Ionicons 
-                            name={isOutfit ? "shirt-outline" : "book-outline"} 
-                            size={32} 
-                            color="#999" 
-                          />
-                        </View>
-                      )}
-                      {/* Lookbook indicator icon */}
-                      {!isOutfit && (
-                        <View style={styles.lookbookBadge}>
-                          <Ionicons name="book" size={20} color="#000" style={styles.lookbookIcon} />
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <Ionicons name="person-circle-outline" size={100} color="#999" />
           )}
         </View>
-      </ScrollView>
-    );
-  };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>@{profile.handle}</Text>
-        <View style={styles.backButton} />
-      </View>
+        <Text style={styles.displayName}>{profile.display_name}</Text>
+        <Text style={styles.handle}>@{profile.handle}</Text>
 
-      <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        scrollEnabled={false}
-      >
-        {/* Profile Info */}
-        <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            {profile.headshot_image_url ? (
-              <ExpoImage
-                source={{ uri: profile.headshot_image_url }}
-                style={styles.avatar}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-              />
+        {/* Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{profile.stats?.posts || 0}</Text>
+            <Text style={styles.statLabel}>Posts</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{profile.stats?.followers || 0}</Text>
+            <Text style={styles.statLabel}>Followers</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{profile.stats?.following || 0}</Text>
+            <Text style={styles.statLabel}>Following</Text>
+          </View>
+        </View>
+
+        {/* Follow Button */}
+        {!isOwnProfile && (
+          <TouchableOpacity
+            style={[
+              styles.followButton,
+              followState.isFollowing && styles.followingButton,
+            ]}
+            onPress={handleFollow}
+            disabled={loadingFollow}
+          >
+            {loadingFollow ? (
+              <ActivityIndicator size="small" color={followState.isFollowing ? '#007AFF' : '#fff'} />
             ) : (
-              <Ionicons name="person-circle-outline" size={100} color="#999" />
+              <Text
+                style={[
+                  styles.followButtonText,
+                  followState.isFollowing && styles.followingButtonText,
+                ]}
+              >
+                {followState.isFollowing
+                  ? followState.status === 'requested'
+                    ? 'Requested'
+                    : 'Following'
+                  : 'Follow'}
+              </Text>
             )}
-          </View>
-
-          <Text style={styles.displayName}>{profile.display_name}</Text>
-          <Text style={styles.handle}>@{profile.handle}</Text>
-
-          {/* Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{profile.stats?.posts || 0}</Text>
-              <Text style={styles.statLabel}>Posts</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{profile.stats?.followers || 0}</Text>
-              <Text style={styles.statLabel}>Followers</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{profile.stats?.following || 0}</Text>
-              <Text style={styles.statLabel}>Following</Text>
-            </View>
-          </View>
-
-          {/* Follow Button */}
-          {!isOwnProfile && (
-            <TouchableOpacity
-              style={[
-                styles.followButton,
-                followState.isFollowing && styles.followingButton,
-              ]}
-              onPress={handleFollow}
-              disabled={loadingFollow}
-            >
-              {loadingFollow ? (
-                <ActivityIndicator size="small" color={followState.isFollowing ? '#007AFF' : '#fff'} />
-              ) : (
-                <Text
-                  style={[
-                    styles.followButtonText,
-                    followState.isFollowing && styles.followingButtonText,
-                  ]}
-                >
-                  {followState.isFollowing
-                    ? followState.status === 'requested'
-                      ? 'Requested'
-                      : 'Following'
-                    : 'Follow'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-      </ScrollView>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Tabs - Only show when viewing another user's profile */}
       {!isOwnProfile && (
@@ -348,11 +259,97 @@ export default function UserProfileScreen() {
           </TouchableOpacity>
         </View>
       )}
+    </View>
+  );
 
-      {/* Tab Content */}
-      <View style={styles.tabContent}>
-        {renderTabContent()}
+  const renderPostItem = ({ item }: { item: FeedItem }) => {
+    const isOutfit = item.type === 'post' 
+      ? item.post?.entity_type === 'outfit' 
+      : item.repost?.original_post?.entity_type === 'outfit';
+    const entity = item.entity?.outfit || item.entity?.lookbook;
+    
+    if (!entity) return null;
+
+    const imageUrl = postImagesCache.get(entity.id);
+
+    return (
+      <TouchableOpacity
+        style={styles.postGridItem}
+        onPress={() => router.push(`/users/${userId}/feed?postId=${item.id}`)}
+      >
+        <View style={styles.postItemContainer}>
+          {imageUrl ? (
+            <ExpoImage
+              source={{ uri: imageUrl }}
+              style={styles.postImage}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          ) : postImagesCache.has(entity.id) ? (
+            <View style={styles.postImagePlaceholder}>
+              <ActivityIndicator size="small" color="#999" />
+            </View>
+          ) : (
+            <View style={styles.postImagePlaceholder}>
+              <Ionicons 
+                name={isOutfit ? "shirt-outline" : "book-outline"} 
+                size={32} 
+                color="#999" 
+              />
+            </View>
+          )}
+          {/* Lookbook indicator icon */}
+          {!isOutfit && (
+            <View style={styles.lookbookBadge}>
+              <Ionicons name="book" size={20} color="#000" style={styles.lookbookIcon} />
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>@{profile.handle}</Text>
+        <View style={styles.backButton} />
       </View>
+
+      {activeTab === 'wardrobe' && !isOwnProfile ? (
+        <UserWardrobeScreen
+          userId={typeof userId === 'string' ? userId : ''}
+          headerComponent={renderProfileHeader()}
+        />
+      ) : (
+        <FlatList
+          data={posts}
+          renderItem={renderPostItem}
+          keyExtractor={(item) => item.id}
+          numColumns={3}
+          ListHeaderComponent={(
+            <View>
+              {renderProfileHeader()}
+              <View style={styles.postsSectionHeader}>
+                <Text style={styles.sectionTitle}>Posts ({posts.length})</Text>
+              </View>
+            </View>
+          )}
+          contentContainerStyle={styles.postsListContent}
+          columnWrapperStyle={styles.postsColumn}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          ListEmptyComponent={(
+            <View style={styles.emptyPosts}>
+              <Ionicons name="images-outline" size={48} color="#ccc" />
+              <Text style={styles.emptyPostsText}>No posts yet</Text>
+            </View>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -467,11 +464,13 @@ const styles = StyleSheet.create({
   followingButtonText: {
     color: '#007AFF',
   },
-  postsSection: {
+  postsSectionHeader: {
     backgroundColor: '#fff',
     marginTop: 12,
     paddingVertical: 16,
     paddingHorizontal: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
   },
   sectionTitle: {
     fontSize: 18,
@@ -488,10 +487,11 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 12,
   },
-  postsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -1,
+  postsListContent: {
+    paddingBottom: 24,
+  },
+  postsColumn: {
+    paddingHorizontal: 1,
   },
   postGridItem: {
     width: '33.33%',
@@ -549,8 +549,5 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: '#007AFF',
     fontWeight: '600',
-  },
-  tabContent: {
-    flex: 1,
   },
 });
