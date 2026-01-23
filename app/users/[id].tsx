@@ -14,13 +14,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFullUserProfile, followUser, unfollowUser, isFollowing } from '@/lib/user';
-import { getFeed, FeedItem } from '@/lib/posts';
 import { getOutfitCoverImageUrl } from '@/lib/images';
-import { getLookbook } from '@/lib/lookbooks';
-import { getUserOutfits } from '@/lib/outfits';
+import { getLookbook, getUserLookbooks, Lookbook } from '@/lib/lookbooks';
+import { getUserOutfits, Outfit } from '@/lib/outfits';
 import UserWardrobeScreen from '@/app/components/UserWardrobeScreen';
 
-type TabType = 'posts' | 'wardrobe';
+type TabType = 'outfits' | 'lookbooks' | 'wardrobe';
 
 export default function UserProfileScreen() {
   const { user } = useAuth();
@@ -32,17 +31,19 @@ export default function UserProfileScreen() {
     isFollowing: boolean;
     status: string | null;
   }>({ isFollowing: false, status: null });
-  const [posts, setPosts] = useState<FeedItem[]>([]);
+  const [outfits, setOutfits] = useState<Outfit[]>([]);
+  const [lookbooks, setLookbooks] = useState<Lookbook[]>([]);
   const [loadingFollow, setLoadingFollow] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [postImagesCache, setPostImagesCache] = useState<Map<string, string | null>>(new Map());
-  const [activeTab, setActiveTab] = useState<TabType>('posts');
+  const [outfitImagesCache, setOutfitImagesCache] = useState<Map<string, string | null>>(new Map());
+  const [lookbookImagesCache, setLookbookImagesCache] = useState<Map<string, string | null>>(new Map());
+  const [activeTab, setActiveTab] = useState<TabType>('outfits');
 
   useEffect(() => {
     if (userId && user) {
       loadProfile();
       checkFollowStatus();
-      loadUserPosts();
+      loadUserContent();
     }
   }, [userId, user]);
 
@@ -64,56 +65,50 @@ export default function UserProfileScreen() {
     setFollowState(result);
   };
 
-  const loadUserPosts = async () => {
+  const loadUserContent = async () => {
     if (!userId || typeof userId !== 'string') return;
 
-    // Get posts by this user
-    const { data } = await getFeed(userId, 50, 0);
-    
-    if (data) {
-      const userPosts = data.filter((item) => {
-        const post = item.type === 'post' ? item.post : item.repost?.original_post;
-        return post?.owner_user_id === userId;
-      });
-      
-      setPosts(userPosts);
+    const [{ data: outfitsData }, { data: lookbooksData }] = await Promise.all([
+      getUserOutfits(userId),
+      getUserLookbooks(userId),
+    ]);
 
-      // Cache images for outfit and lookbook posts
-      const imageCache = new Map<string, string | null>();
-      for (const item of userPosts) {
-        if (item.entity?.outfit) {
-          const outfitId = item.entity.outfit.id;
-          const url = await getOutfitCoverImageUrl(item.entity.outfit);
-          imageCache.set(outfitId, url);
-        } else if (item.entity?.lookbook) {
-          // Get lookbook cover image (first outfit in lookbook)
-          const lookbookId = item.entity.lookbook.id;
-          const { data: lookbookData } = await getLookbook(lookbookId);
-          if (lookbookData && lookbookData.outfits.length > 0) {
-            // Get user's outfits to find the first one
-            if (user) {
-              const { data: allOutfits } = await getUserOutfits(user.id);
-              if (allOutfits) {
-                const firstOutfit = allOutfits.find((o: any) => 
-                  o.id === lookbookData.outfits[0].outfit_id
-                );
-                if (firstOutfit) {
-                  const url = await getOutfitCoverImageUrl(firstOutfit);
-                  imageCache.set(lookbookId, url);
-                }
-              }
+    setOutfits(outfitsData || []);
+    setLookbooks(lookbooksData || []);
+
+    const outfitImageCache = new Map<string, string | null>();
+    await Promise.all(
+      (outfitsData || []).map(async (outfit) => {
+        const url = await getOutfitCoverImageUrl(outfit);
+        outfitImageCache.set(outfit.id, url);
+      })
+    );
+    setOutfitImagesCache(outfitImageCache);
+
+    const lookbookImageCache = new Map<string, string | null>();
+    if (lookbooksData && outfitsData) {
+      await Promise.all(
+        lookbooksData.map(async (lookbook) => {
+          const { data: lookbookData } = await getLookbook(lookbook.id);
+          if (lookbookData?.outfits.length) {
+            const firstOutfitId = lookbookData.outfits[0].outfit_id;
+            const firstOutfit = outfitsData.find((outfit) => outfit.id === firstOutfitId);
+            if (firstOutfit) {
+              const url = await getOutfitCoverImageUrl(firstOutfit);
+              lookbookImageCache.set(lookbook.id, url);
+              return;
             }
           }
-        }
-      }
-      
-      setPostImagesCache(imageCache);
+          lookbookImageCache.set(lookbook.id, null);
+        })
+      );
     }
+    setLookbookImagesCache(lookbookImageCache);
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadProfile(), checkFollowStatus(), loadUserPosts()]);
+    await Promise.all([loadProfile(), checkFollowStatus(), loadUserContent()]);
     setRefreshing(false);
   };
 
@@ -195,8 +190,8 @@ export default function UserProfileScreen() {
         {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{profile.stats?.posts || 0}</Text>
-            <Text style={styles.statLabel}>Posts</Text>
+            <Text style={styles.statValue}>{outfits.length}</Text>
+            <Text style={styles.statLabel}>Outfits</Text>
           </View>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{profile.stats?.followers || 0}</Text>
@@ -242,11 +237,19 @@ export default function UserProfileScreen() {
       {!isOwnProfile && (
         <View style={styles.tabsContainer}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'posts' && styles.tabActive]}
-            onPress={() => setActiveTab('posts')}
+            style={[styles.tab, activeTab === 'outfits' && styles.tabActive]}
+            onPress={() => setActiveTab('outfits')}
           >
-            <Text style={[styles.tabText, activeTab === 'posts' && styles.tabTextActive]}>
-              Posts
+            <Text style={[styles.tabText, activeTab === 'outfits' && styles.tabTextActive]}>
+              Outfits
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'lookbooks' && styles.tabActive]}
+            onPress={() => setActiveTab('lookbooks')}
+          >
+            <Text style={[styles.tabText, activeTab === 'lookbooks' && styles.tabTextActive]}>
+              Lookbooks
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -262,20 +265,13 @@ export default function UserProfileScreen() {
     </View>
   );
 
-  const renderPostItem = ({ item }: { item: FeedItem }) => {
-    const isOutfit = item.type === 'post' 
-      ? item.post?.entity_type === 'outfit' 
-      : item.repost?.original_post?.entity_type === 'outfit';
-    const entity = item.entity?.outfit || item.entity?.lookbook;
-    
-    if (!entity) return null;
-
-    const imageUrl = postImagesCache.get(entity.id);
+  const renderOutfitItem = ({ item }: { item: Outfit }) => {
+    const imageUrl = outfitImagesCache.get(item.id);
 
     return (
       <TouchableOpacity
         style={styles.postGridItem}
-        onPress={() => router.push(`/users/${userId}/feed?postId=${item.id}`)}
+        onPress={() => router.push(`/outfits/${item.id}/view`)}
       >
         <View style={styles.postItemContainer}>
           {imageUrl ? (
@@ -285,25 +281,48 @@ export default function UserProfileScreen() {
               contentFit="cover"
               cachePolicy="memory-disk"
             />
-          ) : postImagesCache.has(entity.id) ? (
+          ) : outfitImagesCache.has(item.id) ? (
             <View style={styles.postImagePlaceholder}>
               <ActivityIndicator size="small" color="#999" />
             </View>
           ) : (
             <View style={styles.postImagePlaceholder}>
-              <Ionicons 
-                name={isOutfit ? "shirt-outline" : "book-outline"} 
-                size={32} 
-                color="#999" 
-              />
+              <Ionicons name="shirt-outline" size={32} color="#999" />
             </View>
           )}
-          {/* Lookbook indicator icon */}
-          {!isOutfit && (
-            <View style={styles.lookbookBadge}>
-              <Ionicons name="book" size={20} color="#000" style={styles.lookbookIcon} />
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderLookbookItem = ({ item }: { item: Lookbook }) => {
+    const imageUrl = lookbookImagesCache.get(item.id);
+
+    return (
+      <TouchableOpacity
+        style={styles.postGridItem}
+        onPress={() => router.push(`/lookbooks/${item.id}/view`)}
+      >
+        <View style={styles.postItemContainer}>
+          {imageUrl ? (
+            <ExpoImage
+              source={{ uri: imageUrl }}
+              style={styles.postImage}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          ) : lookbookImagesCache.has(item.id) ? (
+            <View style={styles.postImagePlaceholder}>
+              <ActivityIndicator size="small" color="#999" />
+            </View>
+          ) : (
+            <View style={styles.postImagePlaceholder}>
+              <Ionicons name="book-outline" size={32} color="#999" />
             </View>
           )}
+          <View style={styles.lookbookBadge}>
+            <Ionicons name="book" size={20} color="#000" style={styles.lookbookIcon} />
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -325,17 +344,41 @@ export default function UserProfileScreen() {
           userId={typeof userId === 'string' ? userId : ''}
           headerComponent={renderProfileHeader()}
         />
-      ) : (
+      ) : activeTab === 'lookbooks' ? (
         <FlatList
-          data={posts}
-          renderItem={renderPostItem}
+          data={lookbooks}
+          renderItem={renderLookbookItem}
           keyExtractor={(item) => item.id}
           numColumns={3}
           ListHeaderComponent={(
             <View>
               {renderProfileHeader()}
               <View style={styles.postsSectionHeader}>
-                <Text style={styles.sectionTitle}>Posts ({posts.length})</Text>
+                <Text style={styles.sectionTitle}>Lookbooks ({lookbooks.length})</Text>
+              </View>
+            </View>
+          )}
+          contentContainerStyle={styles.postsListContent}
+          columnWrapperStyle={styles.postsColumn}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          ListEmptyComponent={(
+            <View style={styles.emptyPosts}>
+              <Ionicons name="book-outline" size={48} color="#ccc" />
+              <Text style={styles.emptyPostsText}>No lookbooks yet</Text>
+            </View>
+          )}
+        />
+      ) : (
+        <FlatList
+          data={outfits}
+          renderItem={renderOutfitItem}
+          keyExtractor={(item) => item.id}
+          numColumns={3}
+          ListHeaderComponent={(
+            <View>
+              {renderProfileHeader()}
+              <View style={styles.postsSectionHeader}>
+                <Text style={styles.sectionTitle}>Outfits ({outfits.length})</Text>
               </View>
             </View>
           )}
@@ -345,7 +388,7 @@ export default function UserProfileScreen() {
           ListEmptyComponent={(
             <View style={styles.emptyPosts}>
               <Ionicons name="images-outline" size={48} color="#ccc" />
-              <Text style={styles.emptyPostsText}>No posts yet</Text>
+              <Text style={styles.emptyPostsText}>No outfits yet</Text>
             </View>
           )}
         />

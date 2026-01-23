@@ -40,7 +40,7 @@ import { createRepost, removeRepost, hasReposted, getRepostCount } from '@/lib/r
 import { getLookbook } from '@/lib/lookbooks';
 import { getUserOutfits, getOutfit, saveOutfit } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
-import { createAIJob, triggerAIJobExecution, waitForAIJobCompletion, getOutfitRenderItemLimit, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
+import { createAIJob, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
 import PolicyBlockModal from '../components/PolicyBlockModal';
 import { supabase } from '@/lib/supabase';
 import { getWardrobeCategories, getWardrobeItemsByIds } from '@/lib/wardrobe';
@@ -110,6 +110,7 @@ export default function SocialScreen() {
   const [menuButtonPosition, setMenuButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [followStatuses, setFollowStatuses] = useState<Map<string, boolean>>(new Map()); // Map of owner_user_id -> isFollowing
   const [unfollowingUserId, setUnfollowingUserId] = useState<string | null>(null);
+  const [tryOnAvatarCache, setTryOnAvatarCache] = useState<Map<string, string | null>>(new Map());
   const menuButtonRefs = useRef<Map<string, any>>(new Map());
   const menuButtonPositions = useRef<Map<string, { x: number; y: number; width: number; height: number }>>(new Map());
   const flatListRef = useRef<FlatList>(null);
@@ -135,6 +136,7 @@ export default function SocialScreen() {
       const counts: typeof engagementCounts = {};
       const newImageCache = new Map<string, string | null>();
       const newFollowStatuses = new Map<string, boolean>();
+      const tryOnOwnerIds = new Set<string>();
       
       // Process all items in parallel using Promise.all
       await Promise.all(feedItems.map(async (item) => {
@@ -181,6 +183,11 @@ export default function SocialScreen() {
             newImageCache.set(outfitId, url);
           } else if (outfitImagesCache.has(outfitId) && !newImageCache.has(outfitId)) {
             newImageCache.set(outfitId, outfitImagesCache.get(outfitId)!);
+          }
+
+          const tryOnMatch = item.entity.outfit.notes?.match(/tryon:([a-z0-9-]+)/i);
+          if (tryOnMatch) {
+            tryOnOwnerIds.add(tryOnMatch[1]);
           }
         }
         
@@ -242,6 +249,20 @@ export default function SocialScreen() {
           }
         }
       }));
+      if (tryOnOwnerIds.size > 0) {
+        const { data: tryOnUsers } = await supabase
+          .from('users')
+          .select('id, avatar_url')
+          .in('id', Array.from(tryOnOwnerIds));
+        if (tryOnUsers) {
+          const updated = new Map(tryOnAvatarCache);
+          tryOnUsers.forEach((tryOnUser: any) => {
+            updated.set(tryOnUser.id, tryOnUser.avatar_url || null);
+          });
+          setTryOnAvatarCache(updated);
+        }
+      }
+
       setEngagementCounts(counts);
       setFollowStatuses(newFollowStatuses);
       if (newImageCache.size > 0) {
@@ -624,12 +645,18 @@ export default function SocialScreen() {
       // Check if user has body shot
       const { data: userSettings } = await supabase
         .from('user_settings')
-        .select('body_shot_image_id, headshot_image_id, ai_model_preference')
+        .select('body_shot_image_id, ai_model_preference')
         .eq('user_id', user.id)
         .single();
 
-      if (!userSettings?.body_shot_image_id || !userSettings?.headshot_image_id) {
-        Alert.alert('Setup Required', 'Please upload a body photo and generate a headshot before trying on outfits.');
+      if (!userSettings?.body_shot_image_id) {
+        Alert.alert('Setup Required', 'Please upload a body photo before trying on outfits.');
+        setTryingOnOutfit(false);
+        return;
+      }
+
+      if (!referenceImageUrl) {
+        Alert.alert('Error', 'Missing reference image for this outfit.');
         setTryingOnOutfit(false);
         return;
       }
@@ -661,6 +688,7 @@ export default function SocialScreen() {
         user.id,
         {
           title: `Try on: ${originalOutfitTitle}`,
+          notes: `tryon:${outfitData.outfit.owner_user_id}`,
           visibility: 'private',
         },
         outfitItems
@@ -718,41 +746,15 @@ export default function SocialScreen() {
       });
 
       const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
-      const renderLimit = getOutfitRenderItemLimit(modelPreference);
-      let mannequinImageId: string | undefined;
 
-      if (selected.length > renderLimit) {
-        const { data: mannequinJob, error: mannequinError } = await createAIJob(user.id, 'outfit_mannequin', {
-          user_id: user.id,
-          outfit_id: newOutfitId,
-          selected,
-        });
-
-        if (mannequinError || !mannequinJob) {
-          throw new Error('Failed to start mannequin generation');
-        }
-
-        await triggerAIJobExecution(mannequinJob.id);
-        const { data: mannequinResult, error: mannequinPollError } = await waitForAIJobCompletion(
-          mannequinJob.id,
-          60,
-          2000,
-          '[Social] Mannequin'
-        );
-
-        if (mannequinPollError || !mannequinResult?.result?.mannequin_image_id) {
-          throw new Error('Mannequin generation timed out. Please try again.');
-        }
-
-        mannequinImageId = mannequinResult.result.mannequin_image_id;
-      }
-
-      // Create outfit_render job
+      // Create outfit_render job using the original render as reference and the user's body shot
       const { data: renderJob, error: jobError } = await createAIJob(user.id, 'outfit_render', {
         user_id: user.id,
         outfit_id: newOutfitId,
         selected,
-        mannequin_image_id: mannequinImageId,
+        body_shot_image_id: userSettings.body_shot_image_id,
+        reference_image_url: referenceImageUrl,
+        model_preference: modelPreference,
       });
 
       if (jobError || !renderJob) {
@@ -870,6 +872,8 @@ export default function SocialScreen() {
 
     const isOutfit = post.entity_type === 'outfit';
     const entity = item.entity?.outfit || item.entity?.lookbook;
+    const tryOnMatch = isOutfit ? entity?.notes?.match(/tryon:([a-z0-9-]+)/i) : null;
+    const tryOnAvatarUrl = tryOnMatch ? tryOnAvatarCache.get(tryOnMatch[1]) || null : null;
 
     const timestamp = item.type === 'post' ? item.post!.created_at : item.repost!.created_at;
     const isOwnPost = item.type === 'post' && post.owner_user_id === user?.id;
@@ -971,6 +975,7 @@ export default function SocialScreen() {
               outfit={entity}
               imageUrl={outfitImagesCache.get(entity.id) || null}
               isLoading={!outfitImagesCache.has(entity.id)}
+              originalAvatarUrl={tryOnAvatarUrl}
             />
           </TouchableOpacity>
         )}
@@ -1073,6 +1078,34 @@ export default function SocialScreen() {
         style={styles.feedListWrapper}
         contentContainerStyle={styles.feedList}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListHeaderComponent={
+          <View style={styles.socialHeader}>
+            <TouchableOpacity
+              style={styles.socialHeaderCard}
+              onPress={() => router.push('/social/explore')}
+            >
+              <View style={styles.socialHeaderIcon}>
+                <Ionicons name="compass-outline" size={22} color="#fff" />
+              </View>
+              <View>
+                <Text style={styles.socialHeaderTitle}>Explore</Text>
+                <Text style={styles.socialHeaderSubtitle}>Public outfits</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.socialHeaderCard}
+              onPress={() => router.push('/social/following-wardrobes')}
+            >
+              <View style={styles.socialHeaderIconAlt}>
+                <Ionicons name="people-outline" size={22} color="#fff" />
+              </View>
+              <View>
+                <Text style={styles.socialHeaderTitle}>Following wardrobes</Text>
+                <Text style={styles.socialHeaderSubtitle}>See their latest pieces</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No posts yet</Text>
@@ -1422,9 +1455,10 @@ interface FeedOutfitCardProps {
   outfit: any;
   imageUrl: string | null;
   isLoading: boolean;
+  originalAvatarUrl: string | null;
 }
 
-const FeedOutfitCard = React.memo(({ outfit, imageUrl, isLoading }: FeedOutfitCardProps) => {
+const FeedOutfitCard = React.memo(({ outfit, imageUrl, isLoading, originalAvatarUrl }: FeedOutfitCardProps) => {
   return (
     <View style={styles.outfitCard}>
       {isLoading ? (
@@ -1442,6 +1476,11 @@ const FeedOutfitCard = React.memo(({ outfit, imageUrl, isLoading }: FeedOutfitCa
           <Text style={styles.outfitImagePlaceholderText}>No image</Text>
         </View>
       )}
+      {originalAvatarUrl ? (
+        <View style={styles.tryOnAvatarBadge}>
+          <ExpoImage source={{ uri: originalAvatarUrl }} style={styles.tryOnAvatarImage} />
+        </View>
+      ) : null}
       {outfit.title && <Text style={styles.outfitTitle}>{outfit.title}</Text>}
     </View>
   );
@@ -1720,6 +1759,7 @@ const styles = StyleSheet.create({
   },
   outfitCard: {
     marginBottom: 0,
+    position: 'relative',
   },
   outfitImage: {
     width: '100%',
@@ -1734,6 +1774,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  tryOnAvatarBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  tryOnAvatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   outfitImagePlaceholderText: {
     color: '#999',
@@ -1884,6 +1945,53 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     color: '#666',
+  },
+  socialHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    gap: 12,
+  },
+  socialHeaderCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e6e6e6',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  socialHeaderIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#111',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialHeaderIconAlt: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111',
+  },
+  socialHeaderSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
   },
   commentsContainer: {
     flex: 1,
