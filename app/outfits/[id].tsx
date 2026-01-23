@@ -33,7 +33,6 @@ import {
   WardrobeItem,
 } from '@/lib/wardrobe';
 import { createAIJob, triggerAIJobExecution, getOutfitRenderItemLimit, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
-import { getUserSettings } from '@/lib/settings';
 import { createPost } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -64,6 +63,7 @@ export default function OutfitEditorScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [rendering, setRendering] = useState(false);
+  const [renderingMessage, setRenderingMessage] = useState('Generating Outfit...');
   const [coverImage, setCoverImage] = useState<any>(null);
   const [itemImageUrls, setItemImageUrls] = useState<Map<string, string>>(new Map());
   const [scheduledDates, setScheduledDates] = useState<Array<{ date: string; entryId: string }>>([]);
@@ -576,9 +576,14 @@ export default function OutfitEditorScreen() {
     }
 
     setRendering(true);
+    setRenderingMessage('Generating Outfit...');
 
     try {
       let currentOutfitId = outfit?.id;
+      console.log('[OutfitEditor] Starting outfit render', {
+        outfitId: currentOutfitId,
+        itemCount: outfitItems.size,
+      });
       
       // Always save/update the outfit with current items before rendering
       // This ensures the saved outfit matches what's in the editor
@@ -632,7 +637,30 @@ export default function OutfitEditorScreen() {
       const renderLimit = getOutfitRenderItemLimit(modelPreference);
       let mannequinImageId;
 
-      if (selected.length > renderLimit) {
+      const { data: mannequinRenders, error: mannequinRenderError } = await supabase
+        .from('outfit_renders')
+        .select('image_id, settings, created_at')
+        .eq('outfit_id', currentOutfitId)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (mannequinRenderError) {
+        console.warn('[OutfitEditor] Failed to load mannequin renders', mannequinRenderError);
+      } else if (mannequinRenders?.length) {
+        const mannequinRender = mannequinRenders.find((render: any) => render?.settings?.mannequin_only);
+        if (mannequinRender?.image_id) {
+          mannequinImageId = mannequinRender.image_id;
+          console.log('[OutfitEditor] Using existing mannequin render', { mannequinImageId });
+        }
+      }
+
+      if (!mannequinImageId && selected.length > renderLimit) {
+        console.log('[OutfitEditor] Starting mannequin pre-step', {
+          outfitId: currentOutfitId,
+          itemCount: selected.length,
+          renderLimit,
+        });
+
         const { data: mannequinJob, error: mannequinError } = await createAIJob(user.id, 'outfit_mannequin', {
           user_id: user.id,
           outfit_id: currentOutfitId,
@@ -641,12 +669,14 @@ export default function OutfitEditorScreen() {
         });
 
         if (mannequinError || !mannequinJob) {
+          console.error('[OutfitEditor] Failed to create mannequin job', mannequinError);
           Alert.alert('Error', 'Failed to start mannequin generation');
           setRendering(false);
           return;
         }
 
         await triggerAIJobExecution(mannequinJob.id);
+        console.log('[OutfitEditor] Mannequin job triggered', { jobId: mannequinJob.id });
         const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
           mannequinJob.id,
           60,
@@ -655,12 +685,17 @@ export default function OutfitEditorScreen() {
         );
 
         if (mannequinPollError || !mannequinResult?.result?.mannequin_image_id) {
+          console.error('[OutfitEditor] Mannequin job failed or timed out', {
+            error: mannequinPollError,
+            result: mannequinResult,
+          });
           Alert.alert('Error', 'Mannequin generation timed out. Please try again.');
           setRendering(false);
           return;
         }
 
         mannequinImageId = mannequinResult.result.mannequin_image_id;
+        console.log('[OutfitEditor] Mannequin completed', { mannequinImageId });
       }
 
       const { data: renderJob, error } = await createAIJob(user.id, 'outfit_render', {
@@ -673,6 +708,7 @@ export default function OutfitEditorScreen() {
       });
 
       if (error) {
+        console.error('[OutfitEditor] Failed to create render job', error);
         Alert.alert('Error', 'Failed to start render job');
         setRendering(false);
         return;
@@ -683,6 +719,8 @@ export default function OutfitEditorScreen() {
         setRendering(false);
         return;
       }
+      
+      console.log('[OutfitEditor] Render job created', { jobId: renderJob.id });
       
       // Trigger the job execution (fire-and-forget)
       const execResult = await triggerAIJobExecution(renderJob.id);
@@ -700,8 +738,117 @@ export default function OutfitEditorScreen() {
       setRendering(false);
       
       // Navigate to the outfit view page - it will detect the active render job and show loading overlay
+      router.push(`/outfits/${currentOutfitId}/view?suppressGeneratingModal=1` as any);
+    } catch (error: any) {
+      console.error('[OutfitEditor] Render flow failed', error);
+      Alert.alert('Error', error.message || 'An unexpected error occurred');
+      setRendering(false);
+    }
+  };
+
+  const handleGenerateOnMannequin = async () => {
+    if (!user || outfitItems.size === 0) {
+      Alert.alert('Error', 'Please add items to the outfit before rendering');
+      return;
+    }
+
+    setRendering(true);
+    setRenderingMessage('Generating Mannequin Outfit...');
+
+    try {
+      let currentOutfitId = outfit?.id;
+      console.log('[OutfitEditor] Starting mannequin-only render', {
+        outfitId: currentOutfitId,
+        itemCount: outfitItems.size,
+      });
+
+      const items = Array.from(outfitItems.entries()).map(([categoryId, item], index) => ({
+        category_id: categoryId || null,
+        wardrobe_item_id: item.id,
+        position: index,
+      }));
+      
+      const { data: savedData, error: saveError } = await saveOutfit(
+        user.id,
+        {
+          id: currentOutfitId || undefined,
+          title: title.trim() || 'Untitled Outfit',
+          notes: notes.trim() || undefined,
+        },
+        items
+      );
+
+      if (saveError || !savedData) {
+        console.error('[OutfitEditor] Failed to save outfit before mannequin render', saveError);
+        Alert.alert('Error', 'Failed to save outfit before rendering');
+        setRendering(false);
+        return;
+      }
+
+      currentOutfitId = savedData.outfit.id;
+      setOutfit(savedData.outfit);
+
+      const selected = Array.from(outfitItems.entries()).map(([categoryId, item]) => ({
+        category: categoryId ? (categories.find((c) => c.id === categoryId)?.name || '') : '',
+        wardrobe_item_id: item.id,
+      }));
+
+      const { data: mannequinJob, error: mannequinError } = await createAIJob(user.id, 'outfit_mannequin', {
+        user_id: user.id,
+        outfit_id: currentOutfitId,
+        selected,
+        prompt: notes.trim() || undefined,
+      });
+
+      if (mannequinError || !mannequinJob) {
+        console.error('[OutfitEditor] Failed to create mannequin-only job', mannequinError);
+        Alert.alert('Error', 'Failed to start mannequin generation');
+        setRendering(false);
+        return;
+      }
+
+      await triggerAIJobExecution(mannequinJob.id);
+      console.log('[OutfitEditor] Mannequin-only job triggered', { jobId: mannequinJob.id });
+
+      const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
+        mannequinJob.id,
+        60,
+        2000,
+        '[OutfitEditor] Mannequin Only'
+      );
+
+      if (mannequinPollError || !mannequinResult?.result?.mannequin_image_id) {
+        console.error('[OutfitEditor] Mannequin-only job failed or timed out', {
+          error: mannequinPollError,
+          result: mannequinResult,
+        });
+        Alert.alert('Error', 'Mannequin generation timed out. Please try again.');
+        setRendering(false);
+        return;
+      }
+
+      const mannequinImageId = mannequinResult.result.mannequin_image_id;
+      console.log('[OutfitEditor] Mannequin-only completed', { mannequinImageId });
+
+      await supabase
+        .from('outfit_renders')
+        .insert({
+          outfit_id: currentOutfitId,
+          image_id: mannequinImageId,
+          prompt: notes.trim() || null,
+          settings: { mannequin_only: true },
+          status: 'succeeded',
+        });
+
+      await supabase
+        .from('outfits')
+        .update({ cover_image_id: mannequinImageId })
+        .eq('id', currentOutfitId);
+
+      setRendering(false);
       router.push(`/outfits/${currentOutfitId}/view` as any);
     } catch (error: any) {
+      console.error('[OutfitEditor] Mannequin-only flow failed', error);
       Alert.alert('Error', error.message || 'An unexpected error occurred');
       setRendering(false);
     }
@@ -1059,6 +1206,14 @@ export default function OutfitEditorScreen() {
             </Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={[styles.mannequinButton, (rendering || outfitItems.size === 0) && styles.buttonDisabled]}
+            onPress={handleGenerateOnMannequin}
+            disabled={rendering || outfitItems.size === 0}
+          >
+            <Text style={styles.mannequinButtonText}>Generate on Mannequin</Text>
+          </TouchableOpacity>
+
           {!isNew && outfit && (
             <>
               <TouchableOpacity
@@ -1237,7 +1392,7 @@ export default function OutfitEditorScreen() {
         <View style={styles.overlay}>
           <View style={styles.overlayContent}>
             <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.overlayText}>Generating Outfit...</Text>
+            <Text style={styles.overlayText}>{renderingMessage}</Text>
             <Text style={styles.overlaySubtext}>This may take 60-90 seconds</Text>
           </View>
         </View>
@@ -1436,6 +1591,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   renderButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  mannequinButton: {
+    backgroundColor: '#5A67D8',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+  },
+  mannequinButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

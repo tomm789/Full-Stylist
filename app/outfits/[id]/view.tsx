@@ -41,11 +41,12 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const IS_TABLET = SCREEN_WIDTH >= 768;
 
 export default function OutfitDetailScreen() {
-  const { id, lookbookId, lookbookTitle, outfitIndex } = useLocalSearchParams<{ 
+  const { id, lookbookId, lookbookTitle, outfitIndex, suppressGeneratingModal } = useLocalSearchParams<{ 
     id: string; 
     lookbookId?: string; 
     lookbookTitle?: string;
     outfitIndex?: string;
+    suppressGeneratingModal?: string;
   }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -81,6 +82,7 @@ export default function OutfitDetailScreen() {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [isGeneratingOutfitRender, setIsGeneratingOutfitRender] = useState(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const shouldShowGeneratingModal = suppressGeneratingModal !== '1';
 
   useEffect(() => {
     if (id) {
@@ -153,37 +155,48 @@ export default function OutfitDetailScreen() {
         const { data: activeJob } = await getActiveOutfitRenderJob(id, user.id);
         
         if (activeJob) {
-          // Active job found - check if job is very old (more than 15 minutes) - might be stuck
-          const jobAge = Date.now() - new Date(activeJob.created_at).getTime();
-          if (jobAge > 900000) { // 15 minutes
-            // Job is very old - check one more time to see if it actually completed
-            const { data: currentJob } = await getAIJob(activeJob.id);
-            if (currentJob && (currentJob.status === 'succeeded' || currentJob.status === 'failed')) {
-              // Job actually completed - refresh and don't show loading
-              if (currentJob.status === 'succeeded') {
-                await refreshOutfit();
+          const coverImageCreatedAt = data.coverImage?.created_at
+            ? new Date(data.coverImage.created_at).getTime()
+            : null;
+          const activeJobCreatedAt = new Date(activeJob.created_at).getTime();
+          const shouldHandleActiveJob = !coverImageCreatedAt || coverImageCreatedAt < activeJobCreatedAt;
+
+          if (!shouldHandleActiveJob) {
+            // Cover image is newer than the active job - avoid showing stale render state
+            setIsGeneratingOutfitRender(false);
+          } else {
+            // Active job found - check if job is very old (more than 15 minutes) - might be stuck
+            const jobAge = Date.now() - new Date(activeJob.created_at).getTime();
+            if (jobAge > 900000) { // 15 minutes
+              // Job is very old - check one more time to see if it actually completed
+              const { data: currentJob } = await getAIJob(activeJob.id);
+              if (currentJob && (currentJob.status === 'succeeded' || currentJob.status === 'failed')) {
+                // Job actually completed - refresh and don't show loading
+                if (currentJob.status === 'succeeded') {
+                  await refreshOutfit();
+                }
+                setIsGeneratingOutfitRender(false);
+              } else if (currentJob && currentJob.status === 'running') {
+                // Job is still running but very old - likely stuck, don't show loading
+                // User can manually trigger a new render if needed
+                setIsGeneratingOutfitRender(false);
+                console.log('[OutfitView] Active job is very old and still running, may be stuck');
+              } else {
+                // Job status unclear - show loading and poll
+                setIsGeneratingOutfitRender(true);
+                startPollingForOutfitRender(activeJob.id).catch((error) => {
+                  console.error('[OutfitView] Error starting polling:', error);
+                  setIsGeneratingOutfitRender(false);
+                });
               }
-              setIsGeneratingOutfitRender(false);
-            } else if (currentJob && currentJob.status === 'running') {
-              // Job is still running but very old - likely stuck, don't show loading
-              // User can manually trigger a new render if needed
-              setIsGeneratingOutfitRender(false);
-              console.log('[OutfitView] Active job is very old and still running, may be stuck');
             } else {
-              // Job status unclear - show loading and poll
+              // Job is recent - show loading and start polling
               setIsGeneratingOutfitRender(true);
               startPollingForOutfitRender(activeJob.id).catch((error) => {
                 console.error('[OutfitView] Error starting polling:', error);
                 setIsGeneratingOutfitRender(false);
               });
             }
-          } else {
-            // Job is recent - show loading and start polling
-            setIsGeneratingOutfitRender(true);
-            startPollingForOutfitRender(activeJob.id).catch((error) => {
-              console.error('[OutfitView] Error starting polling:', error);
-              setIsGeneratingOutfitRender(false);
-            });
           }
         } else {
           // Check for recently completed job (within last 60 seconds)
@@ -320,7 +333,7 @@ export default function OutfitDetailScreen() {
       clearInterval(pollingIntervalRef.current);
     }
 
-    // Check for outfit render every 10 seconds (less frequent than active polling)
+    // Check for outfit render every 3 seconds (less frequent than active polling)
     pollingIntervalRef.current = setInterval(async () => {
       if (!id) return;
       const { data, error } = await getOutfit(id);
@@ -344,7 +357,7 @@ export default function OutfitDetailScreen() {
         pollingIntervalRef.current = null;
         setIsGeneratingOutfitRender(false);
       }
-    }, 10000); // Check every 10 seconds
+    }, 180000);
   };
 
   const startPollingForOutfitRender = async (jobId: string) => {
@@ -657,10 +670,10 @@ export default function OutfitDetailScreen() {
   return (
     <View style={styles.container}>
       {/* Full-screen loading modal when outfit render is being generated */}
-      {isGeneratingOutfitRender && (
+      {isGeneratingOutfitRender && shouldShowGeneratingModal && (
         <Modal
           transparent={false}
-          visible={isGeneratingOutfitRender}
+          visible={isGeneratingOutfitRender && shouldShowGeneratingModal}
           animationType="fade"
         >
           <View style={styles.fullScreenOverlay}>
