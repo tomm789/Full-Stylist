@@ -705,7 +705,38 @@ export default function WardrobeScreen() {
         category: item.category_id ? (categories.find((c) => c.id === item.category_id)?.name || '') : '',
         wardrobe_item_id: item.id,
       }));
-      
+
+      const { data: userSettings } = await getUserSettings(user.id);
+      const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
+      const renderLimit = getOutfitRenderItemLimit(modelPreference);
+      let mannequinImageId;
+
+      if (selected.length > renderLimit) {
+        const { data: mannequinJob, error: mannequinError } = await createAIJob(user.id, 'outfit_mannequin', {
+          user_id: user.id,
+          outfit_id: outfitId,
+          selected,
+        });
+
+        if (mannequinError || !mannequinJob) {
+          throw new Error('Failed to start mannequin generation');
+        }
+
+        await triggerAIJobExecution(mannequinJob.id);
+        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
+          mannequinJob.id,
+          60,
+          2000,
+          '[Wardrobe] Mannequin'
+        );
+
+        if (mannequinPollError || !mannequinResult?.result?.mannequin_image_id) {
+          throw new Error('Mannequin generation timed out. Please try again.');
+        }
+
+        mannequinImageId = mannequinResult.result.mannequin_image_id;
+      }
+
       console.log('[Wardrobe] Creating outfit render job with item IDs:', JSON.stringify(selected.map(s => s.wardrobe_item_id), null, 2));
 
       const { data: renderJob, error: jobError } = await createAIJob(user.id, 'outfit_render', {
