@@ -61,6 +61,21 @@ They are used only in Netlify Functions.
   - Value: Gemini API key
   - Used by: netlify/functions/ai-job-runner.ts only
 
+### Optional
+- GEMINI_3_PASSWORD
+  - Value: Shared password string required to unlock Gemini Pro usage
+  - Used by: netlify/functions/ai-job-runner.js to validate `ai_model_password`
+
+- GEMINI_3_DISABLED
+  - Values: true | false
+  - Used by: netlify/functions/ai-job-runner.js to disable all Gemini Pro usage
+  - Default: false
+
+- GEMINI_3_BODY_SHOTS_DISABLED
+  - Values: true | false
+  - Used by: netlify/functions/ai-job-runner.js to force body-shot generation to use `gemini-2.5-flash-image`
+  - Default: false
+
 ### Optional (future)
 - STRIPE_SECRET_KEY
   - Used by: payments / checkout (not MVP)

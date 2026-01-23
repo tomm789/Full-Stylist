@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getLookbook, Lookbook, LookbookOutfit } from '@/lib/lookbooks';
 import { getUserOutfits } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
+import { supabase } from '@/lib/supabase';
 import {
   likeEntity,
   unlikeEntity,
@@ -37,7 +38,7 @@ import {
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function LookbookViewScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, lookbookIds } = useLocalSearchParams<{ id: string; lookbookIds?: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const [lookbook, setLookbook] = useState<Lookbook | null>(null);
@@ -61,6 +62,9 @@ export default function LookbookViewScreen() {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [navigationLookbooks, setNavigationLookbooks] = useState<Array<{ id: string; title: string }>>([]);
+  const [currentLookbookIndex, setCurrentLookbookIndex] = useState(0);
+  const navigationScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (id && user) {
@@ -68,6 +72,31 @@ export default function LookbookViewScreen() {
       loadSocialEngagement();
     }
   }, [id, user]);
+
+  useEffect(() => {
+    if (id && lookbookIds) {
+      loadNavigationLookbooks();
+    }
+  }, [id, lookbookIds]);
+
+  useEffect(() => {
+    if (!lookbookIds || !id) return;
+    const idsArray = lookbookIds.split(',').filter(Boolean);
+    const index = idsArray.indexOf(id as string);
+    if (index >= 0) {
+      setCurrentLookbookIndex(index);
+    }
+  }, [id, lookbookIds]);
+
+  useEffect(() => {
+    if (navigationLookbooks.length > 0 && currentLookbookIndex >= 0 && navigationScrollRef.current) {
+      const itemWidth = 100 + 12;
+      const scrollPosition = Math.max(0, currentLookbookIndex * itemWidth - SCREEN_WIDTH / 2 + itemWidth / 2);
+      setTimeout(() => {
+        navigationScrollRef.current?.scrollTo({ x: scrollPosition, animated: true });
+      }, 100);
+    }
+  }, [navigationLookbooks, currentLookbookIndex]);
 
   const loadSocialEngagement = async () => {
     if (!id || !user) return;
@@ -89,6 +118,77 @@ export default function LookbookViewScreen() {
     } catch (error) {
       console.error('Failed to load social engagement', error);
     }
+  };
+
+  const getSystemLookbookMeta = (systemType: string) => {
+    const titleMap: Record<string, string> = {
+      all: 'All Outfits',
+      favorites: 'Favorites',
+      recent: 'Recent',
+      top: 'Top Rated',
+    };
+    return {
+      title: titleMap[systemType] || 'Lookbook',
+    };
+  };
+
+  const loadNavigationLookbooks = async () => {
+    if (!lookbookIds) return;
+    try {
+      const idsArray = lookbookIds.split(',').filter(Boolean);
+      if (idsArray.length === 0) return;
+
+      const systemIds = idsArray.filter((lookbookId) => lookbookId.startsWith('system-'));
+      const customIds = idsArray.filter((lookbookId) => !lookbookId.startsWith('system-'));
+      const navItems: Array<{ id: string; title: string }> = [];
+
+      if (customIds.length > 0) {
+        const { data: lookbookData, error } = await supabase
+          .from('lookbooks')
+          .select('id, title')
+          .in('id', customIds);
+
+        if (error) {
+          console.error('Failed to load navigation lookbooks:', error);
+        } else {
+          const lookbookMap = new Map((lookbookData || []).map((lb) => [lb.id, lb.title]));
+          customIds.forEach((lookbookId) => {
+            const title = lookbookMap.get(lookbookId);
+            if (title) {
+              navItems.push({ id: lookbookId, title });
+            }
+          });
+        }
+      }
+
+      systemIds.forEach((lookbookId) => {
+        const systemType = lookbookId.replace('system-', '');
+        const meta = getSystemLookbookMeta(systemType);
+        navItems.push({ id: lookbookId, title: meta.title });
+      });
+
+      const orderedNavItems = idsArray
+        .map((lookbookId) => navItems.find((item) => item.id === lookbookId))
+        .filter((item): item is { id: string; title: string } => Boolean(item));
+
+      setNavigationLookbooks(orderedNavItems);
+    } catch (error) {
+      console.error('Failed to load navigation lookbooks:', error);
+    }
+  };
+
+  const navigateToLookbook = (targetLookbookId: string) => {
+    if (!lookbookIds) return;
+    const query = `lookbookIds=${encodeURIComponent(lookbookIds)}`;
+    router.replace(`/lookbooks/${targetLookbookId}/view?${query}`);
+  };
+
+  const handleBackPress = () => {
+    if (lookbookIds) {
+      router.replace('/(tabs)/lookbooks');
+      return;
+    }
+    router.back();
   };
 
   const loadLookbook = async () => {
@@ -294,7 +394,7 @@ export default function LookbookViewScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={handleBackPress}>
             <Text style={styles.backButton}>← Back</Text>
           </TouchableOpacity>
         </View>
@@ -309,7 +409,7 @@ export default function LookbookViewScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={handleBackPress}>
             <Text style={styles.backButton}>← Back</Text>
           </TouchableOpacity>
         </View>
@@ -324,7 +424,7 @@ export default function LookbookViewScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={handleBackPress}>
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>
         <View style={styles.headerActions}>
@@ -459,6 +559,38 @@ export default function LookbookViewScreen() {
           </View>
         )}
       </ScrollView>
+
+      {navigationLookbooks.length > 1 && (
+        <View style={styles.navigationContainer}>
+          <ScrollView
+            horizontal
+            ref={navigationScrollRef}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.navigationScrollContent}
+          >
+            {navigationLookbooks.map((navLookbook) => {
+              const isActive = navLookbook.id === id;
+              return (
+                <TouchableOpacity
+                  key={navLookbook.id}
+                  style={[styles.navigationItem, isActive && styles.navigationItemActive]}
+                  onPress={() => !isActive && navigateToLookbook(navLookbook.id)}
+                  disabled={isActive}
+                >
+                  <View style={styles.navigationPlaceholder}>
+                    <Text style={styles.navigationPlaceholderText}>
+                      {navLookbook.title?.charAt(0) || 'L'}
+                    </Text>
+                  </View>
+                  <Text style={styles.navigationTitle} numberOfLines={1}>
+                    {navLookbook.title}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Loading Modal */}
       <Modal
@@ -773,6 +905,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 16,
+    textAlign: 'center',
+  },
+  navigationContainer: {
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+  },
+  navigationScrollContent: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  navigationItem: {
+    width: 100,
+    alignItems: 'center',
+  },
+  navigationItemActive: {
+    opacity: 0.6,
+  },
+  navigationPlaceholder: {
+    width: 72,
+    height: 72,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  navigationPlaceholderText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+  },
+  navigationTitle: {
+    fontSize: 12,
+    color: '#333',
     textAlign: 'center',
   },
   // Loading Modal Styles

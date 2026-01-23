@@ -17,8 +17,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getUserSettings, updateUserSettings } from '@/lib/settings';
 import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
-import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, pollAIJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
+import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
 import { getPublicImageUrl, getUserGeneratedImages } from '@/lib/images';
+import PolicyBlockModal from '@/components/PolicyBlockModal';
 
 export default function ProfileImagesScreen() {
   const { user } = useAuth();
@@ -44,6 +45,8 @@ export default function ProfileImagesScreen() {
   
   // Loading overlay state
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [policyModalVisible, setPolicyModalVisible] = useState(false);
+  const [policyMessage, setPolicyMessage] = useState('');
 
   useEffect(() => {
     if (!isLoadingData && user) {
@@ -216,14 +219,22 @@ export default function ProfileImagesScreen() {
 
         setLoadingMessage('Generating professional headshot...\nThis may take 20-30 seconds.');
 
-        const { data: completedJob, error: pollError } = await pollAIJob(headshotJob.id, 30, 2000);
+        const { data: completedJob, error: pollError } = await waitForAIJobCompletion(headshotJob.id, 30, 2000, '[ProfileImages]');
 
         if (pollError || !completedJob) {
           throw new Error('Headshot generation timed out or failed');
         }
 
         if (completedJob.status === 'failed') {
-          throw new Error(`Generation failed: ${completedJob.error || 'Unknown error'}`);
+          const failureMessage = completedJob.error || 'Unknown error';
+          if (isGeminiPolicyBlockError(failureMessage)) {
+            setUploadingSelfie(false);
+            setLoadingMessage('');
+            setPolicyMessage('Gemini could not generate this headshot because it conflicts with safety policy. No credits were charged.');
+            setPolicyModalVisible(true);
+            return;
+          }
+          throw new Error(`Generation failed: ${failureMessage}`);
         }
 
 
@@ -244,7 +255,13 @@ export default function ProfileImagesScreen() {
     } catch (error: any) {
       setUploadingSelfie(false);
       setLoadingMessage('');
-      Alert.alert('Error', error.message || 'Failed to upload selfie');
+      const message = error.message || 'Failed to upload selfie';
+      if (isGeminiPolicyBlockError(message)) {
+        setPolicyMessage('Gemini could not generate this headshot because it conflicts with safety policy. No credits were charged.');
+        setPolicyModalVisible(true);
+        return;
+      }
+      Alert.alert('Error', message);
     }
   };
 
@@ -320,7 +337,7 @@ export default function ProfileImagesScreen() {
 
         setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
 
-        const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+        const { data: finalJob, error: pollError } = await waitForAIJobCompletion(
           bodyShotJob.id,
           60,
           2000,
@@ -332,7 +349,15 @@ export default function ProfileImagesScreen() {
         }
 
         if (finalJob.status === 'failed') {
-          throw new Error(`Generation failed: ${finalJob.error || 'Unknown error'}`);
+          const failureMessage = finalJob.error || 'Unknown error';
+          if (isGeminiPolicyBlockError(failureMessage)) {
+            setUploadingBody(false);
+            setLoadingMessage('');
+            setPolicyMessage('Gemini could not generate this studio model because it conflicts with safety policy. No credits were charged.');
+            setPolicyModalVisible(true);
+            return;
+          }
+          throw new Error(`Generation failed: ${failureMessage}`);
         }
 
 
@@ -349,7 +374,13 @@ export default function ProfileImagesScreen() {
     } catch (error: any) {
       setUploadingBody(false);
       setLoadingMessage('');
-      Alert.alert('Error', error.message || 'Failed to upload body photo');
+      const message = error.message || 'Failed to upload body photo';
+      if (isGeminiPolicyBlockError(message)) {
+        setPolicyMessage('Gemini could not generate this studio model because it conflicts with safety policy. No credits were charged.');
+        setPolicyModalVisible(true);
+        return;
+      }
+      Alert.alert('Error', message);
     }
   };
 
@@ -570,6 +601,11 @@ export default function ProfileImagesScreen() {
       </View>
       </ScrollView>
       {renderLoadingOverlay()}
+      <PolicyBlockModal
+        visible={policyModalVisible}
+        message={policyMessage}
+        onClose={() => setPolicyModalVisible(false)}
+      />
     </>
   );
 }

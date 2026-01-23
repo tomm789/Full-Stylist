@@ -24,7 +24,7 @@ import { getUserOutfits } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
 
-type SystemCategory = 'all' | 'favorites' | 'recent' | 'top';
+type SystemCategory = 'favorites' | 'recent' | 'top';
 
 interface SystemLookbookData {
   category: SystemCategory;
@@ -54,6 +54,10 @@ export default function LookbooksScreen() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [autoPlayInterval, setAutoPlayInterval] = useState<NodeJS.Timeout | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const customLookbookIds = lookbooks.map((lookbook) => lookbook.id).join(',');
+  const systemLookbookIds = systemLookbooks
+    .map((lookbook) => `system-${lookbook.category}`)
+    .join(',');
 
   useEffect(() => {
     if (user && !isLoadingData) {
@@ -79,13 +83,11 @@ export default function LookbooksScreen() {
     // Load custom lookbooks and all system categories in parallel
     const [
       customLookbooksResult,
-      allOutfitsResult,
       favoritesResult,
       recentResult,
       topResult,
     ] = await Promise.all([
       getUserLookbooks(user.id),
-      getSystemLookbookOutfits(user.id, 'system_all'),
       getSystemLookbookOutfits(user.id, 'system_favorites'),
       getSystemLookbookOutfits(user.id, 'system_recent'),
       getSystemLookbookOutfits(user.id, 'system_top'),
@@ -132,7 +134,6 @@ export default function LookbooksScreen() {
 
     // Process system lookbooks (no cover images needed - using icons only)
     const systemCategories: { category: SystemCategory; title: string; icon: string; result: any }[] = [
-      { category: 'all', title: 'All Outfits', icon: '👔', result: allOutfitsResult },
       { category: 'favorites', title: 'Favorites', icon: '❤️', result: favoritesResult },
       { category: 'recent', title: 'Recent', icon: '🕒', result: recentResult },
       { category: 'top', title: 'Top Rated', icon: '⭐', result: topResult },
@@ -149,18 +150,28 @@ export default function LookbooksScreen() {
           title,
           icon,
           outfits: outfitsWithData,
-          coverImageUrl: null, // Always null - using icons only
+          coverImageUrl: null,
         };
       })
-      // Hide top rated if there's no engagement (no outfits with rating > 0)
+      // Hide top rated if fewer than three engaged outfits
       .filter((lookbook) => {
         if (lookbook.category === 'top') {
-          return lookbook.outfits.length > 0;
+          return lookbook.outfits.length >= 3;
         }
         return true;
       });
+    const systemLookbooksWithCovers: SystemLookbookData[] = await Promise.all(
+      systemLookbooksData.map(async (lookbook) => {
+        const coverOutfit = lookbook.outfits[0] || null;
+        const coverImageUrl = coverOutfit ? await getOutfitCoverImageUrl(coverOutfit) : null;
+        return {
+          ...lookbook,
+          coverImageUrl,
+        };
+      })
+    );
 
-    setSystemLookbooks(systemLookbooksData);
+    setSystemLookbooks(systemLookbooksWithCovers);
     setLoading(false);
     setIsLoadingData(false);
   };
@@ -309,16 +320,41 @@ export default function LookbooksScreen() {
   const renderSystemLookbook = ({ item }: { item: SystemLookbookData }) => {
     return (
       <TouchableOpacity
-        style={styles.systemLookbookCard}
-        onPress={() => router.push(`/lookbooks/system-${item.category}`)}
+        style={styles.lookbookCard}
+        onPress={() =>
+          router.push(
+            `/lookbooks/system-${item.category}?lookbookIds=${encodeURIComponent(systemLookbookIds)}`
+          )
+        }
       >
-        <Text style={styles.systemLookbookIcon}>{item.icon}</Text>
-        <Text style={styles.systemLookbookTitle} numberOfLines={1}>
-          {item.title}
-        </Text>
-        <Text style={styles.systemLookbookCount}>
-          {item.outfits.length}
-        </Text>
+        {item.coverImageUrl ? (
+          <ExpoImage
+            source={{ uri: item.coverImageUrl }}
+            style={styles.lookbookImage}
+            contentFit="cover"
+          />
+        ) : (
+          <View style={styles.lookbookPlaceholder}>
+            <Text style={styles.lookbookPlaceholderText}>{item.icon}</Text>
+          </View>
+        )}
+        <TouchableOpacity
+          style={styles.playButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            openSlideshow(undefined, item.category);
+          }}
+        >
+          <Text style={styles.playButtonText}>▶</Text>
+        </TouchableOpacity>
+        <View style={styles.lookbookInfo}>
+          <Text style={styles.lookbookTitle} numberOfLines={2}>
+            {item.title}
+          </Text>
+          <Text style={styles.lookbookDescription} numberOfLines={1}>
+            {item.outfits.length} outfits
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -330,7 +366,9 @@ export default function LookbooksScreen() {
     return (
       <TouchableOpacity
         style={styles.lookbookCard}
-        onPress={() => router.push(`/lookbooks/${item.id}`)}
+        onPress={() =>
+          router.push(`/lookbooks/${item.id}?lookbookIds=${encodeURIComponent(customLookbookIds)}`)
+        }
       >
         {isLoading ? (
           <View style={styles.lookbookPlaceholder}>
@@ -385,16 +423,18 @@ export default function LookbooksScreen() {
         renderItem={null}
         ListHeaderComponent={
           <>
-            {/* System Lookbooks Section - Category Cards */}
+            {/* System Lookbooks Section */}
             {systemLookbooks.length > 0 && (
               <View style={styles.section}>
-                <View style={styles.systemLookbooksGrid}>
-                  {systemLookbooks.map((item) => (
-                    <View key={item.category} style={styles.systemLookbookCardWrapper}>
-                      {renderSystemLookbook({ item })}
-                    </View>
-                  ))}
-                </View>
+                <Text style={styles.sectionTitle}>Highlights</Text>
+                <FlatList
+                  horizontal
+                  data={systemLookbooks}
+                  renderItem={renderSystemLookbook}
+                  keyExtractor={(item) => item.category}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.lookbooksList}
+                />
               </View>
             )}
 
@@ -543,39 +583,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  systemLookbooksGrid: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    gap: 6,
-    flexWrap: 'nowrap',
-  },
-  systemLookbookCardWrapper: {
-    flex: 1,
-    minWidth: 0,
-  },
-  systemLookbookCard: {
-    width: '100%',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  systemLookbookIcon: {
-    fontSize: 32,
-    marginBottom: 4,
-  },
-  systemLookbookTitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  systemLookbookCount: {
-    fontSize: 10,
-    color: '#999',
   },
   section: {
     marginTop: 16,

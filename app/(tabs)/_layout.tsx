@@ -229,6 +229,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="outfits"
+        options={{
+          headerTitle: () => <HeaderTitle title="Outfits" />,
+          tabBarLabel: 'Outfits',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="sparkles-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="lookbooks"
         options={{
           headerTitle: () => <HeaderTitle title="Lookbooks" />,
@@ -256,13 +266,6 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
-        }}
-      />
-      <Tabs.Screen
-        name="outfits"
-        options={{
-          href: null, // Hide from tab bar
-          headerTitle: () => <HeaderTitle title="Outfits" />,
         }}
       />
     </Tabs>
@@ -366,4 +369,3 @@ const styles = StyleSheet.create({
     color: '#ff3b30',
   },
 });
-

@@ -96,7 +96,26 @@ export default function OutfitsScreen() {
   };
 
   const handleOutfitPress = (outfitId: string) => {
-    router.push(`/outfits/${outfitId}/view`);
+    const outfitIds = outfits.map((outfit) => outfit.id).join(',');
+    const activeFilters: string[] = [];
+
+    if (searchQuery.trim()) {
+      activeFilters.push(`Search: "${searchQuery.trim()}"`);
+    }
+    if (showFavoritesOnly) {
+      activeFilters.push('Favorites');
+    }
+    if (sortBy !== 'date' || sortOrder !== 'desc') {
+      activeFilters.push(`Sort: ${getSortLabel()}`);
+    }
+
+    const filterSummary = activeFilters.join(' • ');
+    const queryParts = [`outfitIds=${encodeURIComponent(outfitIds)}`];
+    if (filterSummary) {
+      queryParts.push(`filters=${encodeURIComponent(filterSummary)}`);
+    }
+
+    router.push(`/outfits/${outfitId}/view?${queryParts.join('&')}`);
   };
 
   const handleSortChange = (newSortBy: SortOption) => {

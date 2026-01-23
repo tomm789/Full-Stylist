@@ -17,7 +17,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { initializeUserProfile } from '@/lib/user';
 import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
-import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
+import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
+import PolicyBlockModal from '@/components/PolicyBlockModal';
 
 type OnboardingStep = 'account' | 'headshot' | 'bodyshot';
 
@@ -46,6 +47,8 @@ export default function OnboardingScreen() {
   
   // Loading overlay state
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [policyModalVisible, setPolicyModalVisible] = useState(false);
+  const [policyMessage, setPolicyMessage] = useState('');
   
   const { user } = useAuth();
   const router = useRouter();
@@ -193,7 +196,7 @@ export default function OnboardingScreen() {
         
         setLoadingMessage('Generating professional headshot...\nThis may take 20-30 seconds.');
         
-        const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+        const { data: finalJob, error: pollError } = await waitForAIJobCompletion(
           headshotJob.id,
           30,
           2000,
@@ -205,7 +208,15 @@ export default function OnboardingScreen() {
         }
 
         if (finalJob.status === 'failed') {
-          throw new Error(`Generation failed: ${finalJob.error || 'Unknown error'}`);
+          const failureMessage = finalJob.error || 'Unknown error';
+          if (isGeminiPolicyBlockError(failureMessage)) {
+            setGeneratingHeadshot(false);
+            setLoadingMessage('');
+            setPolicyMessage('Gemini could not generate this headshot because it conflicts with safety policy. No credits were charged.');
+            setPolicyModalVisible(true);
+            return;
+          }
+          throw new Error(`Generation failed: ${failureMessage}`);
         }
         
         
@@ -233,7 +244,13 @@ export default function OnboardingScreen() {
     } catch (error: any) {
       setGeneratingHeadshot(false);
       setLoadingMessage('');
-      Alert.alert('Error', error.message || 'Failed to generate headshot');
+      const message = error.message || 'Failed to generate headshot';
+      if (isGeminiPolicyBlockError(message)) {
+        setPolicyMessage('Gemini could not generate this headshot because it conflicts with safety policy. No credits were charged.');
+        setPolicyModalVisible(true);
+        return;
+      }
+      Alert.alert('Error', message);
     }
   };
 
@@ -359,7 +376,7 @@ export default function OnboardingScreen() {
         
         setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
 
-        const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+        const { data: finalJob, error: pollError } = await waitForAIJobCompletion(
           bodyShotJob.id,
           60,
           2000,
@@ -371,7 +388,15 @@ export default function OnboardingScreen() {
         }
 
         if (finalJob.status === 'failed') {
-          throw new Error(`Generation failed: ${finalJob.error || 'Unknown error'}`);
+          const failureMessage = finalJob.error || 'Unknown error';
+          if (isGeminiPolicyBlockError(failureMessage)) {
+            setGeneratingBodyShot(false);
+            setLoadingMessage('');
+            setPolicyMessage('Gemini could not generate this studio model because it conflicts with safety policy. No credits were charged.');
+            setPolicyModalVisible(true);
+            return;
+          }
+          throw new Error(`Generation failed: ${failureMessage}`);
         }
         
         
@@ -388,7 +413,13 @@ export default function OnboardingScreen() {
       
       setGeneratingBodyShot(false);
       setLoadingMessage('');
-      Alert.alert('Error', error.message || 'Failed to generate studio model');
+      const message = error.message || 'Failed to generate studio model';
+      if (isGeminiPolicyBlockError(message)) {
+        setPolicyMessage('Gemini could not generate this studio model because it conflicts with safety policy. No credits were charged.');
+        setPolicyModalVisible(true);
+        return;
+      }
+      Alert.alert('Error', message);
     }
   };
 
@@ -680,6 +711,11 @@ export default function OnboardingScreen() {
       {currentStep === 'headshot' && renderHeadshotStep()}
       {currentStep === 'bodyshot' && renderBodyShotStep()}
       {renderLoadingOverlay()}
+      <PolicyBlockModal
+        visible={policyModalVisible}
+        message={policyMessage}
+        onClose={() => setPolicyModalVisible(false)}
+      />
     </>
   );
 }
