@@ -40,7 +40,7 @@ import { createRepost, removeRepost, hasReposted, getRepostCount } from '@/lib/r
 import { getLookbook } from '@/lib/lookbooks';
 import { getUserOutfits, getOutfit, saveOutfit } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
-import { createAIJob, triggerAIJobExecution, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
+import { createAIJob, triggerAIJobExecution, pollAIJobWithFinalCheck, getOutfitRenderItemLimit } from '@/lib/ai-jobs';
 import { supabase } from '@/lib/supabase';
 import { getWardrobeCategories, getWardrobeItemsByIds } from '@/lib/wardrobe';
 import { unfollowUser, isFollowing } from '@/lib/user';
@@ -621,7 +621,7 @@ export default function SocialScreen() {
       // Check if user has body shot
       const { data: userSettings } = await supabase
         .from('user_settings')
-        .select('body_shot_image_id, headshot_image_id')
+        .select('body_shot_image_id, headshot_image_id, ai_model_preference')
         .eq('user_id', user.id)
         .single();
 
@@ -714,11 +714,42 @@ export default function SocialScreen() {
         };
       });
 
+      const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
+      const renderLimit = getOutfitRenderItemLimit(modelPreference);
+      let mannequinImageId: string | undefined;
+
+      if (selected.length > renderLimit) {
+        const { data: mannequinJob, error: mannequinError } = await createAIJob(user.id, 'outfit_mannequin', {
+          user_id: user.id,
+          outfit_id: newOutfitId,
+          selected,
+        });
+
+        if (mannequinError || !mannequinJob) {
+          throw new Error('Failed to start mannequin generation');
+        }
+
+        await triggerAIJobExecution(mannequinJob.id);
+        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
+          mannequinJob.id,
+          60,
+          2000,
+          '[Social] Mannequin'
+        );
+
+        if (mannequinPollError || !mannequinResult?.result?.mannequin_image_id) {
+          throw new Error('Mannequin generation timed out. Please try again.');
+        }
+
+        mannequinImageId = mannequinResult.result.mannequin_image_id;
+      }
+
       // Create outfit_render job
       const { data: renderJob, error: jobError } = await createAIJob(user.id, 'outfit_render', {
         user_id: user.id,
         outfit_id: newOutfitId,
         selected,
+        mannequin_image_id: mannequinImageId,
       });
 
       if (jobError || !renderJob) {

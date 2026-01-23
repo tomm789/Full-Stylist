@@ -8,7 +8,7 @@ const CIRCUIT_BREAKER_THRESHOLD = 5;
 export interface AIJob {
   id: string;
   owner_user_id: string;
-  job_type: 'auto_tag' | 'product_shot' | 'headshot_generate' | 'body_shot_generate' | 'outfit_suggest' | 'reference_match' | 'outfit_render' | 'lookbook_generate';
+  job_type: 'auto_tag' | 'product_shot' | 'headshot_generate' | 'body_shot_generate' | 'outfit_suggest' | 'reference_match' | 'outfit_render' | 'outfit_mannequin' | 'lookbook_generate';
   input: any;
   status: 'queued' | 'running' | 'succeeded' | 'failed';
   result?: any;
@@ -22,7 +22,7 @@ export interface AIJob {
  */
 export async function createAIJob(
   userId: string,
-  jobType: 'auto_tag' | 'product_shot' | 'headshot_generate' | 'body_shot_generate' | 'outfit_suggest' | 'reference_match' | 'outfit_render' | 'lookbook_generate',
+  jobType: 'auto_tag' | 'product_shot' | 'headshot_generate' | 'body_shot_generate' | 'outfit_suggest' | 'reference_match' | 'outfit_render' | 'outfit_mannequin' | 'lookbook_generate',
   input: any
 ): Promise<{
   data: AIJob | null;
@@ -40,6 +40,10 @@ export async function createAIJob(
     .single();
 
   return { data, error };
+}
+
+export function getOutfitRenderItemLimit(modelPreference?: string | null): number {
+  return modelPreference?.includes('pro') ? 7 : 2;
 }
 
 /**
