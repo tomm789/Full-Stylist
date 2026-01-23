@@ -11,5 +11,5 @@
   "include": [
     "**/*.ts",
     "**/*.tsx"
-  ]
+, "netlify/functions/prompts.js", "netlify/functions/ai-job-runner.js"  ]
 }
