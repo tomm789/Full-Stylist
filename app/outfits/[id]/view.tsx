@@ -41,11 +41,12 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const IS_TABLET = SCREEN_WIDTH >= 768;
 
 export default function OutfitDetailScreen() {
-  const { id, lookbookId, lookbookTitle, outfitIndex } = useLocalSearchParams<{ 
+  const { id, lookbookId, lookbookTitle, outfitIndex, suppressGeneratingModal } = useLocalSearchParams<{ 
     id: string; 
     lookbookId?: string; 
     lookbookTitle?: string;
     outfitIndex?: string;
+    suppressGeneratingModal?: string;
   }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -81,6 +82,7 @@ export default function OutfitDetailScreen() {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [isGeneratingOutfitRender, setIsGeneratingOutfitRender] = useState(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const shouldShowGeneratingModal = suppressGeneratingModal !== '1';
 
   useEffect(() => {
     if (id) {
@@ -668,10 +670,10 @@ export default function OutfitDetailScreen() {
   return (
     <View style={styles.container}>
       {/* Full-screen loading modal when outfit render is being generated */}
-      {isGeneratingOutfitRender && (
+      {isGeneratingOutfitRender && shouldShowGeneratingModal && (
         <Modal
           transparent={false}
-          visible={isGeneratingOutfitRender}
+          visible={isGeneratingOutfitRender && shouldShowGeneratingModal}
           animationType="fade"
         >
           <View style={styles.fullScreenOverlay}>
