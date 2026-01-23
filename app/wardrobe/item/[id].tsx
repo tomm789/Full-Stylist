@@ -177,17 +177,28 @@ export default function ItemDetailScreen() {
         
         setDisplayImages(filtered);
         
-        // Check if product shot exists, if not, check for active or recently completed job
+        // Check if product shot exists, and coordinate with active jobs
         const hasProductShot = filtered.some((img) => img.type === 'product_shot');
+        const productShotCreatedAt = filtered
+          .filter((img) => img.type === 'product_shot' && img.image?.created_at)
+          .map((img) => new Date(img.image.created_at).getTime())
+          .reduce((latest, current) => Math.max(latest, current), 0) || null;
         
-        if (!hasProductShot && user) {
+        if (user) {
           // Check for active product shot job
-          const { data: activeJob, error: jobError } = await getActiveProductShotJob(id, user.id);
+          const { data: activeJob } = await getActiveProductShotJob(id, user.id);
           
           if (activeJob) {
-            setIsGeneratingProductShot(true);
-            startPollingForProductShot(activeJob.id);
-          } else {
+            const activeJobCreatedAt = new Date(activeJob.created_at).getTime();
+            const shouldHandleActiveJob = !productShotCreatedAt || productShotCreatedAt < activeJobCreatedAt;
+
+            if (shouldHandleActiveJob) {
+              setIsGeneratingProductShot(true);
+              startPollingForProductShot(activeJob.id);
+            } else {
+              setIsGeneratingProductShot(false);
+            }
+          } else if (!hasProductShot) {
             // Check for recently completed job (within last 60 seconds) - job might have completed very quickly
             const { data: recentJob } = await getRecentProductShotJob(id, user.id);
             
