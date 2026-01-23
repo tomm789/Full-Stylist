@@ -177,10 +177,10 @@ export default function OutfitDetailScreen() {
                 }
                 setIsGeneratingOutfitRender(false);
               } else if (currentJob && currentJob.status === 'running') {
-                // Job is still running but very old - likely stuck, don't show loading
-                // User can manually trigger a new render if needed
-                setIsGeneratingOutfitRender(false);
-                console.log('[OutfitView] Active job is very old and still running, may be stuck');
+                // Job is still running but very old - keep showing loading and keep checking
+                setIsGeneratingOutfitRender(true);
+                startPeriodicOutfitRefresh(activeJob.id);
+                console.log('[OutfitView] Active job is very old and still running, continuing to wait');
               } else {
                 // Job status unclear - show loading and poll
                 setIsGeneratingOutfitRender(true);
@@ -327,7 +327,7 @@ export default function OutfitDetailScreen() {
     }
   };
 
-  const startPeriodicOutfitRefresh = () => {
+  const startPeriodicOutfitRefresh = (jobId?: string) => {
     // Clear any existing polling
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
@@ -336,6 +336,18 @@ export default function OutfitDetailScreen() {
     // Check for outfit render every 3 seconds (less frequent than active polling)
     pollingIntervalRef.current = setInterval(async () => {
       if (!id) return;
+      if (jobId) {
+        const { data: job } = await getAIJob(jobId);
+        if (job?.status === 'failed') {
+          console.log('[OutfitView] Outfit render job failed during refresh:', job.error);
+          setIsGeneratingOutfitRender(false);
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          return;
+        }
+      }
       const { data, error } = await getOutfit(id);
       if (!error && data && data.coverImage) {
         // Cover image exists - stop polling and clear loading state
@@ -349,15 +361,6 @@ export default function OutfitDetailScreen() {
         setOutfitItems(data.items);
       }
     }, 3000); // Check every 3 seconds
-
-    // Stop after 180 seconds (60 attempts)
-    setTimeout(() => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-        setIsGeneratingOutfitRender(false);
-      }
-    }, 180000);
   };
 
   const startPollingForOutfitRender = async (jobId: string) => {
@@ -378,9 +381,8 @@ export default function OutfitDetailScreen() {
       );
       
       if (pollError || !finalJob) {
-        // Job still running after timeout - switch to periodic refresh
-        setIsGeneratingOutfitRender(false);
-        startPeriodicOutfitRefresh();
+        // Job still running after timeout - keep modal visible and switch to periodic refresh
+        startPeriodicOutfitRefresh(jobId);
         return;
       }
       
@@ -399,9 +401,8 @@ export default function OutfitDetailScreen() {
       }
     } catch (error) {
       console.error('[OutfitView] Error polling for outfit render:', error);
-      setIsGeneratingOutfitRender(false);
-      // Switch to periodic refresh on error
-      startPeriodicOutfitRefresh();
+      // Keep modal visible and switch to periodic refresh on error
+      startPeriodicOutfitRefresh(jobId);
     }
   };
 
@@ -675,6 +676,7 @@ export default function OutfitDetailScreen() {
           transparent={false}
           visible={isGeneratingOutfitRender && shouldShowGeneratingModal}
           animationType="fade"
+          onRequestClose={() => {}}
         >
           <View style={styles.fullScreenOverlay}>
             <View style={styles.loadingDialog}>
@@ -684,22 +686,8 @@ export default function OutfitDetailScreen() {
                 Creating a professional outfit visualization...
               </Text>
               <Text style={styles.loadingDialogSubtext}>
-                This may take 60-90 seconds. You can cancel and check back later - the outfit will update automatically when ready.
+                This may take 60-90 seconds. We will update the outfit as soon as it is ready.
               </Text>
-              <TouchableOpacity
-                style={styles.cancelRenderButton}
-                onPress={() => {
-                  setIsGeneratingOutfitRender(false);
-                  if (pollingIntervalRef.current) {
-                    clearInterval(pollingIntervalRef.current);
-                    pollingIntervalRef.current = null;
-                  }
-                  // Switch to periodic refresh so outfit will update when job completes
-                  startPeriodicOutfitRefresh();
-                }}
-              >
-                <Text style={styles.cancelRenderButtonText}>Cancel</Text>
-              </TouchableOpacity>
             </View>
           </View>
         </Modal>

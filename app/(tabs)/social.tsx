@@ -776,31 +776,31 @@ export default function SocialScreen() {
       // Set the generating outfit ID to show the overlay
       setGeneratingOutfitId(newOutfitId);
       
-      // Poll for completion (120 attempts = ~10+ minutes)
+      // Poll for completion (loop until job completes to keep overlay visible)
       // Use await pattern like body shot generation for consistency
       try {
-        const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
-          renderJob.id,
-          120,
-          2000,
-          '[Social]'
-        );
-        
-        if (pollError || !finalJob) {
-          // Job still running - let user know they can check later
-          setGeneratingOutfitId(null);
-          Alert.alert(
-            'Generation In Progress',
-            'The outfit is still generating. You can check your outfits page to see when it\'s ready.',
-            [{ text: 'OK' }]
+        let finalJob: any | null = null;
+        while (!finalJob) {
+          const { data: pollResult, error: pollError } = await pollAIJobWithFinalCheck(
+            renderJob.id,
+            120,
+            2000,
+            '[Social]'
           );
-          return;
+
+          if (pollError || !pollResult) {
+            console.warn('[Social] Polling timed out, continuing to wait for completion');
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+            continue;
+          }
+
+          finalJob = pollResult;
         }
         
         // Handle job completion
         if (finalJob.status === 'succeeded') {
           // Refresh outfit data before navigation to ensure cover image is loaded
-          const { data: outfitData } = await getOutfit(newOutfitId);
+          await getOutfit(newOutfitId);
           setGeneratingOutfitId(null);
           router.push(`/outfits/${newOutfitId}/view`);
         } else if (finalJob.status === 'failed') {
@@ -812,7 +812,7 @@ export default function SocialScreen() {
         setGeneratingOutfitId(null);
         Alert.alert(
           'Generation Error',
-          'An error occurred while generating the outfit. You can check your outfits page to see if it completed.',
+          'An error occurred while generating the outfit. Please try again.',
           [{ text: 'OK' }]
         );
       }
@@ -1360,36 +1360,13 @@ export default function SocialScreen() {
         transparent
         animationType="fade"
         statusBarTranslucent={true}
+        onRequestClose={() => {}}
       >
         <View style={styles.generatingOverlay}>
           <View style={styles.generatingOverlayContent}>
             <ActivityIndicator size="large" color="#007AFF" />
             <Text style={styles.generatingOverlayText}>Generating Outfit...</Text>
             <Text style={styles.generatingOverlaySubtext}>This may take 60-90 seconds</Text>
-            <View style={styles.generatingOverlayButtons}>
-              <TouchableOpacity
-                style={styles.generatingOverlayButton}
-                onPress={() => {
-                  if (generatingOutfitId) {
-                    const outfitId = generatingOutfitId;
-                    // Clear any pending polling/timeouts and close dialog before navigating
-                    setGeneratingOutfitId(null);
-                    // Navigate - view page will detect active job and poll properly
-                    router.push(`/outfits/${outfitId}/view`);
-                  }
-                }}
-              >
-                <Text style={styles.generatingOverlayButtonText}>See Outfit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.generatingOverlayButton, styles.generatingOverlayButtonSecondary]}
-                onPress={() => {
-                  setGeneratingOutfitId(null);
-                }}
-              >
-                <Text style={[styles.generatingOverlayButtonText, styles.generatingOverlayButtonTextSecondary]}>OK</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </Modal>
