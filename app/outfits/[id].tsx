@@ -32,7 +32,8 @@ import {
   WardrobeCategory,
   WardrobeItem,
 } from '@/lib/wardrobe';
-import { createAIJob, triggerAIJobExecution, pollAIJob } from '@/lib/ai-jobs';
+import { createAIJob, triggerAIJobExecution, getOutfitRenderItemLimit, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
+import { getUserSettings } from '@/lib/settings';
 import { createPost } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -626,12 +627,49 @@ export default function OutfitEditorScreen() {
       }));
       console.log('[OutfitEditor] Creating render job with items:', JSON.stringify(itemDetails, null, 2));
 
+      const { data: userSettings } = await getUserSettings(user.id);
+      const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
+      const renderLimit = getOutfitRenderItemLimit(modelPreference);
+      let mannequinImageId;
+
+      if (selected.length > renderLimit) {
+        const { data: mannequinJob, error: mannequinError } = await createAIJob(user.id, 'outfit_mannequin', {
+          user_id: user.id,
+          outfit_id: currentOutfitId,
+          selected,
+          prompt: notes.trim() || undefined,
+        });
+
+        if (mannequinError || !mannequinJob) {
+          Alert.alert('Error', 'Failed to start mannequin generation');
+          setRendering(false);
+          return;
+        }
+
+        await triggerAIJobExecution(mannequinJob.id);
+        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
+          mannequinJob.id,
+          60,
+          2000,
+          '[OutfitEditor] Mannequin'
+        );
+
+        if (mannequinPollError || !mannequinResult?.result?.mannequin_image_id) {
+          Alert.alert('Error', 'Mannequin generation timed out. Please try again.');
+          setRendering(false);
+          return;
+        }
+
+        mannequinImageId = mannequinResult.result.mannequin_image_id;
+      }
+
       const { data: renderJob, error } = await createAIJob(user.id, 'outfit_render', {
         user_id: user.id,
         outfit_id: currentOutfitId,
         selected,
         prompt: notes.trim() || undefined,
         headshot_image_id: selectedHeadshotId || undefined, // Pass selected headshot
+        mannequin_image_id: mannequinImageId,
       });
 
       if (error) {

@@ -19,7 +19,7 @@ import {
   getDefaultWardrobeId,
   createWardrobeItem,
 } from '@/lib/wardrobe';
-import { triggerAutoTag, triggerProductShot, triggerAIJobExecution, pollAIJob } from '@/lib/ai-jobs';
+import { triggerAutoTag, triggerProductShot, triggerAIJobExecution, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
 
 export default function AddItemScreen() {
   const { user } = useAuth();
@@ -189,17 +189,7 @@ export default function AddItemScreen() {
                 // Poll for auto_tag completion (30 attempts = ~60 seconds)
                 // Wait for completion before navigating so user sees results immediately
                 try {
-                  const { data: completedJob, error: pollError } = await pollAIJob(autoTagJob.id, 30, 2000);
-                  
-                  // If polling timed out, do one final check
-                  let finalJob = completedJob;
-                  if (pollError || !completedJob) {
-                    const { getAIJob } = await import('@/lib/ai-jobs');
-                    const { data: finalCheck } = await getAIJob(autoTagJob.id);
-                    if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
-                      finalJob = finalCheck;
-                    }
-                  }
+                  await pollAIJobWithFinalCheck(autoTagJob.id, 30, 2000);
                   
                   // Navigate after polling completes (whether success, failure, or timeout)
                   setGeneratingAI(false);

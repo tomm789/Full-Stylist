@@ -22,6 +22,7 @@ import { getUserSettings, updateUserSettings } from '@/lib/settings';
 import { getFeed, FeedItem } from '@/lib/posts';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { uploadImageToStorage } from '@/lib/wardrobe';
+import { getUserGeneratedImages } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
 
 type TabType = 'posts' | 'headshots' | 'bodyshots';
@@ -111,35 +112,9 @@ export default function ProfileScreen() {
     if (!user) return;
 
     try {
-      // Load all user images
-      const { data: allImages } = await supabase
-        .from('images')
-        .select('id, storage_bucket, storage_key, created_at')
-        .eq('owner_user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      
-      if (allImages) {
-        // Filter for headshots
-        const headshotImgs = allImages.filter(img => img.storage_key?.includes('/ai/headshots/'));
-        const headshotsWithUrls = headshotImgs.map((img) => {
-          const { data } = supabase.storage
-            .from(img.storage_bucket)
-            .getPublicUrl(img.storage_key);
-          return { id: img.id, url: data.publicUrl };
-        });
-        setHeadshotImages(headshotsWithUrls);
-        
-        // Filter for body shots
-        const bodyShotImgs = allImages.filter(img => img.storage_key?.includes('/ai/body_shots/'));
-        const bodyShotsWithUrls = bodyShotImgs.map((img) => {
-          const { data } = supabase.storage
-            .from(img.storage_bucket)
-            .getPublicUrl(img.storage_key);
-          return { id: img.id, url: data.publicUrl };
-        });
-        setBodyShotImages(bodyShotsWithUrls);
-      }
+      const { headshots, bodyShots } = await getUserGeneratedImages(user.id);
+      setHeadshotImages(headshots.map(({ id, url }) => ({ id, url })));
+      setBodyShotImages(bodyShots.map(({ id, url }) => ({ id, url })));
     } catch (error) {
       console.error('Error loading profile images:', error);
     }
