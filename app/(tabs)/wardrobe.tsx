@@ -668,6 +668,37 @@ export default function WardrobeScreen() {
 
       const outfitId = savedOutfit.outfit.id;
 
+      const { data: userSettings } = await getUserSettings(user.id);
+      const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
+      const renderLimit = getOutfitRenderItemLimit(modelPreference);
+      let mannequinImageId;
+
+      if (selected.length > renderLimit) {
+        const { data: mannequinJob, error: mannequinError } = await createAIJob(user.id, 'outfit_mannequin', {
+          user_id: user.id,
+          outfit_id: outfitId,
+          selected,
+        });
+
+        if (mannequinError || !mannequinJob) {
+          throw new Error('Failed to start mannequin generation');
+        }
+
+        await triggerAIJobExecution(mannequinJob.id);
+        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
+          mannequinJob.id,
+          60,
+          2000,
+          '[Wardrobe] Mannequin'
+        );
+
+        if (mannequinPollError || !mannequinResult?.result?.mannequin_image_id) {
+          throw new Error('Mannequin generation timed out. Please try again.');
+        }
+
+        mannequinImageId = mannequinResult.result.mannequin_image_id;
+      }
+
       // Create outfit_render job with selected items
       // Handle items that may not have category_id yet (AI will recognize them)
       const selected = selectedItems.map((item) => ({
