@@ -7,9 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "dev": "netlify dev",
-    "build:web": "CI=1 expo export --platform web --output-dir web-build",
-    "check:duplicates": "node scripts/check-duplicate-declarations.mjs"
+    "dev": "netlify dev"
   },
   "keywords": [
     "ai",
