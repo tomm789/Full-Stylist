@@ -67,7 +67,7 @@ export async function getAIJob(jobId: string): Promise<{
     .from('ai_jobs')
     .select('*')
     .eq('id', jobId)
-    .single();
+    .maybeSingle();
 
   return { data, error };
 }
@@ -107,6 +107,11 @@ export async function pollAIJob(
       }
 
       if (!data) {
+        if (attempt < maxAttempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, intervalMs));
+          intervalMs = Math.min(intervalMs * 2, maxIntervalMs);
+          continue;
+        }
         failureCountByJob.set(jobId, failureCount + 1);
         return { data: null, error: new Error('Job not found') };
       }
@@ -529,35 +534,34 @@ export async function triggerAIJobExecution(jobId: string): Promise<{ error: any
       return { error: new Error('No active session') };
     }
 
-    // Determine the Netlify function URL
-    // In development, use the Netlify dev server URL; in production, use relative path
     const isDev = process.env.NODE_ENV === 'development' || __DEV__;
-    let baseUrl = '';
-    
-    if (isDev) {
-      // Allow environment variable to override for physical devices (set to network IP, e.g., http://192.168.1.100:8888)
-      baseUrl = process.env.EXPO_PUBLIC_NETLIFY_DEV_URL || 'http://localhost:8888';
-    } else {
-      // In production, prioritize environment variable
-      baseUrl = process.env.EXPO_PUBLIC_NETLIFY_URL || '';
-      
-      // Fallback: For web builds, use current origin if available
-      if (!baseUrl && typeof window !== 'undefined' && window.location) {
-        baseUrl = window.location.origin;
-        console.warn('[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set, using window.location.origin as fallback:', baseUrl);
-      }
-      
-      // If still empty, use relative URL (may work for same-origin requests)
-      if (!baseUrl) {
-        console.warn('[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set and window.location unavailable, using relative URL');
-        // Relative URL will be used
+    // Prefer the explicitly configured Netlify URL in all environments.
+    // This allows dev builds to call a deployed backend without requiring netlify dev.
+    let baseUrl = process.env.EXPO_PUBLIC_NETLIFY_URL || '';
+
+    if (!baseUrl) {
+      if (isDev) {
+        // Allow environment variable to override for physical devices (set to network IP, e.g., http://192.168.1.100:8888)
+        baseUrl = process.env.EXPO_PUBLIC_NETLIFY_DEV_URL || 'http://localhost:8888';
+      } else {
+        // Fallback: For web builds, use current origin if available
+        if (typeof window !== 'undefined' && window.location) {
+          baseUrl = window.location.origin;
+          console.warn('[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set, using window.location.origin as fallback:', baseUrl);
+        }
+
+        // If still empty, use relative URL (may work for same-origin requests)
+        if (!baseUrl) {
+          console.warn('[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set and window.location unavailable, using relative URL');
+          // Relative URL will be used
+        }
       }
     }
-    
+
     const functionUrl = `${baseUrl}/.netlify/functions/ai-job-runner`;
     
     // Validate URL format
-    if (!isDev && baseUrl && !baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+    if (baseUrl && !baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
       console.error('[AIJobs] Invalid baseUrl format:', baseUrl);
       return { error: new Error('Invalid Netlify function URL configuration') };
     }
