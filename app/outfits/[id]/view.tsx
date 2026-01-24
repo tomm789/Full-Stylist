@@ -191,36 +191,6 @@ export default function OutfitDetailScreen() {
     }
   }, [navigationOutfits, currentOutfitIndex]);
 
-  const generatingItems = outfitItems.map((outfitItem, index) => {
-    const wardrobeItem = wardrobeItems.get(outfitItem.wardrobe_item_id);
-    return {
-      id: outfitItem.wardrobe_item_id,
-      title: wardrobeItem?.title || `Item ${index + 1}`,
-      description: wardrobeItem?.description || '',
-      orderIndex: index,
-    };
-  });
-
-  const topContexts = outfitAnalysis?.contexts?.top_contexts || [];
-  const additionalContexts = outfitAnalysis?.contexts?.additional_contexts || [];
-  const revealedItems = generatingItems.filter((_, index) => index <= itemRevealIndex);
-  const itemsComplete = generatingItems.length > 0 && itemCompleteIndex >= generatingItems.length - 1;
-  const modalTitle =
-    generationPhase === 'items'
-      ? 'Checking your pieces'
-      : generationPhase === 'analysis'
-        ? 'Stylist notes incoming'
-        : 'Finalising your outfit';
-  const modalSubtitle =
-    generationPhase === 'items'
-      ? 'Reviewing each item before building the full look.'
-      : generationPhase === 'analysis'
-        ? 'Here’s where this outfit will shine the most.'
-        : 'Polishing the render and preparing your reveal.';
-  const completedCount = generatingItems.length
-    ? Math.min(itemCompleteIndex + 1, generatingItems.length)
-    : 0;
-
   isGeneratingRef.current = isGeneratingOutfitRender;
   shouldShowModalRef.current = shouldShowGeneratingModal;
 
@@ -346,14 +316,14 @@ export default function OutfitDetailScreen() {
     setItemRevealIndex(-1);
     setItemCompleteIndex(-1);
 
-    if (!generatingItems.length) return;
+    if (!generatingItemsList.length) return;
 
     let currentIndex = -1;
     const tick = () => {
       currentIndex += 1;
-      if (currentIndex >= generatingItems.length) {
-        setItemRevealIndex(generatingItems.length - 1);
-        setItemCompleteIndex(generatingItems.length - 1);
+      if (currentIndex >= generatingItemsList.length) {
+        setItemRevealIndex(generatingItemsList.length - 1);
+        setItemCompleteIndex(generatingItemsList.length - 1);
         clearItemTicking();
         return;
       }
@@ -361,9 +331,9 @@ export default function OutfitDetailScreen() {
       setItemRevealIndex(currentIndex);
       setItemCompleteIndex(Math.max(-1, currentIndex - 1));
 
-      if (currentIndex === generatingItems.length - 1) {
+      if (currentIndex === generatingItemsList.length - 1) {
         itemCompletionTimerRef.current = setTimeout(() => {
-          setItemCompleteIndex(generatingItems.length - 1);
+          setItemCompleteIndex(generatingItemsList.length - 1);
         }, 700);
       }
     };
@@ -400,14 +370,6 @@ export default function OutfitDetailScreen() {
       poll().catch((error) => console.warn('[OutfitView] Analysis poll failed:', error));
     }, 2000);
   };
-
-  useEffect(() => {
-    const cachedAnalysis = outfit?.attribute_cache?.ai_outfit_analysis;
-    setOutfitAnalysis(cachedAnalysis || null);
-    if (!isGeneratingOutfitRender) {
-      lastAnalysisHashRef.current = cachedAnalysis?.input_hash || cachedAnalysis?.generated_at || null;
-    }
-  }, [outfit, isGeneratingOutfitRender]);
 
   useEffect(() => {
     if (renderJobIdParam && user && !coverImage) {
