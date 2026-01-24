@@ -98,7 +98,7 @@ export default function SocialScreen() {
   const [slideshowImages, setSlideshowImages] = useState<Map<string, string | null>>(new Map());
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const [autoPlayInterval, setAutoPlayInterval] = useState<NodeJS.Timeout | null>(null);
+  const [autoPlayInterval, setAutoPlayInterval] = useState<ReturnType<typeof setInterval> | null>(null);
   const [lookbookCarouselIndices, setLookbookCarouselIndices] = useState<Map<string, number>>(new Map());
   const [lookbookOutfitsCache, setLookbookOutfitsCache] = useState<Map<string, any[]>>(new Map());
   const [isLoadingFeed, setIsLoadingFeed] = useState(false);
@@ -114,7 +114,7 @@ export default function SocialScreen() {
   const menuButtonRefs = useRef<Map<string, any>>(new Map());
   const menuButtonPositions = useRef<Map<string, { x: number; y: number; width: number; height: number }>>(new Map());
   const flatListRef = useRef<FlatList>(null);
-  const outfitDialogTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const outfitDialogTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (user && !isLoadingFeed) {
@@ -739,9 +739,21 @@ export default function SocialScreen() {
         // Handle items that may not have category_id yet (AI will recognize them)
         // Prefer category_id from wardrobe item, fallback to outfit item
         const categoryId = wardrobeItem?.category_id || outfitItem.category_id;
+        const categoryName = categoryId ? (categoriesMap.get(categoryId) || '') : '';
         return {
-          category: categoryId ? (categoriesMap.get(categoryId) || '') : '',
+          category: categoryName,
+          category_id: categoryId || null,
+          subcategory_id: wardrobeItem?.subcategory_id || null,
           wardrobe_item_id: outfitItem.wardrobe_item_id,
+          text_snapshot: {
+            title: wardrobeItem?.title || '',
+            description: wardrobeItem?.description || '',
+            brand: wardrobeItem?.brand || '',
+            color_primary: wardrobeItem?.color_primary || '',
+            category: categoryName,
+            category_id: categoryId || null,
+            subcategory_id: wardrobeItem?.subcategory_id || null,
+          },
         };
       });
 

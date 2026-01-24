@@ -155,6 +155,56 @@ const PROMPTS = {
     2. Focus ONLY on applying/changing the outfit as requested.
     3. Ensure lighting, proportions, and textures remain realistic.
     4. Background: Pure white infinite studio.
+  `,
+
+  // Text-only outfit analysis (no image references)
+  OUTFIT_ANALYZE_TEXT: ({ outfitNotes, itemLines, itemCount }) => `
+    You are a friendly, expert stylist. Analyze the outfit using ONLY the provided text descriptions.
+    Do not reference images, photos, or visual inputs.
+
+    OUTFIT NOTES:
+    ${outfitNotes || 'None provided.'}
+
+    ITEMS (${itemCount} total):
+    ${itemLines}
+
+    GOAL:
+    1. Infer the outfit's overall vibe and how it would be worn in the real world.
+    2. Most outfits are NOT for a single, obvious use case (uniform-like looks are the exception).
+    3. Provide between 5 and 10 relevant contexts/settings.
+    4. Choose the three most popular/relevant contexts for women and write fuller descriptions for those.
+    5. List the remaining contexts as concise labels.
+
+    GUIDELINES:
+    - Consider occasion/activity, season, weather, and dress code.
+    - When the outfit is basic (e.g., jeans + plain tee), lean into versatility and broad applicability.
+    - When the outfit is highly specific (e.g., wedding dress), be direct and narrow.
+    - Contexts should reflect how women most commonly use outfits like this.
+
+    Return ONLY valid JSON (no markdown, no code fences) matching this schema:
+    {
+      "outfit_description": "2-4 sentences in a friendly stylist tone",
+      "style_summary": "1-2 sentences about silhouette, formality, and aesthetic",
+      "versatility_notes": "1-3 sentences on how flexible or specific the outfit is",
+      "contexts": {
+        "top_contexts": [
+          {
+            "label": "Short context label",
+            "occasion_activity": "Occasion or activity",
+            "season": ["spring","summer"],
+            "weather": ["mild","warm"],
+            "dress_code": "e.g., casual, smart casual, semi-formal",
+            "confidence": 0.0,
+            "why_it_works": "1-2 sentences explaining why"
+          }
+        ],
+        "additional_contexts": [
+          "Short label 1",
+          "Short label 2"
+        ],
+        "total_contexts_considered": 7
+      }
+    }
   `
 };
 

@@ -16,7 +16,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { getOutfit, deleteOutfit, getUserOutfits } from '@/lib/outfits';
-import { getWardrobeItems, getWardrobeItemImages } from '@/lib/wardrobe';
+import { getWardrobeItemImages } from '@/lib/wardrobe';
 import { getLookbook, getSystemLookbookOutfits } from '@/lib/lookbooks';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
@@ -38,10 +38,28 @@ import {
 } from '@/lib/engagement';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+type GenerationMessageKind = 'description' | 'contexts' | 'style' | 'versatility' | 'finalizing';
+
+interface GenerationMessage {
+  id: string;
+  kind: GenerationMessageKind;
+  text: string;
+}
 const IS_TABLET = SCREEN_WIDTH >= 768;
 
 export default function OutfitDetailScreen() {
-  const { id, lookbookId, lookbookTitle, outfitIndex, suppressGeneratingModal, outfitIds, filters, returnTo } = useLocalSearchParams<{ 
+  const {
+    id,
+    lookbookId,
+    lookbookTitle,
+    outfitIndex,
+    suppressGeneratingModal,
+    outfitIds,
+    filters,
+    returnTo,
+    renderJobId: renderJobIdParamRaw,
+  } = useLocalSearchParams<{
     id: string; 
     lookbookId?: string; 
     lookbookTitle?: string;
@@ -50,10 +68,12 @@ export default function OutfitDetailScreen() {
     outfitIds?: string;
     filters?: string;
     returnTo?: string;
+    renderJobId?: string;
   }>();
   const router = useRouter();
   const { user } = useAuth();
   const filterSummary = typeof filters === 'string' ? decodeURIComponent(filters) : '';
+  const renderJobIdParam = typeof renderJobIdParamRaw === 'string' ? renderJobIdParamRaw : null;
   const [outfit, setOutfit] = useState<any>(null);
   const [coverImage, setCoverImage] = useState<any>(null);
   const [outfitItems, setOutfitItems] = useState<any[]>([]);
@@ -72,7 +92,7 @@ export default function OutfitDetailScreen() {
   const [slideshowImages, setSlideshowImages] = useState<Map<string, string | null>>(new Map());
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const [autoPlayInterval, setAutoPlayInterval] = useState<NodeJS.Timeout | null>(null);
+  const [autoPlayInterval, setAutoPlayInterval] = useState<ReturnType<typeof setInterval> | null>(null);
 
   // Social engagement state
   const [liked, setLiked] = useState(false);
@@ -85,45 +105,30 @@ export default function OutfitDetailScreen() {
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [isGeneratingOutfitRender, setIsGeneratingOutfitRender] = useState(false);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const shouldShowGeneratingModal = suppressGeneratingModal !== '1';
   const [navigationOutfits, setNavigationOutfits] = useState<Array<{ id: string; title: string; imageUrl: string | null }>>([]);
   const [currentOutfitIndex, setCurrentOutfitIndex] = useState(0);
   const navigationScrollRef = useRef<ScrollView>(null);
-  const [generationStepIndex, setGenerationStepIndex] = useState(0);
-
-  const generationSteps = [
-    {
-      title: 'Lighting the Runway',
-      message: 'Analyzing your uploaded pieces for color, texture, and shine.',
-      subtext: 'Polishing the raw materials for a couture-ready render.',
-    },
-    {
-      title: 'Silhouette Sculpting',
-      message: 'Mapping shapes, seams, and movement for a perfect drape.',
-      subtext: 'Building the backbone of a refined, camera-ready outfit.',
-    },
-    {
-      title: 'Style Intelligence',
-      message: 'Calibrating proportions and style cues for a balanced look.',
-      subtext: 'Ensuring every item feels intentional and luxe.',
-    },
-    {
-      title: 'Fabric Physics',
-      message: 'Simulating folds, shadows, and layered textures.',
-      subtext: 'Adding depth so the outfit feels alive.',
-    },
-    {
-      title: 'Editorial Finishing',
-      message: 'Enhancing clarity, contrast, and fabric detail.',
-      subtext: 'Delivering a glossy, magazine-ready presentation.',
-    },
-    {
-      title: 'Final Reveal',
-      message: 'Assembling the full ensemble and exporting your render.',
-      subtext: 'Almost ready—putting the finishing touch on the look.',
-    },
-  ];
+  const analysisPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const itemTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const itemCompletionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finalizingFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messageQueueRef = useRef<GenerationMessage[]>([]);
+  const isMessageRunningRef = useRef(false);
+  const lastAnalysisHashRef = useRef<string | null>(null);
+  const failureNotifiedRef = useRef(false);
+  const isGeneratingRef = useRef(false);
+  const shouldShowModalRef = useRef(shouldShowGeneratingModal);
+  const [renderJobId, setRenderJobId] = useState<string | null>(null);
+  const [outfitAnalysis, setOutfitAnalysis] = useState<any | null>(null);
+  const [generationAnalysis, setGenerationAnalysis] = useState<any | null>(null);
+  const [analysisQueued, setAnalysisQueued] = useState(false);
+  const [itemRevealIndex, setItemRevealIndex] = useState(-1);
+  const [itemCompleteIndex, setItemCompleteIndex] = useState(-1);
+  const [activeGenerationMessage, setActiveGenerationMessage] = useState<GenerationMessage | null>(null);
+  const [generationPhase, setGenerationPhase] = useState<'items' | 'analysis' | 'finalizing'>('items');
 
   useEffect(() => {
     if (id) {
@@ -140,6 +145,28 @@ export default function OutfitDetailScreen() {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
+      if (analysisPollingRef.current) {
+        clearInterval(analysisPollingRef.current);
+        analysisPollingRef.current = null;
+      }
+      if (itemTickRef.current) {
+        clearInterval(itemTickRef.current);
+        itemTickRef.current = null;
+      }
+      if (messageTimerRef.current) {
+        clearTimeout(messageTimerRef.current);
+        messageTimerRef.current = null;
+      }
+      if (itemCompletionTimerRef.current) {
+        clearTimeout(itemCompletionTimerRef.current);
+        itemCompletionTimerRef.current = null;
+      }
+      if (finalizingFallbackRef.current) {
+        clearTimeout(finalizingFallbackRef.current);
+        finalizingFallbackRef.current = null;
+      }
+      messageQueueRef.current = [];
+      isMessageRunningRef.current = false;
       // Clear loading state on unmount to prevent stale state
       setIsGeneratingOutfitRender(false);
     };
@@ -165,17 +192,300 @@ export default function OutfitDetailScreen() {
   }, [navigationOutfits, currentOutfitIndex]);
 
   useEffect(() => {
-    if (!isGeneratingOutfitRender || !shouldShowGeneratingModal) {
-      setGenerationStepIndex(0);
+    if (renderJobIdParam && user && !coverImage) {
+      setRenderJobId(renderJobIdParam);
+      setIsGeneratingOutfitRender(true);
+    }
+  }, [renderJobIdParam, user, coverImage]);
+
+  const generatingItemsList = outfitItems.map((outfitItem, index) => {
+    const wardrobeItem = wardrobeItems.get(outfitItem.wardrobe_item_id);
+    return {
+      id: outfitItem.wardrobe_item_id,
+      title: wardrobeItem?.title || `Item ${index + 1}`,
+      description: wardrobeItem?.description || '',
+      orderIndex: index,
+    };
+  });
+
+  const topContexts = outfitAnalysis?.contexts?.top_contexts || [];
+  const additionalContexts = outfitAnalysis?.contexts?.additional_contexts || [];
+  const revealedItems = generatingItemsList.filter((_, index) => index <= itemRevealIndex);
+  const itemsComplete = generatingItemsList.length > 0 && itemCompleteIndex >= generatingItemsList.length - 1;
+  const modalTitle =
+    generationPhase === 'items'
+      ? 'Checking your pieces'
+      : generationPhase === 'analysis'
+        ? 'Stylist notes incoming'
+        : 'Finalising your outfit';
+  const modalSubtitle =
+    generationPhase === 'items'
+      ? 'Reviewing each item before building the full look.'
+      : generationPhase === 'analysis'
+        ? 'Here’s where this outfit will shine the most.'
+        : 'Polishing the render and preparing your reveal.';
+  const completedCount = generatingItemsList.length
+    ? Math.min(itemCompleteIndex + 1, generatingItemsList.length)
+    : 0;
+
+  isGeneratingRef.current = isGeneratingOutfitRender;
+  shouldShowModalRef.current = shouldShowGeneratingModal;
+
+  const clearAnalysisPolling = () => {
+    if (analysisPollingRef.current) {
+      clearInterval(analysisPollingRef.current);
+      analysisPollingRef.current = null;
+    }
+  };
+
+  const clearItemTicking = () => {
+    if (itemTickRef.current) {
+      clearInterval(itemTickRef.current);
+      itemTickRef.current = null;
+    }
+    if (itemCompletionTimerRef.current) {
+      clearTimeout(itemCompletionTimerRef.current);
+      itemCompletionTimerRef.current = null;
+    }
+  };
+
+  const clearMessageTimers = () => {
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = null;
+    }
+    if (finalizingFallbackRef.current) {
+      clearTimeout(finalizingFallbackRef.current);
+      finalizingFallbackRef.current = null;
+    }
+  };
+
+  const getMessageDuration = (message: GenerationMessage) => {
+    const base = message.kind === 'description' ? 3600 : 2400;
+    const extra = Math.min(2000, Math.max(0, message.text.length - 120) * 6);
+    return base + extra;
+  };
+
+  const processNextMessage = () => {
+    if (!isGeneratingRef.current || !shouldShowModalRef.current) {
+      isMessageRunningRef.current = false;
       return;
     }
 
-    const interval = setInterval(() => {
-      setGenerationStepIndex((prev) => (prev + 1) % generationSteps.length);
-    }, 2000);
+    clearMessageTimers();
 
-    return () => clearInterval(interval);
-  }, [isGeneratingOutfitRender, shouldShowGeneratingModal, generationSteps.length]);
+    const nextMessage = messageQueueRef.current.shift();
+    if (!nextMessage) {
+      isMessageRunningRef.current = false;
+      setGenerationPhase('finalizing');
+      setActiveGenerationMessage({
+        id: 'finalizing',
+        kind: 'finalizing',
+        text: 'Finalising your outfit…',
+      });
+      return;
+    }
+
+    isMessageRunningRef.current = true;
+    setGenerationPhase('analysis');
+    setActiveGenerationMessage(nextMessage);
+
+    const duration = getMessageDuration(nextMessage);
+    messageTimerRef.current = setTimeout(() => {
+      setActiveGenerationMessage(null);
+      messageTimerRef.current = setTimeout(() => {
+        processNextMessage();
+      }, 250);
+    }, duration);
+  };
+
+  const enqueueMessages = (messages: GenerationMessage[]) => {
+    if (!messages.length) return;
+    messageQueueRef.current.push(...messages);
+    if (!isMessageRunningRef.current) {
+      processNextMessage();
+    }
+  };
+
+  const buildGenerationMessages = (analysis: any): GenerationMessage[] => {
+    const analysisTopContexts = analysis?.contexts?.top_contexts || [];
+    const topLabels = analysisTopContexts.map((ctx: any) => ctx.label).filter(Boolean);
+    const additionalLabels = (analysis?.contexts?.additional_contexts || []).filter(Boolean);
+
+    const contextsParts = [];
+    if (topLabels.length) {
+      contextsParts.push(`Top settings: ${topLabels.slice(0, 3).join(', ')}.`);
+    }
+    if (additionalLabels.length) {
+      contextsParts.push(`Also works for: ${additionalLabels.slice(0, 7).join(', ')}.`);
+    }
+
+    return [
+      {
+        id: `description-${Date.now()}`,
+        kind: 'description',
+        text: analysis?.outfit_description || 'Pulling the look together in a way that feels effortless and intentional.',
+      },
+      {
+        id: `contexts-${Date.now() + 1}`,
+        kind: 'contexts',
+        text:
+          contextsParts.join(' ') ||
+          'This outfit can flex across several casual-to-polished settings depending on your accessories.',
+      },
+      {
+        id: `style-${Date.now() + 2}`,
+        kind: 'style',
+        text: analysis?.style_summary || 'The styling balances silhouette, texture, and formality for a clean, wearable finish.',
+      },
+      {
+        id: `versatility-${Date.now() + 3}`,
+        kind: 'versatility',
+        text:
+          analysis?.versatility_notes ||
+          'You can steer it dressier or more relaxed by switching shoes, jewellery, or layering pieces.',
+      },
+    ];
+  };
+
+  const startItemTicking = () => {
+    clearItemTicking();
+    setItemRevealIndex(-1);
+    setItemCompleteIndex(-1);
+
+    if (!generatingItemsList.length) return;
+
+    let currentIndex = -1;
+    const tick = () => {
+      currentIndex += 1;
+      if (currentIndex >= generatingItemsList.length) {
+        setItemRevealIndex(generatingItemsList.length - 1);
+        setItemCompleteIndex(generatingItemsList.length - 1);
+        clearItemTicking();
+        return;
+      }
+
+      setItemRevealIndex(currentIndex);
+      setItemCompleteIndex(Math.max(-1, currentIndex - 1));
+
+      if (currentIndex === generatingItemsList.length - 1) {
+        itemCompletionTimerRef.current = setTimeout(() => {
+          setItemCompleteIndex(generatingItemsList.length - 1);
+        }, 700);
+      }
+    };
+
+    tick();
+    itemTickRef.current = setInterval(tick, 950);
+  };
+
+  const startAnalysisPolling = (jobId: string) => {
+    clearAnalysisPolling();
+
+    const poll = async () => {
+      const { data: job } = await getAIJob(jobId);
+      if (!job) return;
+
+      const analysis = job.result?.analysis;
+      const analysisStatus = job.result?.analysis_status;
+      if (analysis && analysisStatus === 'ready') {
+        const hash = analysis.input_hash || analysis.generated_at || analysis.outfit_description;
+        if (hash && lastAnalysisHashRef.current !== hash) {
+          lastAnalysisHashRef.current = hash;
+          setGenerationAnalysis(analysis);
+          setOutfitAnalysis(analysis);
+        }
+      }
+
+      if (job.status === 'succeeded' || job.status === 'failed') {
+        clearAnalysisPolling();
+      }
+    };
+
+    poll().catch((error) => console.warn('[OutfitView] Analysis poll failed:', error));
+    analysisPollingRef.current = setInterval(() => {
+      poll().catch((error) => console.warn('[OutfitView] Analysis poll failed:', error));
+    }, 2000);
+  };
+
+  useEffect(() => {
+    const cachedAnalysis = outfit?.attribute_cache?.ai_outfit_analysis;
+    setOutfitAnalysis(cachedAnalysis || null);
+    if (!isGeneratingOutfitRender) {
+      lastAnalysisHashRef.current = cachedAnalysis?.input_hash || cachedAnalysis?.generated_at || null;
+    }
+  }, [outfit, isGeneratingOutfitRender]);
+
+  useEffect(() => {
+    if (!isGeneratingOutfitRender || !shouldShowGeneratingModal) {
+      clearItemTicking();
+      clearMessageTimers();
+      messageQueueRef.current = [];
+      isMessageRunningRef.current = false;
+      setActiveGenerationMessage(null);
+      setGenerationPhase('items');
+      setAnalysisQueued(false);
+      setGenerationAnalysis(null);
+      lastAnalysisHashRef.current = null;
+      return;
+    }
+
+    messageQueueRef.current = [];
+    isMessageRunningRef.current = false;
+    setAnalysisQueued(false);
+    setActiveGenerationMessage(null);
+    setGenerationPhase('items');
+    startItemTicking();
+  }, [isGeneratingOutfitRender, shouldShowGeneratingModal, generatingItemsList.length]);
+
+  useEffect(() => {
+    if (!renderJobId || !isGeneratingOutfitRender || !shouldShowGeneratingModal) {
+      clearAnalysisPolling();
+      return;
+    }
+
+    startAnalysisPolling(renderJobId);
+    return () => clearAnalysisPolling();
+  }, [renderJobId, isGeneratingOutfitRender, shouldShowGeneratingModal]);
+
+  useEffect(() => {
+    if (renderJobId) {
+      failureNotifiedRef.current = false;
+    }
+  }, [renderJobId]);
+
+  useEffect(() => {
+    if (!isGeneratingOutfitRender || analysisQueued || !generationAnalysis) return;
+    const itemsDone = !generatingItemsList.length || itemCompleteIndex >= generatingItemsList.length - 1;
+    if (!itemsDone) return;
+    enqueueMessages(buildGenerationMessages(generationAnalysis));
+    setAnalysisQueued(true);
+  }, [generationAnalysis, analysisQueued, isGeneratingOutfitRender, itemCompleteIndex, generatingItemsList.length]);
+
+  useEffect(() => {
+    if (!isGeneratingOutfitRender) return;
+    const itemsDone = !generatingItemsList.length || itemCompleteIndex >= generatingItemsList.length - 1;
+    if (!itemsDone || analysisQueued) return;
+
+    clearMessageTimers();
+    finalizingFallbackRef.current = setTimeout(() => {
+      if (!analysisQueued) {
+        setGenerationPhase('finalizing');
+        setActiveGenerationMessage({
+          id: 'finalizing-fallback',
+          kind: 'finalizing',
+          text: 'Finalising your outfit…',
+        });
+      }
+    }, 1400);
+
+    return () => {
+      if (finalizingFallbackRef.current) {
+        clearTimeout(finalizingFallbackRef.current);
+        finalizingFallbackRef.current = null;
+      }
+    };
+  }, [isGeneratingOutfitRender, itemCompleteIndex, generatingItemsList.length, analysisQueued]);
 
   const loadSocialEngagement = async () => {
     if (!id || !user) return;
@@ -301,8 +611,10 @@ export default function OutfitDetailScreen() {
 
           if (!shouldHandleActiveJob) {
             // Cover image is newer than the active job - avoid showing stale render state
+            setRenderJobId(null);
             setIsGeneratingOutfitRender(false);
           } else {
+            setRenderJobId(activeJob.id);
             // Active job found - check if job is very old (more than 15 minutes) - might be stuck
             const jobAge = Date.now() - new Date(activeJob.created_at).getTime();
             if (jobAge > 900000) { // 15 minutes
@@ -313,6 +625,7 @@ export default function OutfitDetailScreen() {
                 if (currentJob.status === 'succeeded') {
                   await refreshOutfit();
                 }
+                setRenderJobId(null);
                 setIsGeneratingOutfitRender(false);
               } else if (currentJob && currentJob.status === 'running') {
                 // Job is still running but very old - keep showing loading and keep checking
@@ -343,15 +656,22 @@ export default function OutfitDetailScreen() {
           if (recentJob && recentJob.status === 'succeeded') {
             // Job just completed - refresh outfit immediately
             await refreshOutfit();
+            setRenderJobId(null);
           } else if (recentJob && recentJob.status === 'failed') {
             // Job failed - don't show loading
+            setRenderJobId(null);
             setIsGeneratingOutfitRender(false);
-          } else if (!data.coverImage) {
-            // No active or recent job and no cover image - start periodic refresh check
+          } else if (renderJobIdParam) {
+            // A render job was explicitly provided (e.g., from wardrobe flow) - poll it directly
             setIsGeneratingOutfitRender(true);
-            startPeriodicOutfitRefresh();
+            setRenderJobId(renderJobIdParam);
+            startPollingForOutfitRender(renderJobIdParam).catch((error) => {
+              console.error('[OutfitView] Error starting polling from param job id:', error);
+              setIsGeneratingOutfitRender(false);
+            });
           } else {
-            // Cover image exists and no active job - don't show loading
+            // No active job detected - don't show generating state by default
+            setRenderJobId(null);
             setIsGeneratingOutfitRender(false);
           }
         }
@@ -379,13 +699,13 @@ export default function OutfitDetailScreen() {
           
           if (items && !itemsError) {
             const itemsMap = new Map();
-            items.forEach((item) => {
+            items.forEach((item: any) => {
               itemsMap.set(item.id, item);
             });
             setWardrobeItems(itemsMap);
             
             // Load images for wardrobe items
-            const imagePromises = items.map(async (item) => {
+            const imagePromises = items.map(async (item: any) => {
               const { data: imageData } = await getWardrobeItemImages(item.id);
               if (imageData && imageData.length > 0) {
                 const imageRecord = imageData[0].image;
@@ -470,6 +790,9 @@ export default function OutfitDetailScreen() {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
     }
+    if (jobId) {
+      setRenderJobId(jobId);
+    }
 
     // Check for outfit render every 3 seconds (less frequent than active polling)
     pollingIntervalRef.current = setInterval(async () => {
@@ -478,7 +801,12 @@ export default function OutfitDetailScreen() {
         const { data: job } = await getAIJob(jobId);
         if (job?.status === 'failed') {
           console.log('[OutfitView] Outfit render job failed during refresh:', job.error);
+          setRenderJobId(null);
           setIsGeneratingOutfitRender(false);
+          if (!failureNotifiedRef.current) {
+            failureNotifiedRef.current = true;
+            Alert.alert('Outfit generation failed', job.error || 'Please try again.');
+          }
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
@@ -493,6 +821,7 @@ export default function OutfitDetailScreen() {
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
         }
+        setRenderJobId(null);
         setIsGeneratingOutfitRender(false);
         setOutfit(data.outfit);
         setCoverImage(data.coverImage);
@@ -507,6 +836,7 @@ export default function OutfitDetailScreen() {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
+    setRenderJobId(jobId);
 
     // Use await pollAIJob pattern like body shot generation for consistency
     // This provides better timeout handling and final check
@@ -526,6 +856,7 @@ export default function OutfitDetailScreen() {
       
       // Handle job completion
       if (finalJob.status === 'succeeded') {
+        setRenderJobId(null);
         setIsGeneratingOutfitRender(false);
         await refreshOutfit();
         // Double-check that cover image exists
@@ -534,8 +865,13 @@ export default function OutfitDetailScreen() {
           setIsGeneratingOutfitRender(false);
         }
       } else if (finalJob.status === 'failed') {
+        setRenderJobId(null);
         setIsGeneratingOutfitRender(false);
         console.log('[OutfitView] Outfit render job failed:', finalJob.error);
+        if (!failureNotifiedRef.current) {
+          failureNotifiedRef.current = true;
+          Alert.alert('Outfit generation failed', finalJob.error || 'Please try again.');
+        }
       }
     } catch (error) {
       console.error('[OutfitView] Error polling for outfit render:', error);
@@ -818,41 +1154,88 @@ export default function OutfitDetailScreen() {
         >
           <View style={styles.fullScreenOverlay}>
             <View style={styles.loadingDialog}>
-              <ActivityIndicator size="large" color="#007AFF" />
-              <Text style={styles.loadingDialogTitle}>{generationSteps[generationStepIndex].title}</Text>
-              <Text style={styles.loadingDialogMessage}>
-                {generationSteps[generationStepIndex].message}
-              </Text>
-              <Text style={styles.loadingDialogSubtext}>
-                {generationSteps[generationStepIndex].subtext}
-              </Text>
-              <Text style={styles.loadingDialogStep}>
-                Step {generationStepIndex + 1} of {generationSteps.length}
-              </Text>
-              <View style={styles.loadingDialogSteps}>
-                {generationSteps.map((step, index) => (
-                  <View
-                    key={`${step.title}-${index}`}
-                    style={[
-                      styles.loadingDialogStepRow,
-                      index === generationStepIndex && styles.loadingDialogStepRowActive,
-                    ]}
-                  >
-                    <View style={styles.loadingDialogStepDot} />
-                    <Text
-                      style={[
-                        styles.loadingDialogStepText,
-                        index === generationStepIndex && styles.loadingDialogStepTextActive,
-                      ]}
-                    >
-                      {step.title}
+              <View style={styles.loadingDialogHeader}>
+                <Ionicons name="sparkles" size={26} color="#34C759" />
+                <Text style={styles.loadingDialogTitle}>{modalTitle}</Text>
+                <Text style={styles.loadingDialogSubtitle}>{modalSubtitle}</Text>
+              </View>
+
+              <View style={styles.loadingDialogBody}>
+                <View style={styles.loadingDialogSection}>
+                  <View style={styles.loadingDialogSectionHeader}>
+                    <Text style={styles.loadingDialogSectionLabel}>Selected items</Text>
+                    <Text style={styles.loadingDialogSectionMeta}>
+                      {completedCount}/{generatingItemsList.length}
                     </Text>
                   </View>
-                ))}
+                  <View style={styles.loadingDialogItems}>
+                    {revealedItems.map((item, index) => {
+                      const isComplete = index <= itemCompleteIndex;
+                      const isActive = index === itemRevealIndex && !isComplete;
+                      return (
+                        <View
+                          key={item.id}
+                          style={[
+                            styles.loadingDialogItemRow,
+                            isComplete && styles.loadingDialogItemRowComplete,
+                          ]}
+                        >
+                          <View style={styles.loadingDialogItemIcon}>
+                            {isComplete ? (
+                              <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                            ) : (
+                              <ActivityIndicator size="small" color={isActive ? '#007AFF' : '#8E8E93'} />
+                            )}
+                          </View>
+                          <Text
+                            style={[
+                              styles.loadingDialogItemText,
+                              isComplete && styles.loadingDialogItemTextComplete,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {item.title}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.loadingDialogSection}>
+                  <Text style={styles.loadingDialogSectionLabel}>Stylist overview</Text>
+                  <View style={styles.loadingDialogMessageCard}>
+                    {activeGenerationMessage ? (
+                      <>
+                        <View style={styles.loadingDialogMessageHeader}>
+                          <Ionicons name="chatbubble-ellipses" size={16} color="#007AFF" />
+                          <Text style={styles.loadingDialogMessageLabel}>
+                            {activeGenerationMessage.kind === 'finalizing' ? 'Finishing touches' : 'Your stylist'}
+                          </Text>
+                        </View>
+                        <View style={styles.loadingDialogMessageBody}>
+                          {activeGenerationMessage.kind === 'finalizing' && (
+                            <ActivityIndicator size="small" color="#007AFF" style={styles.loadingDialogInlineSpinner} />
+                          )}
+                          <Text style={styles.loadingDialogMessageText}>{activeGenerationMessage.text}</Text>
+                        </View>
+                      </>
+                    ) : (
+                      <View style={styles.loadingDialogTypingRow}>
+                        <ActivityIndicator size="small" color="#007AFF" />
+                        <Text style={styles.loadingDialogTypingText}>
+                          {itemsComplete ? 'Pulling together your overview…' : 'Reviewing each piece…'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
               </View>
-              <Text style={styles.loadingDialogFooter}>
-                Stay on this screen while we craft your look.
-              </Text>
+
+              <View style={styles.loadingDialogFooterRow}>
+                <ActivityIndicator size="small" color="#007AFF" />
+                <Text style={styles.loadingDialogFooterText}>Stay on this screen while we craft your look.</Text>
+              </View>
             </View>
           </View>
         </Modal>
@@ -973,6 +1356,65 @@ export default function OutfitDetailScreen() {
             <View style={styles.notesSection}>
               <Text style={styles.sectionLabel}>Notes</Text>
               <Text style={styles.notesText}>{outfit.notes}</Text>
+            </View>
+          )}
+
+          {outfitAnalysis && (
+            <View style={styles.overviewSection}>
+              <Text style={styles.sectionLabel}>Outfit Overview</Text>
+              <Text style={styles.overviewDescription}>{outfitAnalysis.outfit_description}</Text>
+
+              {topContexts.length > 0 && (
+                <View style={styles.contextsBlock}>
+                  <Text style={styles.overviewSubheading}>Top settings</Text>
+                  {topContexts.slice(0, 3).map((context: any, index: number) => (
+                    <View key={`${context.label}-${index}`} style={styles.contextCard}>
+                      <View style={styles.contextCardHeader}>
+                        <Ionicons name="sparkles" size={16} color="#34C759" />
+                        <Text style={styles.contextCardTitle}>{context.label}</Text>
+                        {context.dress_code && (
+                          <Text style={styles.contextDressCode}>{context.dress_code}</Text>
+                        )}
+                      </View>
+                      {context.why_it_works && (
+                        <Text style={styles.contextWhy}>{context.why_it_works}</Text>
+                      )}
+                      {(context.season?.length || context.weather?.length) && (
+                        <Text style={styles.contextMeta}>
+                          {[...(context.season || []), ...(context.weather || [])].join(' • ')}
+                        </Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {additionalContexts.length > 0 && (
+                <View style={styles.contextsBlock}>
+                  <Text style={styles.overviewSubheading}>More places it fits</Text>
+                  <View style={styles.contextChips}>
+                    {additionalContexts.slice(0, 7).map((label: string, index: number) => (
+                      <View key={`${label}-${index}`} style={styles.contextChip}>
+                        <Text style={styles.contextChipText}>{label}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {outfitAnalysis.style_summary && (
+                <View style={styles.overviewTextBlock}>
+                  <Text style={styles.overviewSubheading}>Style summary</Text>
+                  <Text style={styles.overviewBody}>{outfitAnalysis.style_summary}</Text>
+                </View>
+              )}
+
+              {outfitAnalysis.versatility_notes && (
+                <View style={styles.overviewTextBlock}>
+                  <Text style={styles.overviewSubheading}>Versatility notes</Text>
+                  <Text style={styles.overviewBody}>{outfitAnalysis.versatility_notes}</Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -1248,80 +1690,146 @@ const styles = StyleSheet.create({
   },
   loadingDialog: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 32,
-    alignItems: 'center',
-    minWidth: 280,
-    maxWidth: '80%',
+    borderRadius: 18,
+    padding: 24,
+    alignItems: 'stretch',
+    width: '90%',
+    maxWidth: 440,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
+  loadingDialogHeader: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
   loadingDialogTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#0A0A0A',
+    marginTop: 10,
+    marginBottom: 6,
     textAlign: 'center',
   },
-  loadingDialogMessage: {
-    fontSize: 14,
-    color: '#666',
+  loadingDialogSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
   },
-  loadingDialogSubtext: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  loadingDialogStep: {
-    marginTop: 16,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#007AFF',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  loadingDialogSteps: {
-    marginTop: 12,
+  loadingDialogBody: {
     width: '100%',
   },
-  loadingDialogStepRow: {
+  loadingDialogSection: {
+    backgroundColor: '#F7F8FA',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+  },
+  loadingDialogSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  loadingDialogStepRowActive: {
-    backgroundColor: 'rgba(0, 122, 255, 0.08)',
-  },
-  loadingDialogStepDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#007AFF',
-    marginRight: 8,
-  },
-  loadingDialogStepText: {
-    fontSize: 12,
-    color: '#666',
-    flexShrink: 1,
-  },
-  loadingDialogStepTextActive: {
-    color: '#007AFF',
+  loadingDialogSectionLabel: {
+    fontSize: 13,
     fontWeight: '600',
+    color: '#111827',
   },
-  loadingDialogFooter: {
-    marginTop: 16,
+  loadingDialogSectionMeta: {
     fontSize: 12,
-    color: '#888',
+    fontWeight: '700',
+    color: '#007AFF',
+  },
+  loadingDialogItems: {
+    width: '100%',
+  },
+  loadingDialogItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+  },
+  loadingDialogItemRowComplete: {
+    opacity: 0.35,
+  },
+  loadingDialogItemIcon: {
+    width: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+  },
+  loadingDialogItemText: {
+    flexShrink: 1,
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '500',
+  },
+  loadingDialogItemTextComplete: {
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  loadingDialogMessageCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    minHeight: 88,
+    justifyContent: 'center',
+  },
+  loadingDialogMessageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  loadingDialogMessageLabel: {
+    marginLeft: 6,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#007AFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  loadingDialogMessageBody: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  loadingDialogInlineSpinner: {
+    marginRight: 8,
+    marginTop: 2,
+  },
+  loadingDialogMessageText: {
+    flexShrink: 1,
+    fontSize: 14,
+    color: '#111827',
+    lineHeight: 20,
+  },
+  loadingDialogTypingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  loadingDialogTypingText: {
+    marginLeft: 8,
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  loadingDialogFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  loadingDialogFooterText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: '#6B7280',
     textAlign: 'center',
   },
   cancelRenderButton: {
@@ -1413,6 +1921,102 @@ const styles = StyleSheet.create({
   notesText: {
     fontSize: 14,
     color: '#666',
+    lineHeight: 20,
+  },
+  overviewSection: {
+    marginBottom: 24,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  overviewDescription: {
+    fontSize: 15,
+    color: '#111827',
+    lineHeight: 22,
+    marginBottom: 14,
+  },
+  contextsBlock: {
+    marginBottom: 12,
+  },
+  overviewSubheading: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  contextCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 10,
+  },
+  contextCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  contextCardTitle: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    flexShrink: 1,
+  },
+  contextDressCode: {
+    marginLeft: 'auto',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#007AFF',
+    backgroundColor: 'rgba(0, 122, 255, 0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 999,
+    overflow: 'hidden',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  contextWhy: {
+    fontSize: 13,
+    color: '#4B5563',
+    lineHeight: 19,
+  },
+  contextMeta: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  contextChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+  },
+  contextChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  contextChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#3730A3',
+  },
+  overviewTextBlock: {
+    marginTop: 8,
+  },
+  overviewBody: {
+    fontSize: 14,
+    color: '#4B5563',
     lineHeight: 20,
   },
   itemsSection: {
