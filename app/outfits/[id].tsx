@@ -617,10 +617,24 @@ export default function OutfitEditorScreen() {
       
       // Create outfit_render job with items from current editor state
       // Handle items that may not have category_id yet (AI will recognize them)
-      const selected = Array.from(outfitItems.entries()).map(([categoryId, item]) => ({
-        category: categoryId ? (categories.find((c) => c.id === categoryId)?.name || '') : '',
-        wardrobe_item_id: item.id,
-      }));
+      const selected = Array.from(outfitItems.entries()).map(([categoryId, item]) => {
+        const categoryName = categoryId ? (categories.find((c) => c.id === categoryId)?.name || '') : '';
+        return {
+          category: categoryName,
+          category_id: categoryId || null,
+          subcategory_id: item.subcategory_id || null,
+          wardrobe_item_id: item.id,
+          text_snapshot: {
+            title: item.title || '',
+            description: item.description || '',
+            brand: item.brand || '',
+            color_primary: item.color_primary || '',
+            category: categoryName,
+            category_id: categoryId || null,
+            subcategory_id: item.subcategory_id || null,
+          },
+        };
+      });
 
       // Log items being sent to render job
       const itemDetails = Array.from(outfitItems.entries()).map(([categoryId, item]) => ({

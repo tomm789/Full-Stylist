@@ -851,10 +851,24 @@ export default function WardrobeScreen() {
 
       // Create outfit_render job with selected items
       // Handle items that may not have category_id yet (AI will recognize them)
-      const selected = selectedItems.map((item) => ({
-        category: item.category_id ? (categories.find((c) => c.id === item.category_id)?.name || '') : '',
-        wardrobe_item_id: item.id,
-      }));
+      const selected = selectedItems.map((item) => {
+        const categoryName = item.category_id ? (categories.find((c) => c.id === item.category_id)?.name || '') : '';
+        return {
+          category: categoryName,
+          category_id: item.category_id || null,
+          subcategory_id: item.subcategory_id || null,
+          wardrobe_item_id: item.id,
+          text_snapshot: {
+            title: item.title || '',
+            description: item.description || '',
+            brand: item.brand || '',
+            color_primary: item.color_primary || '',
+            category: categoryName,
+            category_id: item.category_id || null,
+            subcategory_id: item.subcategory_id || null,
+          },
+        };
+      });
 
       const { data: userSettings } = await getUserSettings(user.id);
       if (!userSettings?.body_shot_image_id) {
