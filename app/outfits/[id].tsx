@@ -759,7 +759,7 @@ export default function OutfitEditorScreen() {
       setRendering(false);
       
       // Navigate to the outfit view page - it will detect the active render job and show loading overlay
-      router.push(`/outfits/${currentOutfitId}/view` as any);
+      router.push(`/outfits/${currentOutfitId}/view?renderJobId=${renderJob.id}` as any);
     } catch (error: any) {
       console.error('[OutfitEditor] Render flow failed', error);
       Alert.alert('Error', error.message || 'An unexpected error occurred');

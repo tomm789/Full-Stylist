@@ -49,7 +49,17 @@ interface GenerationMessage {
 const IS_TABLET = SCREEN_WIDTH >= 768;
 
 export default function OutfitDetailScreen() {
-  const { id, lookbookId, lookbookTitle, outfitIndex, suppressGeneratingModal, outfitIds, filters, returnTo } = useLocalSearchParams<{ 
+  const {
+    id,
+    lookbookId,
+    lookbookTitle,
+    outfitIndex,
+    suppressGeneratingModal,
+    outfitIds,
+    filters,
+    returnTo,
+    renderJobId: renderJobIdParamRaw,
+  } = useLocalSearchParams<{
     id: string; 
     lookbookId?: string; 
     lookbookTitle?: string;
@@ -58,10 +68,12 @@ export default function OutfitDetailScreen() {
     outfitIds?: string;
     filters?: string;
     returnTo?: string;
+    renderJobId?: string;
   }>();
   const router = useRouter();
   const { user } = useAuth();
   const filterSummary = typeof filters === 'string' ? decodeURIComponent(filters) : '';
+  const renderJobIdParam = typeof renderJobIdParamRaw === 'string' ? renderJobIdParamRaw : null;
   const [outfit, setOutfit] = useState<any>(null);
   const [coverImage, setCoverImage] = useState<any>(null);
   const [outfitItems, setOutfitItems] = useState<any[]>([]);
@@ -106,6 +118,7 @@ export default function OutfitDetailScreen() {
   const messageQueueRef = useRef<GenerationMessage[]>([]);
   const isMessageRunningRef = useRef(false);
   const lastAnalysisHashRef = useRef<string | null>(null);
+  const failureNotifiedRef = useRef(false);
   const isGeneratingRef = useRef(false);
   const shouldShowModalRef = useRef(shouldShowGeneratingModal);
   const [renderJobId, setRenderJobId] = useState<string | null>(null);
@@ -397,6 +410,231 @@ export default function OutfitDetailScreen() {
   }, [outfit, isGeneratingOutfitRender]);
 
   useEffect(() => {
+    if (renderJobIdParam && user && !coverImage) {
+      setRenderJobId(renderJobIdParam);
+      setIsGeneratingOutfitRender(true);
+    }
+  }, [renderJobIdParam, user, coverImage]);
+
+  const generatingItemsList = outfitItems.map((outfitItem, index) => {
+    const wardrobeItem = wardrobeItems.get(outfitItem.wardrobe_item_id);
+    return {
+      id: outfitItem.wardrobe_item_id,
+      title: wardrobeItem?.title || `Item ${index + 1}`,
+      description: wardrobeItem?.description || '',
+      orderIndex: index,
+    };
+  });
+
+  const topContexts = outfitAnalysis?.contexts?.top_contexts || [];
+  const additionalContexts = outfitAnalysis?.contexts?.additional_contexts || [];
+  const revealedItems = generatingItemsList.filter((_, index) => index <= itemRevealIndex);
+  const itemsComplete = generatingItemsList.length > 0 && itemCompleteIndex >= generatingItemsList.length - 1;
+  const modalTitle =
+    generationPhase === 'items'
+      ? 'Checking your pieces'
+      : generationPhase === 'analysis'
+        ? 'Stylist notes incoming'
+        : 'Finalising your outfit';
+  const modalSubtitle =
+    generationPhase === 'items'
+      ? 'Reviewing each item before building the full look.'
+      : generationPhase === 'analysis'
+        ? 'Here’s where this outfit will shine the most.'
+        : 'Polishing the render and preparing your reveal.';
+  const completedCount = generatingItemsList.length
+    ? Math.min(itemCompleteIndex + 1, generatingItemsList.length)
+    : 0;
+
+  isGeneratingRef.current = isGeneratingOutfitRender;
+  shouldShowModalRef.current = shouldShowGeneratingModal;
+
+  const clearAnalysisPolling = () => {
+    if (analysisPollingRef.current) {
+      clearInterval(analysisPollingRef.current);
+      analysisPollingRef.current = null;
+    }
+  };
+
+  const clearItemTicking = () => {
+    if (itemTickRef.current) {
+      clearInterval(itemTickRef.current);
+      itemTickRef.current = null;
+    }
+    if (itemCompletionTimerRef.current) {
+      clearTimeout(itemCompletionTimerRef.current);
+      itemCompletionTimerRef.current = null;
+    }
+  };
+
+  const clearMessageTimers = () => {
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = null;
+    }
+    if (finalizingFallbackRef.current) {
+      clearTimeout(finalizingFallbackRef.current);
+      finalizingFallbackRef.current = null;
+    }
+  };
+
+  const getMessageDuration = (message: GenerationMessage) => {
+    const base = message.kind === 'description' ? 3600 : 2400;
+    const extra = Math.min(2000, Math.max(0, message.text.length - 120) * 6);
+    return base + extra;
+  };
+
+  const processNextMessage = () => {
+    if (!isGeneratingRef.current || !shouldShowModalRef.current) {
+      isMessageRunningRef.current = false;
+      return;
+    }
+
+    clearMessageTimers();
+
+    const nextMessage = messageQueueRef.current.shift();
+    if (!nextMessage) {
+      isMessageRunningRef.current = false;
+      setGenerationPhase('finalizing');
+      setActiveGenerationMessage({
+        id: 'finalizing',
+        kind: 'finalizing',
+        text: 'Finalising your outfit…',
+      });
+      return;
+    }
+
+    isMessageRunningRef.current = true;
+    setGenerationPhase('analysis');
+    setActiveGenerationMessage(nextMessage);
+
+    const duration = getMessageDuration(nextMessage);
+    messageTimerRef.current = setTimeout(() => {
+      setActiveGenerationMessage(null);
+      messageTimerRef.current = setTimeout(() => {
+        processNextMessage();
+      }, 250);
+    }, duration);
+  };
+
+  const enqueueMessages = (messages: GenerationMessage[]) => {
+    if (!messages.length) return;
+    messageQueueRef.current.push(...messages);
+    if (!isMessageRunningRef.current) {
+      processNextMessage();
+    }
+  };
+
+  const buildGenerationMessages = (analysis: any): GenerationMessage[] => {
+    const analysisTopContexts = analysis?.contexts?.top_contexts || [];
+    const topLabels = analysisTopContexts.map((ctx: any) => ctx.label).filter(Boolean);
+    const additionalLabels = (analysis?.contexts?.additional_contexts || []).filter(Boolean);
+
+    const contextsParts = [];
+    if (topLabels.length) {
+      contextsParts.push(`Top settings: ${topLabels.slice(0, 3).join(', ')}.`);
+    }
+    if (additionalLabels.length) {
+      contextsParts.push(`Also works for: ${additionalLabels.slice(0, 7).join(', ')}.`);
+    }
+
+    return [
+      {
+        id: `description-${Date.now()}`,
+        kind: 'description',
+        text: analysis?.outfit_description || 'Pulling the look together in a way that feels effortless and intentional.',
+      },
+      {
+        id: `contexts-${Date.now() + 1}`,
+        kind: 'contexts',
+        text:
+          contextsParts.join(' ') ||
+          'This outfit can flex across several casual-to-polished settings depending on your accessories.',
+      },
+      {
+        id: `style-${Date.now() + 2}`,
+        kind: 'style',
+        text: analysis?.style_summary || 'The styling balances silhouette, texture, and formality for a clean, wearable finish.',
+      },
+      {
+        id: `versatility-${Date.now() + 3}`,
+        kind: 'versatility',
+        text:
+          analysis?.versatility_notes ||
+          'You can steer it dressier or more relaxed by switching shoes, jewellery, or layering pieces.',
+      },
+    ];
+  };
+
+  const startItemTicking = () => {
+    clearItemTicking();
+    setItemRevealIndex(-1);
+    setItemCompleteIndex(-1);
+
+    if (!generatingItemsList.length) return;
+
+    let currentIndex = -1;
+    const tick = () => {
+      currentIndex += 1;
+      if (currentIndex >= generatingItemsList.length) {
+        setItemRevealIndex(generatingItemsList.length - 1);
+        setItemCompleteIndex(generatingItemsList.length - 1);
+        clearItemTicking();
+        return;
+      }
+
+      setItemRevealIndex(currentIndex);
+      setItemCompleteIndex(Math.max(-1, currentIndex - 1));
+
+      if (currentIndex === generatingItemsList.length - 1) {
+        itemCompletionTimerRef.current = setTimeout(() => {
+          setItemCompleteIndex(generatingItemsList.length - 1);
+        }, 700);
+      }
+    };
+
+    tick();
+    itemTickRef.current = setInterval(tick, 950);
+  };
+
+  const startAnalysisPolling = (jobId: string) => {
+    clearAnalysisPolling();
+
+    const poll = async () => {
+      const { data: job } = await getAIJob(jobId);
+      if (!job) return;
+
+      const analysis = job.result?.analysis;
+      const analysisStatus = job.result?.analysis_status;
+      if (analysis && analysisStatus === 'ready') {
+        const hash = analysis.input_hash || analysis.generated_at || analysis.outfit_description;
+        if (hash && lastAnalysisHashRef.current !== hash) {
+          lastAnalysisHashRef.current = hash;
+          setGenerationAnalysis(analysis);
+          setOutfitAnalysis(analysis);
+        }
+      }
+
+      if (job.status === 'succeeded' || job.status === 'failed') {
+        clearAnalysisPolling();
+      }
+    };
+
+    poll().catch((error) => console.warn('[OutfitView] Analysis poll failed:', error));
+    analysisPollingRef.current = setInterval(() => {
+      poll().catch((error) => console.warn('[OutfitView] Analysis poll failed:', error));
+    }, 2000);
+  };
+
+  useEffect(() => {
+    const cachedAnalysis = outfit?.attribute_cache?.ai_outfit_analysis;
+    setOutfitAnalysis(cachedAnalysis || null);
+    if (!isGeneratingOutfitRender) {
+      lastAnalysisHashRef.current = cachedAnalysis?.input_hash || cachedAnalysis?.generated_at || null;
+    }
+  }, [outfit, isGeneratingOutfitRender]);
+
+  useEffect(() => {
     if (!isGeneratingOutfitRender || !shouldShowGeneratingModal) {
       clearItemTicking();
       clearMessageTimers();
@@ -416,7 +654,7 @@ export default function OutfitDetailScreen() {
     setActiveGenerationMessage(null);
     setGenerationPhase('items');
     startItemTicking();
-  }, [isGeneratingOutfitRender, shouldShowGeneratingModal, generatingItems.length]);
+  }, [isGeneratingOutfitRender, shouldShowGeneratingModal, generatingItemsList.length]);
 
   useEffect(() => {
     if (!renderJobId || !isGeneratingOutfitRender || !shouldShowGeneratingModal) {
@@ -429,16 +667,22 @@ export default function OutfitDetailScreen() {
   }, [renderJobId, isGeneratingOutfitRender, shouldShowGeneratingModal]);
 
   useEffect(() => {
+    if (renderJobId) {
+      failureNotifiedRef.current = false;
+    }
+  }, [renderJobId]);
+
+  useEffect(() => {
     if (!isGeneratingOutfitRender || analysisQueued || !generationAnalysis) return;
-    const itemsDone = !generatingItems.length || itemCompleteIndex >= generatingItems.length - 1;
+    const itemsDone = !generatingItemsList.length || itemCompleteIndex >= generatingItemsList.length - 1;
     if (!itemsDone) return;
     enqueueMessages(buildGenerationMessages(generationAnalysis));
     setAnalysisQueued(true);
-  }, [generationAnalysis, analysisQueued, isGeneratingOutfitRender, itemCompleteIndex, generatingItems.length]);
+  }, [generationAnalysis, analysisQueued, isGeneratingOutfitRender, itemCompleteIndex, generatingItemsList.length]);
 
   useEffect(() => {
     if (!isGeneratingOutfitRender) return;
-    const itemsDone = !generatingItems.length || itemCompleteIndex >= generatingItems.length - 1;
+    const itemsDone = !generatingItemsList.length || itemCompleteIndex >= generatingItemsList.length - 1;
     if (!itemsDone || analysisQueued) return;
 
     clearMessageTimers();
@@ -459,7 +703,7 @@ export default function OutfitDetailScreen() {
         finalizingFallbackRef.current = null;
       }
     };
-  }, [isGeneratingOutfitRender, itemCompleteIndex, generatingItems.length, analysisQueued]);
+  }, [isGeneratingOutfitRender, itemCompleteIndex, generatingItemsList.length, analysisQueued]);
 
   const loadSocialEngagement = async () => {
     if (!id || !user) return;
@@ -635,13 +879,16 @@ export default function OutfitDetailScreen() {
             // Job failed - don't show loading
             setRenderJobId(null);
             setIsGeneratingOutfitRender(false);
-          } else if (!data.coverImage) {
-            // No active or recent job and no cover image - start periodic refresh check
-            setRenderJobId(null);
+          } else if (renderJobIdParam) {
+            // A render job was explicitly provided (e.g., from wardrobe flow) - poll it directly
             setIsGeneratingOutfitRender(true);
-            startPeriodicOutfitRefresh();
+            setRenderJobId(renderJobIdParam);
+            startPollingForOutfitRender(renderJobIdParam).catch((error) => {
+              console.error('[OutfitView] Error starting polling from param job id:', error);
+              setIsGeneratingOutfitRender(false);
+            });
           } else {
-            // Cover image exists and no active job - don't show loading
+            // No active job detected - don't show generating state by default
             setRenderJobId(null);
             setIsGeneratingOutfitRender(false);
           }
@@ -774,6 +1021,10 @@ export default function OutfitDetailScreen() {
           console.log('[OutfitView] Outfit render job failed during refresh:', job.error);
           setRenderJobId(null);
           setIsGeneratingOutfitRender(false);
+          if (!failureNotifiedRef.current) {
+            failureNotifiedRef.current = true;
+            Alert.alert('Outfit generation failed', job.error || 'Please try again.');
+          }
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
@@ -835,6 +1086,10 @@ export default function OutfitDetailScreen() {
         setRenderJobId(null);
         setIsGeneratingOutfitRender(false);
         console.log('[OutfitView] Outfit render job failed:', finalJob.error);
+        if (!failureNotifiedRef.current) {
+          failureNotifiedRef.current = true;
+          Alert.alert('Outfit generation failed', finalJob.error || 'Please try again.');
+        }
       }
     } catch (error) {
       console.error('[OutfitView] Error polling for outfit render:', error);
@@ -1128,7 +1383,7 @@ export default function OutfitDetailScreen() {
                   <View style={styles.loadingDialogSectionHeader}>
                     <Text style={styles.loadingDialogSectionLabel}>Selected items</Text>
                     <Text style={styles.loadingDialogSectionMeta}>
-                      {completedCount}/{generatingItems.length}
+                      {completedCount}/{generatingItemsList.length}
                     </Text>
                   </View>
                   <View style={styles.loadingDialogItems}>
