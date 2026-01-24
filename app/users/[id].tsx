@@ -17,6 +17,7 @@ import { getFullUserProfile, followUser, unfollowUser, isFollowing } from '@/lib
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { getLookbook, getUserLookbooks, Lookbook } from '@/lib/lookbooks';
 import { getUserOutfits, Outfit } from '@/lib/outfits';
+import { supabase } from '@/lib/supabase';
 import UserWardrobeScreen from '@/app/components/UserWardrobeScreen';
 
 type TabType = 'outfits' | 'lookbooks' | 'wardrobe';
@@ -24,7 +25,7 @@ type TabType = 'outfits' | 'lookbooks' | 'wardrobe';
 export default function UserProfileScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const { id: userId } = useLocalSearchParams();
+  const { id: userId, tab } = useLocalSearchParams();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [followState, setFollowState] = useState<{
@@ -37,6 +38,7 @@ export default function UserProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [outfitImagesCache, setOutfitImagesCache] = useState<Map<string, string | null>>(new Map());
   const [lookbookImagesCache, setLookbookImagesCache] = useState<Map<string, string | null>>(new Map());
+  const [outfitWearCounts, setOutfitWearCounts] = useState<Map<string, number>>(new Map());
   const [activeTab, setActiveTab] = useState<TabType>('outfits');
 
   useEffect(() => {
@@ -46,6 +48,13 @@ export default function UserProfileScreen() {
       loadUserContent();
     }
   }, [userId, user]);
+
+  useEffect(() => {
+    if (!tab || typeof tab !== 'string') return;
+    if (tab === 'outfits' || tab === 'lookbooks' || tab === 'wardrobe') {
+      setActiveTab(tab);
+    }
+  }, [tab]);
 
   const loadProfile = async () => {
     if (!userId || typeof userId !== 'string') return;
@@ -75,6 +84,27 @@ export default function UserProfileScreen() {
 
     setOutfits(outfitsData || []);
     setLookbooks(lookbooksData || []);
+    if (outfitsData && outfitsData.length > 0) {
+      const outfitIds = outfitsData.map((outfit) => outfit.id);
+      const wearCounts = new Map<string, number>();
+      outfitIds.forEach((id) => wearCounts.set(id, 0));
+
+      const { data: wornEntries } = await supabase
+        .from('calendar_entries')
+        .select('outfit_id, calendar_day:calendar_day_id(owner_user_id)')
+        .in('outfit_id', outfitIds)
+        .eq('status', 'worn');
+
+      wornEntries?.forEach((entry: any) => {
+        const ownerId = entry.calendar_day?.owner_user_id;
+        if (!entry.outfit_id || !ownerId || ownerId === userId) return;
+        wearCounts.set(entry.outfit_id, (wearCounts.get(entry.outfit_id) || 0) + 1);
+      });
+
+      setOutfitWearCounts(wearCounts);
+    } else {
+      setOutfitWearCounts(new Map());
+    }
 
     const outfitImageCache = new Map<string, string | null>();
     await Promise.all(
@@ -267,6 +297,7 @@ export default function UserProfileScreen() {
 
   const renderOutfitItem = ({ item }: { item: Outfit }) => {
     const imageUrl = outfitImagesCache.get(item.id);
+    const wearCount = outfitWearCounts.get(item.id) || 0;
 
     return (
       <TouchableOpacity
@@ -288,6 +319,12 @@ export default function UserProfileScreen() {
           ) : (
             <View style={styles.postImagePlaceholder}>
               <Ionicons name="shirt-outline" size={32} color="#999" />
+            </View>
+          )}
+          {wearCount > 0 && (
+            <View style={styles.wornBadge}>
+              <Ionicons name="walk-outline" size={14} color="#111" />
+              <Text style={styles.wornBadgeText}>{wearCount}</Text>
             </View>
           )}
         </View>
@@ -557,6 +594,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  wornBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  wornBadgeText: {
+    fontSize: 12,
+    color: '#111',
+    fontWeight: '600',
   },
   lookbookBadge: {
     position: 'absolute',

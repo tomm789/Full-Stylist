@@ -161,6 +161,14 @@ async function downloadImageFromStorage(supabase, imageId) {
   return Buffer.from(buffer).toString('base64');
 }
 
+async function downloadImageFromUrl(url) {
+  if (!url) throw new Error('Missing reference image URL');
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to fetch reference image: ${response.statusText}`);
+  const buffer = await response.arrayBuffer();
+  return Buffer.from(buffer).toString('base64');
+}
+
 async function uploadImageToStorage(supabase, userId, base64Data, storagePath) {
   const isPng = base64Data.startsWith('iVBORw0KGgo');
   const mimeType = isPng ? 'image/png' : 'image/jpeg';
@@ -449,8 +457,10 @@ async function processBodyShotGenerate(input, supabase, userId) {
 }
 
 async function processOutfitRender(input, supabase, userId) {
-  const { outfit_id, selected, prompt, settings, headshot_image_id, mannequin_image_id } = input;
-  if (!outfit_id || !selected?.length) throw new Error('Missing outfit_id or selected items');
+  const { outfit_id, selected, prompt, settings, headshot_image_id, mannequin_image_id, reference_image_url } = input;
+  if (!outfit_id || (!reference_image_url && !selected?.length)) {
+    throw new Error('Missing outfit_id or selected items');
+  }
 
   const { data: userSettings } = await supabase
     .from('user_settings')
@@ -461,7 +471,39 @@ async function processOutfitRender(input, supabase, userId) {
   const bodyId = userSettings?.body_shot_image_id;
   const headId = headshot_image_id || userSettings?.headshot_image_id;
 
-  if (!bodyId || !headId) throw new Error('Missing body shot or headshot');
+  if (!bodyId) throw new Error('Missing body shot');
+
+  if (reference_image_url) {
+    const [bodyB64, referenceB64] = await Promise.all([
+      downloadImageFromStorage(supabase, bodyId),
+      downloadImageFromUrl(reference_image_url)
+    ]);
+
+    const preferredModel = resolveGeminiModel(
+      userSettings?.ai_model_preference || 'gemini-2.5-flash-image',
+      userSettings
+    );
+
+    const tryOnPrompt = PROMPTS.OUTFIT_TRY_ON(prompt || 'No additional details');
+    const finalImageB64 = await callGeminiAPI(tryOnPrompt, [bodyB64, referenceB64], preferredModel, 'IMAGE');
+
+    const timestamp = Date.now();
+    const storagePath = `${userId}/ai/outfits/${outfit_id}/${timestamp}.jpg`;
+    const uploadResult = await uploadImageToStorage(supabase, userId, finalImageB64, storagePath);
+
+    await supabase.from('outfit_renders').insert({
+      outfit_id,
+      image_id: uploadResult.imageId,
+      prompt: prompt || null,
+      settings: { ...(settings || {}), reference_image_url },
+      status: 'succeeded'
+    });
+
+    await supabase.from('outfits').update({ cover_image_id: uploadResult.imageId }).eq('id', outfit_id);
+    return { renders: [{ image_id: uploadResult.imageId, storage_key: uploadResult.storageKey }] };
+  }
+
+  if (!headId) throw new Error('Missing headshot');
 
   // --- Optimization: Parallel Item Image Fetching ---
   const wardrobeItemIds = selected.map(s => s.wardrobe_item_id);

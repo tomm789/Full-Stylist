@@ -360,11 +360,32 @@ export default function ProfileImagesScreen() {
           throw new Error(`Generation failed: ${failureMessage}`);
         }
 
+        let showSuccessAlert = true;
+        const generatedImageId = finalJob.result?.image_id || finalJob.result?.generated_image_id;
+        if (generatedImageId) {
+          const { error: settingsError } = await updateUserSettings(user.id, {
+            body_shot_image_id: generatedImageId,
+          });
+
+          if (settingsError) {
+            console.warn('[ProfileImages] Failed to save body shot selection:', settingsError);
+            Alert.alert(
+              'Saved with Warning',
+              'Your studio model was generated, but we could not save it as active. Please select it from your profile.'
+            );
+            showSuccessAlert = false;
+          } else {
+            setActiveBodyShotId(generatedImageId);
+          }
+        }
+
 
         setUploadingBody(false);
         setLoadingMessage('');
 
-        Alert.alert('Success', 'Studio model generated successfully!');
+        if (showSuccessAlert) {
+          Alert.alert('Success', 'Studio model generated successfully!');
+        }
       } else {
         throw jobError || new Error('Failed to create body shot job');
       }
