@@ -191,6 +191,224 @@ export default function OutfitDetailScreen() {
     }
   }, [navigationOutfits, currentOutfitIndex]);
 
+  const generatingItems = outfitItems.map((outfitItem, index) => {
+    const wardrobeItem = wardrobeItems.get(outfitItem.wardrobe_item_id);
+    return {
+      id: outfitItem.wardrobe_item_id,
+      title: wardrobeItem?.title || `Item ${index + 1}`,
+      description: wardrobeItem?.description || '',
+      orderIndex: index,
+    };
+  });
+
+  const topContexts = outfitAnalysis?.contexts?.top_contexts || [];
+  const additionalContexts = outfitAnalysis?.contexts?.additional_contexts || [];
+  const revealedItems = generatingItems.filter((_, index) => index <= itemRevealIndex);
+  const itemsComplete = generatingItems.length > 0 && itemCompleteIndex >= generatingItems.length - 1;
+  const modalTitle =
+    generationPhase === 'items'
+      ? 'Checking your pieces'
+      : generationPhase === 'analysis'
+        ? 'Stylist notes incoming'
+        : 'Finalising your outfit';
+  const modalSubtitle =
+    generationPhase === 'items'
+      ? 'Reviewing each item before building the full look.'
+      : generationPhase === 'analysis'
+        ? 'Here’s where this outfit will shine the most.'
+        : 'Polishing the render and preparing your reveal.';
+  const completedCount = generatingItems.length
+    ? Math.min(itemCompleteIndex + 1, generatingItems.length)
+    : 0;
+
+  isGeneratingRef.current = isGeneratingOutfitRender;
+  shouldShowModalRef.current = shouldShowGeneratingModal;
+
+  const clearAnalysisPolling = () => {
+    if (analysisPollingRef.current) {
+      clearInterval(analysisPollingRef.current);
+      analysisPollingRef.current = null;
+    }
+  };
+
+  const clearItemTicking = () => {
+    if (itemTickRef.current) {
+      clearInterval(itemTickRef.current);
+      itemTickRef.current = null;
+    }
+    if (itemCompletionTimerRef.current) {
+      clearTimeout(itemCompletionTimerRef.current);
+      itemCompletionTimerRef.current = null;
+    }
+  };
+
+  const clearMessageTimers = () => {
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = null;
+    }
+    if (finalizingFallbackRef.current) {
+      clearTimeout(finalizingFallbackRef.current);
+      finalizingFallbackRef.current = null;
+    }
+  };
+
+  const getMessageDuration = (message: GenerationMessage) => {
+    const base = message.kind === 'description' ? 3600 : 2400;
+    const extra = Math.min(2000, Math.max(0, message.text.length - 120) * 6);
+    return base + extra;
+  };
+
+  const processNextMessage = () => {
+    if (!isGeneratingRef.current || !shouldShowModalRef.current) {
+      isMessageRunningRef.current = false;
+      return;
+    }
+
+    clearMessageTimers();
+
+    const nextMessage = messageQueueRef.current.shift();
+    if (!nextMessage) {
+      isMessageRunningRef.current = false;
+      setGenerationPhase('finalizing');
+      setActiveGenerationMessage({
+        id: 'finalizing',
+        kind: 'finalizing',
+        text: 'Finalising your outfit…',
+      });
+      return;
+    }
+
+    isMessageRunningRef.current = true;
+    setGenerationPhase('analysis');
+    setActiveGenerationMessage(nextMessage);
+
+    const duration = getMessageDuration(nextMessage);
+    messageTimerRef.current = setTimeout(() => {
+      setActiveGenerationMessage(null);
+      messageTimerRef.current = setTimeout(() => {
+        processNextMessage();
+      }, 250);
+    }, duration);
+  };
+
+  const enqueueMessages = (messages: GenerationMessage[]) => {
+    if (!messages.length) return;
+    messageQueueRef.current.push(...messages);
+    if (!isMessageRunningRef.current) {
+      processNextMessage();
+    }
+  };
+
+  const buildGenerationMessages = (analysis: any): GenerationMessage[] => {
+    const topContexts = analysis?.contexts?.top_contexts || [];
+    const topLabels = topContexts.map((ctx: any) => ctx.label).filter(Boolean);
+    const additionalLabels = (analysis?.contexts?.additional_contexts || []).filter(Boolean);
+
+    const contextsParts = [];
+    if (topLabels.length) {
+      contextsParts.push(`Top settings: ${topLabels.slice(0, 3).join(', ')}.`);
+    }
+    if (additionalLabels.length) {
+      contextsParts.push(`Also works for: ${additionalLabels.slice(0, 7).join(', ')}.`);
+    }
+
+    return [
+      {
+        id: `description-${Date.now()}`,
+        kind: 'description',
+        text: analysis?.outfit_description || 'Pulling the look together in a way that feels effortless and intentional.',
+      },
+      {
+        id: `contexts-${Date.now() + 1}`,
+        kind: 'contexts',
+        text:
+          contextsParts.join(' ') ||
+          'This outfit can flex across several casual-to-polished settings depending on your accessories.',
+      },
+      {
+        id: `style-${Date.now() + 2}`,
+        kind: 'style',
+        text: analysis?.style_summary || 'The styling balances silhouette, texture, and formality for a clean, wearable finish.',
+      },
+      {
+        id: `versatility-${Date.now() + 3}`,
+        kind: 'versatility',
+        text:
+          analysis?.versatility_notes ||
+          'You can steer it dressier or more relaxed by switching shoes, jewellery, or layering pieces.',
+      },
+    ];
+  };
+
+  const startItemTicking = () => {
+    clearItemTicking();
+    setItemRevealIndex(-1);
+    setItemCompleteIndex(-1);
+
+    if (!generatingItems.length) return;
+
+    let currentIndex = -1;
+    const tick = () => {
+      currentIndex += 1;
+      if (currentIndex >= generatingItems.length) {
+        setItemRevealIndex(generatingItems.length - 1);
+        setItemCompleteIndex(generatingItems.length - 1);
+        clearItemTicking();
+        return;
+      }
+
+      setItemRevealIndex(currentIndex);
+      setItemCompleteIndex(Math.max(-1, currentIndex - 1));
+
+      if (currentIndex === generatingItems.length - 1) {
+        itemCompletionTimerRef.current = setTimeout(() => {
+          setItemCompleteIndex(generatingItems.length - 1);
+        }, 700);
+      }
+    };
+
+    tick();
+    itemTickRef.current = setInterval(tick, 950);
+  };
+
+  const startAnalysisPolling = (jobId: string) => {
+    clearAnalysisPolling();
+
+    const poll = async () => {
+      const { data: job } = await getAIJob(jobId);
+      if (!job) return;
+
+      const analysis = job.result?.analysis;
+      const analysisStatus = job.result?.analysis_status;
+      if (analysis && analysisStatus === 'ready') {
+        const hash = analysis.input_hash || analysis.generated_at || analysis.outfit_description;
+        if (hash && lastAnalysisHashRef.current !== hash) {
+          lastAnalysisHashRef.current = hash;
+          setGenerationAnalysis(analysis);
+          setOutfitAnalysis(analysis);
+        }
+      }
+
+      if (job.status === 'succeeded' || job.status === 'failed') {
+        clearAnalysisPolling();
+      }
+    };
+
+    poll().catch((error) => console.warn('[OutfitView] Analysis poll failed:', error));
+    analysisPollingRef.current = setInterval(() => {
+      poll().catch((error) => console.warn('[OutfitView] Analysis poll failed:', error));
+    }, 2000);
+  };
+
+  useEffect(() => {
+    const cachedAnalysis = outfit?.attribute_cache?.ai_outfit_analysis;
+    setOutfitAnalysis(cachedAnalysis || null);
+    if (!isGeneratingOutfitRender) {
+      lastAnalysisHashRef.current = cachedAnalysis?.input_hash || cachedAnalysis?.generated_at || null;
+    }
+  }, [outfit, isGeneratingOutfitRender]);
+
   useEffect(() => {
     if (renderJobIdParam && user && !coverImage) {
       setRenderJobId(renderJobIdParam);
