@@ -1,6 +1,7 @@
 // Use require for CommonJS compatibility with Netlify Functions
 const { createClient } = require('@supabase/supabase-js');
 const { PROMPTS } = require('./prompts');
+const crypto = require('crypto');
 
 // --- CONFIGURATION & ENV ---
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -30,6 +31,45 @@ function isGemini3Allowed(userSettings) {
 function resolveGeminiModel(requestedModel, userSettings) {
   if (requestedModel !== 'gemini-3-pro-image-preview') return requestedModel;
   return isGemini3Allowed(userSettings) ? requestedModel : 'gemini-2.5-flash-image';
+}
+
+function resolveGeminiTextModel(requestedModel) {
+  if (!requestedModel) return 'gemini-2.5-flash';
+  return requestedModel.includes('image') ? 'gemini-2.5-flash' : requestedModel;
+}
+
+function mergeResults(existingResult, newResult) {
+  const safeExisting = existingResult && typeof existingResult === 'object' ? existingResult : {};
+  const safeNew = newResult && typeof newResult === 'object' ? newResult : {};
+
+  const merged = {
+    ...safeExisting,
+    ...safeNew,
+    progress: {
+      ...(safeExisting.progress || {}),
+      ...(safeNew.progress || {}),
+    },
+  };
+
+  if (!safeNew.analysis && safeExisting.analysis) merged.analysis = safeExisting.analysis;
+  if (!safeNew.analysis_status && safeExisting.analysis_status) merged.analysis_status = safeExisting.analysis_status;
+  if (!safeNew.renders && safeExisting.renders) merged.renders = safeExisting.renders;
+
+  return merged;
+}
+
+async function updateJobProgress(jobId, supabase, partialResult) {
+  if (!jobId) return;
+  try {
+    const { data: jobRow } = await supabase.from('ai_jobs').select('result').eq('id', jobId).single();
+    const mergedResult = mergeResults(jobRow?.result, partialResult);
+    await supabase
+      .from('ai_jobs')
+      .update({ result: mergedResult, updated_at: new Date().toISOString() })
+      .eq('id', jobId);
+  } catch (err) {
+    console.warn('[AIJobRunner] Failed to update job progress:', err?.message || err);
+  }
 }
 
 // --- HANDLER ---
@@ -108,7 +148,7 @@ exports.handler = async (event, context) => {
           result = await processOutfitMannequin(input, supabaseAdmin, user.id);
           break;
         case 'outfit_render':
-          result = await processOutfitRender(input, supabaseAdmin, user.id);
+          result = await processOutfitRender(input, supabaseAdmin, user.id, job_id);
           break;
         default:
           throw new Error(`Unknown job type: ${job.job_type}`);
@@ -119,12 +159,19 @@ exports.handler = async (event, context) => {
     }
 
     // 5. Save Result
+    const { data: existingJobRow } = await supabaseAdmin
+      .from('ai_jobs')
+      .select('result')
+      .eq('id', job_id)
+      .single();
+    const mergedResult = mergeResults(existingJobRow?.result, result);
+
     const updateData = {
       updated_at: new Date().toISOString(),
       status: error ? 'failed' : 'succeeded',
     };
     if (error) updateData.error = error;
-    else updateData.result = result;
+    if (mergedResult && Object.keys(mergedResult).length > 0) updateData.result = mergedResult;
 
     await supabaseAdmin.from('ai_jobs').update(updateData).eq('id', job_id);
 
@@ -167,6 +214,294 @@ async function downloadImageFromUrl(url) {
   if (!response.ok) throw new Error(`Failed to fetch reference image: ${response.statusText}`);
   const buffer = await response.arrayBuffer();
   return Buffer.from(buffer).toString('base64');
+}
+
+function stripCodeFences(text) {
+  if (!text) return '';
+  return text
+    .replace(/```json/gi, '```')
+    .replace(/```/g, '')
+    .trim();
+}
+
+function parseJsonResponse(text) {
+  const cleaned = stripCodeFences(text);
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      const slice = cleaned.slice(start, end + 1);
+      return JSON.parse(slice);
+    }
+    throw err;
+  }
+}
+
+function toArray(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function normalizeStringList(values) {
+  return toArray(values)
+    .map((v) => (typeof v === 'string' ? v.trim() : String(v || '').trim()))
+    .filter(Boolean);
+}
+
+function normalizeContextObject(ctx) {
+  if (!ctx || typeof ctx !== 'object') return null;
+  const label = (ctx.label || ctx.context || ctx.name || '').toString().trim();
+  if (!label) return null;
+  const confidence = Number(ctx.confidence ?? 0);
+  return {
+    label,
+    occasion_activity: (ctx.occasion_activity || ctx.occasion || '').toString().trim() || null,
+    season: normalizeStringList(ctx.season),
+    weather: normalizeStringList(ctx.weather),
+    dress_code: (ctx.dress_code || ctx.formality || '').toString().trim() || null,
+    confidence: Number.isFinite(confidence) ? Math.min(Math.max(confidence, 0), 1) : 0,
+    why_it_works: (ctx.why_it_works || ctx.reason || '').toString().trim() || null,
+  };
+}
+
+function dedupeContexts(contexts) {
+  const seen = new Set();
+  const deduped = [];
+  for (const ctx of contexts) {
+    const key = ctx.label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(ctx);
+  }
+  return deduped;
+}
+
+function ensureMinimumAdditionalContexts(additionalContexts, existingLabels) {
+  const fallbacks = [
+    'Weekend errands',
+    'Casual coffee meetups',
+    'Daytime outings',
+    'Travel days',
+    'Relaxed dinners',
+    'Smart casual office days',
+    'Laid-back social plans',
+  ];
+  const labels = new Set(existingLabels.map((l) => l.toLowerCase()));
+  const result = [...additionalContexts];
+  for (const fallback of fallbacks) {
+    if (result.length >= 7) break;
+    if (labels.has(fallback.toLowerCase())) continue;
+    labels.add(fallback.toLowerCase());
+    result.push(fallback);
+  }
+  return result;
+}
+
+function computeInputHash(payload) {
+  const serialized = JSON.stringify(payload);
+  return crypto.createHash('sha256').update(serialized).digest('hex');
+}
+
+function buildItemLine(index, item) {
+  const detailParts = [];
+  if (item.category_name && item.subcategory_name) {
+    detailParts.push(`${item.category_name} (${item.subcategory_name})`);
+  } else if (item.category_name) {
+    detailParts.push(item.category_name);
+  }
+  if (item.color_primary) detailParts.push(`color: ${item.color_primary}`);
+  if (item.brand) detailParts.push(`brand: ${item.brand}`);
+
+  const detailText = detailParts.length ? ` — ${detailParts.join(', ')}` : '';
+  const notesText = item.description ? ` Notes: ${item.description}` : '';
+  return `${index + 1}. ${item.title || 'Untitled item'}${detailText}.${notesText}`.trim();
+}
+
+async function buildOutfitTextPayload(selected, supabase, prompt) {
+  const wardrobeItemIds = [...new Set((selected || []).map((s) => s.wardrobe_item_id).filter(Boolean))];
+  if (!wardrobeItemIds.length) {
+    return {
+      itemCount: 0,
+      itemLines: 'No wardrobe items provided.',
+      outfitNotes: prompt || '',
+      itemDescriptions: [],
+      inputHash: computeInputHash({ prompt: prompt || '', items: [] }),
+    };
+  }
+
+  const { data: wardrobeItems } = await supabase
+    .from('wardrobe_items')
+    .select('id, title, description, brand, color_primary, category_id, subcategory_id')
+    .in('id', wardrobeItemIds);
+
+  const itemsMap = new Map();
+  (wardrobeItems || []).forEach((item) => itemsMap.set(item.id, item));
+
+  const categoryIds = new Set();
+  const subcategoryIds = new Set();
+  for (const entry of selected || []) {
+    const snapshot = entry.text_snapshot || {};
+    const itemRow = itemsMap.get(entry.wardrobe_item_id);
+    const categoryId = snapshot.category_id || itemRow?.category_id;
+    const subcategoryId = snapshot.subcategory_id || itemRow?.subcategory_id;
+    if (categoryId) categoryIds.add(categoryId);
+    if (subcategoryId) subcategoryIds.add(subcategoryId);
+  }
+
+  const [{ data: categories }, { data: subcategories }] = await Promise.all([
+    categoryIds.size
+      ? supabase.from('wardrobe_categories').select('id, name').in('id', [...categoryIds])
+      : Promise.resolve({ data: [] }),
+    subcategoryIds.size
+      ? supabase.from('wardrobe_subcategories').select('id, name, category_id').in('id', [...subcategoryIds])
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const categoriesMap = new Map((categories || []).map((c) => [c.id, c.name]));
+  const subcategoriesMap = new Map((subcategories || []).map((s) => [s.id, s.name]));
+
+  const itemDescriptions = (selected || []).map((entry, index) => {
+    const snapshot = entry.text_snapshot || {};
+    const itemRow = itemsMap.get(entry.wardrobe_item_id) || {};
+    const categoryId = snapshot.category_id || itemRow.category_id || null;
+    const subcategoryId = snapshot.subcategory_id || itemRow.subcategory_id || null;
+    const categoryName = snapshot.category || categoriesMap.get(categoryId) || entry.category || null;
+    const subcategoryName = snapshot.subcategory || subcategoriesMap.get(subcategoryId) || null;
+
+    const mergedItem = {
+      wardrobe_item_id: entry.wardrobe_item_id,
+      title: snapshot.title || itemRow.title || 'Untitled item',
+      description: snapshot.description || itemRow.description || '',
+      brand: snapshot.brand || itemRow.brand || '',
+      color_primary: snapshot.color_primary || itemRow.color_primary || '',
+      category_name: categoryName,
+      subcategory_name: subcategoryName,
+      order_index: index,
+    };
+
+    return {
+      ...mergedItem,
+      line: buildItemLine(index, mergedItem),
+    };
+  });
+
+  const itemLines = itemDescriptions.map((item) => item.line).join('\n');
+  const outfitNotes = prompt || '';
+  const inputHash = computeInputHash({
+    outfitNotes,
+    items: itemDescriptions.map((item) => ({
+      wardrobe_item_id: item.wardrobe_item_id,
+      title: item.title,
+      description: item.description,
+      brand: item.brand,
+      color_primary: item.color_primary,
+      category_name: item.category_name,
+      subcategory_name: item.subcategory_name,
+    })),
+  });
+
+  return {
+    itemCount: itemDescriptions.length,
+    itemLines,
+    outfitNotes,
+    itemDescriptions,
+    inputHash,
+  };
+}
+
+function normalizeOutfitAnalysis(rawAnalysis, payload) {
+  const baseAnalysis = rawAnalysis && typeof rawAnalysis === 'object' ? rawAnalysis : {};
+  const contextsRoot = baseAnalysis.contexts || {};
+
+  const rawTopContexts = contextsRoot.top_contexts || baseAnalysis.top_contexts || [];
+  const rawAdditionalContexts = contextsRoot.additional_contexts || baseAnalysis.additional_contexts || [];
+  const rawContextList = contextsRoot.contexts || baseAnalysis.contexts_list || baseAnalysis.contexts || [];
+
+  const normalizedTop = toArray(rawTopContexts).map(normalizeContextObject).filter(Boolean);
+  const normalizedFromList = toArray(rawContextList).map(normalizeContextObject).filter(Boolean);
+
+  const combinedContexts = dedupeContexts([...normalizedTop, ...normalizedFromList]);
+  combinedContexts.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+
+  const top_contexts = combinedContexts.slice(0, 3);
+  const existingLabels = top_contexts.map((ctx) => ctx.label);
+
+  const additionalFromAI = normalizeStringList(rawAdditionalContexts);
+  const additionalFromContexts = combinedContexts.slice(3).map((ctx) => ctx.label);
+  const dedupedAdditional = dedupeContexts(
+    additionalFromContexts.map((label) => ({ label, confidence: 0, season: [], weather: [] }))
+  ).map((ctx) => ctx.label);
+
+  let additional_contexts = [...additionalFromAI, ...dedupedAdditional]
+    .map((label) => label.trim())
+    .filter((label) => label && !existingLabels.some((top) => top.toLowerCase() === label.toLowerCase()));
+
+  const additionalSeen = new Set();
+  additional_contexts = additional_contexts.filter((label) => {
+    const key = label.toLowerCase();
+    if (additionalSeen.has(key)) return false;
+    additionalSeen.add(key);
+    return true;
+  });
+
+  additional_contexts = additional_contexts.slice(0, 7);
+  additional_contexts = ensureMinimumAdditionalContexts(additional_contexts, existingLabels);
+
+  const total_contexts_considered = Math.min(
+    10,
+    Math.max(
+      5,
+      Number(contextsRoot.total_contexts_considered || baseAnalysis.total_contexts_considered || 0) ||
+        top_contexts.length + additional_contexts.length
+    )
+  );
+
+  return {
+    version: 1,
+    generated_at: new Date().toISOString(),
+    analysis_source: 'ai_text_only',
+    tone: 'friendly stylist',
+    input_hash: payload.inputHash,
+    item_descriptions: payload.itemDescriptions,
+    outfit_description:
+      (baseAnalysis.outfit_description || '').toString().trim() ||
+      `This look brings together ${payload.itemCount} pieces into an intentional, wearable outfit.`,
+    style_summary:
+      (baseAnalysis.style_summary || '').toString().trim() ||
+      'The overall styling balances practicality with a put-together finish.',
+    versatility_notes:
+      (baseAnalysis.versatility_notes || '').toString().trim() ||
+      'This outfit can flex across multiple plans with small tweaks to accessories or layers.',
+    contexts: {
+      top_contexts,
+      additional_contexts,
+      total_contexts_considered,
+    },
+  };
+}
+
+async function persistOutfitAnalysis(supabase, outfitId, analysis) {
+  const { data: outfitRow } = await supabase
+    .from('outfits')
+    .select('attribute_cache')
+    .eq('id', outfitId)
+    .single();
+
+  const attributeCache = outfitRow?.attribute_cache && typeof outfitRow.attribute_cache === 'object'
+    ? outfitRow.attribute_cache
+    : {};
+
+  const nextCache = {
+    ...attributeCache,
+    ai_outfit_analysis: analysis,
+  };
+
+  await supabase
+    .from('outfits')
+    .update({ attribute_cache: nextCache, updated_at: new Date().toISOString() })
+    .eq('id', outfitId);
 }
 
 async function uploadImageToStorage(supabase, userId, base64Data, storagePath) {
@@ -456,7 +791,7 @@ async function processBodyShotGenerate(input, supabase, userId) {
   return { image_id: imageId, storage_key: storageKey };
 }
 
-async function processOutfitRender(input, supabase, userId) {
+async function processOutfitRender(input, supabase, userId, jobId) {
   const { outfit_id, selected, prompt, settings, headshot_image_id, mannequin_image_id, reference_image_url } = input;
   if (!outfit_id || (!reference_image_url && !selected?.length)) {
     throw new Error('Missing outfit_id or selected items');
@@ -472,6 +807,66 @@ async function processOutfitRender(input, supabase, userId) {
   const headId = headshot_image_id || userSettings?.headshot_image_id;
 
   if (!bodyId) throw new Error('Missing body shot');
+
+  let outfitAnalysis = null;
+  let analysisStatus = 'skipped';
+  let analysisError = null;
+
+  if (selected?.length) {
+    try {
+      await updateJobProgress(jobId, supabase, {
+        analysis_status: 'running',
+        progress: {
+          stage: 'analysis_started',
+          item_count: selected.length,
+          analysis_started_at: new Date().toISOString(),
+        },
+      });
+
+      const textPayload = await buildOutfitTextPayload(selected, supabase, prompt);
+      const analysisPrompt = PROMPTS.OUTFIT_ANALYZE_TEXT({
+        outfitNotes: textPayload.outfitNotes,
+        itemLines: textPayload.itemLines,
+        itemCount: textPayload.itemCount,
+      });
+      const textModel = resolveGeminiTextModel(userSettings?.ai_model_preference || 'gemini-2.5-flash');
+      const analysisResponseText = await callGeminiAPI(analysisPrompt, [], textModel, 'TEXT');
+      const parsedAnalysis = parseJsonResponse(analysisResponseText);
+      outfitAnalysis = normalizeOutfitAnalysis(parsedAnalysis, textPayload);
+      analysisStatus = 'ready';
+
+      await persistOutfitAnalysis(supabase, outfit_id, outfitAnalysis);
+      await updateJobProgress(jobId, supabase, {
+        analysis_status: 'ready',
+        analysis: outfitAnalysis,
+        progress: {
+          stage: 'analysis_ready',
+          item_count: textPayload.itemCount,
+          analysis_ready_at: new Date().toISOString(),
+        },
+      });
+    } catch (err) {
+      analysisStatus = 'failed';
+      analysisError = err.message || 'Failed to analyze outfit from text';
+      console.warn('[OutfitRender] Text analysis failed, continuing render:', analysisError);
+      await updateJobProgress(jobId, supabase, {
+        analysis_status: 'failed',
+        analysis_error: analysisError,
+        progress: {
+          stage: 'analysis_failed',
+          analysis_failed_at: new Date().toISOString(),
+        },
+      });
+    }
+  } else {
+    await updateJobProgress(jobId, supabase, {
+      analysis_status: 'skipped',
+      progress: {
+        stage: 'analysis_skipped',
+        analysis_skipped_at: new Date().toISOString(),
+      },
+    });
+  }
 
   if (reference_image_url) {
     const [bodyB64, referenceB64] = await Promise.all([
@@ -495,12 +890,22 @@ async function processOutfitRender(input, supabase, userId) {
       outfit_id,
       image_id: uploadResult.imageId,
       prompt: prompt || null,
-      settings: { ...(settings || {}), reference_image_url },
+      settings: {
+        ...(settings || {}),
+        reference_image_url,
+        analysis_status: analysisStatus,
+        analysis_input_hash: outfitAnalysis?.input_hash || null,
+      },
       status: 'succeeded'
     });
 
     await supabase.from('outfits').update({ cover_image_id: uploadResult.imageId }).eq('id', outfit_id);
-    return { renders: [{ image_id: uploadResult.imageId, storage_key: uploadResult.storageKey }] };
+    return {
+      analysis_status: analysisStatus,
+      analysis: outfitAnalysis,
+      analysis_error: analysisError,
+      renders: [{ image_id: uploadResult.imageId, storage_key: uploadResult.storageKey }],
+    };
   }
 
   if (!headId) throw new Error('Missing headshot');
@@ -612,12 +1017,22 @@ async function processOutfitRender(input, supabase, userId) {
     outfit_id,
     image_id: imageId,
     prompt: prompt || null,
-    settings: { ...(settings || {}), mannequin_fallback: usedMannequinFallback },
+    settings: {
+      ...(settings || {}),
+      mannequin_fallback: usedMannequinFallback,
+      analysis_status: analysisStatus,
+      analysis_input_hash: outfitAnalysis?.input_hash || null,
+    },
     status: 'succeeded'
   });
 
   await supabase.from('outfits').update({ cover_image_id: imageId }).eq('id', outfit_id);
-  return { renders: [{ image_id: imageId, storage_key: storageKey }] };
+  return {
+    analysis_status: analysisStatus,
+    analysis: outfitAnalysis,
+    analysis_error: analysisError,
+    renders: [{ image_id: imageId, storage_key: storageKey }],
+  };
 }
 
 async function processOutfitMannequin(input, supabase, userId) {

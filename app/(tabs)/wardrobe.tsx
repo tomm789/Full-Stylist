@@ -851,10 +851,24 @@ export default function WardrobeScreen() {
 
       // Create outfit_render job with selected items
       // Handle items that may not have category_id yet (AI will recognize them)
-      const selected = selectedItems.map((item) => ({
-        category: item.category_id ? (categories.find((c) => c.id === item.category_id)?.name || '') : '',
-        wardrobe_item_id: item.id,
-      }));
+      const selected = selectedItems.map((item) => {
+        const categoryName = item.category_id ? (categories.find((c) => c.id === item.category_id)?.name || '') : '';
+        return {
+          category: categoryName,
+          category_id: item.category_id || null,
+          subcategory_id: item.subcategory_id || null,
+          wardrobe_item_id: item.id,
+          text_snapshot: {
+            title: item.title || '',
+            description: item.description || '',
+            brand: item.brand || '',
+            color_primary: item.color_primary || '',
+            category: categoryName,
+            category_id: item.category_id || null,
+            subcategory_id: item.subcategory_id || null,
+          },
+        };
+      });
 
       const { data: userSettings } = await getUserSettings(user.id);
       if (!userSettings?.body_shot_image_id) {
@@ -915,43 +929,13 @@ export default function WardrobeScreen() {
         console.warn('[Wardrobe] Job trigger returned error (may still work):', triggerResult.error);
         // Continue anyway - job might still be triggered
       }
-      
-      setGenerationStatus('Generating outfit...\nThis may take 60-90 seconds.');
-      
-      // Poll for completion (120 attempts = ~10+ minutes with exponential backoff)
-      const { data: finalJob, error: pollError } = await waitForAIJobCompletion(
-        renderJob.id,
-        120,
-        2000,
-        '[Wardrobe]'
-      );
-      
-      if (pollError || !finalJob) {
-        throw new Error('Outfit generation timed out. Please try again.');
-      }
-      
-      if (finalJob.status === 'failed') {
-        const errorMessage = finalJob.error || 'Unknown error';
-        console.error('[Wardrobe] Outfit generation failed:', errorMessage);
-        if (isGeminiPolicyBlockError(errorMessage)) {
-          setIsGenerating(false);
-          setGenerationStatus('');
-          setPolicyMessage('Gemini could not generate this outfit because it conflicts with safety policy. No credits were charged.');
-          setPolicyModalVisible(true);
-          return;
-        }
-        throw new Error(`Generation failed: ${errorMessage}`);
-      }
 
-      // Success! Show success message briefly, then navigate
-      setGenerationStatus('Success! Loading outfit...');
-      
-      setTimeout(() => {
-        setIsGenerating(false);
-        setOutfitCreatorMode(false);
-        setSelectedOutfitItems([]);
-        router.push(`/outfits/${outfitId}/view?returnTo=outfits`);
-      }, 500);
+      // Navigate immediately so the outfit view page can show the richer generating experience
+      setIsGenerating(false);
+      setGenerationStatus('');
+      setOutfitCreatorMode(false);
+      setSelectedOutfitItems([]);
+      router.push(`/outfits/${outfitId}/view?renderJobId=${renderJob.id}&returnTo=wardrobe`);
 
     } catch (error: any) {
       console.error('Outfit generation error:', error);
