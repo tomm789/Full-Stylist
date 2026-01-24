@@ -15,6 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { initializeUserProfile } from '@/lib/user';
+import { updateUserSettings } from '@/lib/settings';
 import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
@@ -398,12 +399,29 @@ export default function OnboardingScreen() {
           }
           throw new Error(`Generation failed: ${failureMessage}`);
         }
-        
-        
+        const generatedImageId = finalJob.result?.image_id || finalJob.result?.generated_image_id;
+
+        let showSuccessAlert = true;
+        if (generatedImageId) {
+          const { error: settingsError } = await updateUserSettings(user.id, {
+            body_shot_image_id: generatedImageId,
+          });
+          if (settingsError) {
+            console.warn('[Onboarding] Failed to save body shot selection:', settingsError);
+            Alert.alert(
+              'Saved with Warning',
+              'Your studio model was generated, but we could not save it as active. Please select it from your profile.'
+            );
+            showSuccessAlert = false;
+          }
+        }
+
         setGeneratingBodyShot(false);
         setLoadingMessage('');
-        
-        Alert.alert('Success', 'Studio model generated successfully!');
+
+        if (showSuccessAlert) {
+          Alert.alert('Success', 'Studio model generated successfully!');
+        }
         // Complete onboarding - navigate to main app
         router.replace('/(tabs)/wardrobe');
       } else {

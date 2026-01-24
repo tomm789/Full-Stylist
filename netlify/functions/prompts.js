@@ -132,6 +132,29 @@ const PROMPTS = {
     3. Focus ONLY on applying/changing the clothes as requested.
     4. Ensure head-to-body proportions are accurate (8-heads-tall rule). No long necks or large heads.
     5. Background: Pure white infinite studio.
+  `,
+
+  // Try-on (2-image) workflow
+  // Image 0: body/pose reference
+  // Image 1: target outfit reference
+  OUTFIT_TRY_ON: (details) => `
+    Fashion Photography.
+    OUTPUT FORMAT: Vertical Portrait (3:4 Aspect Ratio).
+
+    SUBJECT REFERENCE:
+    - Image 0: Current body state, pose, and framing.
+
+    OUTFIT REFERENCE:
+    - Image 1: The target outfit reference. Transfer the exact outfit from Image 1 onto Image 0.
+
+    DETAILS:
+    - ${details}
+
+    CRITICAL:
+    1. Maintain the EXACT pose and framing from Image 0.
+    2. Focus ONLY on applying/changing the outfit as requested.
+    3. Ensure lighting, proportions, and textures remain realistic.
+    4. Background: Pure white infinite studio.
   `
 };
 

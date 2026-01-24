@@ -51,6 +51,7 @@ export default function UserWardrobeScreen({ userId, headerComponent }: UserWard
   const [items, setItems] = useState<WardrobeItem[]>([]);
   const [allItems, setAllItems] = useState<WardrobeItem[]>([]);
   const [itemImagesCache, setItemImagesCache] = useState<Map<string, string | null>>(new Map());
+  const [itemOutfitCounts, setItemOutfitCounts] = useState<Map<string, { self: number; others: number }>>(new Map());
   const [savedItems, setSavedItems] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -169,6 +170,28 @@ export default function UserWardrobeScreen({ userId, headerComponent }: UserWard
       if (data.length > 0) {
         const itemIds = data.map((item) => item.id);
         const { data: imagesMap } = await getWardrobeItemsImages(itemIds);
+        const ownerByItemId = new Map(data.map((item) => [item.id, item.owner_user_id]));
+        const initialCounts = new Map<string, { self: number; others: number }>();
+        data.forEach((item) => {
+          initialCounts.set(item.id, { self: 0, others: 0 });
+        });
+        const { data: outfitItems } = await supabase
+          .from('outfit_items')
+          .select('wardrobe_item_id, outfit:outfit_id(owner_user_id)')
+          .in('wardrobe_item_id', itemIds);
+
+        outfitItems?.forEach((row: any) => {
+          const counts = initialCounts.get(row.wardrobe_item_id);
+          const ownerId = ownerByItemId.get(row.wardrobe_item_id);
+          const outfitOwnerId = row.outfit?.owner_user_id;
+          if (!counts || !ownerId || !outfitOwnerId) return;
+          if (outfitOwnerId === ownerId) {
+            counts.self += 1;
+          } else {
+            counts.others += 1;
+          }
+        });
+        setItemOutfitCounts(initialCounts);
 
         const newCache = new Map<string, string | null>();
         for (const itemId of itemIds) {
@@ -186,6 +209,7 @@ export default function UserWardrobeScreen({ userId, headerComponent }: UserWard
         setItemImagesCache(newCache);
       } else {
         setItemImagesCache(new Map());
+        setItemOutfitCounts(new Map());
       }
 
       if (user) {
@@ -315,6 +339,7 @@ export default function UserWardrobeScreen({ userId, headerComponent }: UserWard
     const imageUrl = itemImagesCache.get(item.id) || null;
     const isSaved = savedItems.has(item.id);
     const isSaving = savingItemId === item.id;
+    const counts = itemOutfitCounts.get(item.id) || { self: 0, others: 0 };
 
     return (
       <TouchableOpacity
@@ -354,6 +379,12 @@ export default function UserWardrobeScreen({ userId, headerComponent }: UserWard
         <Text style={styles.itemTitle} numberOfLines={1}>
           {item.title}
         </Text>
+        <View style={styles.itemMetaRow}>
+          <Text style={styles.itemMetaText}>Outfits: {counts.self}</Text>
+          {counts.others > 0 && (
+            <Text style={styles.itemMetaTextSecondary}>By others: {counts.others}</Text>
+          )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -661,12 +692,12 @@ const styles = StyleSheet.create({
   },
   itemImage: {
     width: '100%',
-    height: '80%',
+    height: '70%',
     backgroundColor: '#f0f0f0',
   },
   itemImagePlaceholder: {
     width: '100%',
-    height: '80%',
+    height: '70%',
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
@@ -684,6 +715,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#000',
     fontWeight: '500',
+  },
+  itemMetaRow: {
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    gap: 2,
+  },
+  itemMetaText: {
+    fontSize: 11,
+    color: '#666',
+  },
+  itemMetaTextSecondary: {
+    fontSize: 11,
+    color: '#999',
   },
   emptyContainer: {
     flex: 1,

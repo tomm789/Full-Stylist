@@ -30,6 +30,21 @@ export default function AddItemScreen() {
   const [initializing, setInitializing] = useState(true);
   const [generatingAI, setGeneratingAI] = useState(false);
   const [aiJobId, setAiJobId] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<{
+    category: string;
+    subcategory: string;
+    attributes: string[];
+    description: string;
+    title: string;
+  } | null>(null);
+  type AnalysisStep = 'spinner' | 'analyzing' | 'category' | 'subcategory' | 'attribute' | 'description' | 'title' | 'adding';
+  const [analysisStep, setAnalysisStep] = useState<AnalysisStep>('spinner');
+  const [attributeIndex, setAttributeIndex] = useState(0);
+  const [productShotComplete, setProductShotComplete] = useState(false);
+  const [pendingItemId, setPendingItemId] = useState<string | null>(null);
+  const [pendingImageIds, setPendingImageIds] = useState<string[]>([]);
+  const [lineVisible, setLineVisible] = useState(true);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     initialize();
@@ -51,6 +66,183 @@ export default function AddItemScreen() {
     // Categories no longer needed - AI will recognize them
     setInitializing(false);
   };
+
+  const scheduleStep = (nextStep: AnalysisStep, delayMs: number) => {
+    const timer = setTimeout(() => {
+      setLineVisible(false);
+      setTimeout(() => {
+        setAnalysisStep(nextStep);
+        setLineVisible(true);
+      }, 200);
+    }, delayMs);
+    return () => clearTimeout(timer);
+  };
+
+  const resetAnalysis = () => {
+    setAnalysisResult(null);
+    setAnalysisStep('spinner');
+    setAttributeIndex(0);
+    setLineVisible(true);
+  };
+
+  const handleReportIssue = () => {
+    const details = aiJobId ? `Job ID: ${aiJobId}` : 'No job ID available';
+    Alert.alert('Report Issue', `Share this with support:\n${details}`);
+  };
+
+  const handleCancelGeneration = () => {
+    setGeneratingAI(false);
+    setAiJobId(null);
+    setAiError(null);
+    setPendingItemId(null);
+    setPendingImageIds([]);
+  };
+
+  const startGenerationJobs = async (itemId: string, imageIds: string[]) => {
+    setAiError(null);
+    resetAnalysis();
+    setGeneratingAI(true);
+    setPendingItemId(itemId);
+    setPendingImageIds(imageIds);
+    setProductShotComplete(false);
+
+    try {
+      const { data: productShotJob, error: productShotError } = await triggerProductShot(
+        user!.id,
+        imageIds[0],
+        itemId
+      );
+
+      if (productShotJob && !productShotError) {
+        const execResult = await triggerAIJobExecution(productShotJob.id);
+        if (!execResult.error) {
+          pollAIJobWithFinalCheck(productShotJob.id, 60, 2000)
+            .then(() => setProductShotComplete(true))
+            .catch(() => {
+              setAiError('Sorry, the item failed to add to your wardrobe.');
+            });
+        } else {
+          setAiError('Sorry, the item failed to add to your wardrobe.');
+        }
+      } else if (productShotError) {
+        setAiError('Sorry, the item failed to add to your wardrobe.');
+      }
+
+      const { data: autoTagJob, error: autoTagError } = await triggerAutoTag(
+        user!.id,
+        itemId,
+        imageIds,
+        null,
+        null
+      );
+
+      if (autoTagJob && !autoTagError) {
+        const execResult = await triggerAIJobExecution(autoTagJob.id);
+        setAiJobId(autoTagJob.id);
+        if (!execResult.error) {
+          try {
+            const { data: autoTagResult } = await pollAIJobWithFinalCheck(autoTagJob.id, 30, 2000);
+            const parsed = autoTagResult?.result || {};
+            const attributes = Array.isArray(parsed.attributes)
+              ? parsed.attributes
+                  .map((attr: any) => {
+                    const values = (attr.values || [])
+                      .map((value: any) => value.value)
+                      .filter(Boolean)
+                      .join(', ');
+                    if (!values) return null;
+                    return `${attr.key}: ${values}`;
+                  })
+                  .filter(Boolean)
+              : [];
+            setAnalysisResult({
+              category: parsed.recognized_category || 'Category',
+              subcategory: parsed.recognized_subcategory || 'Subcategory',
+              attributes,
+              description: parsed.suggested_notes || 'Description',
+              title: parsed.suggested_title || 'Title',
+            });
+          } catch (error) {
+            setAiError('Sorry, the item failed to add to your wardrobe.');
+          }
+        } else {
+          setAiError('Sorry, the item failed to add to your wardrobe.');
+        }
+      } else if (autoTagError) {
+        setAiError('Sorry, the item failed to add to your wardrobe.');
+      }
+    } catch (error) {
+      setAiError('Sorry, the item failed to add to your wardrobe.');
+    }
+  };
+
+  const handleRetryGeneration = () => {
+    if (!pendingItemId || pendingImageIds.length === 0) return;
+    startGenerationJobs(pendingItemId, pendingImageIds);
+  };
+
+  useEffect(() => {
+    if (!generatingAI) return;
+    if (aiError) return;
+
+    if (!analysisResult) {
+      if (analysisStep === 'spinner') {
+        return scheduleStep('analyzing', 2000);
+      }
+      if (analysisStep === 'analyzing') {
+        return scheduleStep('spinner', 3000);
+      }
+      return;
+    }
+
+    if (analysisStep === 'spinner' || analysisStep === 'analyzing') {
+      return scheduleStep('category', 0);
+    }
+
+    if (analysisStep === 'category') {
+      return scheduleStep('subcategory', 1000);
+    }
+
+    if (analysisStep === 'subcategory') {
+      if (analysisResult.attributes.length > 0) {
+        return scheduleStep('attribute', 1000);
+      }
+      return scheduleStep('description', 1000);
+    }
+
+    if (analysisStep === 'attribute') {
+      const timer = setTimeout(() => {
+        setAttributeIndex((current) => {
+          const nextIndex = current + 1;
+          if (analysisResult.attributes[nextIndex]) {
+            return nextIndex;
+          }
+          scheduleStep('description', 0);
+          return current;
+        });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+
+    if (analysisStep === 'description') {
+      return scheduleStep('title', 2000);
+    }
+
+    if (analysisStep === 'title') {
+      return scheduleStep('adding', 1000);
+    }
+  }, [analysisResult, analysisStep, aiError, generatingAI]);
+
+  useEffect(() => {
+    if (!generatingAI || analysisStep !== 'adding' || !pendingItemId) return;
+    if (!productShotComplete) return;
+    const timer = setTimeout(() => {
+      setGeneratingAI(false);
+      setAiJobId(null);
+      router.replace(`/wardrobe/item/${pendingItemId}`);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [analysisStep, generatingAI, pendingItemId, productShotComplete, router]);
 
   // Removed loadSubcategories - no longer needed
 
@@ -154,74 +346,11 @@ export default function AddItemScreen() {
         if (data?.item && data?.images && data.images.length > 0) {
           try {
             const imageIds = data.images.map((img: any) => img.image_id);
-
-            // Create product shot job for first image (auto-triggered)
-            const { data: productShotJob, error: productShotError } = await triggerProductShot(
-              user.id,
-              imageIds[0],
-              data.item.id
-            );
-
-            // Auto-trigger the product shot job immediately
-            if (productShotJob && !productShotError) {
-              const execResult = await triggerAIJobExecution(productShotJob.id);
-            } else if (productShotError) {
-              console.warn('Failed to create product shot job:', productShotError);
-            }
-
-            // Create auto_tag job (auto-triggered) - AI will recognize category/subcategory
-            const { data: autoTagJob, error: autoTagError } = await triggerAutoTag(
-              user.id,
-              data.item.id,
-              imageIds,
-              null, // No category provided - AI will recognize it
-              null  // No subcategory provided - AI will recognize it
-            );
-
-            // Auto-trigger the auto_tag job immediately
-            if (autoTagJob && !autoTagError) {
-              const execResult = await triggerAIJobExecution(autoTagJob.id);
-              if (!execResult.error) {
-                // Show loading dialog and poll for completion
-                setGeneratingAI(true);
-                setAiJobId(autoTagJob.id);
-                
-                // Poll for auto_tag completion (30 attempts = ~60 seconds)
-                // Wait for completion before navigating so user sees results immediately
-                try {
-                  await pollAIJobWithFinalCheck(autoTagJob.id, 30, 2000);
-                  
-                  // Navigate after polling completes (whether success, failure, or timeout)
-                  setGeneratingAI(false);
-                  setAiJobId(null);
-                  router.replace(`/wardrobe/item/${data.item.id}`);
-                } catch (error) {
-                  // Navigate even on error
-                  setGeneratingAI(false);
-                  setAiJobId(null);
-                  router.replace(`/wardrobe/item/${data.item.id}`);
-                }
-              } else {
-                // Trigger failed - navigate anyway
-                router.replace(`/wardrobe/item/${data.item.id}`);
-              }
-            } else if (autoTagError) {
-              console.warn('Failed to create auto-tag job:', autoTagError);
-              // Navigate even if job creation failed
-              router.replace(`/wardrobe/item/${data.item.id}`);
-            } else {
-              // No auto_tag job - navigate immediately
-              router.replace(`/wardrobe/item/${data.item.id}`);
-            }
-
-            // Note: Product shot job runs asynchronously
-            // Results will be applied when jobs complete via Netlify function
+            await startGenerationJobs(data.item.id, imageIds);
           } catch (error) {
             console.warn('Error triggering AI jobs:', error);
             // Don't fail the whole operation if AI jobs fail
-            setGeneratingAI(false);
-            setAiJobId(null);
-            router.replace(`/wardrobe/item/${data.item.id}`);
+            setAiError('Sorry, the item failed to add to your wardrobe.');
           }
         } else {
           // No images - navigate immediately
@@ -345,11 +474,43 @@ export default function AddItemScreen() {
         >
           <View style={styles.loadingOverlay}>
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#007AFF" />
-              <Text style={styles.loadingTitle}>Analyzing Item</Text>
-              <Text style={styles.loadingMessage}>
-                AI is recognizing category, attributes, and generating details...
-              </Text>
+              {aiError ? (
+                <>
+                  <Text style={styles.loadingTitle}>Sorry, the item failed to add to your wardrobe</Text>
+                  {aiJobId ? (
+                    <Text style={styles.loadingMessage}>Job ID: {aiJobId}</Text>
+                  ) : null}
+                  <View style={styles.errorActions}>
+                    <TouchableOpacity style={styles.errorButton} onPress={handleRetryGeneration}>
+                      <Text style={styles.errorButtonText}>Retry</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.errorButton} onPress={handleCancelGeneration}>
+                      <Text style={styles.errorButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.errorButton} onPress={handleReportIssue}>
+                      <Text style={styles.errorButtonText}>Report</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <>
+                  {(analysisStep === 'spinner' || analysisStep === 'analyzing' || analysisStep === 'adding') && (
+                    <ActivityIndicator size="large" color="#007AFF" />
+                  )}
+                  {lineVisible && (
+                    <Text style={styles.loadingTitle}>
+                      {analysisStep === 'spinner' && 'Preparing item...'}
+                      {analysisStep === 'analyzing' && 'Analyzing your image...'}
+                      {analysisStep === 'category' && analysisResult?.category}
+                      {analysisStep === 'subcategory' && analysisResult?.subcategory}
+                      {analysisStep === 'attribute' && analysisResult?.attributes[attributeIndex]}
+                      {analysisStep === 'description' && analysisResult?.description}
+                      {analysisStep === 'title' && analysisResult?.title}
+                      {analysisStep === 'adding' && 'Adding item to your wardrobe'}
+                    </Text>
+                  )}
+                </>
+              )}
             </View>
           </View>
         </Modal>
@@ -570,5 +731,25 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  errorActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  errorButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
+  },
+  errorButtonText: {
+    fontSize: 14,
+    color: '#111',
+    fontWeight: '600',
   },
 });

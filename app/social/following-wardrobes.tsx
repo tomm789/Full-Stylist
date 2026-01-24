@@ -17,6 +17,8 @@ type FollowedUser = {
 type WardrobePreview = {
   user: FollowedUser;
   items: Array<{ id: string; title: string; imageUrl: string | null }>;
+  wardrobeCount: number;
+  outfitCount: number;
 };
 
 const priorityCategoryKeywords = ['dress', 'dresses', 'shoes', 'bags', 'bag', 'jewellery', 'jewelry'];
@@ -118,6 +120,11 @@ export default function FollowingWardrobesScreen() {
       const previewsData = await Promise.all(
         followedUsers.map(async (followed) => {
           const { data: wardrobeItems } = await getUserWardrobeItems(followed.id);
+          const { count: outfitCount } = await supabase
+            .from('outfits')
+            .select('id', { count: 'exact', head: true })
+            .eq('owner_user_id', followed.id)
+            .eq('archived_at', null);
           const selectedItems = selectPreviewItems(wardrobeItems || []);
           const itemIds = selectedItems.map((item) => item.id);
           const { data: imagesMap } = await getWardrobeItemsImages(itemIds);
@@ -138,6 +145,8 @@ export default function FollowingWardrobesScreen() {
           return {
             user: followed,
             items: previewItems,
+            wardrobeCount: wardrobeItems?.length || 0,
+            outfitCount: outfitCount || 0,
           } satisfies WardrobePreview;
         })
       );
@@ -176,12 +185,24 @@ export default function FollowingWardrobesScreen() {
               style={styles.card}
               onPress={() => router.push(`/wardrobe/user/${item.user.id}`)}
             >
-              <TouchableOpacity
-                style={styles.profileLink}
-                onPress={() => router.push(`/users/${item.user.id}`)}
-              >
-                <Ionicons name="person-circle-outline" size={20} color="#111" />
-              </TouchableOpacity>
+              <View style={styles.topRightActions}>
+                <TouchableOpacity
+                  style={styles.profileLink}
+                  onPress={() => router.push(`/users/${item.user.id}`)}
+                >
+                  {item.user.avatar_url ? (
+                    <ExpoImage source={{ uri: item.user.avatar_url }} style={styles.profileAvatar} />
+                  ) : (
+                    <Ionicons name="person-circle-outline" size={28} color="#111" />
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.outfitLink}
+                  onPress={() => router.push(`/users/${item.user.id}?tab=outfits`)}
+                >
+                  <Ionicons name="shirt-outline" size={22} color="#111" />
+                </TouchableOpacity>
+              </View>
               <View style={styles.cardHeader}>
                 {item.user.avatar_url ? (
                   <ExpoImage source={{ uri: item.user.avatar_url }} style={styles.avatar} />
@@ -195,6 +216,9 @@ export default function FollowingWardrobesScreen() {
                   {item.user.handle ? (
                     <Text style={styles.userHandle}>@{item.user.handle}</Text>
                   ) : null}
+                  <Text style={styles.userCounts}>
+                    {item.wardrobeCount} items • {item.outfitCount} outfits
+                  </Text>
                 </View>
               </View>
               <View style={styles.previewGrid}>
@@ -247,13 +271,38 @@ const styles = StyleSheet.create({
     elevation: 3,
     position: 'relative',
   },
-  profileLink: {
+  topRightActions: {
     position: 'absolute',
     top: 12,
     right: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  profileLink: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  profileAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+  },
+  outfitLink: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
@@ -292,13 +341,18 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
   },
+  userCounts: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+  },
   previewGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'space-between',
+    gap: 6,
   },
   previewItem: {
-    width: '30%',
+    width: '19%',
     aspectRatio: 3 / 4,
     borderRadius: 12,
     overflow: 'hidden',

@@ -18,7 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { uploadImageToStorage } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { triggerBodyShotGenerate, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
-import { getUserSettings } from '@/lib/settings';
+import { getUserSettings, updateUserSettings } from '@/lib/settings';
 import PolicyBlockModal from '../components/PolicyBlockModal';
 
 interface Headshot {
@@ -246,8 +246,24 @@ export default function NewBodyshotScreen() {
           throw new Error(`Generation failed: ${failureMessage}`);
         }
         
+        let showSuccessAlert = true;
         // Get the generated body shot image ID from the job result
         const generatedImageId = finalJob.result?.image_id || finalJob.result?.generated_image_id;
+
+        if (generatedImageId) {
+          const { error: settingsError } = await updateUserSettings(user.id, {
+            body_shot_image_id: generatedImageId,
+          });
+
+          if (settingsError) {
+            console.warn('[NewBodyshot] Failed to save body shot selection:', settingsError);
+            Alert.alert(
+              'Saved with Warning',
+              'Your studio model was generated, but we could not save it as active. Please select it from your profile.'
+            );
+            showSuccessAlert = false;
+          }
+        }
         
         setGenerating(false);
         setLoadingMessage('');
@@ -256,7 +272,9 @@ export default function NewBodyshotScreen() {
           // Navigate to the body shot detail page
           router.replace(`/bodyshot/${generatedImageId}` as any);
         } else {
-          Alert.alert('Success', 'Studio model generated successfully!');
+          if (showSuccessAlert) {
+            Alert.alert('Success', 'Studio model generated successfully!');
+          }
           router.back();
         }
       } else {
