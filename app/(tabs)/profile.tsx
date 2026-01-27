@@ -23,7 +23,7 @@ import {
 type TabType = 'posts' | 'headshots' | 'bodyshots';
 
 export default function ProfileScreen() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('posts');
   const [showEditModal, setShowEditModal] = useState(false);
@@ -75,11 +75,20 @@ export default function ProfileScreen() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" />
       </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Profile</Text>
+        <Text style={styles.warningText}>Sign in to view your profile</Text>
+      </ScrollView>
     );
   }
 
