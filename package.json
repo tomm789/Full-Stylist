@@ -23,6 +23,7 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
     "@types/react": "~19.1.10",
+    "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "expo": "^54.0.31",
     "expo-constants": "~18.0.13",
@@ -44,6 +45,7 @@
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@netlify/functions": "^5.1.2"
+    "@netlify/functions": "^5.1.2",
+    "babel-plugin-module-resolver": "^5.0.2"
   }
 }

@@ -2,14 +2,22 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/lib/*": ["./src/lib/*"],
+      "@/app/*": ["./app/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/hooks/*": ["./src/hooks/*"],
+      "@/utils/*": ["./src/utils/*"],
+      "@/contexts/*": ["./src/contexts/*"],
+      "@/hooks": ["./src/hooks/index.ts"],
+      "@/styles": ["./src/styles"]  // ← ADD THIS LINE
     }
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx"
-, "netlify/functions/prompts.js", "netlify/functions/ai-job-runner.js"  ]
+    "**/*.tsx",
+    "netlify/functions/prompts.js",
+    "netlify/functions/ai-job-runner.js"
+  ]
 }

@@ -1,180 +1,58 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * Bodyshot Detail Screen (Refactored)
+ * View, duplicate, or delete bodyshot
+ */
+
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   SafeAreaView,
   Modal,
+  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { useHeadshotEdit } from '@/hooks/profile';
 
 export default function BodyshotDetailScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { id: bodyshotId } = useLocalSearchParams();
-  const [bodyshotUrl, setBodyshotUrl] = useState<string | null>(null);
-  const [bodyshotImage, setBodyshotImage] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    if (bodyshotId && user) {
-      loadBodyshot();
-    }
-  }, [bodyshotId, user]);
-
-  const loadBodyshot = async () => {
-    if (!bodyshotId || typeof bodyshotId !== 'string' || !user) return;
-
-    setLoading(true);
-    try {
-      // Load the bodyshot image
-      const { data: image, error: imageError } = await supabase
-        .from('images')
-        .select('*')
-        .eq('id', bodyshotId)
-        .single();
-
-      if (imageError || !image) {
-        throw new Error('Body shot not found');
-      }
-
-      setBodyshotImage(image);
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from(image.storage_bucket || 'media')
-        .getPublicUrl(image.storage_key);
-      
-      setBodyshotUrl(urlData.publicUrl);
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load body shot');
-      router.back();
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Reuse the headshot edit hook (works for bodyshots too)
+  const {
+    headshot: bodyshot,
+    loading,
+    duplicating,
+    deleting,
+    duplicate,
+    deleteHeadshot: deleteBodyshot,
+    setAsActive,
+  } = useHeadshotEdit({
+    headshotId: bodyshotId as string,
+    userId: user?.id,
+  });
 
   const handleDuplicate = async () => {
-    if (!user || !bodyshotUrl) {
-      Alert.alert('Error', 'Cannot duplicate body shot');
-      return;
-    }
-
-    setGenerating(true);
-    
-    try {
-      // Fetch the current bodyshot image as a blob
-      const response = await fetch(bodyshotUrl);
-      const blob = await response.blob();
-      
-      // Upload the duplicate to storage in the body_shots folder
-      const timestamp = Date.now();
-      const storagePath = `${user.id}/ai/body_shots/${timestamp}.jpg`;
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('media')
-        .upload(storagePath, blob, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Create a new image record for the duplicate
-      const { data: imageRecord, error: imageError } = await supabase
-        .from('images')
-        .insert({
-          owner_user_id: user.id,
-          storage_bucket: 'media',
-          storage_key: uploadData.path,
-          mime_type: 'image/jpeg',
-          source: 'ai_generated',
-        })
-        .select()
-        .single();
-
-      if (imageError || !imageRecord) {
-        throw imageError || new Error('Failed to create duplicate image record');
-      }
-
-      setGenerating(false);
-      
-      // Navigate to the duplicate's detail page
-      router.replace(`/bodyshot/${imageRecord.id}` as any);
-    } catch (error: any) {
-      setGenerating(false);
-      Alert.alert('Error', error.message || 'Failed to duplicate body shot');
+    const newId = await duplicate();
+    if (newId) {
+      router.replace(`/bodyshot/${newId}` as any);
     }
   };
 
-
-  const handleDelete = () => {
-    setShowDeleteConfirm(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!user || !bodyshotId || !bodyshotImage) return;
-
-    setDeleting(true);
-    try {
-      // Delete from storage
-      if (bodyshotImage.storage_key) {
-        const { error: storageError } = await supabase.storage
-          .from(bodyshotImage.storage_bucket || 'media')
-          .remove([bodyshotImage.storage_key]);
-
-        if (storageError) {
-          console.error('Storage delete error:', storageError);
-          // Continue with database deletion even if storage deletion fails
-        }
-      }
-
-      // Delete from images table
-      const { error: imageError } = await supabase
-        .from('images')
-        .delete()
-        .eq('id', bodyshotId)
-        .eq('owner_user_id', user.id);
-
-      if (imageError) {
-        throw imageError;
-      }
-
-      // If this was the active body shot, clear it from user settings
-      const { data: settings } = await supabase
-        .from('user_settings')
-        .select('body_shot_image_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (settings?.body_shot_image_id === bodyshotId) {
-        await updateUserSettings(user.id, {
-          body_shot_image_id: null,
-        } as any);
-      }
-
-      setDeleting(false);
+  const handleDelete = async () => {
+    const success = await deleteBodyshot();
+    if (success) {
       setShowDeleteConfirm(false);
-      
-      // Navigate back
       router.back();
-    } catch (error: any) {
-      setDeleting(false);
-      setShowDeleteConfirm(false);
-      Alert.alert('Error', error.message || 'Failed to delete body shot');
     }
   };
 
@@ -185,7 +63,7 @@ export default function BodyshotDetailScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#000" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Body Shot</Text>
+          <Text style={styles.headerTitle}>Bodyshot</Text>
           <View style={styles.backButton} />
         </View>
         <View style={styles.loadingContainer}>
@@ -195,6 +73,10 @@ export default function BodyshotDetailScreen() {
     );
   }
 
+  if (!bodyshot) {
+    return null;
+  }
+
   return (
     <>
       <SafeAreaView style={styles.container}>
@@ -202,43 +84,84 @@ export default function BodyshotDetailScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#000" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Studio Model</Text>
+          <Text style={styles.headerTitle}>Bodyshot</Text>
           <View style={styles.headerActions}>
-            <TouchableOpacity onPress={handleDuplicate} style={styles.headerButton} disabled={generating}>
+            <TouchableOpacity onPress={setAsActive} style={styles.headerButton}>
+              <Ionicons name="checkmark-circle-outline" size={24} color="#34c759" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDuplicate}
+              style={styles.headerButton}
+              disabled={duplicating}
+            >
               <Ionicons name="copy-outline" size={24} color="#007AFF" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleDelete} style={[styles.headerButton, styles.deleteButton]}>
+            <TouchableOpacity
+              onPress={() => setShowDeleteConfirm(true)}
+              style={styles.headerButton}
+            >
               <Ionicons name="trash-outline" size={24} color="#FF3B30" />
             </TouchableOpacity>
           </View>
         </View>
 
         <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
-          {bodyshotUrl && (
-            <View style={styles.imageContainer}>
-              <ExpoImage
-                source={{ uri: bodyshotUrl }}
-                style={styles.image}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-              />
-            </View>
-          )}
+          <View style={styles.imageContainer}>
+            <ExpoImage
+              source={{ uri: bodyshot.url }}
+              style={styles.image}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          </View>
+
+          <View style={styles.infoSection}>
+            <Text style={styles.infoTitle}>About Bodyshots</Text>
+            <Text style={styles.infoText}>
+              Bodyshots combine your headshot with a full-body photo to create professional
+              studio-quality model photos. You can duplicate this bodyshot to create
+              variations.
+            </Text>
+          </View>
+
+          <View style={styles.actionsSection}>
+            <TouchableOpacity
+              style={[styles.actionButton, duplicating && styles.actionButtonDisabled]}
+              onPress={handleDuplicate}
+              disabled={duplicating}
+            >
+              {duplicating ? (
+                <ActivityIndicator color="#007AFF" size="small" />
+              ) : (
+                <Ionicons name="copy-outline" size={24} color="#007AFF" />
+              )}
+              <Text style={styles.actionButtonText}>Duplicate</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={setAsActive}
+            >
+              <Ionicons name="checkmark-circle-outline" size={24} color="#34c759" />
+              <Text style={styles.actionButtonText}>Set as Active</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </SafeAreaView>
-      
+
       {/* Delete Confirmation Modal */}
       <Modal
         visible={showDeleteConfirm}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={() => setShowDeleteConfirm(false)}
       >
         <View style={styles.deleteModalContainer}>
           <View style={styles.deleteModalContent}>
-            <Text style={styles.deleteModalTitle}>Delete Studio Model</Text>
+            <Text style={styles.deleteModalTitle}>Delete Bodyshot</Text>
             <Text style={styles.deleteModalMessage}>
-              Are you sure you want to delete this studio model? This action cannot be undone.
+              Are you sure you want to delete this bodyshot? This action cannot be
+              undone.
             </Text>
             <View style={styles.deleteModalButtons}>
               <TouchableOpacity
@@ -250,7 +173,7 @@ export default function BodyshotDetailScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.deleteModalButton, styles.confirmDeleteButton]}
-                onPress={confirmDelete}
+                onPress={handleDelete}
                 disabled={deleting}
               >
                 {deleting ? (
@@ -298,9 +221,6 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: 8,
   },
-  deleteButton: {
-    // No special background, icon color will indicate delete action
-  },
   scrollContainer: {
     flex: 1,
   },
@@ -323,6 +243,45 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  infoSection: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+  },
+  infoTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#000',
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  actionsSection: {
+    gap: 12,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    gap: 12,
+  },
+  actionButtonDisabled: {
+    opacity: 0.6,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
   },
   deleteModalContainer: {
     flex: 1,

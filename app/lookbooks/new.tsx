@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { saveLookbook } from '@/lib/lookbooks';
 import { getUserOutfits } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
-import FilterDefinitionEditor from '@/app/components/FilterDefinitionEditor';
+import FilterDefinitionEditor from '@/components/FilterDefinitionEditor';
 
 type LookbookType = 'custom_manual' | 'custom_filter';
 
