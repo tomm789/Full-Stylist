@@ -16,7 +16,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfileData, useProfileEdit } from '@/hooks/profile';
 import {
   ProfileHeader,
-  ProfileStats,
   ProfileTabs,
   EditProfileModal,
 } from '@/components/profile';
@@ -24,7 +23,7 @@ import {
 type TabType = 'posts' | 'headshots' | 'bodyshots';
 
 export default function ProfileScreen() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('posts');
   const [showEditModal, setShowEditModal] = useState(false);
@@ -76,11 +75,20 @@ export default function ProfileScreen() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" />
       </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Profile</Text>
+        <Text style={styles.warningText}>Sign in to view your profile</Text>
+      </ScrollView>
     );
   }
 
@@ -100,15 +108,10 @@ export default function ProfileScreen() {
       {/* Hero Section */}
       <View style={styles.heroSection}>
         <ProfileHeader
-          displayName={profile.display_name}
-          handle={profile.handle}
-          headshotUrl={profile.headshot_image_url}
+          profile={profile}
+          primaryStat={{ label: 'Posts', value: profile.stats?.posts || 0 }}
+          isOwnProfile
           onEditPress={() => setShowEditModal(true)}
-        />
-        <ProfileStats
-          posts={profile.stats?.posts || 0}
-          followers={profile.stats?.followers || 0}
-          following={profile.stats?.following || 0}
         />
       </View>
 
