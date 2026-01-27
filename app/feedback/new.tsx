@@ -1,142 +1,186 @@
+/**
+ * New Feedback Thread Screen (Refactored)
+ * Create new feedback thread
+ */
+
 import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Alert,
+  SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { createFeedbackThread } from '@/lib/feedback';
+import { supabase } from '@/lib/supabase';
 
-export default function NewFeedbackThreadScreen() {
-  const router = useRouter();
+type Category = 'bug' | 'feature' | 'general' | 'other';
+
+const CATEGORIES: { value: Category; label: string; icon: string }[] = [
+  { value: 'bug', label: 'Bug Report', icon: 'bug-outline' },
+  { value: 'feature', label: 'Feature Request', icon: 'bulb-outline' },
+  { value: 'general', label: 'General Feedback', icon: 'chatbubble-outline' },
+  { value: 'other', label: 'Other', icon: 'help-circle-outline' },
+];
+
+export default function NewFeedbackScreen() {
   const { user } = useAuth();
+  const router = useRouter();
+  const [category, setCategory] = useState<Category>('general');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [category, setCategory] = useState<'bug' | 'feature' | 'general' | 'other'>('general');
-  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleCreate = async () => {
-    if (!user) {
-      Alert.alert('Error', 'You must be logged in to create a feedback thread');
-      return;
-    }
+  const handleSubmit = async () => {
+    if (!user) return;
 
     if (!title.trim()) {
-      Alert.alert('Error', 'Please enter a title for your feedback');
+      Alert.alert('Error', 'Please enter a title');
       return;
     }
 
     if (!body.trim()) {
-      Alert.alert('Error', 'Please enter a description for your feedback');
+      Alert.alert('Error', 'Please enter a description');
       return;
     }
 
-    setSaving(true);
+    setSubmitting(true);
 
     try {
-      const { data: thread, error } = await createFeedbackThread(user.id, {
-        title: title.trim(),
-        body: body.trim(),
-        category: category,
-      });
+      const { data, error } = await supabase
+        .from('feedback_threads')
+        .insert({
+          owner_user_id: user.id,
+          category,
+          status: 'open',
+          title: title.trim(),
+          body: body.trim(),
+        })
+        .select()
+        .single();
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      if (thread?.id) {
-        router.replace(`/feedback/${thread.id}`);
+      if (data) {
+        router.replace(`/feedback/${data.id}` as any);
       } else {
         router.back();
       }
     } catch (error: any) {
-      Alert.alert('Error', `Failed to create feedback thread: ${error.message || error}`);
+      Alert.alert('Error', error.message || 'Failed to create feedback thread');
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 
-  const categories: Array<{ value: 'bug' | 'feature' | 'general' | 'other'; label: string }> = [
-    { value: 'bug', label: 'Bug Report' },
-    { value: 'feature', label: 'Feature Request' },
-    { value: 'general', label: 'General Feedback' },
-    { value: 'other', label: 'Other' },
-  ];
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} disabled={saving}>
-          <Text style={styles.cancelButton}>Cancel</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="close" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Feedback</Text>
-        <TouchableOpacity onPress={handleCreate} disabled={saving}>
-          <Text style={[styles.createButton, saving && styles.createButtonDisabled]}>
-            Create
-          </Text>
+        <TouchableOpacity
+          onPress={handleSubmit}
+          disabled={submitting}
+          style={styles.submitButton}
+        >
+          {submitting ? (
+            <ActivityIndicator color="#007AFF" size="small" />
+          ) : (
+            <Text style={styles.submitButtonText}>Submit</Text>
+          )}
         </TouchableOpacity>
       </View>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Title *</Text>
-        <TextInput
-          style={styles.titleInput}
-          placeholder="Enter a title for your feedback"
-          value={title}
-          onChangeText={setTitle}
-          editable={!saving}
-          maxLength={200}
-        />
-
-        <Text style={styles.label}>Category *</Text>
-        <View style={styles.categoryContainer}>
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat.value}
-              style={[
-                styles.categoryButton,
-                category === cat.value && styles.categoryButtonSelected,
-              ]}
-              onPress={() => setCategory(cat.value)}
-              disabled={saving}
-            >
-              <Text
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
+        {/* Category Selection */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Category</Text>
+          <View style={styles.categoryGrid}>
+            {CATEGORIES.map((cat) => (
+              <TouchableOpacity
+                key={cat.value}
                 style={[
-                  styles.categoryButtonText,
-                  category === cat.value && styles.categoryButtonTextSelected,
+                  styles.categoryButton,
+                  category === cat.value && styles.categoryButtonActive,
                 ]}
+                onPress={() => setCategory(cat.value)}
               >
-                {cat.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Ionicons
+                  name={cat.icon as any}
+                  size={24}
+                  color={category === cat.value ? '#007AFF' : '#999'}
+                />
+                <Text
+                  style={[
+                    styles.categoryText,
+                    category === cat.value && styles.categoryTextActive,
+                  ]}
+                >
+                  {cat.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
-        <Text style={styles.label}>Description *</Text>
-        <TextInput
-          style={styles.bodyInput}
-          placeholder="Describe your feedback in detail..."
-          value={body}
-          onChangeText={setBody}
-          editable={!saving}
-          multiline
-          numberOfLines={10}
-          textAlignVertical="top"
-        />
-      </View>
-
-      {saving && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#007AFF" />
+        {/* Title Input */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Title</Text>
+          <TextInput
+            style={styles.titleInput}
+            placeholder="Brief summary of your feedback"
+            value={title}
+            onChangeText={setTitle}
+            maxLength={100}
+            editable={!submitting}
+          />
+          <Text style={styles.charCount}>{title.length}/100</Text>
         </View>
-      )}
-    </ScrollView>
+
+        {/* Body Input */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Description</Text>
+          <TextInput
+            style={styles.bodyInput}
+            placeholder="Provide details about your feedback..."
+            value={body}
+            onChangeText={setBody}
+            maxLength={1000}
+            multiline
+            textAlignVertical="top"
+            editable={!submitting}
+          />
+          <Text style={styles.charCount}>{body.length}/1000</Text>
+        </View>
+
+        {/* Tips */}
+        <View style={styles.tipsSection}>
+          <Text style={styles.tipsTitle}>Tips for good feedback:</Text>
+          <View style={styles.tip}>
+            <Ionicons name="checkmark-circle" size={16} color="#34c759" />
+            <Text style={styles.tipText}>Be specific and descriptive</Text>
+          </View>
+          <View style={styles.tip}>
+            <Ionicons name="checkmark-circle" size={16} color="#34c759" />
+            <Text style={styles.tipText}>
+              Include steps to reproduce (for bugs)
+            </Text>
+          </View>
+          <View style={styles.tip}>
+            <Ionicons name="checkmark-circle" size={16} color="#34c759" />
+            <Text style={styles.tipText}>Explain the use case (for features)</Text>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -145,98 +189,123 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  contentContainer: {
-    paddingBottom: 40,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  cancelButton: {
-    fontSize: 16,
-    color: '#666',
+  backButton: {
+    padding: 8,
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     color: '#000',
   },
-  createButton: {
+  submitButton: {
+    padding: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  submitButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#007AFF',
   },
-  createButtonDisabled: {
-    color: '#999',
+  scrollContainer: {
+    flex: 1,
   },
-  form: {
-    padding: 16,
+  content: {
+    padding: 20,
+  },
+  section: {
+    marginBottom: 24,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
+    marginBottom: 12,
     color: '#000',
-    marginBottom: 8,
-    marginTop: 16,
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  categoryButton: {
+    flex: 1,
+    minWidth: '45%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    gap: 12,
+  },
+  categoryButtonActive: {
+    borderColor: '#007AFF',
+    backgroundColor: '#f0f8ff',
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+    flex: 1,
+  },
+  categoryTextActive: {
+    color: '#007AFF',
+    fontWeight: '600',
   },
   titleInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
-    minHeight: 44,
-  },
-  categoryContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 8,
-  },
-  categoryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
-  },
-  categoryButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  categoryButtonText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  categoryButtonTextSelected: {
-    color: '#fff',
+    backgroundColor: '#f9f9f9',
   },
   bodyInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#f9f9f9',
     minHeight: 200,
-    textAlignVertical: 'top',
   },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'center',
+  charCount: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'right',
+    marginTop: 4,
+  },
+  tipsSection: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 16,
+  },
+  tipsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#000',
+  },
+  tip: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  tipText: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
   },
 });

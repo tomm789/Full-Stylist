@@ -20,7 +20,7 @@ import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
-import FindSimilarModal from '@/app/components/FindSimilarModal';
+import FindSimilarModal from '@/components/FindSimilarModal';
 import { getFeed, FeedItem, Post, deletePost } from '@/lib/posts';
 import {
   likeEntity,

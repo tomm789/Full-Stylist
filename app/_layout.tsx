@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
-import { AddToHomeScreenBanner } from '@/app/components/AddToHomeScreenBanner';
+import { AddToHomeScreenBanner } from '@/components/AddToHomeScreenBanner';
 
 export default function RootLayout() {
   // Register service worker for PWA support (web only)

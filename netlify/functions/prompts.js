@@ -1,7 +1,12 @@
-// prompts.js
+"use strict";
+
+// This module defines a collection of prompt templates used by the AI
+// generation functions. Each property corresponds to a distinct AI
+// workflow and returns either a static string or a function that
+// produces a string incorporating dynamic values.
 
 const PROMPTS = {
-  // Matched to original: "Analyze this clothing item image..."
+  // Analyze a clothing item and extract detailed attributes
   AUTO_TAG: (categories, subcategories) => `
     Analyze this clothing item image and extract detailed attributes in JSON format.
     
@@ -34,7 +39,7 @@ const PROMPTS = {
     Return ONLY valid JSON, no markdown code blocks, no explanation.
   `,
 
-  // Matched to original: "Transform this clothing item..."
+  // Transform a clothing item into a professional product shot
   PRODUCT_SHOT: `
     Transform this clothing item into a professional product photography shot.
     REQUIREMENTS:
@@ -50,8 +55,7 @@ const PROMPTS = {
     - OUTPUT: Square image (1:1 aspect ratio) suitable for grid display
   `,
 
-  // Matched to original: "Professional studio headshot..."
-  // Note: Handles default hair/makeup logic via function arguments in the handler
+  // Generate a professional headshot using the subject's selfie
   HEADSHOT: (hair, makeup) => `
     Professional studio headshot. 
     SUBJECT: The person in the image.
@@ -62,8 +66,7 @@ const PROMPTS = {
     OUTPUT: Professional headshot suitable for fashion photography.
   `,
 
-  // Matched to original: "Generate a wide-shot..."
-  // Restored the specific "grey boxer shorts and white ribbed singlet" instruction
+  // Compose a head on a body to produce a full-body composite
   BODY_COMPOSITE: `
     Generate a wide-shot, full-body studio photograph.
     SUBJECT: A person standing in grey boxer shorts and a white ribbed singlet.
@@ -81,40 +84,8 @@ const PROMPTS = {
     7. BACKGROUND: Pure white studio background.
   `,
 
-  // Matched to original: "Generate a photorealistic image..."
-  // This is Step 1 of the Mannequin workflow
-  OUTFIT_MANNEQUIN: (count, details) => `
-    Generate a photorealistic image of a fashion outfit on a ghost mannequin.
-    INSTRUCTIONS:
-    - Combine all provided clothing items into a single cohesive outfit.
-    - BACKGROUND: Simple grey studio.
-    - STYLE: Ghost mannequin (invisible mannequin).
-    - CLOTHING: ${count} items provided.
-    - DETAILS: ${details}.
-    - ASPECT RATIO: Vertical Portrait.
-  `,
-
-  // Matched to original: "DRESSING THE SUBJECT..."
-  // This is Step 2 of the Mannequin workflow
-  // NOTE: Your original code did NOT inject the user prompt here, only in Step 1. I have preserved that behavior.
-  OUTFIT_COMPOSITE: `
-    DRESSING THE SUBJECT:
-    - IMAGE 0: The body/pose reference (base photo).
-    - IMAGE 1: The target outfit (on mannequin).
-    - IMAGE 2: The facial identity reference (headshot).
-
-    TASK:
-    - Transfer the EXACT outfit from Image 1 onto the person in Image 0.
-    - Use the face, hair, and head from Image 2.
-    - Maintain the body pose and framing from Image 0.
-    - Ensure lighting and skin tones match perfectly.
-    - Ensure head-to-body proportions are accurate (8-heads-tall rule).
-    - OUTPUT: Full Body Vertical Portrait.
-  `,
-
-  // Matched to original: "Fashion Photography..."
-  // This is the Direct (1-step) workflow
-  OUTFIT_FINAL: (details) => `
+  // Direct outfit render prompt for client-side stacked clothing items
+  OUTFIT_FINAL_STACKED: (details, itemCount) => `
     Fashion Photography.
     OUTPUT FORMAT: Vertical Portrait (3:4 Aspect Ratio).
 
@@ -122,16 +93,24 @@ const PROMPTS = {
     - Image 0: Current body state, pose, and framing.
     - Image 1: STRICT Facial Identity reference. Use the face, hair, and head from this image.
 
+    CLOTHING REFERENCE:
+    - Image 2: A vertically-stacked image showing ${itemCount} clothing items.
+    - Each item is separated by a thin grey line in the stack.
+    - Analyze ALL items in this stacked image carefully.
+
     CLOTHING INSTRUCTIONS:
-    - Dress the subject in the provided clothing images.
+    - Dress the subject in ALL ${itemCount} clothing items from Image 2 (the stacked image).
+    - Combine all items into a cohesive, fashionable outfit.
     - ${details}
 
     CRITICAL:
     1. Apply the exact facial identity, hair, and head from Image 1 onto the body in Image 0.
     2. Maintain the EXACT pose and framing from Image 0.
-    3. Focus ONLY on applying/changing the clothes as requested.
+    3. Use ALL clothing items visible in the stacked Image 2.
     4. Ensure head-to-body proportions are accurate (8-heads-tall rule). No long necks or large heads.
     5. Background: Pure white infinite studio.
+    6. Create a cohesive outfit that looks natural and fashionable.
+    7. Pay attention to layering: start with base layers (underwear/shirts) then add outer layers (jackets/coats).
   `
 };
 

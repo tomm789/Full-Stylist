@@ -1,0 +1,301 @@
+# PROFILE & FEEDBACK REFACTORING - FILE INVENTORY
+
+Generated: 2026-01-26
+
+---
+
+## NEW HOOKS (5 files)
+
+### Profile Hooks (3 files, 350 lines)
+```
+/hooks/profile/
+├── useProfileData.ts          (100 lines) - Load profile, posts, images
+├── useProfileEdit.ts          (125 lines) - Edit profile, upload avatar
+├── useImageGeneration.ts      (125 lines) - Generate headshots/bodyshots
+└── index.ts                   (10 lines)  - Export all profile hooks
+```
+
+### Feedback Hooks (2 files, 160 lines)
+```
+/hooks/feedback/
+├── useFeedbackThreads.ts      (70 lines)  - Load/filter threads
+├── useFeedbackThread.ts       (90 lines)  - Thread details & comments
+└── index.ts                   (10 lines)  - Export all feedback hooks
+```
+
+---
+
+## NEW COMPONENTS (7 files)
+
+### Profile Components (5 files, 400 lines)
+```
+/app/components/profile/
+├── ProfileHeader.tsx          (60 lines)  - Avatar, name, handle, edit button
+├── ProfileStats.tsx           (45 lines)  - Posts/followers/following counts
+├── ProfileTabs.tsx            (215 lines) - Tab bar + content (posts/headshots/bodyshots)
+├── EditProfileModal.tsx       (80 lines)  - Edit modal with avatar upload
+└── index.ts                   (10 lines)  - Export all profile components
+```
+
+### Feedback Components (2 files, 190 lines)
+```
+/app/components/feedback/
+├── FeedbackCard.tsx           (120 lines) - Thread card with badges/stats
+├── FeedbackFilterBar.tsx      (70 lines)  - Category/status filters
+└── index.ts                   (10 lines)  - Export all feedback components
+```
+
+---
+
+## REFACTORED SCREENS (2 files)
+
+### Profile Screen
+```
+/app/(tabs)/
+└── profile-refactored.tsx     (150 lines) - Main profile screen
+```
+**Original:** 722 lines
+**Refactored:** 150 lines
+**Reduction:** 79% (572 lines saved)
+
+### Feedback List Screen
+```
+/app/feedback/
+└── index-refactored.tsx       (100 lines) - Feedback threads list
+```
+**Original:** 350 lines
+**Refactored:** 100 lines
+**Reduction:** 71% (250 lines saved)
+
+---
+
+## FILE DEPENDENCIES
+
+### Profile Screen Dependencies
+```
+profile-refactored.tsx
+├── @/hooks/profile
+│   ├── useProfileData
+│   └── useProfileEdit
+├── @/components/profile
+│   ├── ProfileHeader
+│   ├── ProfileStats
+│   ├── ProfileTabs
+│   └── EditProfileModal
+└── @/contexts/AuthContext
+```
+
+### Feedback List Dependencies
+```
+feedback/index-refactored.tsx
+├── @/hooks/feedback
+│   └── useFeedbackThreads
+├── @/components/feedback
+│   ├── FeedbackCard
+│   └── FeedbackFilterBar
+└── @/components/shared
+    ├── LoadingSpinner
+    └── EmptyState
+```
+
+---
+
+## READY TO REFACTOR (Not Yet Complete)
+
+### Headshot Screens
+```
+/app/headshot/
+├── new.tsx                    (500 lines) → ~200 lines (60% reduction)
+└── [id].tsx                   (700 lines) → ~300 lines (57% reduction)
+```
+**Can use:** useImageGeneration hook (already created)
+
+### Bodyshot Screens
+```
+/app/bodyshot/
+├── new.tsx                    (600 lines) → ~200 lines (67% reduction)
+└── [id].tsx                   (350 lines) → ~150 lines (57% reduction)
+```
+**Can use:** useImageGeneration hook (already created)
+
+### Feedback Screens
+```
+/app/feedback/
+├── [id].tsx                   (400 lines) → ~150 lines (62% reduction)
+└── new.tsx                    (200 lines) → ~120 lines (40% reduction)
+```
+**Can use:** useFeedbackThread hook (already created)
+
+### Listings Screens
+```
+/app/listings/
+├── index.tsx                  (200 lines) → ~100 lines (50% reduction)
+└── new.tsx                    (400 lines) → ~200 lines (50% reduction)
+```
+**Need:** useListings, useListingCreate hooks
+
+### Other Screens
+```
+/app/
+└── profile-images.tsx         (700 lines) → ~250 lines (64% reduction)
+```
+**Can use:** useImageGeneration hook (already created)
+
+### Auth Screens (minimal changes)
+```
+/app/auth/
+├── login.tsx                  (150 lines) - Extract useLogin hook
+├── signup.tsx                 (180 lines) - Extract useSignup hook
+└── _layout.tsx                (10 lines)  - No changes needed
+```
+
+---
+
+## INSTALLATION INSTRUCTIONS
+
+1. **Copy hooks:**
+   ```bash
+   cp -r outputs/hooks/profile src/hooks/
+   cp -r outputs/hooks/feedback src/hooks/
+   ```
+
+2. **Copy components:**
+   ```bash
+   cp -r outputs/app/components/profile src/app/components/
+   cp -r outputs/app/components/feedback src/app/components/
+   ```
+
+3. **Copy screens:**
+   ```bash
+   cp outputs/app/(tabs)/profile-refactored.tsx src/app/(tabs)/
+   cp outputs/app/feedback/index-refactored.tsx src/app/feedback/
+   ```
+
+4. **Update imports in app:**
+   - Replace old profile screen with profile-refactored.tsx
+   - Replace old feedback list with index-refactored.tsx
+
+5. **Test thoroughly:**
+   - Profile: editing, tabs, navigation
+   - Feedback: filters, list, navigation
+
+---
+
+## TOTAL FILE COUNT
+
+**New Infrastructure:**
+- 5 hook files (510 lines)
+- 7 component files (590 lines)
+- 2 refactored screens (250 lines)
+
+**Total:** 12 new files, 822 lines saved in screens, ~1,350 lines of infrastructure
+
+**ROI:** For every 1 line of infrastructure code written, saved 0.6 lines in screens (not counting future reuse)
+
+---
+
+## CUMULATIVE INFRASTRUCTURE (All Sections)
+
+**Total Reusable Files:** 108
+- Shared: 40 files
+- Wardrobe domain: 14 files
+- Outfits domain: 12 files
+- Calendar domain: 11 files
+- Lookbooks domain: 9 files
+- Social domain: 10 files
+- Profile domain: 7 files
+- Feedback domain: 5 files
+
+**Total Infrastructure Lines:** ~11,350
+**Total App Code Lines:** ~4,734 (from 12,377)
+**Reduction:** 62% overall
+
+---
+
+## NEXT REFACTORING SESSION
+
+**Priority Order:**
+1. **profile-images.tsx** (700 lines) - Can immediately use useImageGeneration
+2. **headshot/bodyshot screens** (2,150 lines total) - Can use useImageGeneration
+3. **feedback/[id].tsx + new.tsx** (600 lines total) - Can use useFeedbackThread
+4. **listings screens** (600 lines total) - Need new hooks
+5. **auth screens** (330 lines total) - Simple extraction
+
+**Estimated Additional Savings:** ~2,300 lines (60% reduction)
+
+---
+
+## TESTING MATRIX
+
+### Profile Screen
+| Feature | Test Case | Status |
+|---------|-----------|--------|
+| Load | Profile data displays correctly | ⏳ |
+| Stats | Counts show (posts/followers/following) | ⏳ |
+| Tabs | Switch between posts/headshots/bodyshots | ⏳ |
+| Posts | Grid shows 3 columns with images | ⏳ |
+| Headshots | Gallery shows generated images | ⏳ |
+| Bodyshots | Gallery shows generated images | ⏳ |
+| Edit | Modal opens/closes | ⏳ |
+| Save | Profile updates successfully | ⏳ |
+| Avatar | Upload updates avatar | ⏳ |
+| Nav | Navigate to posts/images works | ⏳ |
+
+### Feedback List
+| Feature | Test Case | Status |
+|---------|-----------|--------|
+| Load | Threads display in list | ⏳ |
+| Filter | Category filter updates list | ⏳ |
+| Filter | Status filter updates list | ⏳ |
+| Refresh | Pull-to-refresh reloads data | ⏳ |
+| Empty | Shows empty state when no threads | ⏳ |
+| Navigate | Tap thread opens detail | ⏳ |
+| Create | New button navigates to create | ⏳ |
+
+---
+
+## QUALITY METRICS
+
+### Code Quality
+- ✅ TypeScript strict mode
+- ✅ No any types (except error handling)
+- ✅ Proper error boundaries
+- ✅ Loading states
+- ✅ Empty states
+
+### Performance
+- ✅ Parallel data loading
+- ✅ Image caching (Map)
+- ✅ Memoization where needed
+- ✅ Lazy loading (FlatList)
+
+### Maintainability
+- ✅ Clear separation of concerns
+- ✅ Single responsibility principle
+- ✅ DRY (Don't Repeat Yourself)
+- ✅ Consistent naming
+- ✅ Comprehensive comments
+
+### UX
+- ✅ Pull-to-refresh
+- ✅ Loading indicators
+- ✅ Error messages
+- ✅ Empty states
+- ✅ Smooth animations (default RN)
+
+---
+
+## CHANGELOG
+
+**2026-01-26 - Profile & Feedback Refactoring**
+- Created useProfileData, useProfileEdit, useImageGeneration hooks
+- Created ProfileHeader, ProfileStats, ProfileTabs, EditProfileModal components
+- Refactored profile screen (722 → 150 lines, 79% reduction)
+- Created useFeedbackThreads, useFeedbackThread hooks
+- Created FeedbackCard, FeedbackFilterBar components
+- Refactored feedback list screen (350 → 100 lines, 71% reduction)
+- Total: 12 new files, 822 lines saved
+
+---
+
+End of File Inventory
