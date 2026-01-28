@@ -1,23 +1,29 @@
 /**
  * ProfileStats Component
- * Display posts, followers, following counts
+ * Display primary stat with followers/following counts
  */
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 interface ProfileStatsProps {
-  posts: number;
+  primaryLabel: string;
+  primaryValue: number;
   followers: number;
   following: number;
 }
 
-export function ProfileStats({ posts, followers, following }: ProfileStatsProps) {
+export function ProfileStats({
+  primaryLabel,
+  primaryValue,
+  followers,
+  following,
+}: ProfileStatsProps) {
   return (
     <View style={styles.container}>
       <View style={styles.statItem}>
-        <Text style={styles.statValue}>{posts}</Text>
-        <Text style={styles.statLabel}>Posts</Text>
+        <Text style={styles.statValue}>{primaryValue}</Text>
+        <Text style={styles.statLabel}>{primaryLabel}</Text>
       </View>
       <View style={styles.statItem}>
         <Text style={styles.statValue}>{followers}</Text>
@@ -41,13 +47,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#000',
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
   },
 });
