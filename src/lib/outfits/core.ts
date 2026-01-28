@@ -208,11 +208,11 @@ export async function getOutfitWithDetails(outfitId: string, userId: string): Pr
   }
 
   // Use the performant database function to get items with wardrobe details
-  const { data: itemsWithDetails, error: itemsError } = await supabase
-    .rpc('get_outfit_items_with_details', {
-      outfit_id: outfitId,
-      viewer_id: userId
-    });
+  const { data, error } = await supabase
+  .rpc('get_outfit_items_with_details', {
+    p_outfit_id: outfitId,
+    p_viewer_id: userId,
+  });
 
   if (itemsError) {
     return { data: null, error: itemsError };

@@ -9,7 +9,7 @@ import { View, Text, TouchableOpacity, StyleSheet, TextInput, Switch } from 'rea
 interface AIModelSectionProps {
   aiModelPreference: string;
   saving: boolean;
-  onModelSelection: (model: string) => Promise<void>;
+  onModelSelection: (model: string, password?: string) => Promise<void>;
   includeHeadshot: boolean;
   onHeadshotToggle: (enabled: boolean, password: string) => Promise<void>;
 }
@@ -23,6 +23,9 @@ export function AIModelSection({
 }: AIModelSectionProps) {
   const [showPasswordInput, setShowPasswordInput] = useState(false);
   const [password, setPassword] = useState('');
+  const [showModelPasswordInput, setShowModelPasswordInput] = useState(false);
+  const [modelPassword, setModelPassword] = useState('');
+  const [pendingModel, setPendingModel] = useState<string | null>(null);
 
   const handleTogglePress = () => {
     if (!includeHeadshot) {
@@ -47,6 +50,33 @@ export function AIModelSection({
   const handlePasswordCancel = () => {
     setPassword('');
     setShowPasswordInput(false);
+  };
+
+  const handleModelPress = (model: string) => {
+    // If selecting Pro model and not already selected, require password
+    if (model === 'gemini-3-pro-image-preview' && aiModelPreference !== 'gemini-3-pro-image-preview') {
+      setPendingModel(model);
+      setShowModelPasswordInput(true);
+    } else {
+      // Standard model or already selected Pro model - no password needed
+      onModelSelection(model);
+    }
+  };
+
+  const handleModelPasswordSubmit = async () => {
+    if (!modelPassword.trim() || !pendingModel) {
+      return;
+    }
+    await onModelSelection(pendingModel, modelPassword);
+    setModelPassword('');
+    setShowModelPasswordInput(false);
+    setPendingModel(null);
+  };
+
+  const handleModelPasswordCancel = () => {
+    setModelPassword('');
+    setShowModelPasswordInput(false);
+    setPendingModel(null);
   };
 
   return (
@@ -117,8 +147,8 @@ export function AIModelSection({
             styles.option,
             aiModelPreference === 'gemini-2.5-flash-image' && styles.optionSelected,
           ]}
-          onPress={() => onModelSelection('gemini-2.5-flash-image')}
-          disabled={saving}
+          onPress={() => handleModelPress('gemini-2.5-flash-image')}
+          disabled={saving || showModelPasswordInput}
         >
           <Text
             style={[
@@ -136,8 +166,8 @@ export function AIModelSection({
             styles.option,
             aiModelPreference === 'gemini-3-pro-image-preview' && styles.optionSelected,
           ]}
-          onPress={() => onModelSelection('gemini-3-pro-image-preview')}
-          disabled={saving}
+          onPress={() => handleModelPress('gemini-3-pro-image-preview')}
+          disabled={saving || showModelPasswordInput}
         >
           <Text
             style={[
@@ -149,6 +179,41 @@ export function AIModelSection({
           </Text>
           <Text style={styles.optionSubtext}>Up to 7 items, password required</Text>
         </TouchableOpacity>
+
+        {showModelPasswordInput && (
+          <View style={styles.passwordContainer}>
+            <Text style={styles.passwordLabel}>Enter Password for Pro Model</Text>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Password"
+              value={modelPassword}
+              onChangeText={setModelPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={styles.passwordButtons}>
+              <TouchableOpacity
+                style={[styles.passwordButton, styles.passwordButtonCancel]}
+                onPress={handleModelPasswordCancel}
+                disabled={saving}
+              >
+                <Text style={[styles.passwordButtonText, styles.passwordButtonCancelText]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.passwordButton, styles.passwordButtonConfirm]}
+                onPress={handleModelPasswordSubmit}
+                disabled={saving || !modelPassword.trim()}
+              >
+                <Text style={[styles.passwordButtonText, styles.passwordButtonConfirmText]}>
+                  Confirm
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );

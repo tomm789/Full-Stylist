@@ -61,6 +61,12 @@ They are used only in Netlify Functions.
   - Value: Gemini API key
   - Used by: netlify/functions/ai-job-runner.ts only
 
+- AI_MODEL_PASSWORD
+  - Value: Password for accessing advanced AI models (e.g., Gemini 3 Pro)
+  - Used by: netlify/functions/validate-model-password.js
+  - Required for: Password validation when users select Pro model or enable headshot generation
+  - Security: This password is validated server-side to keep it secure
+
 ### Optional (future)
 - STRIPE_SECRET_KEY
   - Used by: payments / checkout (not MVP)

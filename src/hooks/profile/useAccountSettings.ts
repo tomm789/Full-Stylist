@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserSettings, updateUserSettings, UserSettings } from '@/lib/settings';
+import { getUserSettings, updateUserSettings, validateModelPassword, UserSettings } from '@/lib/settings';
 
 interface UseAccountSettingsReturn {
   settings: UserSettings | null;
@@ -20,7 +20,7 @@ interface UseAccountSettingsReturn {
     key: K,
     value: UserSettings[K]
   ) => Promise<void>;
-  handleModelSelection: (model: string) => Promise<void>;
+  handleModelSelection: (model: string, password?: string) => Promise<void>;
   handleHeadshotToggle: (enabled: boolean, password: string) => Promise<void>;
   handleSignOut: () => Promise<void>;
 }
@@ -85,20 +85,51 @@ export function useAccountSettings(): UseAccountSettingsReturn {
   );
 
   const handleModelSelection = useCallback(
-    async (model: string) => {
+    async (model: string, password?: string) => {
       if (!user || !settings) return;
 
-      const { error: updateError } = await updateUserSettings(user.id, {
-        ai_model_preference: model,
-      } as any);
+      // If selecting Pro model, validate password via Netlify function
+      if (model === 'gemini-3-pro-image-preview') {
+        if (!password) {
+          Alert.alert('Error', 'Password is required for Pro model');
+          return;
+        }
 
-      if (updateError) {
-        Alert.alert('Error', 'Failed to update model preference');
-        return;
+        setSaving(true);
+        try {
+          const { valid, error } = await validateModelPassword(password, user.id);
+          
+          if (!valid) {
+            Alert.alert('Error', error || 'Incorrect password');
+            setSaving(false);
+            return;
+          }
+        } catch (error: any) {
+          Alert.alert('Error', error.message || 'Failed to validate password');
+          setSaving(false);
+          return;
+        }
+      } else {
+        setSaving(true);
       }
 
-      setAiModelPreference(model);
-      await loadData();
+      try {
+        const { error: updateError } = await updateUserSettings(user.id, {
+          ai_model_preference: model,
+        } as any);
+
+        if (updateError) {
+          Alert.alert('Error', 'Failed to update model preference');
+          return;
+        }
+
+        setAiModelPreference(model);
+        await loadData();
+      } catch (error: any) {
+        Alert.alert('Error', error.message || 'An unexpected error occurred');
+      } finally {
+        setSaving(false);
+      }
     },
     [user, settings, loadData]
   );
@@ -107,13 +138,21 @@ export function useAccountSettings(): UseAccountSettingsReturn {
     async (enabled: boolean, password: string) => {
       if (!user || !settings) return;
 
-      // Validate password (same as model selection: "abcxyz")
-      if (password !== 'abcxyz') {
-        Alert.alert('Error', 'Incorrect password');
+      // Validate password via Netlify function (same as model selection)
+      setSaving(true);
+      try {
+        const { valid, error } = await validateModelPassword(password, user.id);
+        
+        if (!valid) {
+          Alert.alert('Error', error || 'Incorrect password');
+          setSaving(false);
+          return;
+        }
+      } catch (error: any) {
+        Alert.alert('Error', error.message || 'Failed to validate password');
+        setSaving(false);
         return;
       }
-
-      setSaving(true);
 
       try {
         const { error: updateError } = await updateUserSettings(user.id, {
