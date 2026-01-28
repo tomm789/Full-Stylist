@@ -1,20 +1,40 @@
 /**
  * useOutfitGeneration Hook
  * Handles outfit creation and AI generation from wardrobe with client-side image stacking
+ * NOW WITH REAL-TIME DESCRIPTION POLLING
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { saveOutfit } from '@/lib/outfits';
 import { createAndTriggerJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
 import { getUserSettings } from '@/lib/settings';
 import { WardrobeItem, WardrobeCategory } from '@/lib/wardrobe';
-import { useImageStacker } from '@/hooks/useImageStacker';
 import { supabase } from '@/lib/supabase';
+import { generateClothingGrid } from '@/utils/clothing-grid';
 
 interface GenerationProgress {
   phase: 'saving' | 'preparing' | 'stacking' | 'generating' | 'complete' | 'error';
   message: string;
   progress: number; // 0-100
+}
+
+interface GenerationItem {
+  id: string;
+  title: string;
+  orderIndex: number;
+}
+
+interface GenerationMessage {
+  id: string;
+  kind: 'description' | 'contexts' | 'style' | 'versatility' | 'finalizing';
+  text: string;
+}
+
+interface OutfitDescription {
+  description: string;
+  occasions: string[];
+  styleTags: string[];
+  season: string;
 }
 
 interface UseOutfitGenerationOptions {
@@ -30,8 +50,176 @@ export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationO
     progress: 0,
   });
   const [generatedOutfitId, setGeneratedOutfitId] = useState<string | null>(null);
-  
-  const { stackAndUpload } = useImageStacker();
+
+  // NEW: Modal-specific state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalPhase, setModalPhase] = useState<'items' | 'analysis' | 'finalizing'>('items');
+  const [modalItems, setModalItems] = useState<GenerationItem[]>([]);
+  const [revealedItemsCount, setRevealedItemsCount] = useState(-1);
+  const [completedItemsCount, setCompletedItemsCount] = useState(-1);
+  const [activeMessage, setActiveMessage] = useState<GenerationMessage | null>(null);
+  const [outfitDescription, setOutfitDescription] = useState<OutfitDescription | null>(null);
+
+  // Polling interval refs
+  const descriptionPollingInterval = useRef<NodeJS.Timeout | null>(null);
+  const itemRevealInterval = useRef<NodeJS.Timeout | null>(null);
+
+  const clearAllIntervals = useCallback(() => {
+    if (descriptionPollingInterval.current) {
+      clearInterval(descriptionPollingInterval.current);
+      descriptionPollingInterval.current = null;
+    }
+    if (itemRevealInterval.current) {
+      clearInterval(itemRevealInterval.current);
+      itemRevealInterval.current = null;
+    }
+  }, []);
+
+  // NEW: Animate item checking
+  const startItemRevealAnimation = useCallback((items: GenerationItem[]) => {
+    setModalItems(items);
+    setRevealedItemsCount(-1);
+    setCompletedItemsCount(-1);
+    setModalPhase('items');
+
+    let currentRevealed = -1;
+    let currentCompleted = -1;
+
+    itemRevealInterval.current = setInterval(() => {
+      if (currentRevealed < items.length - 1) {
+        currentRevealed++;
+        setRevealedItemsCount(currentRevealed);
+
+        // Mark previous item as completed
+        if (currentRevealed > 0) {
+          currentCompleted = currentRevealed - 1;
+          setCompletedItemsCount(currentCompleted);
+        }
+      } else {
+        // All items revealed, mark last one as completed
+        currentCompleted = items.length - 1;
+        setCompletedItemsCount(currentCompleted);
+
+        // Transition to analysis phase
+        setTimeout(() => {
+          setModalPhase('analysis');
+        }, 500);
+
+        if (itemRevealInterval.current) {
+          clearInterval(itemRevealInterval.current);
+          itemRevealInterval.current = null;
+        }
+      }
+    }, 400); // Reveal one item every 400ms
+  }, []);
+
+  // NEW: Poll for outfit description from backend
+  const startDescriptionPolling = useCallback((outfitId: string) => {
+    console.log('[OutfitGeneration] Starting description polling...');
+
+    descriptionPollingInterval.current = setInterval(async () => {
+      try {
+        const { data: outfitData } = await supabase
+          .from('outfits')
+          .select('description, occasions, style_tags, season, description_generated_at')
+          .eq('id', outfitId)
+          .single();
+
+        if (outfitData?.description_generated_at) {
+          console.log('[OutfitGeneration] Description received!');
+
+          const description: OutfitDescription = {
+            description: outfitData.description || '',
+            occasions: outfitData.occasions || [],
+            styleTags: outfitData.style_tags || [],
+            season: outfitData.season || 'all-season',
+          };
+
+          setOutfitDescription(description);
+
+          // Animate through messages
+          animateDescriptionMessages(description);
+
+          // Stop polling
+          if (descriptionPollingInterval.current) {
+            clearInterval(descriptionPollingInterval.current);
+            descriptionPollingInterval.current = null;
+          }
+        }
+      } catch (error) {
+        console.error('[OutfitGeneration] Description polling error:', error);
+      }
+    }, 500); // Poll every 500ms
+  }, []);
+
+  // NEW: Animate through description messages
+  const animateDescriptionMessages = useCallback((description: OutfitDescription) => {
+    const messages: GenerationMessage[] = [];
+
+    // Message 1: Description
+    if (description.description) {
+      messages.push({
+        id: 'msg-description',
+        kind: 'description',
+        text: description.description,
+      });
+    }
+
+    // Message 2: Occasions (contexts)
+    if (description.occasions.length > 0) {
+      messages.push({
+        id: 'msg-contexts',
+        kind: 'contexts',
+        text: `Perfect for ${description.occasions.join(', ')}.`,
+      });
+    }
+
+    // Message 3: Style tags
+    if (description.styleTags.length > 0) {
+      messages.push({
+        id: 'msg-style',
+        kind: 'style',
+        text: `This outfit embodies ${description.styleTags.join(', ')} vibes.`,
+      });
+    }
+
+    // Message 4: Versatility/Season
+    if (description.season && description.season !== 'all-season') {
+      messages.push({
+        id: 'msg-versatility',
+        kind: 'versatility',
+        text: `Best suited for ${description.season} weather.`,
+      });
+    } else {
+      messages.push({
+        id: 'msg-versatility',
+        kind: 'versatility',
+        text: `A versatile outfit that works year-round.`,
+      });
+    }
+
+    // Animate through messages
+    let currentIndex = 0;
+
+    const showNextMessage = () => {
+      if (currentIndex < messages.length) {
+        setActiveMessage(messages[currentIndex]);
+        currentIndex++;
+        setTimeout(showNextMessage, 2000); // Show each message for 2 seconds
+      } else {
+        // All messages shown, transition to finalizing
+        setModalPhase('finalizing');
+        setActiveMessage({
+          id: 'msg-finalizing',
+          kind: 'finalizing',
+          text: 'Applying final touches to your outfit visualization...',
+        });
+      }
+    };
+
+    // Start animation after a brief delay
+    setTimeout(showNextMessage, 300);
+  }, []);
 
   const generateOutfit = useCallback(
     async (selectedItems: WardrobeItem[]): Promise<{ success: boolean; outfitId?: string; error?: string }> => {
@@ -41,6 +229,10 @@ export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationO
 
       setGenerating(true);
       setGeneratedOutfitId(null);
+      setModalVisible(true); // Show modal
+      setOutfitDescription(null);
+      setActiveMessage(null);
+      clearAllIntervals();
 
       try {
         // Phase 1: Save outfit
@@ -84,6 +276,14 @@ export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationO
         if (!userSettings?.body_shot_image_id) {
           throw new Error('Please upload a body photo in settings before generating outfits');
         }
+
+        // NEW: Start item reveal animation
+        const itemsForModal: GenerationItem[] = selectedItems.map((item, index) => ({
+          id: item.id,
+          title: item.title || 'Untitled Item',
+          orderIndex: index,
+        }));
+        startItemRevealAnimation(itemsForModal);
 
         // Phase 3: Download and stack wardrobe item images
         setProgress({
@@ -150,59 +350,94 @@ export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationO
 
         setProgress({
           phase: 'stacking',
-          message: `Downloading ${topImages.length} images...`,
+          message: `Preparing ${topImages.length} images...`,
           progress: 40,
         });
 
-        console.log(`[OutfitGeneration] Downloading ${topImages.length} images`);
+        console.log(`[OutfitGeneration] Getting image URLs for ${topImages.length} images`);
 
-        // Download images as File objects
-        const imageFiles = await Promise.all(
-          topImages.map(async (link) => {
-            // Get public URL
-            const { data: urlData } = supabase.storage
-              .from('media')
-              .getPublicUrl(link.storage_key);
+        // Get public URLs for all images
+        const imageUrls = topImages.map((link) => {
+          const { data: urlData } = supabase.storage
+            .from('media')
+            .getPublicUrl(link.storage_key);
 
-            if (!urlData?.publicUrl) {
-              throw new Error(`Failed to get URL for image ${link.image_id}`);
-            }
+          if (!urlData?.publicUrl) {
+            throw new Error(`Failed to get URL for image ${link.image_id}`);
+          }
 
-            // Download image
-            const response = await fetch(urlData.publicUrl);
-            if (!response.ok) {
-              throw new Error(`Failed to download image ${link.image_id}`);
-            }
+          return urlData.publicUrl;
+        });
 
-            const blob = await response.blob();
-            return new File([blob], `item-${link.image_id}.jpg`, { type: 'image/jpeg' });
-          })
-        );
+        console.log(`[OutfitGeneration] Got ${imageUrls.length} image URLs`);
 
-        console.log(`[OutfitGeneration] Downloaded ${imageFiles.length} images successfully`);
-
-        // Stack and upload images
+        // Generate grid using the new grid function
         setProgress({
           phase: 'stacking',
-          message: `Stacking ${imageFiles.length} images...`,
+          message: `Creating grid for ${imageUrls.length} items...`,
           progress: 50,
         });
 
-        console.log(`[OutfitGeneration] Starting image stacking...`);
+        console.log(`[OutfitGeneration] Starting grid generation...`);
 
-        const stackedResult = await stackAndUpload(imageFiles);
+        const gridBase64 = await generateClothingGrid(imageUrls);
+        console.log(`[OutfitGeneration] Grid generated successfully, base64 length: ${gridBase64.length}`);
 
-        if (!stackedResult) {
-          throw new Error('Failed to stack images. Please try again.');
+        // Convert base64 to Blob and upload to storage
+        setProgress({
+          phase: 'stacking',
+          message: `Uploading grid image...`,
+          progress: 60,
+        });
+
+        // Verify user session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session?.user?.id || session.user.id !== userId) {
+          throw new Error('User not authenticated or session mismatch');
         }
 
-        console.log(`[OutfitGeneration] Images stacked successfully. Image ID: ${stackedResult.imageId}`);
+        // Convert base64 to Blob
+        const byteCharacters = atob(gridBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const gridBlob = new Blob([byteArray], { type: 'image/jpeg' });
+
+        // Upload to Supabase storage
+        const timestamp = Date.now();
+        const fileName = `grid-${timestamp}.jpg`;
+        const storagePath = `${userId}/ai/stacked/${fileName}`;
+
+        const arrayBuffer = await gridBlob.arrayBuffer();
+        const uploadData = new Uint8Array(arrayBuffer);
+
+        const { data: uploadDataResult, error: uploadError } = await supabase.storage
+          .from('media')
+          .upload(storagePath, uploadData, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: 'image/jpeg',
+          });
+
+        if (uploadError || !uploadDataResult) {
+          throw new Error(`Failed to upload grid image: ${uploadError?.message || 'Unknown error'}`);
+        }
+
+        console.log(`[OutfitGeneration] Grid uploaded successfully. Storage path: ${uploadDataResult.path}`);
+
+        const stackedResult = {
+          imageId: uploadDataResult.path,
+          publicUrl: supabase.storage.from('media').getPublicUrl(uploadDataResult.path).data.publicUrl,
+          storagePath: uploadDataResult.path
+        };
 
         // Phase 4: Prepare items data for AI job
         setProgress({
           phase: 'preparing',
           message: 'Preparing AI generation...',
-          progress: 60,
+          progress: 70,
         });
 
         const selectedForJob = selectedItems.map((item) => {
@@ -229,11 +464,11 @@ export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationO
 
         const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
 
-        // Phase 5: Create and trigger AI job with stacked image
+        // Phase 5: Create and trigger AI job with grid image
         setProgress({
           phase: 'generating',
           message: 'Generating outfit image...',
-          progress: 70,
+          progress: 80,
         });
 
         console.log(`[OutfitGeneration] Creating AI job with stacked image ID: ${stackedResult.imageId}`);
@@ -245,7 +480,7 @@ export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationO
             user_id: userId,
             outfit_id: outfitId,
             selected: selectedForJob,
-            stacked_image_id: stackedResult.imageId, // KEY: Send stacked image ID!
+            stacked_image_id: stackedResult.imageId,
             body_shot_image_id: userSettings.body_shot_image_id,
             model_preference: modelPreference,
             settings: {
@@ -261,28 +496,34 @@ export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationO
 
         console.log(`[OutfitGeneration] AI job created: ${jobData.jobId}`);
 
+        // NEW: Start polling for description (runs in parallel with image generation)
+        startDescriptionPolling(outfitId);
+
         // Phase 6: Poll for completion
         setProgress({
           phase: 'generating',
           message: 'AI is working on your outfit...',
-          progress: 80,
+          progress: 90,
         });
 
         const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
           jobData.jobId,
-          60, // max attempts
-          2000, // 2 second intervals
+          60,
+          2000,
           '[OutfitGeneration]'
         );
 
+        // Clean up intervals
+        clearAllIntervals();
+
         if (pollError || !completedJob) {
-          // Don't throw - the outfit was saved successfully, just the image generation timed out
           console.warn('[OutfitGeneration] AI generation polling timed out, but outfit was saved');
           setProgress({
             phase: 'complete',
             message: 'Outfit saved! Image generation in progress...',
             progress: 100,
           });
+          setModalVisible(false);
           return { success: true, outfitId };
         }
 
@@ -298,23 +539,31 @@ export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationO
           progress: 100,
         });
 
+        // Hide modal after a brief delay
+        setTimeout(() => {
+          setModalVisible(false);
+        }, 1500);
+
         return { success: true, outfitId };
       } catch (error: any) {
         console.error('[OutfitGeneration] Error:', error);
+        clearAllIntervals();
         setProgress({
           phase: 'error',
           message: error.message || 'Generation failed',
           progress: 0,
         });
+        setModalVisible(false);
         return { success: false, error: error.message };
       } finally {
         setGenerating(false);
       }
     },
-    [userId, categories, stackAndUpload]
+    [userId, categories, startItemRevealAnimation, startDescriptionPolling, clearAllIntervals]
   );
 
   const reset = useCallback(() => {
+    clearAllIntervals();
     setGenerating(false);
     setProgress({
       phase: 'saving',
@@ -322,7 +571,14 @@ export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationO
       progress: 0,
     });
     setGeneratedOutfitId(null);
-  }, []);
+    setModalVisible(false);
+    setModalPhase('items');
+    setModalItems([]);
+    setRevealedItemsCount(-1);
+    setCompletedItemsCount(-1);
+    setActiveMessage(null);
+    setOutfitDescription(null);
+  }, [clearAllIntervals]);
 
   return {
     generating,
@@ -330,6 +586,14 @@ export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationO
     generatedOutfitId,
     generateOutfit,
     reset,
+    // NEW: Modal state
+    modalVisible,
+    modalPhase,
+    modalItems,
+    revealedItemsCount,
+    completedItemsCount,
+    activeMessage,
+    outfitDescription,
   };
 }
 

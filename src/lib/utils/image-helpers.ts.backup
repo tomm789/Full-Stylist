@@ -1,0 +1,307 @@
+import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import { supabase } from '../supabase';
+
+/**
+ * Get public URL for an image from Supabase storage
+ */
+export function getPublicImageUrl(
+  image?: { storage_bucket?: string | null; storage_key?: string | null } | null
+): string | null {
+  if (!image?.storage_key) {
+    return null;
+  }
+
+  const { data: urlData } = supabase.storage
+    .from(image.storage_bucket || 'media')
+    .getPublicUrl(image.storage_key);
+  
+  return urlData.publicUrl;
+}
+
+/**
+ * Get public URL from storage bucket and key
+ */
+export function getStorageUrl(bucket: string, key: string): string {
+  const { data } = supabase.storage.from(bucket).getPublicUrl(key);
+  return data.publicUrl;
+}
+
+/**
+ * Convert base64 string to ArrayBuffer (for React Native compatibility)
+ */
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+/**
+ * Convert image URI to Blob
+ * Handles file:// URIs on native platforms using expo-file-system
+ * Falls back to fetch() for web and other URI formats
+ */
+export async function uriToBlob(uri: string, mimeType: string): Promise<Blob> {
+  // Check if this is a file:// URI on native platform
+  if (uri.startsWith('file://') && Platform.OS !== 'web') {
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: 'base64' as any,
+    });
+    
+    const dataUrl = `data:${mimeType};base64,${base64}`;
+    const response = await fetch(dataUrl);
+    return await response.blob();
+  }
+  
+  // Use fetch for web (blob:, data:, http:) and other formats
+  const response = await fetch(uri);
+  return await response.blob();
+}
+
+/**
+ * Upload image to Supabase Storage
+ */
+export async function uploadImageToStorage(
+  userId: string,
+  file: Blob | File,
+  fileName: string,
+  bucket: string = 'media'
+): Promise<{
+  data: { path: string; fullPath: string } | null;
+  error: any;
+}> {
+  try {
+    const fileExt = fileName.split('.').pop();
+    const filePath = `${userId}/${Date.now()}.${fileExt}`;
+
+    // For React Native, convert Blob to ArrayBuffer
+    // Supabase storage .upload() handles ArrayBuffer as a raw body
+    let uploadData: any;
+    if (Platform.OS !== 'web' && (file instanceof Blob || (file as any)._uri)) {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-helpers.ts:82',message:'uploadImageToStorage starting conversion',data:{blobSize:file.size,blobType:file.type,isBlob:file instanceof Blob,hasUri:!!(file as any)._uri},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+
+      // Use the native Blob's internal data if possible, or convert to base64 then ArrayBuffer
+      // In React Native, fetch(blobUrl).arrayBuffer() is often the most reliable way
+      const blobUrl = (file as any)._uri || URL.createObjectURL(file);
+      try {
+        const response = await fetch(blobUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-helpers.ts:94',message:'uploadImageToStorage blob fetch success',data:{byteLength:arrayBuffer.byteLength,blobSize:file.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+
+        // Wrap in Uint8Array to ensure it's treated as raw binary
+        uploadData = new Uint8Array(arrayBuffer);
+      } catch (e: any) {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-helpers.ts:102',message:'uploadImageToStorage blob fetch failed',data:{error:e.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+
+        // Fallback to FileReader if fetch fails
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = reader.result as string;
+            const base64Data = result.includes(',') ? result.split(',')[1] : result;
+            resolve(base64Data);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        uploadData = bytes;
+      } finally {
+        if (!(file as any)._uri) {
+          URL.revokeObjectURL(blobUrl);
+        }
+      }
+    } else {
+      uploadData = file;
+    }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-helpers.ts:135',message:'uploadImageToStorage before supabase upload',data:{isUint8Array:uploadData instanceof Uint8Array,length:uploadData?.length,contentType:file.type || 'image/jpeg'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, uploadData, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type || 'image/jpeg',
+      });
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(data.path);
+
+    return { data: { path: data.path, fullPath: publicUrl }, error: null };
+  } catch (error: any) {
+    return { data: null, error };
+  }
+}
+
+/**
+ * Create image record in database after upload
+ */
+export async function createImageRecord(
+  userId: string,
+  storagePath: string,
+  mimeType: string,
+  source: 'upload' | 'ai_generated' = 'upload',
+  bucket: string = 'media'
+): Promise<{
+  data: { id: string } | null;
+  error: any;
+}> {
+  try {
+    const { data, error } = await supabase
+      .from('images')
+      .insert({
+        owner_user_id: userId,
+        storage_bucket: bucket,
+        storage_key: storagePath,
+        mime_type: mimeType,
+        source,
+      })
+      .select('id')
+      .single();
+
+    return { data, error };
+  } catch (error: any) {
+    return { data: null, error };
+  }
+}
+
+/**
+ * Upload image and create database record in one operation
+ */
+export async function uploadAndCreateImage(
+  userId: string,
+  file: Blob | File,
+  fileName: string,
+  source: 'upload' | 'ai_generated' = 'upload'
+): Promise<{
+  data: { imageId: string; path: string; url: string } | null;
+  error: any;
+}> {
+  try {
+    // Upload to storage
+    const uploadResult = await uploadImageToStorage(userId, file, fileName);
+    if (uploadResult.error || !uploadResult.data) {
+      return { data: null, error: uploadResult.error };
+    }
+
+    // Create database record
+    const imageResult = await createImageRecord(
+      userId,
+      uploadResult.data.path,
+      file.type || 'image/jpeg',
+      source
+    );
+    
+    if (imageResult.error || !imageResult.data) {
+      return { data: null, error: imageResult.error };
+    }
+
+    return {
+      data: {
+        imageId: imageResult.data.id,
+        path: uploadResult.data.path,
+        url: uploadResult.data.fullPath,
+      },
+      error: null,
+    };
+  } catch (error: any) {
+    return { data: null, error };
+  }
+}
+
+/**
+ * Delete image from storage and database
+ */
+export async function deleteImage(
+  imageId: string,
+  userId: string
+): Promise<{ error: any }> {
+  try {
+    // Get image record
+    const { data: image } = await supabase
+      .from('images')
+      .select('storage_bucket, storage_key')
+      .eq('id', imageId)
+      .eq('owner_user_id', userId)
+      .single();
+
+    if (!image) {
+      return { error: new Error('Image not found or access denied') };
+    }
+
+    // Delete from storage
+    const { error: storageError } = await supabase.storage
+      .from(image.storage_bucket)
+      .remove([image.storage_key]);
+
+    if (storageError) {
+      console.warn('Failed to delete from storage:', storageError);
+    }
+
+    // Delete database record
+    const { error: dbError } = await supabase
+      .from('images')
+      .delete()
+      .eq('id', imageId)
+      .eq('owner_user_id', userId);
+
+    return { error: dbError };
+  } catch (error: any) {
+    return { error };
+  }
+}
+
+/**
+ * Batch upload images
+ */
+export async function batchUploadImages(
+  userId: string,
+  files: Array<{ uri: string; type: string; name: string }>,
+  source: 'upload' | 'ai_generated' = 'upload'
+): Promise<{
+  data: string[]; // Array of image IDs
+  errors: any[];
+}> {
+  const imageIds: string[] = [];
+  const errors: any[] = [];
+
+  for (const file of files) {
+    try {
+      const blob = await uriToBlob(file.uri, file.type);
+      const result = await uploadAndCreateImage(userId, blob, file.name, source);
+      
+      if (result.error || !result.data) {
+        errors.push({ file: file.name, error: result.error });
+      } else {
+        imageIds.push(result.data.imageId);
+      }
+    } catch (error: any) {
+      errors.push({ file: file.name, error });
+    }
+  }
+
+  return { data: imageIds, errors };
+}

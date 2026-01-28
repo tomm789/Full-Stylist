@@ -3,7 +3,7 @@
  * Edit, regenerate, duplicate, or delete headshot
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -14,139 +14,53 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Modal,
-  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
-import { useHeadshotEdit, useImageGeneration } from '@/hooks/profile';
+import { useHeadshotDetailActions } from '@/hooks/profile';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
-import { triggerHeadshotGenerate, triggerAIJobExecution, waitForAIJobCompletion, isGeminiPolicyBlockError } from '@/lib/ai-jobs';
 
 export default function HeadshotDetailScreen() {
-  const { user } = useAuth();
   const router = useRouter();
-  const { id: headshotId } = useLocalSearchParams();
-  const [hairStyle, setHairStyle] = useState('');
-  const [makeupStyle, setMakeupStyle] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('');
+  const { user } = useAuth();
+  const { id: headshotId, perfStartTime, perfApiResponseTime } = useLocalSearchParams();
 
-  // Load headshot details
   const {
+    // Image data
     headshot,
     loading,
     duplicating,
     deleting,
-    refresh,
-    duplicate,
-    deleteHeadshot,
+
+    // Form state
+    hairStyle,
+    makeupStyle,
+    setHairStyle,
+    setMakeupStyle,
+
+    // Actions
+    regenerating,
+    loadingMessage,
+    showDeleteConfirm,
+    setShowDeleteConfirm,
+    handleRegenerate,
+    handleDuplicate,
+    handleDelete,
     setAsActive,
-  } = useHeadshotEdit({
+
+    // Policy blocking
+    policyModalVisible,
+    policyMessage,
+    localPolicyVisible,
+    localPolicyMessage,
+    closePolicyModal,
+    setLocalPolicyVisible,
+  } = useHeadshotDetailActions({
     headshotId: headshotId as string,
     userId: user?.id,
   });
-
-  // For policy blocking
-  const { policyModalVisible, policyMessage, closePolicyModal } = useImageGeneration();
-  const [localPolicyVisible, setLocalPolicyVisible] = useState(false);
-  const [localPolicyMessage, setLocalPolicyMessage] = useState('');
-
-  // Update form when headshot loads
-  useEffect(() => {
-    if (headshot) {
-      setHairStyle(headshot.originalHairStyle);
-      setMakeupStyle(headshot.originalMakeupStyle);
-    }
-  }, [headshot]);
-
-  const handleRegenerate = async () => {
-    if (!user || !headshot?.originalSelfieId) {
-      Alert.alert('Error', 'Cannot regenerate without original selfie');
-      return;
-    }
-
-    setRegenerating(true);
-    setLoadingMessage('Creating headshot job...');
-
-    try {
-      const { data: job, error: jobError } = await triggerHeadshotGenerate(
-        user.id,
-        headshot.originalSelfieId,
-        hairStyle || undefined,
-        makeupStyle || undefined
-      );
-
-      if (!job || jobError) {
-        throw jobError || new Error('Failed to create headshot job');
-      }
-
-      await triggerAIJobExecution(job.id);
-      setLoadingMessage('Regenerating headshot...\nThis may take 20-30 seconds.');
-
-      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
-        job.id,
-        30,
-        2000,
-        '[Headshot]'
-      );
-
-      if (pollError || !completedJob) {
-        throw new Error('Headshot generation timed out');
-      }
-
-      if (completedJob.status === 'failed') {
-        const failureMessage = completedJob.error || 'Unknown error';
-        if (isGeminiPolicyBlockError(failureMessage)) {
-          setLocalPolicyMessage(
-            'Gemini could not generate this headshot because it conflicts with safety policy. No credits were charged.'
-          );
-          setLocalPolicyVisible(true);
-          return;
-        }
-        throw new Error(`Generation failed: ${failureMessage}`);
-      }
-
-      const generatedImageId =
-        completedJob.result?.image_id || completedJob.result?.generated_image_id;
-
-      if (generatedImageId) {
-        router.replace(`/headshot/${generatedImageId}` as any);
-      } else {
-        await refresh();
-      }
-    } catch (error: any) {
-      const message = error.message || 'Failed to generate headshot';
-      if (isGeminiPolicyBlockError(message)) {
-        setLocalPolicyMessage(
-          'Gemini could not generate this headshot because it conflicts with safety policy. No credits were charged.'
-        );
-        setLocalPolicyVisible(true);
-        return;
-      }
-      Alert.alert('Error', message);
-    } finally {
-      setRegenerating(false);
-      setLoadingMessage('');
-    }
-  };
-
-  const handleDuplicate = async () => {
-    const newId = await duplicate();
-    if (newId) {
-      router.replace(`/headshot/${newId}` as any);
-    }
-  };
-
-  const handleDelete = async () => {
-    const success = await deleteHeadshot();
-    if (success) {
-      setShowDeleteConfirm(false);
-      router.back();
-    }
-  };
 
   if (loading) {
     return (
@@ -204,6 +118,32 @@ export default function HeadshotDetailScreen() {
               style={styles.image}
               contentFit="cover"
               cachePolicy="memory-disk"
+              onLoad={() => {
+                // Performance tracking: Image load complete
+                const renderCompleteTime = performance.now();
+                
+                // Parse timing data from route params if available
+                if (perfStartTime && perfApiResponseTime) {
+                  const startTime = parseFloat(perfStartTime as string);
+                  const apiResponseTime = parseFloat(perfApiResponseTime as string);
+                  
+                  const totalUserWait = renderCompleteTime - startTime;
+                  const backendProcessing = apiResponseTime - startTime;
+                  const transferAndRender = renderCompleteTime - apiResponseTime;
+                  
+                  // Log performance breakdown table
+                  console.log('\n╔════════════════════════════════════════════════════════╗');
+                  console.log('║         AI IMAGE GENERATION PERFORMANCE BREAKDOWN      ║');
+                  console.log('╠════════════════════════════════════════════════════════╣');
+                  console.log(`║ Total User Wait:        ${totalUserWait.toFixed(2).padStart(10)} ms ║`);
+                  console.log(`║ Backend Processing:     ${backendProcessing.toFixed(2).padStart(10)} ms ║`);
+                  console.log(`║ Transfer & Render:      ${transferAndRender.toFixed(2).padStart(10)} ms ║`);
+                  console.log('╚════════════════════════════════════════════════════════╝');
+                  console.log(`\n[PERF] Transfer & Render is the bottleneck: ${transferAndRender.toFixed(2)}ms\n`);
+                } else {
+                  console.log('[PERF] Image loaded at:', renderCompleteTime);
+                }
+              }}
             />
           </View>
 
@@ -238,6 +178,29 @@ export default function HeadshotDetailScreen() {
             <Text style={styles.inputHint}>
               Describe your desired makeup or leave blank for natural look
             </Text>
+          </View>
+
+          <View style={styles.actionsSection}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={setAsActive}
+            >
+              <Ionicons name="checkmark-circle-outline" size={24} color="#34c759" />
+              <Text style={styles.actionButtonText}>Set as Active</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, duplicating && styles.actionButtonDisabled]}
+              onPress={handleDuplicate}
+              disabled={duplicating}
+            >
+              {duplicating ? (
+                <ActivityIndicator color="#007AFF" size="small" />
+              ) : (
+                <Ionicons name="copy-outline" size={24} color="#007AFF" />
+              )}
+              <Text style={styles.actionButtonText}>Duplicate</Text>
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity
@@ -482,5 +445,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  actionsSection: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    gap: 12,
+  },
+  actionButtonDisabled: {
+    opacity: 0.6,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
   },
 });

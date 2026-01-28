@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,127 +6,34 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
   FlatList,
-  Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
-import { useAuth } from '@/contexts/AuthContext';
-import { createListing } from '@/lib/listings';
-import { getWardrobeItems, getWardrobeItemImages, getDefaultWardrobeId, WardrobeItem } from '@/lib/wardrobe';
-import { supabase } from '@/lib/supabase';
+import { useNewListing } from '@/hooks/listings';
 
 export default function NewListingScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [wardrobeId, setWardrobeId] = useState<string | null>(null);
-  const [selectedItem, setSelectedItem] = useState<WardrobeItem | null>(null);
-  const [items, setItems] = useState<WardrobeItem[]>([]);
-  const [itemImages, setItemImages] = useState<Array<{ id: string; image_id: string; type: string; image: any }>>([]);
-  const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
-  const [price, setPrice] = useState('');
-  const [condition, setCondition] = useState<'new' | 'like_new' | 'good' | 'worn'>('good');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const {
+    items,
+    loading,
+    selectedItem,
+    itemImages,
+    selectedImageIds,
+    price,
+    condition,
+    setSelectedItem,
+    setPrice,
+    setCondition,
+    toggleImage,
+    saving,
+    handleCreate,
+    selectItem,
+    getImageUrl,
+  } = useNewListing();
 
-  useEffect(() => {
-    if (user) {
-      loadWardrobe();
-    }
-  }, [user]);
-
-  const loadWardrobe = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    const { data: defaultWardrobeId } = await getDefaultWardrobeId(user.id);
-    if (defaultWardrobeId) {
-      setWardrobeId(defaultWardrobeId);
-      const { data: wardrobeItems } = await getWardrobeItems(defaultWardrobeId, {});
-      if (wardrobeItems) {
-        setItems(wardrobeItems);
-      }
-    }
-    setLoading(false);
-  };
-
-  const selectItem = async (item: WardrobeItem) => {
-    setSelectedItem(item);
-    const { data: images } = await getWardrobeItemImages(item.id);
-    if (images) {
-      // Filter to only original images
-      const originalImages = images.filter((img) => img.type === 'original');
-      setItemImages(originalImages);
-      // Auto-select all original images
-      setSelectedImageIds(new Set(originalImages.map((img) => img.image_id)));
-    }
-  };
-
-  const toggleImage = (imageId: string) => {
-    const newSelected = new Set(selectedImageIds);
-    if (newSelected.has(imageId)) {
-      newSelected.delete(imageId);
-    } else {
-      newSelected.add(imageId);
-    }
-    setSelectedImageIds(newSelected);
-  };
-
-  const handleCreate = async () => {
-    if (!user || !selectedItem) return;
-
-    if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
-      Alert.alert('Error', 'Please enter a valid price');
-      return;
-    }
-
-    if (selectedImageIds.size === 0) {
-      Alert.alert('Error', 'Please select at least one original image');
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      const { data: listing, error } = await createListing(
-        user.id,
-        selectedItem.id,
-        {
-          price: parseFloat(price),
-          currency: 'AUD',
-          condition: condition,
-          imageIds: Array.from(selectedImageIds),
-        }
-      );
-
-      if (error) {
-        throw error;
-      }
-
-      Alert.alert('Success', 'Listing created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
-    } catch (error: any) {
-      Alert.alert('Error', `Failed to create listing: ${error.message || error}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const getImageUrl = (imageData: any): string | null => {
-    if (!imageData) return null;
-    const { data: urlData } = supabase.storage
-      .from(imageData.storage_bucket || 'media')
-      .getPublicUrl(imageData.storage_key);
-    return urlData.publicUrl;
-  };
-
-  const renderItem = ({ item }: { item: WardrobeItem }) => {
+  const renderItem = ({ item }: { item: typeof items[0] }) => {
     const isSelected = selectedItem?.id === item.id;
 
     return (
@@ -141,7 +48,11 @@ export default function NewListingScreen() {
     );
   };
 
-  const renderImage = ({ item }: { item: { id: string; image_id: string; type: string; image: any } }) => {
+  const renderImage = ({
+    item,
+  }: {
+    item: { id: string; image_id: string; type: string; image: any };
+  }) => {
     const imageUrl = getImageUrl(item.image);
     const isSelected = selectedImageIds.has(item.image_id);
 
@@ -151,7 +62,11 @@ export default function NewListingScreen() {
         onPress={() => toggleImage(item.image_id)}
       >
         {imageUrl ? (
-          <ExpoImage source={{ uri: imageUrl }} style={styles.image} contentFit="cover" />
+          <ExpoImage
+            source={{ uri: imageUrl }}
+            style={styles.image}
+            contentFit="cover"
+          />
         ) : (
           <View style={styles.imagePlaceholder}>
             <Text style={styles.imagePlaceholderText}>No Image</Text>
@@ -182,7 +97,9 @@ export default function NewListingScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Listing</Text>
         <TouchableOpacity onPress={handleCreate} disabled={saving}>
-          <Text style={[styles.saveButton, saving && styles.saveButtonDisabled]}>Create</Text>
+          <Text style={[styles.saveButton, saving && styles.saveButtonDisabled]}>
+            Create
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -212,10 +129,13 @@ export default function NewListingScreen() {
           <>
             <Text style={styles.label}>Select Images (Original Only) *</Text>
             <Text style={styles.description}>
-              Only original images can be used in listings. AI-generated images are not allowed.
+              Only original images can be used in listings. AI-generated images are not
+              allowed.
             </Text>
             {itemImages.length === 0 ? (
-              <Text style={styles.emptyText}>No original images found for this item</Text>
+              <Text style={styles.emptyText}>
+                No original images found for this item
+              </Text>
             ) : (
               <FlatList
                 data={itemImages}
@@ -240,11 +160,17 @@ export default function NewListingScreen() {
               {(['new', 'like_new', 'good', 'worn'] as const).map((cond) => (
                 <TouchableOpacity
                   key={cond}
-                  style={[styles.conditionOption, condition === cond && styles.conditionOptionActive]}
+                  style={[
+                    styles.conditionOption,
+                    condition === cond && styles.conditionOptionActive,
+                  ]}
                   onPress={() => setCondition(cond)}
                 >
                   <Text
-                    style={[styles.conditionOptionText, condition === cond && styles.conditionOptionTextActive]}
+                    style={[
+                      styles.conditionOptionText,
+                      condition === cond && styles.conditionOptionTextActive,
+                    ]}
                   >
                     {cond.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                   </Text>

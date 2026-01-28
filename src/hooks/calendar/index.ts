@@ -7,3 +7,4 @@ export { useCalendarEntries } from './useCalendarEntries';
 export { useDayEntries } from './useDayEntries';
 export { useSlotPresets } from './useSlotPresets';
 export { useUserOutfits } from './useUserOutfits';
+export { useCalendarDayForm } from './useCalendarDayForm';

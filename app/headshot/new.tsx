@@ -3,7 +3,7 @@
  * Generate professional headshot from selfie
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useImageGeneration } from '@/hooks/profile';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
+import ErrorModal from '@/components/ErrorModal';
 
 export default function NewHeadshotScreen() {
   const { user } = useAuth();
@@ -33,6 +34,8 @@ export default function NewHeadshotScreen() {
     uploadedUri,
     policyModalVisible,
     policyMessage,
+    error,
+    clearError,
     pickImage,
     clearImage,
     generateHeadshot,
@@ -42,10 +45,28 @@ export default function NewHeadshotScreen() {
   const handleGenerate = async () => {
     if (!user) return;
 
+    // Performance tracking: Start time (button click)
+    const startTime = performance.now();
+    console.log('[PERF] Button clicked at:', startTime);
+
     const imageId = await generateHeadshot(user.id, hairStyle, makeupStyle);
+    
+    // Performance tracking: API response time
+    const apiResponseTime = performance.now();
+    const backendProcessingTime = apiResponseTime - startTime;
+    console.log('[PERF] API response received at:', apiResponseTime);
+    console.log('[PERF] Backend processing duration:', backendProcessingTime.toFixed(2), 'ms');
+
     if (imageId) {
       Alert.alert('Success', 'Headshot generated successfully!');
-      router.replace(`/headshot/${imageId}` as any);
+      // Pass timing data via route params
+      router.replace({
+        pathname: `/headshot/${imageId}` as any,
+        params: {
+          perfStartTime: startTime.toString(),
+          perfApiResponseTime: apiResponseTime.toString(),
+        },
+      } as any);
     }
   };
 
@@ -161,6 +182,12 @@ export default function NewHeadshotScreen() {
         visible={policyModalVisible}
         message={policyMessage}
         onClose={closePolicyModal}
+      />
+
+      <ErrorModal
+        visible={!!error && !generating}
+        message={error || undefined}
+        onClose={clearError}
       />
     </>
   );

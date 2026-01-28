@@ -17,7 +17,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile, useFollowStatus } from '@/hooks/social';
-import { UserProfileHeader } from '@/components/social';
+import { ProfileHeader } from '@/components/profile';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
 
 type TabType = 'outfits' | 'lookbooks';
@@ -83,15 +83,15 @@ export default function UserProfileScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {/* Profile Header */}
-      <UserProfileHeader
-  profile={profile}
-  outfitCount={outfits.length}
-  isOwnProfile={isOwnProfile}
-  isFollowing={isFollowing}
-  followStatus={status}
-  loadingFollow={followLoading}
-  onFollowPress={handleFollowPress}
-/>
+      <ProfileHeader
+        profile={profile}
+        primaryStat={{ label: 'Outfits', value: outfits.length }}
+        isOwnProfile={isOwnProfile}
+        isFollowing={isFollowing}
+        followStatus={status}
+        loadingFollow={followLoading}
+        onFollowPress={handleFollowPress}
+      />
       {/* Tabs */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity

@@ -5,14 +5,14 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
-import { BottomSheet, PillButton, PrimaryButton } from '@/components/shared';
+import { BottomSheet, PrimaryButton } from '@/components/shared';
 import { theme } from '@/styles';
 import { FilterState } from '@/hooks/wardrobe';
 import { WardrobeSubcategory } from '@/lib/wardrobe';
-import { Ionicons } from '@expo/vector-icons';
-import { TouchableOpacity } from 'react-native';
+import { FilterPillGroup } from './FilterPillGroup';
+import { FilterAccordionSection } from './FilterAccordionSection';
 
-const { colors, spacing, typography } = theme;
+const { colors, spacing } = theme;
 
 interface FilterDrawerProps {
   visible: boolean;
@@ -44,7 +44,7 @@ export default function FilterDrawer({
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   const toggleSection = (sectionKey: string) => {
-    setExpandedSections(prev => {
+    setExpandedSections((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(sectionKey)) {
         newSet.delete(sectionKey);
@@ -108,226 +108,110 @@ export default function FilterDrawer({
 
       {/* Subcategory Filter */}
       {subcategories.length > 0 && (
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.accordionHeader}
-            onPress={() => toggleSection('subcategory')}
-          >
-            <Text style={styles.sectionTitle}>Subcategory</Text>
-            <Ionicons
-              name={expandedSections.has('subcategory') ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color={colors.textPrimary}
-            />
-          </TouchableOpacity>
-          {expandedSections.has('subcategory') && (
-            <View style={styles.pillsContainer}>
-              <PillButton
-                label="All"
-                selected={filters.subcategoryId === null}
-                onPress={() => onUpdateFilter('subcategoryId', null)}
-                size="small"
-              />
-              {subcategories.map((sub) => (
-                <PillButton
-                  key={sub.id}
-                  label={sub.name}
-                  selected={filters.subcategoryId === sub.id}
-                  onPress={() => onUpdateFilter('subcategoryId', sub.id)}
-                  size="small"
-                />
-              ))}
-            </View>
-          )}
-        </View>
+        <FilterAccordionSection
+          title="Subcategory"
+          expanded={expandedSections.has('subcategory')}
+          onToggle={() => toggleSection('subcategory')}
+        >
+          <FilterPillGroup
+            label="Subcategory"
+            pills={subcategories.map((sub) => ({ id: sub.id, label: sub.name }))}
+            selectedId={filters.subcategoryId}
+            onToggle={(id) => onUpdateFilter('subcategoryId', id as any)}
+          />
+        </FilterAccordionSection>
       )}
 
       {/* Color Filter */}
       {availableColors.length > 0 && (
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.accordionHeader}
-            onPress={() => toggleSection('color')}
-          >
-            <Text style={styles.sectionTitle}>Color</Text>
-            <Ionicons
-              name={expandedSections.has('color') ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color={colors.textPrimary}
-            />
-          </TouchableOpacity>
-          {expandedSections.has('color') && (
-            <View style={styles.pillsContainer}>
-              <PillButton
-                label="All"
-                selected={filters.color === null}
-                onPress={() => onUpdateFilter('color', null)}
-                size="small"
-              />
-              {availableColors.map((color) => (
-                <PillButton
-                  key={color}
-                  label={color}
-                  selected={filters.color === color}
-                  onPress={() => onUpdateFilter('color', filters.color === color ? null : color)}
-                  size="small"
-                />
-              ))}
-            </View>
-          )}
-        </View>
+        <FilterAccordionSection
+          title="Color"
+          expanded={expandedSections.has('color')}
+          onToggle={() => toggleSection('color')}
+        >
+          <FilterPillGroup
+            label="Color"
+            pills={availableColors.map((color) => ({ id: color, label: color }))}
+            selectedId={filters.color}
+            onToggle={(id) =>
+              onUpdateFilter('color', filters.color === id ? null : (id as any))
+            }
+          />
+        </FilterAccordionSection>
       )}
 
       {/* Material Filter */}
       {availableMaterials.length > 0 && (
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.accordionHeader}
-            onPress={() => toggleSection('material')}
-          >
-            <Text style={styles.sectionTitle}>Material</Text>
-            <Ionicons
-              name={expandedSections.has('material') ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color={colors.textPrimary}
-            />
-          </TouchableOpacity>
-          {expandedSections.has('material') && (
-            <View style={styles.pillsContainer}>
-              <PillButton
-                label="All"
-                selected={filters.material === null}
-                onPress={() => onUpdateFilter('material', null)}
-                size="small"
-              />
-              {availableMaterials.map((material) => (
-                <PillButton
-                  key={material}
-                  label={material.length > 20 ? `${material.substring(0, 20)}...` : material}
-                  selected={filters.material === material}
-                  onPress={() =>
-                    onUpdateFilter('material', filters.material === material ? null : material)
-                  }
-                  size="small"
-                />
-              ))}
-            </View>
-          )}
-        </View>
+        <FilterAccordionSection
+          title="Material"
+          expanded={expandedSections.has('material')}
+          onToggle={() => toggleSection('material')}
+        >
+          <FilterPillGroup
+            label="Material"
+            pills={availableMaterials.map((material) => ({
+              id: material,
+              label: material,
+            }))}
+            selectedId={filters.material}
+            onToggle={(id) =>
+              onUpdateFilter('material', filters.material === id ? null : (id as any))
+            }
+          />
+        </FilterAccordionSection>
       )}
 
       {/* Size Filter */}
       {availableSizes.length > 0 && (
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.accordionHeader}
-            onPress={() => toggleSection('size')}
-          >
-            <Text style={styles.sectionTitle}>Size</Text>
-            <Ionicons
-              name={expandedSections.has('size') ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color={colors.textPrimary}
-            />
-          </TouchableOpacity>
-          {expandedSections.has('size') && (
-            <View style={styles.pillsContainer}>
-              <PillButton
-                label="All"
-                selected={filters.size === null}
-                onPress={() => onUpdateFilter('size', null)}
-                size="small"
-              />
-              {availableSizes.map((size) => (
-                <PillButton
-                  key={size}
-                  label={size.length > 20 ? `${size.substring(0, 20)}...` : size}
-                  selected={filters.size === size}
-                  onPress={() =>
-                    onUpdateFilter('size', filters.size === size ? null : size)
-                  }
-                  size="small"
-                />
-              ))}
-            </View>
-          )}
-        </View>
+        <FilterAccordionSection
+          title="Size"
+          expanded={expandedSections.has('size')}
+          onToggle={() => toggleSection('size')}
+        >
+          <FilterPillGroup
+            label="Size"
+            pills={availableSizes.map((size) => ({ id: size, label: size }))}
+            selectedId={filters.size}
+            onToggle={(id) =>
+              onUpdateFilter('size', filters.size === id ? null : (id as any))
+            }
+          />
+        </FilterAccordionSection>
       )}
 
       {/* Season Filter */}
       {availableSeasons.length > 0 && (
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.accordionHeader}
-            onPress={() => toggleSection('season')}
-          >
-            <Text style={styles.sectionTitle}>Season</Text>
-            <Ionicons
-              name={expandedSections.has('season') ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color={colors.textPrimary}
-            />
-          </TouchableOpacity>
-          {expandedSections.has('season') && (
-            <View style={styles.pillsContainer}>
-              <PillButton
-                label="All"
-                selected={filters.season === null}
-                onPress={() => onUpdateFilter('season', null)}
-                size="small"
-              />
-              {availableSeasons.map((season) => (
-                <PillButton
-                  key={season}
-                  label={season.length > 20 ? `${season.substring(0, 20)}...` : season}
-                  selected={filters.season === season}
-                  onPress={() =>
-                    onUpdateFilter('season', filters.season === season ? null : season)
-                  }
-                  size="small"
-                />
-              ))}
-            </View>
-          )}
-        </View>
+        <FilterAccordionSection
+          title="Season"
+          expanded={expandedSections.has('season')}
+          onToggle={() => toggleSection('season')}
+        >
+          <FilterPillGroup
+            label="Season"
+            pills={availableSeasons.map((season) => ({ id: season, label: season }))}
+            selectedId={filters.season}
+            onToggle={(id) =>
+              onUpdateFilter('season', filters.season === id ? null : (id as any))
+            }
+          />
+        </FilterAccordionSection>
       )}
 
       {/* Tags Filter */}
       {availableTags.length > 0 && (
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.accordionHeader}
-            onPress={() => toggleSection('tags')}
-          >
-            <Text style={styles.sectionTitle}>Tags</Text>
-            <Ionicons
-              name={expandedSections.has('tags') ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color={colors.textPrimary}
-            />
-          </TouchableOpacity>
-          {expandedSections.has('tags') && (
-            <View style={styles.pillsContainer}>
-              {availableTags.map((tag) => {
-                const isSelected = filters.tagIds.includes(tag.id);
-                return (
-                  <PillButton
-                    key={tag.id}
-                    label={tag.name}
-                    selected={isSelected}
-                    onPress={() => {
-                      const newTagIds = isSelected
-                        ? filters.tagIds.filter((id) => id !== tag.id)
-                        : [...filters.tagIds, tag.id];
-                      onUpdateFilter('tagIds', newTagIds);
-                    }}
-                    size="small"
-                  />
-                );
-              })}
-            </View>
-          )}
-        </View>
+        <FilterAccordionSection
+          title="Tags"
+          expanded={expandedSections.has('tags')}
+          onToggle={() => toggleSection('tags')}
+        >
+          <FilterPillGroup
+            label="Tags"
+            pills={availableTags.map((tag) => ({ id: tag.id, label: tag.name }))}
+            selectedId={filters.tagIds}
+            onToggle={(newTagIds) => onUpdateFilter('tagIds', newTagIds as any)}
+            showAllOption={false}
+          />
+        </FilterAccordionSection>
       )}
     </BottomSheet>
   );
@@ -347,25 +231,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   toggleLabel: {
-    fontSize: typography.fontSize.md,
+    fontSize: 16,
     color: colors.textPrimary,
-  },
-  accordionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  pillsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.md,
   },
   footer: {
     flexDirection: 'row',

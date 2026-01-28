@@ -7,7 +7,7 @@
  */
 
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -217,41 +217,59 @@ export default function WardrobeScreen() {
 
   const handleModalEdit = () => {
     if (!selectedItem) return;
+    setShowItemModal(false);
     router.push(`/wardrobe/item/${selectedItem.id}/edit`);
   };
 
-  const handleModalDelete = async () => {
+  const handleModalDelete = () => {
     if (!selectedItem || !user) return;
     if (selectedItem.owner_user_id !== user.id) return;
 
-    Alert.alert(
-      'Delete Item',
-      'Are you sure you want to delete this item?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { error } = await supabase
-                .from('wardrobe_items')
-                .update({ archived_at: new Date().toISOString() })
-                .eq('id', selectedItem.id)
-                .eq('owner_user_id', user.id);
+    const deleteAction = async () => {
+      try {
+        const { error } = await supabase
+          .from('wardrobe_items')
+          .update({ archived_at: new Date().toISOString() })
+          .eq('id', selectedItem.id)
+          .eq('owner_user_id', user.id);
 
-              if (error) throw error;
+        if (error) throw error;
 
-              Alert.alert('Success', 'Item deleted');
-              setShowItemModal(false);
-              refresh();
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to delete item');
-            }
+        setShowItemModal(false);
+        refresh();
+        
+        if (Platform.OS === 'web') {
+          alert('Item deleted successfully');
+        } else {
+          Alert.alert('Success', 'Item deleted successfully');
+        }
+      } catch (error: any) {
+        if (Platform.OS === 'web') {
+          alert(error.message || 'Failed to delete item');
+        } else {
+          Alert.alert('Error', error.message || 'Failed to delete item');
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+        deleteAction();
+      }
+    } else {
+      Alert.alert(
+        'Delete Item',
+        'Are you sure you want to delete this item? This action cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: deleteAction,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   // Get selected items for outfit creator bar

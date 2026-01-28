@@ -1,275 +1,107 @@
 /**
  * Add Wardrobe Item Screen (Refactored)
  * Screen for adding new wardrobe items with AI analysis
- * 
- * BEFORE: 600+ lines
- * AFTER: ~200 lines (67% reduction)
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { useAuth } from '@/contexts/AuthContext';
-import { useWardrobe } from '@/hooks/wardrobe';
-import { useAIJobPolling } from '@/hooks/ai';
-import { createWardrobeItem } from '@/lib/wardrobe';
-import { triggerAutoTag, triggerProductShot, triggerAIJobExecution } from '@/lib/ai-jobs';
+import { useAddWardrobeItem } from '@/hooks/wardrobe';
 import {
   Header,
   LoadingOverlay,
-  EmptyState,
 } from '@/components/shared';
-import { theme } from '@/styles';
+import ImageCropper from '@/components/wardrobe/ImageCropper';
+import { theme, commonStyles } from '@/styles';
 import { Image } from 'expo-image';
 
-const { colors, spacing, borderRadius } = theme;
-
-interface SelectedImage {
-  uri: string;
-  type: string;
-  name: string;
-}
+const { colors, spacing, borderRadius, typography } = theme;
 
 export default function AddItemScreen() {
-  const { user } = useAuth();
   const router = useRouter();
-  const { wardrobeId, loading: wardrobeLoading } = useWardrobe(user?.id);
-
-  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [generatingAI, setGeneratingAI] = useState(false);
-  const [analysisStep, setAnalysisStep] = useState<string>('');
-  const [pendingItemId, setPendingItemId] = useState<string | null>(null);
-  const [aiJobId, setAiJobId] = useState<string | null>(null);
-  const [aiError, setAiError] = useState<string | null>(null);
-
-  // Poll AI job for completion
-  const { job: aiJob } = useAIJobPolling({
-    jobId: aiJobId,
-    enabled: !!aiJobId && generatingAI,
-    onComplete: (job) => {
-      if (job.status === 'succeeded' && pendingItemId) {
-        setTimeout(() => {
-          setGeneratingAI(false);
-          router.replace(`/wardrobe/item/${pendingItemId}`);
-        }, 800);
-      } else if (job.status === 'failed') {
-        setAiError('Sorry, the item failed to add to your wardrobe.');
-      }
-    },
-    onError: () => {
-      setAiError('Sorry, the item failed to add to your wardrobe.');
-    },
-  });
-
-  // Update analysis step based on AI job progress
-  useEffect(() => {
-    if (!aiJob || !generatingAI) return;
-
-    if (aiJob.status === 'running') {
-      setAnalysisStep('Analyzing your image...');
-    } else if (aiJob.status === 'succeeded') {
-      setAnalysisStep('Adding item to your wardrobe');
-    }
-  }, [aiJob, generatingAI]);
-
-  const handleTakePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please grant camera permissions');
-      return;
-    }
-
-    const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const newImage = {
-        uri: result.assets[0].uri,
-        type: result.assets[0].type || 'image/jpeg',
-        name: result.assets[0].fileName || `photo-${Date.now()}.jpg`,
-      };
-      setSelectedImages([...selectedImages, newImage]);
-    }
-  };
-
-  const handleUploadPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please grant camera roll permissions');
-      return;
-    }
-
-    const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes,
-      allowsMultipleSelection: true,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets) {
-      const newImages = result.assets.map((asset) => ({
-        uri: asset.uri,
-        type: asset.type || 'image/jpeg',
-        name: asset.fileName || `image-${Date.now()}.jpg`,
-      }));
-      setSelectedImages([...selectedImages, ...newImages]);
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setSelectedImages(selectedImages.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async () => {
-    if (!user || !wardrobeId) {
-      Alert.alert('Error', 'Please sign in to add items');
-      return;
-    }
-
-    if (selectedImages.length === 0) {
-      Alert.alert('Error', 'Please select at least one image');
-      return;
-    }
-
-    setLoading(true);
-    setAiError(null);
-
-    try {
-      // Create item with placeholder title
-      const { data, error } = await createWardrobeItem(
-        user.id,
-        wardrobeId,
-        {
-          title: 'New Item',
-          description: undefined,
-          category_id: undefined,
-          subcategory_id: undefined,
-          visibility_override: 'inherit',
-        },
-        selectedImages
-      );
-
-      if (error) {
-        Alert.alert('Error', error.message || 'Failed to create item');
-        setLoading(false);
-        return;
-      }
-
-      if (data?.item && data?.images && data.images.length > 0) {
-        const itemId = data.item.id;
-        const imageIds = data.images.map((img: any) => img.image_id);
-
-        setPendingItemId(itemId);
-        setGeneratingAI(true);
-        setAnalysisStep('Preparing item...');
-
-        // Trigger product shot
-        const { data: productShotJob } = await triggerProductShot(
-          user.id,
-          imageIds[0],
-          itemId
-        );
-
-        if (productShotJob) {
-          await triggerAIJobExecution(productShotJob.id);
-        }
-
-        // Trigger auto tag
-        const { data: autoTagJob } = await triggerAutoTag(
-          user.id,
-          itemId,
-          imageIds,
-          null,
-          null
-        );
-
-        if (autoTagJob) {
-          setAiJobId(autoTagJob.id);
-          await triggerAIJobExecution(autoTagJob.id);
-        }
-      }
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    selectedImages,
+    handleTakePhoto,
+    handleUploadPhoto,
+    removeImage,
+    cropperVisible,
+    cropperImageUri,
+    handleCropperCancel,
+    handleCropperDone,
+    loading,
+    generatingAI,
+    analysisStep,
+    aiError,
+    handleSubmit,
+    wardrobeLoading,
+  } = useAddWardrobeItem();
 
   if (wardrobeLoading) {
     return (
       <View style={styles.container}>
-        <LoadingOverlay visible message="Loading wardrobe..." />
+        <LoadingOverlay visible={true} text="Loading..." />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <LoadingOverlay
-        visible={generatingAI}
-        message={analysisStep}
-        subMessage={aiError || undefined}
-      />
-
       <Header
         title="Add Item"
         leftContent={
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         }
       />
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+      >
         {selectedImages.length === 0 ? (
-          <View style={styles.imageOptionsContainer}>
-            <TouchableOpacity style={styles.optionButton} onPress={handleTakePhoto}>
-              <Ionicons name="camera-outline" size={32} color={colors.primary} />
-              <View style={styles.optionTextContainer}>
-                <Text style={styles.optionTitle}>Take Photo</Text>
-                <Text style={styles.optionSubtext}>Use your camera</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.optionButton} onPress={handleUploadPhoto}>
-              <Ionicons name="images-outline" size={32} color={colors.primary} />
-              <View style={styles.optionTextContainer}>
-                <Text style={styles.optionTitle}>Upload Photo</Text>
-                <Text style={styles.optionSubtext}>Choose from library</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
-            </TouchableOpacity>
+          <View style={styles.emptyContainer}>
+            <Ionicons name="image-outline" size={64} color={colors.gray400} />
+            <Text style={styles.emptyTitle}>Add Photos</Text>
+            <Text style={styles.emptyMessage}>Take a photo or upload from your library</Text>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleTakePhoto}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="camera-outline" size={20} color={colors.white} />
+                <Text style={styles.actionButtonText}>Take Photo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleUploadPhoto}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="images-outline" size={20} color={colors.white} />
+                <Text style={styles.actionButtonText}>Upload Photo</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
-          <View style={styles.imagePreviewContainer}>
-            <View style={styles.imagePreviewGrid}>
+          <>
+            <View style={styles.imageGrid}>
               {selectedImages.map((image, index) => (
-                <View key={index} style={styles.imagePreviewItem}>
+                <View key={index} style={styles.imageContainer}>
                   <Image
                     source={{ uri: image.uri }}
-                    style={styles.imagePreviewThumbnail}
+                    style={styles.image}
                     contentFit="cover"
                   />
                   <TouchableOpacity
-                    style={styles.removeImageButton}
+                    style={styles.removeButton}
                     onPress={() => removeImage(index)}
                   >
                     <Ionicons name="close-circle" size={24} color={colors.error} />
@@ -278,27 +110,36 @@ export default function AddItemScreen() {
               ))}
             </View>
 
-            <View style={styles.addMoreContainer}>
-              <TouchableOpacity style={styles.addMoreButton} onPress={handleTakePhoto}>
-                <Ionicons name="camera-outline" size={20} color={colors.primary} />
-                <Text style={styles.addMoreText}>Take Another</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.addMoreButton} onPress={handleUploadPhoto}>
-                <Ionicons name="images-outline" size={20} color={colors.primary} />
-                <Text style={styles.addMoreText}>Add More</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleSubmit}
+              disabled={loading || generatingAI}
+            >
+              <Text style={styles.submitButtonText}>
+                {loading || generatingAI ? 'Processing...' : 'Add Item'}
+              </Text>
+            </TouchableOpacity>
+          </>
         )}
-
-        <TouchableOpacity
-          style={[styles.submitButton, (loading || selectedImages.length === 0) && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading || selectedImages.length === 0}
-        >
-          <Text style={styles.submitButtonText}>Add Item</Text>
-        </TouchableOpacity>
       </ScrollView>
+
+      <LoadingOverlay
+        visible={generatingAI}
+        text={analysisStep || 'Processing your item...'}
+      />
+
+      {aiError && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{aiError}</Text>
+        </View>
+      )}
+
+      <ImageCropper
+        visible={cropperVisible}
+        imageUri={cropperImageUri || ''}
+        onCancel={handleCropperCancel}
+        onDone={handleCropperDone}
+      />
     </View>
   );
 }
@@ -306,106 +147,102 @@ export default function AddItemScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: colors.white,
   },
   content: {
-    padding: spacing.xl,
-  },
-  imageOptionsContainer: {
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    gap: spacing.lg,
-  },
-  optionTextContainer: {
     flex: 1,
   },
-  optionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 4,
+  scrollContent: {
+    padding: spacing.lg,
   },
-  optionSubtext: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  imagePreviewContainer: {
-    marginBottom: spacing.xl,
-  },
-  imagePreviewGrid: {
+  imageGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  imagePreviewItem: {
-    width: '48%',
+  imageContainer: {
+    width: '100%',
     aspectRatio: 1,
-    position: 'relative',
     borderRadius: borderRadius.md,
     overflow: 'hidden',
+    position: 'relative',
     backgroundColor: colors.gray100,
   },
-  imagePreviewThumbnail: {
+  image: {
     width: '100%',
     height: '100%',
   },
-  removeImageButton: {
+  removeButton: {
     position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
+    top: spacing.xs,
+    right: spacing.xs,
     backgroundColor: colors.white,
-    borderRadius: borderRadius.round,
-    padding: 2,
-  },
-  addMoreContainer: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  addMoreButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: borderRadius.md,
-    gap: spacing.sm,
-  },
-  addMoreText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '600',
+    borderRadius: borderRadius.full,
   },
   submitButton: {
     backgroundColor: colors.black,
     borderRadius: borderRadius.md,
-    padding: spacing.lg,
+    padding: spacing.md,
     alignItems: 'center',
-    marginTop: spacing.lg,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
   },
   submitButtonText: {
     color: colors.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  errorContainer: {
+    position: 'absolute',
+    bottom: spacing.lg,
+    left: spacing.lg,
+    right: spacing.lg,
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+  },
+  errorText: {
+    color: colors.white,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xxxl,
+  },
+  emptyTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  emptyMessage: {
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
+  buttonContainer: {
+    width: '100%',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  actionButtonText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.white,
   },
 });

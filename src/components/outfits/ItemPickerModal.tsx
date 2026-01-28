@@ -4,12 +4,7 @@
  */
 
 import React from 'react';
-import {
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  Text,
-} from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { WardrobeItem } from '@/lib/wardrobe';
 import { BottomSheet } from '@/components/shared';

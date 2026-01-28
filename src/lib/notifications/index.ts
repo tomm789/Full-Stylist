@@ -1,13 +1,21 @@
 /**
- * Notifications module - exports all notification-related functions
- * 
- * Usage:
- * import { getNotifications, subscribeToNotifications, getNotificationMessage } from '@/lib/notifications';
+ * Notifications Module Barrel File
+ * Re-exports all notifications types, enrichment, core API, helpers, and realtime
  */
 
-// Re-export from core
+// Types
+export type { Notification } from './types';
+
+// Enrichment
 export {
-  type Notification,
+  enrichNotificationsWithEntityData,
+  enrichWithPosts,
+  enrichWithOutfits,
+  enrichWithLookbooks,
+} from './enrichment';
+
+// Core API
+export {
   getNotifications,
   getUnreadCount,
   markAsRead,
@@ -15,14 +23,7 @@ export {
   deleteNotification,
 } from './core';
 
-// Re-export from realtime
-export {
-  subscribeToNotifications,
-  unsubscribeFromAllNotifications,
-  getActiveChannel,
-} from './realtime';
-
-// Re-export from helpers
+// Helpers
 export {
   getNotificationMessage,
   getNotificationIcon,
@@ -30,3 +31,10 @@ export {
   groupNotificationsByDate,
   getRelativeTime,
 } from './helpers';
+
+// Realtime
+export {
+  subscribeToNotifications,
+  unsubscribeFromAllNotifications,
+  getActiveChannel,
+} from './realtime';

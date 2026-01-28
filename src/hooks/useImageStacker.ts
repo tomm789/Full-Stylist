@@ -64,9 +64,13 @@ export function useImageStacker(): UseImageStackerReturn {
       const storagePath = `${userId}/ai/stacked/${fileName}`;
 
       // Upload to Supabase storage bucket 'media'
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      // Use Uint8Array to ensure raw binary upload in React Native
+      const arrayBuffer = await stackedBlob.arrayBuffer();
+      const uploadData = new Uint8Array(arrayBuffer);
+
+      const { data: uploadDataResult, error: uploadError } = await supabase.storage
         .from('media')
-        .upload(storagePath, stackedBlob, {
+        .upload(storagePath, uploadData, {
           cacheControl: '3600',
           upsert: false,
           contentType: 'image/jpeg',
@@ -76,30 +80,30 @@ export function useImageStacker(): UseImageStackerReturn {
         throw new Error(`Failed to upload image: ${uploadError.message}`);
       }
 
-      if (!uploadData) {
+      if (!uploadDataResult) {
         throw new Error('Upload succeeded but no data returned');
       }
 
-      console.log(`[useImageStacker] Uploaded to storage: ${uploadData.path}`);
+      console.log(`[useImageStacker] Uploaded to storage: ${uploadDataResult.path}`);
 
       // Get the public URL
       const { data: urlData } = supabase.storage
         .from('media')
-        .getPublicUrl(uploadData.path);
+        .getPublicUrl(uploadDataResult.path);
 
       if (!urlData?.publicUrl) {
         throw new Error('Failed to get public URL for uploaded image');
       }
 
-      console.log(`[useImageStacker] Upload complete, storage path: ${uploadData.path}`);
+      console.log(`[useImageStacker] Upload complete, storage path: ${uploadDataResult.path}`);
 
       // We don't need to create an images record - the Netlify function can download
       // directly from storage using the storage_key. Return the path as the "imageId"
       setLoading(false);
       return {
-        imageId: uploadData.path, // Use storage path as ID
+        imageId: uploadDataResult.path, // Use storage path as ID
         publicUrl: urlData.publicUrl,
-        storagePath: uploadData.path
+        storagePath: uploadDataResult.path
       };
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error occurred');

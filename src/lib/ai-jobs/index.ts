@@ -42,4 +42,7 @@ export {
   triggerBodyShotGenerate,
   getActiveOutfitRenderJob,
   getRecentOutfitRenderJob,
+  triggerBatchJob,
+  getActiveBatchJob,
+  getRecentBatchJob,
 } from './types';

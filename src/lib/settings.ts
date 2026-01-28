@@ -10,6 +10,7 @@ export interface UserSettings {
   body_shot_image_id?: string | null;
   ai_model_preference?: string;
   ai_model_password?: string | null;
+  include_headshot_in_generation?: boolean;
   created_at?: string;
   updated_at?: string;
 }

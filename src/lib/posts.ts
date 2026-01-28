@@ -121,9 +121,8 @@ export async function deletePost(
 }
 
 /**
- * Get social feed (posts + reposts)
+ * Get social feed (posts + reposts) - OPTIMIZED
  * Returns posts and reposts from users the current user follows (and own posts)
- * For MVP, we'll show all public posts
  */
 export async function getFeed(
   userId: string,
@@ -132,41 +131,29 @@ export async function getFeed(
 ): Promise<{
   data: FeedItem[];
   error: any;
-  }> {
+}> {
   try {
-    // Get posts from followed users + own posts + public posts
-    // First, get list of followed user IDs
+    // Get list of followed user IDs
     const { data: follows } = await supabase
       .from('follows')
-      .select('followed_user_id, follower_user_id, status')
+      .select('followed_user_id, status')
       .eq('follower_user_id', userId);
     
     const acceptedFollows = follows?.filter(f => f.status === 'accepted') || [];
     const followedUserIds = acceptedFollows.map((f) => f.followed_user_id);
     
-    // Build query: own posts + posts from followed users + public posts
+    // Build posts query
     let postsQuery = supabase
       .from('posts')
-      .select(
-        `
-        *,
-        owner:users(id, handle, display_name)
-      `
-      );
+      .select('*, owner:users(id, handle, display_name)');
 
-    // Filter posts: own posts + posts from followed users (public/followers) + public posts from anyone
-    // Build OR filter
+    // Filter posts
     let filterString = '';
     if (followedUserIds.length > 0) {
-      // Include: 
-      // 1. Own posts (any visibility)
-      // 2. Followed users' posts with visibility public OR followers
-      // 3. Public posts from anyone
       const userFilters = [userId, ...followedUserIds].map(id => `owner_user_id.eq.${id}`).join(',');
       filterString = `${userFilters},visibility.eq.public`;
       postsQuery = postsQuery.or(filterString);
     } else {
-      // Just own posts and public posts
       filterString = `owner_user_id.eq.${userId},visibility.eq.public`;
       postsQuery = postsQuery.or(filterString);
     }
@@ -175,36 +162,29 @@ export async function getFeed(
       .order('created_at', { ascending: false })
       .limit(limit * 2);
 
-    if (postsError) {
-      throw postsError;
-    }
+    if (postsError) throw postsError;
 
-    // Get all reposts (we'll filter by public posts after)
+    // Get reposts
     const { data: allReposts, error: repostsError } = await supabase
       .from('reposts')
-      .select(
-        `
+      .select(`
         *,
         user:users!reposts_user_id_fkey(id, handle, display_name),
         original_post:posts!reposts_original_post_id_fkey(*)
-      `
-      )
+      `)
       .order('created_at', { ascending: false })
       .limit(limit * 2);
 
-    if (repostsError) {
-      throw repostsError;
-    }
+    if (repostsError) throw repostsError;
 
-    // Filter reposts to only those with public original posts
+    // Filter reposts to only public posts
     const reposts = (allReposts || []).filter(
       (r: any) => r.original_post && r.original_post.visibility === 'public'
     );
 
-    // Combine and sort by created_at
+    // Combine and build feed items
     const feedItems: FeedItem[] = [];
 
-    // Add posts
     if (posts) {
       for (const post of posts) {
         feedItems.push({
@@ -216,7 +196,6 @@ export async function getFeed(
       }
     }
 
-    // Add reposts
     if (reposts) {
       for (const repost of reposts) {
         feedItems.push({
@@ -235,7 +214,7 @@ export async function getFeed(
       }
     }
 
-    // Sort by created_at (most recent first)
+    // Sort by created_at
     feedItems.sort((a, b) => {
       const aDate = a.type === 'post' ? a.post!.created_at : a.repost!.created_at;
       const bDate = b.type === 'post' ? b.post!.created_at : b.repost!.created_at;
@@ -245,31 +224,64 @@ export async function getFeed(
     // Slice to requested limit
     const limitedItems = feedItems.slice(offset, offset + limit);
 
-    // Fetch entity data (outfit or lookbook) for each feed item
-    for (const item of limitedItems) {
+    // 🔥 OPTIMIZATION: Batch fetch all entities in TWO queries instead of N queries
+    const outfitIds = new Set<string>();
+    const lookbookIds = new Set<string>();
+
+    limitedItems.forEach(item => {
       const post = item.type === 'post' ? item.post! : item.repost!.original_post!;
       if (post) {
         if (post.entity_type === 'outfit') {
-          const { data: outfit, error: outfitError } = await supabase
-            .from('outfits')
-            .select('*')
-            .eq('id', post.entity_id)
-            .single();
+          outfitIds.add(post.entity_id);
+        } else if (post.entity_type === 'lookbook') {
+          lookbookIds.add(post.entity_id);
+        }
+      }
+    });
+
+    // Fetch all outfits in ONE query
+    let outfitsMap = new Map<string, any>();
+    if (outfitIds.size > 0) {
+      const { data: outfits } = await supabase
+        .from('outfits')
+        .select('*')
+        .in('id', Array.from(outfitIds));
+      
+      if (outfits) {
+        outfits.forEach(outfit => outfitsMap.set(outfit.id, outfit));
+      }
+    }
+
+    // Fetch all lookbooks in ONE query
+    let lookbooksMap = new Map<string, any>();
+    if (lookbookIds.size > 0) {
+      const { data: lookbooks } = await supabase
+        .from('lookbooks')
+        .select('*')
+        .in('id', Array.from(lookbookIds));
+      
+      if (lookbooks) {
+        lookbooks.forEach(lookbook => lookbooksMap.set(lookbook.id, lookbook));
+      }
+    }
+
+    // Attach entities to feed items (instant lookup)
+    limitedItems.forEach(item => {
+      const post = item.type === 'post' ? item.post! : item.repost!.original_post!;
+      if (post) {
+        if (post.entity_type === 'outfit') {
+          const outfit = outfitsMap.get(post.entity_id);
           if (outfit) {
             item.entity = { outfit };
           }
         } else if (post.entity_type === 'lookbook') {
-          const { data: lookbook, error: lookbookError } = await supabase
-            .from('lookbooks')
-            .select('*')
-            .eq('id', post.entity_id)
-            .single();
+          const lookbook = lookbooksMap.get(post.entity_id);
           if (lookbook) {
             item.entity = { lookbook };
           }
         }
       }
-    }
+    });
 
     return { data: limitedItems, error: null };
   } catch (error: any) {

@@ -6,6 +6,10 @@
 export { useOutfits } from './useOutfits';
 export { useOutfitFilters } from './useOutfitFilters';
 export { useSocialEngagement } from './useSocialEngagement';
-export { useOutfitGeneration } from './useOutfitGeneration';  // ← Add this line
+export { useOutfitGeneration } from './useOutfitGeneration';
+export { useOutfitView } from './useOutfitView';
+export { useOutfitEditor } from './useOutfitEditor';
+export { useOutfitEditorActions } from './useOutfitEditorActions';
+export { useOutfitViewActions } from './useOutfitViewActions';
 
 export type { SortOption, SortOrder } from './useOutfitFilters';

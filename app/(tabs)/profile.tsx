@@ -11,12 +11,11 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfileData, useProfileEdit } from '@/hooks/profile';
 import {
   ProfileHeader,
-  ProfileStats,
   ProfileTabs,
   EditProfileModal,
 } from '@/components/profile';
@@ -60,14 +59,8 @@ export default function ProfileScreen() {
     }
   }, [profile]);
 
-  // Reload profile images when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      if (user && !loading) {
-        refresh();
-      }
-    }, [user, loading])
-  );
+  // Note: Data loads automatically via useProfileData's useEffect
+  // Removed useFocusEffect to prevent infinite refresh loop
 
   const handleSave = async () => {
     const success = await saveProfile(handle, displayName);
@@ -100,15 +93,10 @@ export default function ProfileScreen() {
       {/* Hero Section */}
       <View style={styles.heroSection}>
         <ProfileHeader
-          displayName={profile.display_name}
-          handle={profile.handle}
-          headshotUrl={profile.headshot_image_url}
+          profile={profile}
+          primaryStat={{ label: 'Posts', value: profile.stats?.posts || 0 }}
+          isOwnProfile
           onEditPress={() => setShowEditModal(true)}
-        />
-        <ProfileStats
-          posts={profile.stats?.posts || 0}
-          followers={profile.stats?.followers || 0}
-          following={profile.stats?.following || 0}
         />
       </View>
 

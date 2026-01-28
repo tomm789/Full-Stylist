@@ -1,22 +1,15 @@
 /**
- * useFeed Hook
+ * useFeed Hook (OPTIMIZED)
  * Load and cache feed items with images and engagement counts
  */
 
 import { useState, useEffect } from 'react';
 import { getFeed, FeedItem } from '@/lib/posts';
-import { getOutfitCoverImageUrl } from '@/lib/images';
+import { supabase } from '@/lib/supabase';
 import { getLookbook } from '@/lib/lookbooks';
 import { getUserOutfits } from '@/lib/outfits';
-import {
-  getLikeCount,
-  getSaveCount,
-  getCommentCount,
-  hasLiked,
-  hasSaved,
-} from '@/lib/engagement';
-import { getRepostCount, hasReposted } from '@/lib/reposts';
 import { isFollowing } from '@/lib/user';
+import { getRepostCount, hasReposted } from '@/lib/reposts';
 
 interface EngagementCounts {
   likes: number;
@@ -30,7 +23,7 @@ interface EngagementCounts {
 
 interface UseFeedProps {
   userId: string | undefined;
-  filterByUserId?: string; // Optional: only show posts from this user
+  filterByUserId?: string;
   limit?: number;
 }
 
@@ -44,6 +37,135 @@ interface UseFeedReturn {
   refresh: () => Promise<void>;
 }
 
+// 🔥 OPTIMIZATION: Batch get outfit cover images
+async function batchGetOutfitCoverImages(
+  outfits: Array<{ id: string; cover_image_id?: string }>
+): Promise<Map<string, string | null>> {
+  const imageMap = new Map<string, string | null>();
+  
+  const coverImageIds = outfits
+    .map(o => o.cover_image_id)
+    .filter(Boolean) as string[];
+
+  if (coverImageIds.length === 0) {
+    outfits.forEach(o => imageMap.set(o.id, null));
+    return imageMap;
+  }
+
+  const { data: coverImages } = await supabase
+    .from('images')
+    .select('id, storage_bucket, storage_key')
+    .in('id', coverImageIds);
+
+  const coverImageLookup = new Map(
+    (coverImages || []).map(img => [img.id, img])
+  );
+
+  outfits.forEach(outfit => {
+    if (outfit.cover_image_id) {
+      const img = coverImageLookup.get(outfit.cover_image_id);
+      if (img?.storage_key) {
+        const { data } = supabase.storage
+          .from(img.storage_bucket || 'media')
+          .getPublicUrl(img.storage_key);
+        imageMap.set(outfit.id, data.publicUrl);
+        return;
+      }
+    }
+    imageMap.set(outfit.id, null);
+  });
+
+  return imageMap;
+}
+
+// 🔥 OPTIMIZATION: Batch get engagement counts in ONE query
+async function batchGetEngagementCounts(
+  postIds: string[],
+  userId: string
+): Promise<Record<string, Omit<EngagementCounts, 'reposts' | 'hasReposted'>>> {
+  if (postIds.length === 0) return {};
+
+  // 🔥 Single query to get all likes, saves, and user interactions
+  const [
+    { data: likesData },
+    { data: savesData },
+    { data: commentsData },
+    { data: userLikes },
+    { data: userSaves },
+  ] = await Promise.all([
+    // Get all likes grouped by post
+    supabase
+      .from('likes')
+      .select('entity_id')
+      .eq('entity_type', 'post')
+      .in('entity_id', postIds),
+    
+    // Get all saves grouped by post
+    supabase
+      .from('saves')
+      .select('entity_id')
+      .eq('entity_type', 'post')
+      .in('entity_id', postIds),
+    
+    // Get all comments grouped by post
+    supabase
+      .from('comments')
+      .select('entity_id')
+      .eq('entity_type', 'post')
+      .in('entity_id', postIds),
+    
+    // Get user's likes
+    supabase
+      .from('likes')
+      .select('entity_id')
+      .eq('entity_type', 'post')
+      .eq('user_id', userId)
+      .in('entity_id', postIds),
+    
+    // Get user's saves
+    supabase
+      .from('saves')
+      .select('entity_id')
+      .eq('entity_type', 'post')
+      .eq('user_id', userId)
+      .in('entity_id', postIds),
+  ]);
+
+  // Count occurrences
+  const likeCounts = new Map<string, number>();
+  const saveCounts = new Map<string, number>();
+  const commentCounts = new Map<string, number>();
+  const userLikedSet = new Set(userLikes?.map(l => l.entity_id) || []);
+  const userSavedSet = new Set(userSaves?.map(s => s.entity_id) || []);
+
+  (likesData || []).forEach(({ entity_id }) => {
+    likeCounts.set(entity_id, (likeCounts.get(entity_id) || 0) + 1);
+  });
+
+  (savesData || []).forEach(({ entity_id }) => {
+    saveCounts.set(entity_id, (saveCounts.get(entity_id) || 0) + 1);
+  });
+
+  (commentsData || []).forEach(({ entity_id }) => {
+    commentCounts.set(entity_id, (commentCounts.get(entity_id) || 0) + 1);
+  });
+
+  // Build result
+  const result: Record<string, Omit<EngagementCounts, 'reposts' | 'hasReposted'>> = {};
+  
+  postIds.forEach(postId => {
+    result[postId] = {
+      likes: likeCounts.get(postId) || 0,
+      saves: saveCounts.get(postId) || 0,
+      comments: commentCounts.get(postId) || 0,
+      hasLiked: userLikedSet.has(postId),
+      hasSaved: userSavedSet.has(postId),
+    };
+  });
+
+  return result;
+}
+
 export function useFeed({
   userId,
   filterByUserId,
@@ -52,9 +174,7 @@ export function useFeed({
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [outfitImages, setOutfitImages] = useState<Map<string, string | null>>(new Map());
   const [lookbookImages, setLookbookImages] = useState<Map<string, any>>(new Map());
-  const [engagementCounts, setEngagementCounts] = useState<Record<string, EngagementCounts>>(
-    {}
-  );
+  const [engagementCounts, setEngagementCounts] = useState<Record<string, EngagementCounts>>({});
   const [followStatuses, setFollowStatuses] = useState<Map<string, boolean>>(new Map());
   const [loading, setLoading] = useState(true);
 
@@ -83,105 +203,125 @@ export function useFeed({
 
       setFeed(filteredFeed);
 
-      // Load engagement counts and images in parallel
+      // Extract all post IDs and owner IDs
+      const postIds: string[] = [];
+      const ownerIds = new Set<string>();
+      
+      filteredFeed.forEach(item => {
+        const post = item.type === 'post' ? item.post : item.repost?.original_post;
+        if (post) {
+          postIds.push(post.id);
+          if (post.owner_user_id !== userId) {
+            ownerIds.add(post.owner_user_id);
+          }
+        }
+      });
+
+      // 🔥 OPTIMIZATION: Batch load everything in parallel
+      const [
+        engagementData,
+        repostData,
+        userRepostData,
+        followData,
+      ] = await Promise.all([
+        // Batch get engagement counts (1 query instead of 5*N queries!)
+        batchGetEngagementCounts(postIds, userId),
+        
+        // Get all repost counts
+        Promise.all(postIds.map(async (postId) => ({
+          postId,
+          count: await getRepostCount(postId),
+        }))),
+        
+        // Get user's reposts
+        Promise.all(postIds.map(async (postId) => ({
+          postId,
+          hasReposted: await hasReposted(userId, postId),
+        }))),
+        
+        // Get follow statuses
+        Promise.all(
+          Array.from(ownerIds).map(async (ownerId) => ({
+            ownerId,
+            following: (await isFollowing(userId, ownerId)).isFollowing,
+          }))
+        ),
+      ]);
+
+      // Combine engagement data with reposts
       const counts: Record<string, EngagementCounts> = {};
-      const outfitImageCache = new Map<string, string | null>();
+      const repostMap = new Map(repostData.map(r => [r.postId, r.count]));
+      const userRepostMap = new Map(userRepostData.map(r => [r.postId, r.hasReposted]));
+
+      postIds.forEach(postId => {
+        counts[postId] = {
+          ...engagementData[postId],
+          reposts: repostMap.get(postId) || 0,
+          hasReposted: userRepostMap.get(postId) || false,
+        };
+      });
+
+      setEngagementCounts(counts);
+
+      // Set follow statuses
+      const followStatusMap = new Map(
+        followData.map(f => [f.ownerId, f.following])
+      );
+      setFollowStatuses(followStatusMap);
+
+      // 🔥 OPTIMIZATION: Batch get outfit images
+      const outfitItems = filteredFeed
+        .filter(item => {
+          const post = item.type === 'post' ? item.post : item.repost?.original_post;
+          return post?.entity_type === 'outfit' && item.entity?.outfit;
+        });
+
+      const outfits = outfitItems.map(item => item.entity!.outfit);
+      const outfitImageCache = await batchGetOutfitCoverImages(outfits);
+      setOutfitImages(outfitImageCache);
+
+      // Handle lookbooks (this is already relatively optimized)
       const lookbookImageCache = new Map<string, any>();
-      const followStatusMap = new Map<string, boolean>();
+      const lookbookItems = filteredFeed.filter(item => {
+        const post = item.type === 'post' ? item.post : item.repost?.original_post;
+        return post?.entity_type === 'lookbook' && item.entity?.lookbook;
+      });
 
       await Promise.all(
-        filteredFeed.map(async (item) => {
-          const post = item.type === 'post' ? item.post : item.repost?.original_post;
-          if (!post) return;
+        lookbookItems.map(async (item) => {
+          const lookbookId = item.entity!.lookbook.id;
+          const { data } = await getLookbook(lookbookId);
+          
+          if (data && data.outfits.length > 0) {
+            const lookbookOwnerId = data.lookbook.owner_user_id;
+            const { data: allOutfits } = await getUserOutfits(lookbookOwnerId);
 
-          const postId = post.id;
-          const ownerId = post.owner_user_id;
+            if (allOutfits) {
+              const lookbookOutfits = data.outfits
+                .map((lo: any) => allOutfits.find((o: any) => o.id === lo.outfit_id))
+                .filter(Boolean);
 
-          // Check follow status for non-own posts
-          if (ownerId !== userId && !followStatusMap.has(ownerId)) {
-            const { isFollowing: following } = await isFollowing(userId, ownerId);
-            followStatusMap.set(ownerId, following);
-          }
+              lookbookImageCache.set(`${lookbookId}_outfits`, lookbookOutfits);
 
-          // Load engagement counts
-          const [likes, saves, comments, reposts, liked, saved, reposted] =
-            await Promise.all([
-              getLikeCount('post', postId),
-              getSaveCount('post', postId),
-              getCommentCount('post', postId),
-              getRepostCount(postId),
-              hasLiked(userId, 'post', postId),
-              hasSaved(userId, 'post', postId),
-              hasReposted(userId, postId),
-            ]);
-
-          counts[postId] = {
-            likes,
-            saves,
-            comments,
-            reposts,
-            hasLiked: liked,
-            hasSaved: saved,
-            hasReposted: reposted,
-          };
-
-          // Cache outfit images
-          if (post.entity_type === 'outfit' && item.entity?.outfit) {
-            const outfitId = item.entity.outfit.id;
-            if (!outfitImageCache.has(outfitId)) {
-              const url = await getOutfitCoverImageUrl(item.entity.outfit);
-              outfitImageCache.set(outfitId, url);
-            }
-          }
-
-          // Cache lookbook outfits and images
-          if (post.entity_type === 'lookbook' && item.entity?.lookbook) {
-            const lookbookId = item.entity.lookbook.id;
-            if (!lookbookImageCache.has(lookbookId)) {
-              const { data } = await getLookbook(lookbookId);
-              if (data && data.outfits.length > 0) {
-                const lookbookOwnerId = data.lookbook.owner_user_id;
-                const { data: allOutfits } = await getUserOutfits(lookbookOwnerId);
-
-                if (allOutfits) {
-                  const lookbookOutfits = data.outfits
-                    .map((lo: any) => allOutfits.find((o: any) => o.id === lo.outfit_id))
-                    .filter(Boolean);
-
-                  // Store outfits for carousel
-                  lookbookImageCache.set(`${lookbookId}_outfits`, lookbookOutfits);
-
-                  // Load all outfit images in parallel
-                  const imageUrls = await Promise.all(
-                    lookbookOutfits.map(async (outfit) => {
-                      const url = await getOutfitCoverImageUrl(outfit);
-                      return { outfitId: outfit.id, url };
-                    })
-                  );
-
-                  // Set first image as thumbnail
-                  if (imageUrls.length > 0) {
-                    lookbookImageCache.set(lookbookId, imageUrls[0].url);
-                  }
-
-                  // Cache all outfit images
-                  imageUrls.forEach(({ outfitId, url }) => {
-                    lookbookImageCache.set(`${lookbookId}_outfit_${outfitId}`, url);
-                  });
-                } else {
-                  lookbookImageCache.set(lookbookId, null);
-                }
-              } else {
-                lookbookImageCache.set(lookbookId, null);
+              const imageUrls = await batchGetOutfitCoverImages(lookbookOutfits);
+              
+              if (lookbookOutfits.length > 0) {
+                const firstUrl = imageUrls.get(lookbookOutfits[0].id);
+                lookbookImageCache.set(lookbookId, firstUrl);
               }
+
+              imageUrls.forEach((url, outfitId) => {
+                lookbookImageCache.set(`${lookbookId}_outfit_${outfitId}`, url);
+              });
+            } else {
+              lookbookImageCache.set(lookbookId, null);
             }
+          } else {
+            lookbookImageCache.set(lookbookId, null);
           }
         })
       );
 
-      setEngagementCounts(counts);
-      setFollowStatuses(followStatusMap);
-      setOutfitImages(outfitImageCache);
       setLookbookImages(lookbookImageCache);
     } catch (error) {
       console.error('Error loading feed:', error);

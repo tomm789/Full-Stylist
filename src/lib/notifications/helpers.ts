@@ -1,4 +1,4 @@
-import type { Notification } from './core';
+import type { Notification } from './types';
 
 /**
  * Get notification message text
