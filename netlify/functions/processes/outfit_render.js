@@ -135,10 +135,10 @@ async function fetchOutfitItemDetails(outfitId, supabase, userId) {
   try {
     // Use the existing function to get outfit items with wardrobe details
     const { data, error } = await supabase
-      .rpc('get_outfit_items_with_details', {
-        outfit_id: outfitId,
-        viewer_id: userId
-      });
+  .rpc('get_outfit_items_with_details', {
+    p_outfit_id: outfitId,
+    p_viewer_id: userId,
+  });
 
     if (error) {
       console.error(`[OutfitDescription] Error fetching items:`, error);
