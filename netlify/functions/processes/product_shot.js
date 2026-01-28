@@ -20,21 +20,37 @@ const {
  * @param {object} input - Job input with image_id and wardrobe_item_id
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase - Supabase client
  * @param {string} userId - ID of the user requesting the image
+ * @param {object} perfTracker - Optional performance tracker for timing measurements
+ * @param {object} timingTracker - Optional timing tracker for detailed step-by-step timing
+ * @param {object} preDownloadedImageData - Optional pre-downloaded image data { base64, mimeType } to avoid redundant downloads
  * @returns {Promise<{image_id: number, storage_key: string}>} New image record details
  */
-async function processProductShot(input, supabase, userId) {
+async function processProductShot(input, supabase, userId, perfTracker = null, timingTracker = null, preDownloadedImageData = null) {
   const { image_id, wardrobe_item_id } = input;
   if (!image_id || !wardrobe_item_id) {
     throw new Error("Missing ID or wardrobe_item_id");
   }
-  // Download the original item image
-  const imageB64 = await downloadImageFromStorage(supabase, image_id);
-  // Generate a product shot using Gemini
+  
+  // Use pre-downloaded image if provided, otherwise download from storage
+  let imageResult;
+  if (preDownloadedImageData && preDownloadedImageData.base64) {
+    // Use the pre-downloaded image data to avoid redundant storage download
+    console.log(`[processProductShot] Using pre-downloaded image (skipping storage download, saving ~5s)`);
+    imageResult = preDownloadedImageData;
+  } else {
+    // Download from storage if no pre-downloaded data provided
+    console.log(`[processProductShot] Downloading image from storage (image_id: ${image_id})...`);
+    imageResult = await downloadImageFromStorage(supabase, image_id, timingTracker);
+  }
+  
+  // Generate a product shot using Gemini - pass full result object to include mime-type
   const productShotB64 = await callGeminiAPI(
     PROMPTS.PRODUCT_SHOT,
-    [imageB64],
+    [imageResult],
     "gemini-2.5-flash-image",
-    "IMAGE"
+    "IMAGE",
+    perfTracker,
+    timingTracker
   );
   // Upload the generated image to storage
   const timestamp = Date.now();

@@ -1,5 +1,5 @@
 /**
- * useUserProfile Hook
+ * useUserProfile Hook (OPTIMIZED)
  * Load and manage user profile data
  */
 
@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { getFullUserProfile } from '@/lib/user';
 import { getUserOutfits } from '@/lib/outfits';
 import { getUserLookbooks } from '@/lib/lookbooks';
-import { getOutfitCoverImageUrl } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
 
 interface UseUserProfileProps {
@@ -27,6 +26,47 @@ interface UseUserProfileReturn {
   isOwnProfile: boolean;
 }
 
+// 🔥 OPTIMIZATION: Batch get outfit cover images
+async function batchGetOutfitCoverImages(
+  outfits: Array<{ id: string; cover_image_id?: string }>
+): Promise<Map<string, string | null>> {
+  const imageMap = new Map<string, string | null>();
+  
+  const coverImageIds = outfits
+    .map(o => o.cover_image_id)
+    .filter(Boolean) as string[];
+
+  if (coverImageIds.length === 0) {
+    outfits.forEach(o => imageMap.set(o.id, null));
+    return imageMap;
+  }
+
+  const { data: coverImages } = await supabase
+    .from('images')
+    .select('id, storage_bucket, storage_key')
+    .in('id', coverImageIds);
+
+  const coverImageLookup = new Map(
+    (coverImages || []).map(img => [img.id, img])
+  );
+
+  outfits.forEach(outfit => {
+    if (outfit.cover_image_id) {
+      const img = coverImageLookup.get(outfit.cover_image_id);
+      if (img?.storage_key) {
+        const { data } = supabase.storage
+          .from(img.storage_bucket || 'media')
+          .getPublicUrl(img.storage_key);
+        imageMap.set(outfit.id, data.publicUrl);
+        return;
+      }
+    }
+    imageMap.set(outfit.id, null);
+  });
+
+  return imageMap;
+}
+
 export function useUserProfile({
   userId,
   currentUserId,
@@ -35,9 +75,7 @@ export function useUserProfile({
   const [outfits, setOutfits] = useState<any[]>([]);
   const [lookbooks, setLookbooks] = useState<any[]>([]);
   const [outfitImages, setOutfitImages] = useState<Map<string, string | null>>(new Map());
-  const [lookbookImages, setLookbookImages] = useState<Map<string, string | null>>(
-    new Map()
-  );
+  const [lookbookImages, setLookbookImages] = useState<Map<string, string | null>>(new Map());
   const [outfitWearCounts, setOutfitWearCounts] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
 
@@ -52,32 +90,50 @@ export function useUserProfile({
     setLoading(true);
 
     try {
-      // Load profile
-      const { data: profileData } = await getFullUserProfile(userId);
-      setProfile(profileData);
-
-      // Load content
-      const [{ data: outfitsData }, { data: lookbooksData }] = await Promise.all([
+      // Load profile and content in parallel
+      const [
+        { data: profileData },
+        { data: outfitsData },
+        { data: lookbooksData },
+      ] = await Promise.all([
+        getFullUserProfile(userId),
         getUserOutfits(userId),
         getUserLookbooks(userId),
       ]);
 
+      setProfile(profileData);
       setOutfits(outfitsData || []);
       setLookbooks(lookbooksData || []);
 
-      // Load outfit wear counts
-      if (outfitsData && outfitsData.length > 0) {
-        const outfitIds = outfitsData.map((outfit) => outfit.id);
+      // 🔥 OPTIMIZATION: Batch load wear counts and lookbook data
+      const outfitIds = (outfitsData || []).map(outfit => outfit.id);
+
+      const [wearCountsData, lookbookOutfitsData] = await Promise.all([
+        // Get wear counts in ONE query
+        outfitIds.length > 0
+          ? supabase
+              .from('calendar_entries')
+              .select('outfit_id, calendar_day:calendar_day_id(owner_user_id)')
+              .in('outfit_id', outfitIds)
+              .eq('status', 'worn')
+          : Promise.resolve({ data: null }),
+        
+        // Get first outfit for each lookbook in ONE query
+        lookbooksData && lookbooksData.length > 0
+          ? supabase
+              .from('lookbook_outfits')
+              .select('lookbook_id, outfit_id, position')
+              .in('lookbook_id', lookbooksData.map(lb => lb.id))
+              .order('position', { ascending: true })
+          : Promise.resolve({ data: null }),
+      ]);
+
+      // Process wear counts
+      if (outfitIds.length > 0) {
         const wearCounts = new Map<string, number>();
-        outfitIds.forEach((id) => wearCounts.set(id, 0));
+        outfitIds.forEach(id => wearCounts.set(id, 0));
 
-        const { data: wornEntries } = await supabase
-          .from('calendar_entries')
-          .select('outfit_id, calendar_day:calendar_day_id(owner_user_id)')
-          .in('outfit_id', outfitIds)
-          .eq('status', 'worn');
-
-        wornEntries?.forEach((entry: any) => {
+        (wearCountsData.data || []).forEach((entry: any) => {
           const ownerId = entry.calendar_day?.owner_user_id;
           if (!entry.outfit_id || !ownerId || ownerId === userId) return;
           wearCounts.set(entry.outfit_id, (wearCounts.get(entry.outfit_id) || 0) + 1);
@@ -86,49 +142,43 @@ export function useUserProfile({
         setOutfitWearCounts(wearCounts);
       }
 
-      // Load outfit images
-      const outfitImageCache = new Map<string, string | null>();
-      await Promise.all(
-        (outfitsData || []).map(async (outfit) => {
-          const url = await getOutfitCoverImageUrl(outfit);
-          outfitImageCache.set(outfit.id, url);
-        })
-      );
-      setOutfitImages(outfitImageCache);
-
-      // Load lookbook images (first outfit as thumbnail)
-      const lookbookImageCache = new Map<string, string | null>();
-      if (lookbooksData && outfitsData) {
-        await Promise.all(
-          lookbooksData.map(async (lookbook) => {
-            // Get first outfit from lookbook
-            const { data: lookbookData } = await supabase
-              .from('lookbooks')
-              .select('id')
-              .eq('id', lookbook.id)
-              .single();
-
-            const { data: lookbookOutfits } = await supabase
-              .from('lookbook_outfits')
-              .select('outfit_id')
-              .eq('lookbook_id', lookbook.id)
-              .order('position', { ascending: true })
-              .limit(1);
-
-            if (lookbookOutfits && lookbookOutfits.length > 0) {
-              const firstOutfitId = lookbookOutfits[0].outfit_id;
-              const firstOutfit = outfitsData.find((o) => o.id === firstOutfitId);
-              if (firstOutfit) {
-                const url = await getOutfitCoverImageUrl(firstOutfit);
-                lookbookImageCache.set(lookbook.id, url);
-                return;
-              }
-            }
-            lookbookImageCache.set(lookbook.id, null);
-          })
-        );
+      // 🔥 OPTIMIZATION: Batch get outfit images
+      if (outfitsData && outfitsData.length > 0) {
+        const outfitImageCache = await batchGetOutfitCoverImages(outfitsData);
+        setOutfitImages(outfitImageCache);
       }
-      setLookbookImages(lookbookImageCache);
+
+      // 🔥 OPTIMIZATION: Process lookbook images
+      if (lookbooksData && lookbooksData.length > 0 && outfitsData) {
+        const lookbookImageCache = new Map<string, string | null>();
+        
+        // Group lookbook outfits by lookbook_id (get first one only)
+        const firstOutfitsByLookbook = new Map<string, string>();
+        (lookbookOutfitsData.data || []).forEach((lo: any) => {
+          if (!firstOutfitsByLookbook.has(lo.lookbook_id)) {
+            firstOutfitsByLookbook.set(lo.lookbook_id, lo.outfit_id);
+          }
+        });
+
+        // Get images for first outfits
+        const firstOutfits = Array.from(firstOutfitsByLookbook.values())
+          .map(outfitId => outfitsData.find(o => o.id === outfitId))
+          .filter(Boolean);
+
+        const firstOutfitImages = await batchGetOutfitCoverImages(firstOutfits);
+
+        // Map back to lookbooks
+        lookbooksData.forEach(lookbook => {
+          const firstOutfitId = firstOutfitsByLookbook.get(lookbook.id);
+          if (firstOutfitId) {
+            lookbookImageCache.set(lookbook.id, firstOutfitImages.get(firstOutfitId) || null);
+          } else {
+            lookbookImageCache.set(lookbook.id, null);
+          }
+        });
+
+        setLookbookImages(lookbookImageCache);
+      }
     } catch (error) {
       console.error('Error loading user profile:', error);
     } finally {

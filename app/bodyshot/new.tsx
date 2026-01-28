@@ -3,7 +3,7 @@
  * Generate full-body studio model photo from photo + headshot
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -18,24 +18,20 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
-import { useAuth } from '@/contexts/AuthContext';
+import { useNewBodyshot } from '@/hooks/profile';
 import { useImageGeneration } from '@/hooks/profile';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 
-interface HeadshotOption {
-  id: string;
-  url: string;
-}
-
 export default function NewBodyshotScreen() {
-  const { user } = useAuth();
   const router = useRouter();
-  const [headshots, setHeadshots] = useState<HeadshotOption[]>([]);
-  const [selectedHeadshotId, setSelectedHeadshotId] = useState<string | null>(null);
-  const [loadingHeadshots, setLoadingHeadshots] = useState(true);
-
+  const { user } = useAuth();
+  const imageGeneration = useImageGeneration();
   const {
+    headshots,
+    loadingHeadshots,
+    selectedHeadshotId,
+    setSelectedHeadshotId,
     generating,
     loadingMessage,
     uploadedUri,
@@ -43,70 +39,9 @@ export default function NewBodyshotScreen() {
     policyMessage,
     pickImage,
     clearImage,
-    generateBodyShot,
     closePolicyModal,
-  } = useImageGeneration();
-
-  // Load user's headshots
-  useEffect(() => {
-    if (user) {
-      loadHeadshots();
-    }
-  }, [user]);
-
-  const loadHeadshots = async () => {
-    if (!user) return;
-
-    setLoadingHeadshots(true);
-
-    try {
-      // Get all headshots
-      const { data: images } = await supabase
-        .from('images')
-        .select('*')
-        .eq('owner_user_id', user.id)
-        .eq('source', 'ai_generated')
-        .order('created_at', { ascending: false });
-
-      if (images) {
-        // Filter headshots by checking AI jobs
-        const { data: jobs } = await supabase
-          .from('ai_jobs')
-          .select('*')
-          .eq('owner_user_id', user.id)
-          .eq('job_type', 'headshot_generate')
-          .eq('status', 'succeeded');
-
-        const headshotIds = new Set(
-          jobs?.map((j) => j.result?.image_id || j.result?.generated_image_id).filter(Boolean) || []
-        );
-
-        const headshotImages = images
-          .filter((img) => headshotIds.has(img.id))
-          .map((img) => {
-            const { data: urlData } = supabase.storage
-              .from(img.storage_bucket || 'media')
-              .getPublicUrl(img.storage_key);
-            return { id: img.id, url: urlData.publicUrl };
-          });
-
-        setHeadshots(headshotImages);
-      }
-    } catch (error) {
-      console.error('Error loading headshots:', error);
-    } finally {
-      setLoadingHeadshots(false);
-    }
-  };
-
-  const handleGenerate = async () => {
-    if (!user || !selectedHeadshotId) return;
-
-    const generatedImageId = await generateBodyShot(user.id, selectedHeadshotId);
-    if (generatedImageId) {
-      router.replace(`/bodyshot/${generatedImageId}` as any);
-    }
-  };
+    handleGenerate,
+  } = useNewBodyshot();
 
   return (
     <>
@@ -226,7 +161,35 @@ export default function NewBodyshotScreen() {
                       styles.generateButton,
                       generating && styles.generateButtonDisabled,
                     ]}
-                    onPress={handleGenerate}
+                    onPress={async () => {
+                      // Performance tracking: Start time (button click)
+                      const startTime = performance.now();
+                      console.log('[PERF] Button clicked at:', startTime);
+
+                      if (!user || !selectedHeadshotId) return;
+
+                      const generatedImageId = await imageGeneration.generateBodyShot(
+                        user.id,
+                        selectedHeadshotId
+                      );
+                      
+                      // Performance tracking: API response time
+                      const apiResponseTime = performance.now();
+                      const backendProcessingTime = apiResponseTime - startTime;
+                      console.log('[PERF] API response received at:', apiResponseTime);
+                      console.log('[PERF] Backend processing duration:', backendProcessingTime.toFixed(2), 'ms');
+
+                      if (generatedImageId) {
+                        // Pass timing data via route params
+                        router.replace({
+                          pathname: `/bodyshot/${generatedImageId}` as any,
+                          params: {
+                            perfStartTime: startTime.toString(),
+                            perfApiResponseTime: apiResponseTime.toString(),
+                          },
+                        } as any);
+                      }
+                    }}
                     disabled={generating}
                   >
                     <Ionicons name="sparkles-outline" size={20} color="#fff" />

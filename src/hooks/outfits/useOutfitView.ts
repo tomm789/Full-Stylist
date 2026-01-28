@@ -1,0 +1,219 @@
+/**
+ * useOutfitView Hook
+ * Load and manage outfit view data with polling
+ */
+
+import { useState, useEffect } from 'react';
+import { Alert } from 'react-native';
+import { getOutfit, deleteOutfit } from '@/lib/outfits';
+import { getWardrobeItemImages } from '@/lib/wardrobe';
+import { getOutfitCoverImageUrl } from '@/lib/images';
+import { supabase } from '@/lib/supabase';
+import {
+  getActiveOutfitRenderJob,
+  getRecentOutfitRenderJob,
+  pollAIJobWithFinalCheck,
+} from '@/lib/ai-jobs';
+
+interface UseOutfitViewProps {
+  outfitId: string | undefined;
+  userId: string | undefined;
+  renderJobIdParam?: string;
+}
+
+interface UseOutfitViewReturn {
+  outfit: any | null;
+  coverImage: any | null;
+  outfitItems: any[];
+  wardrobeItems: Map<string, any>;
+  itemImageUrls: Map<string, string>;
+  loading: boolean;
+  isGenerating: boolean;
+  renderJobId: string | null;
+  refreshOutfit: () => Promise<void>;
+  deleteOutfit: () => Promise<void>;
+}
+
+export function useOutfitView({
+  outfitId,
+  userId,
+  renderJobIdParam,
+}: UseOutfitViewProps): UseOutfitViewReturn {
+  const [outfit, setOutfit] = useState<any | null>(null);
+  const [coverImage, setCoverImage] = useState<any | null>(null);
+  const [outfitItems, setOutfitItems] = useState<any[]>([]);
+  const [wardrobeItems, setWardrobeItems] = useState<Map<string, any>>(
+    new Map()
+  );
+  const [itemImageUrls, setItemImageUrls] = useState<Map<string, string>>(
+    new Map()
+  );
+  const [loading, setLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [renderJobId, setRenderJobId] = useState<string | null>(null);
+
+  const startPollingForOutfitRender = async (jobId: string) => {
+    try {
+      const { data: finalJob } = await pollAIJobWithFinalCheck(
+        jobId,
+        120,
+        2000,
+        '[OutfitView]'
+      );
+
+      if (finalJob && finalJob.status === 'succeeded') {
+        setRenderJobId(null);
+        setIsGenerating(false);
+        await refreshOutfit();
+      } else if (finalJob && finalJob.status === 'failed') {
+        setRenderJobId(null);
+        setIsGenerating(false);
+        Alert.alert('Error', 'Outfit generation failed');
+      }
+    } catch (error) {
+      console.error('Error polling:', error);
+    }
+  };
+
+  const refreshOutfit = async () => {
+    if (!outfitId) return;
+
+    const { data } = await getOutfit(outfitId);
+    if (data) {
+      setOutfit(data.outfit);
+      setCoverImage(data.coverImage);
+      setOutfitItems(data.items);
+
+      if (data.coverImage) {
+        setIsGenerating(false);
+      }
+    }
+  };
+
+  const deleteOutfitAction = async () => {
+    if (!userId || !outfit) return;
+
+    const { error } = await deleteOutfit(userId, outfit.id);
+    if (error) {
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    if (!outfitId || !userId) {
+      setLoading(false);
+      return;
+    }
+
+    const loadOutfitData = async () => {
+      setLoading(true);
+
+      try {
+        const { data, error } = await getOutfit(outfitId);
+        if (error || !data) {
+          Alert.alert('Error', 'Failed to load outfit');
+          return;
+        }
+
+        setOutfit(data.outfit);
+        setCoverImage(data.coverImage);
+        setOutfitItems(data.items);
+
+        // Check for active render jobs
+        const { data: activeJob } = await getActiveOutfitRenderJob(
+          outfitId,
+          userId
+        );
+
+        if (activeJob) {
+          const coverImageCreatedAt = data.coverImage?.created_at
+            ? new Date(data.coverImage.created_at).getTime()
+            : null;
+          const activeJobCreatedAt = new Date(activeJob.created_at).getTime();
+          const shouldHandleActiveJob =
+            !coverImageCreatedAt || coverImageCreatedAt < activeJobCreatedAt;
+
+          if (shouldHandleActiveJob) {
+            setRenderJobId(activeJob.id);
+            setIsGenerating(true);
+            startPollingForOutfitRender(activeJob.id);
+          }
+        } else if (renderJobIdParam) {
+          setIsGenerating(true);
+          setRenderJobId(renderJobIdParam);
+          startPollingForOutfitRender(renderJobIdParam);
+        }
+
+        // Load wardrobe items
+        if (data.items.length > 0) {
+          const wardrobeItemIds = data.items.map(
+            (item) => item.wardrobe_item_id
+          );
+
+          try {
+            const { data: items } = await supabase
+              .from('wardrobe_items')
+              .select('*')
+              .in('id', wardrobeItemIds);
+
+            if (items) {
+              const itemsMap = new Map();
+              items.forEach((item: any) => {
+                itemsMap.set(item.id, item);
+              });
+              setWardrobeItems(itemsMap);
+
+              // Load images
+              const imagePromises = items.map(async (item: any) => {
+                const { data: imageData } = await getWardrobeItemImages(
+                  item.id
+                );
+                if (imageData && imageData.length > 0) {
+                  const imageRecord = imageData[0].image;
+                  if (imageRecord) {
+                    const { data: urlData } = supabase.storage
+                      .from(imageRecord.storage_bucket || 'media')
+                      .getPublicUrl(imageRecord.storage_key);
+                    return { itemId: item.id, url: urlData.publicUrl };
+                  }
+                }
+                return { itemId: item.id, url: null };
+              });
+
+              const imageResults = await Promise.all(imagePromises);
+              const newImageUrls = new Map<string, string>();
+              imageResults.forEach(({ itemId, url }) => {
+                if (url) {
+                  newImageUrls.set(itemId, url);
+                }
+              });
+              setItemImageUrls(newImageUrls);
+            }
+          } catch (error) {
+            console.error('Error loading items:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading outfit:', error);
+        Alert.alert('Error', 'Failed to load outfit');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOutfitData();
+  }, [outfitId, userId, renderJobIdParam]);
+
+  return {
+    outfit,
+    coverImage,
+    outfitItems,
+    wardrobeItems,
+    itemImageUrls,
+    loading,
+    isGenerating,
+    renderJobId,
+    refreshOutfit,
+    deleteOutfit: deleteOutfitAction,
+  };
+}

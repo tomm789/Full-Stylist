@@ -11,7 +11,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfileData, useProfileEdit } from '@/hooks/profile';
 import {
@@ -59,14 +59,8 @@ export default function ProfileScreen() {
     }
   }, [profile]);
 
-  // Reload profile images when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      if (user && !loading) {
-        refresh();
-      }
-    }, [user, loading])
-  );
+  // Note: Data loads automatically via useProfileData's useEffect
+  // Removed useFocusEffect to prevent infinite refresh loop
 
   const handleSave = async () => {
     const success = await saveProfile(handle, displayName);

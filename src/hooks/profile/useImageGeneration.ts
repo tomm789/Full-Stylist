@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { uploadImageToStorage } from '@/lib/wardrobe';
+import { uploadImageToStorage, uriToBlob } from '@/lib/utils/image-helpers';
 import { supabase } from '@/lib/supabase';
 import {
   triggerHeadshotGenerate,
@@ -46,24 +46,29 @@ export function useImageGeneration(): UseImageGenerationReturn {
   const [policyMessage, setPolicyMessage] = useState('');
 
   const pickImage = async (useCamera = false) => {
+    console.log('[pickImage] Starting, useCamera:', useCamera);
+    
     const permissionFn = useCamera
       ? ImagePicker.requestCameraPermissionsAsync
       : ImagePicker.requestMediaLibraryPermissionsAsync;
 
     const { status } = await permissionFn();
     if (status !== 'granted') {
+      console.log('[pickImage] Permission denied');
       Alert.alert(
         'Permission Required',
-        `Please grant ${useCamera ? 'camera' : 'camera roll'} permissions`
+        'Please grant ' + (useCamera ? 'camera' : 'camera roll') + ' permissions'
       );
       return;
     }
 
+    console.log('[pickImage] Permission granted');
     const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
     const launchFn = useCamera
       ? ImagePicker.launchCameraAsync
       : ImagePicker.launchImageLibraryAsync;
 
+    console.log('[pickImage] Launching picker...');
     const result = await launchFn({
       mediaTypes,
       allowsEditing: true,
@@ -71,14 +76,23 @@ export function useImageGeneration(): UseImageGenerationReturn {
       quality: 0.8,
     });
 
-    if (result.canceled || !result.assets[0]) return;
+    console.log('[pickImage] Picker result:', {
+      canceled: result.canceled,
+      hasAssets: !!(result.assets && result.assets[0])
+    });
 
-    // Use uriToBlob for proper file:// handling on iOS
-    const { uriToBlob } = await import('@/lib/wardrobe');
+    if (result.canceled || !result.assets[0]) {
+      console.log('[pickImage] User canceled or no assets');
+      return;
+    }
+
+    console.log('[pickImage] Converting to blob...');
     const blob = await uriToBlob(result.assets[0].uri, 'image/jpeg');
+    console.log('[pickImage] Blob created, size:', blob.size);
 
     setUploadedUri(result.assets[0].uri);
     setUploadedBlob(blob);
+    console.log('[pickImage] Done!');
   };
 
   const clearImage = () => {
@@ -91,7 +105,12 @@ export function useImageGeneration(): UseImageGenerationReturn {
     hairStyle?: string,
     makeupStyle?: string
   ): Promise<string | null> => {
+    console.log('=== HEADSHOT GENERATION START ===');
+    console.log('userId:', userId);
+    console.log('uploadedBlob exists:', !!uploadedBlob);
+
     if (!uploadedBlob) {
+      console.log('ERROR: No blob');
       Alert.alert('Error', 'Please take or upload a photo first');
       return null;
     }
@@ -100,34 +119,38 @@ export function useImageGeneration(): UseImageGenerationReturn {
     setLoadingMessage('Uploading photo...');
 
     try {
-      // Upload image
+      console.log('-> Uploading...');
       const uploadResult = await uploadImageToStorage(
         userId,
         uploadedBlob,
-        `selfie-${Date.now()}.jpg`
+        'selfie-' + Date.now() + '.jpg'
       );
+      console.log('Upload done, error:', !!uploadResult.error);
+      
       if (uploadResult.error) throw uploadResult.error;
 
       setLoadingMessage('Creating headshot job...');
 
-      // Create image record
+      console.log('-> Creating image record...');
       const { data: imageRecord, error: imageError } = await supabase
         .from('images')
         .insert({
           owner_user_id: userId,
           storage_bucket: 'media',
-          storage_key: uploadResult.data!.path,
+          storage_key: uploadResult.data.path,
           mime_type: 'image/jpeg',
           source: 'upload',
         })
         .select()
         .single();
 
+      console.log('Image record done, error:', !!imageError);
+
       if (imageError || !imageRecord) {
         throw imageError || new Error('Failed to create image record');
       }
 
-      // Create headshot generation job
+      console.log('-> Creating job...');
       const { data: job, error: jobError } = await triggerHeadshotGenerate(
         userId,
         imageRecord.id,
@@ -135,16 +158,19 @@ export function useImageGeneration(): UseImageGenerationReturn {
         makeupStyle
       );
 
+      console.log('Job created, error:', !!jobError, 'jobId:', job?.id);
+
       if (!job || jobError) {
         throw jobError || new Error('Failed to create headshot job');
       }
 
-      // Trigger and wait for completion
+      console.log('-> Executing job...');
       await triggerAIJobExecution(job.id);
-      setLoadingMessage(
-        'Generating professional headshot...\nThis may take 20-30 seconds.'
-      );
+      console.log('Execution triggered');
+      
+      setLoadingMessage('Generating professional headshot...\nThis may take 20-30 seconds.');
 
+      console.log('-> Waiting for completion...');
       const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
         job.id,
         30,
@@ -152,12 +178,16 @@ export function useImageGeneration(): UseImageGenerationReturn {
         '[Headshot]'
       );
 
+      console.log('Wait done, status:', completedJob?.status);
+
       if (pollError || !completedJob) {
         throw new Error('Headshot generation timed out or failed');
       }
 
       if (completedJob.status === 'failed') {
         const failureMessage = completedJob.error || 'Unknown error';
+        console.log('Job failed:', failureMessage);
+        
         if (isGeminiPolicyBlockError(failureMessage)) {
           setPolicyMessage(
             'Gemini could not generate this headshot because it conflicts with safety policy. No credits were charged.'
@@ -165,14 +195,16 @@ export function useImageGeneration(): UseImageGenerationReturn {
           setPolicyModalVisible(true);
           return null;
         }
-        throw new Error(`Generation failed: ${failureMessage}`);
+        throw new Error('Generation failed: ' + failureMessage);
       }
 
       const generatedImageId =
         completedJob.result?.image_id || completedJob.result?.generated_image_id;
 
+      console.log('=== SUCCESS! Image ID:', generatedImageId);
       return generatedImageId || null;
     } catch (error: any) {
+      console.error('=== ERROR:', error.message);
       const message = error.message || 'Failed to generate headshot';
       if (isGeminiPolicyBlockError(message)) {
         setPolicyMessage(
@@ -184,6 +216,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
       Alert.alert('Error', message);
       return null;
     } finally {
+      console.log('-> Cleanup');
       setGenerating(false);
       setLoadingMessage('');
     }
@@ -202,23 +235,21 @@ export function useImageGeneration(): UseImageGenerationReturn {
     setLoadingMessage('Uploading photo...');
 
     try {
-      // Upload image
       const uploadResult = await uploadImageToStorage(
         userId,
         uploadedBlob,
-        `body-${Date.now()}.jpg`
+        'body-' + Date.now() + '.jpg'
       );
       if (uploadResult.error) throw uploadResult.error;
 
       setLoadingMessage('Creating studio model job...');
 
-      // Create image record
       const { data: imageRecord, error: imageError } = await supabase
         .from('images')
         .insert({
           owner_user_id: userId,
           storage_bucket: 'media',
-          storage_key: uploadResult.data!.path,
+          storage_key: uploadResult.data.path,
           mime_type: 'image/jpeg',
           source: 'upload',
         })
@@ -229,7 +260,6 @@ export function useImageGeneration(): UseImageGenerationReturn {
         throw imageError || new Error('Failed to create image record');
       }
 
-      // Create body shot generation job
       const { data: job, error: jobError } = await triggerBodyShotGenerate(
         userId,
         imageRecord.id,
@@ -240,7 +270,6 @@ export function useImageGeneration(): UseImageGenerationReturn {
         throw jobError || new Error('Failed to create body shot job');
       }
 
-      // Trigger and wait for completion
       await triggerAIJobExecution(job.id);
       setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
 
@@ -266,7 +295,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
           setPolicyModalVisible(true);
           return null;
         }
-        throw new Error(`Generation failed: ${failureMessage}`);
+        throw new Error('Generation failed: ' + failureMessage);
       }
 
       const generatedImageId =

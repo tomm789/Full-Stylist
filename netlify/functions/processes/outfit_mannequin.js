@@ -21,9 +21,11 @@ const {
  * @param {object} input - Job input including outfit_id, selected items, prompt and settings
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase - Supabase client
  * @param {string} userId - User ID
+ * @param {object} perfTracker - Optional performance tracker for timing measurements
+ * @param {object} timingTracker - Optional timing tracker for detailed step-by-step timing
  * @returns {Promise<{mannequin_image_id: number, storage_key: string, settings: object}>} Mannequin image info
  */
-async function processOutfitMannequin(input, supabase, userId) {
+async function processOutfitMannequin(input, supabase, userId, perfTracker = null, timingTracker = null) {
   const { outfit_id, selected, prompt, settings } = input;
   if (!outfit_id || !selected?.length) {
     throw new Error("Missing outfit_id or selected items");
@@ -58,9 +60,11 @@ async function processOutfitMannequin(input, supabase, userId) {
     throw new Error("No valid images found for outfit items");
   }
   // Download item images for the mannequin generation
-  const itemImages = await Promise.all(
-    imageIdsToDownload.map((id) => downloadImageFromStorage(supabase, id))
+  const itemImageResults = await Promise.all(
+    imageIdsToDownload.map((id) => downloadImageFromStorage(supabase, id, timingTracker))
   );
+  // Pass full result objects to include mime-types (callGeminiAPI will extract base64)
+  const itemImages = itemImageResults;
   // Determine the model to use
   const { data: userSettings } = await supabase
     .from("user_settings")
@@ -77,7 +81,9 @@ async function processOutfitMannequin(input, supabase, userId) {
     mannequinPrompt,
     itemImages,
     preferredModel,
-    "IMAGE"
+    "IMAGE",
+    perfTracker,
+    timingTracker
   );
   // Upload the mannequin render
   const timestamp = Date.now();

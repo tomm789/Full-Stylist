@@ -1,5 +1,5 @@
 /**
- * useProfileData Hook
+ * useProfileData Hook (OPTIMIZED)
  * Load user profile, settings, posts, and images
  */
 
@@ -7,8 +7,7 @@ import { useState, useEffect } from 'react';
 import { getFullUserProfile } from '@/lib/user';
 import { getUserSettings } from '@/lib/settings';
 import { getFeed, FeedItem } from '@/lib/posts';
-import { getOutfitCoverImageUrl } from '@/lib/images';
-import { getUserGeneratedImages } from '@/lib/images';
+import { supabase } from '@/lib/supabase';
 
 interface UseProfileDataProps {
   userId: string | undefined;
@@ -23,6 +22,69 @@ interface UseProfileDataReturn {
   bodyShotImages: Array<{ id: string; url: string }>;
   loading: boolean;
   refresh: () => Promise<void>;
+}
+
+// 🔥 OPTIMIZATION: Batch generate public URLs (no async needed!)
+function batchGenerateImageUrls(
+  images: Array<{ id: string; storage_bucket?: string | null; storage_key?: string | null; created_at: string }>
+): Array<{ id: string; url: string; created_at: string }> {
+  return images
+    .filter(img => img.storage_key)
+    .map(img => {
+      const { data } = supabase.storage
+        .from(img.storage_bucket || 'media')
+        .getPublicUrl(img.storage_key!);
+      return {
+        id: img.id,
+        url: data.publicUrl,
+        created_at: img.created_at,
+      };
+    });
+}
+
+// 🔥 OPTIMIZATION: Get outfit cover images in batch
+async function batchGetOutfitCoverImages(
+  outfits: Array<{ id: string; cover_image_id?: string }>
+): Promise<Map<string, string | null>> {
+  const imageMap = new Map<string, string | null>();
+  
+  // Get all cover image IDs
+  const coverImageIds = outfits
+    .map(o => o.cover_image_id)
+    .filter(Boolean) as string[];
+
+  if (coverImageIds.length === 0) {
+    outfits.forEach(o => imageMap.set(o.id, null));
+    return imageMap;
+  }
+
+  // 🔥 Single query to get all cover images
+  const { data: coverImages } = await supabase
+    .from('images')
+    .select('id, storage_bucket, storage_key')
+    .in('id', coverImageIds);
+
+  // Create lookup map
+  const coverImageLookup = new Map(
+    (coverImages || []).map(img => [img.id, img])
+  );
+
+  // Generate URLs for all outfits
+  outfits.forEach(outfit => {
+    if (outfit.cover_image_id) {
+      const img = coverImageLookup.get(outfit.cover_image_id);
+      if (img?.storage_key) {
+        const { data } = supabase.storage
+          .from(img.storage_bucket || 'media')
+          .getPublicUrl(img.storage_key);
+        imageMap.set(outfit.id, data.publicUrl);
+        return;
+      }
+    }
+    imageMap.set(outfit.id, null);
+  });
+
+  return imageMap;
 }
 
 export function useProfileData({
@@ -45,15 +107,22 @@ export function useProfileData({
     setLoading(true);
 
     try {
-      // Load profile, settings, and posts in parallel
+      // 🔥 OPTIMIZATION: Load profile, settings, posts, and images in parallel
       const [
         { data: profileData },
         { data: settingsData },
         { data: feedData },
+        { data: allImages },
       ] = await Promise.all([
         getFullUserProfile(userId),
         getUserSettings(userId),
         getFeed(userId, 50, 0),
+        supabase
+          .from('images')
+          .select('id, storage_bucket, storage_key, created_at')
+          .eq('owner_user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(100),
       ]);
 
       if (profileData) {
@@ -71,23 +140,28 @@ export function useProfileData({
 
         setPosts(userPosts);
 
-        // Cache outfit images
-        const imageCache = new Map<string, string | null>();
-        await Promise.all(
-          userPosts.map(async (item) => {
-            if (item.entity?.outfit) {
-              const url = await getOutfitCoverImageUrl(item.entity.outfit);
-              imageCache.set(item.entity.outfit.id, url);
-            }
-          })
-        );
+        // 🔥 OPTIMIZATION: Batch get outfit cover images
+        const outfits = userPosts
+          .map(item => item.entity?.outfit)
+          .filter(Boolean);
+        
+        const imageCache = await batchGetOutfitCoverImages(outfits);
         setPostImages(imageCache);
       }
 
-      // Load profile images
-      const { headshots, bodyShots } = await getUserGeneratedImages(userId);
-      setHeadshotImages(headshots);
-      setBodyShotImages(bodyShots);
+      // 🔥 OPTIMIZATION: Batch generate URLs for profile images (no async!)
+      if (allImages) {
+        const headshots = batchGenerateImageUrls(
+          allImages.filter((img) => img.storage_key?.includes('/ai/headshots/'))
+        );
+        
+        const bodyShots = batchGenerateImageUrls(
+          allImages.filter((img) => img.storage_key?.includes('/ai/body_shots/'))
+        );
+
+        setHeadshotImages(headshots);
+        setBodyShotImages(bodyShots);
+      }
     } catch (error) {
       console.error('Error loading profile data:', error);
     } finally {

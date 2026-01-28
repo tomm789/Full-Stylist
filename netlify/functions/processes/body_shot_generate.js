@@ -20,9 +20,11 @@ const {
  * @param {object} input - Job input including body_photo_image_id and optionally headshot_image_id
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase - Supabase client
  * @param {string} userId - The user's ID
+ * @param {object} perfTracker - Optional performance tracker for timing measurements
+ * @param {object} timingTracker - Optional timing tracker for detailed step-by-step timing
  * @returns {Promise<{image_id: number, storage_key: string}>} New body shot info
  */
-async function processBodyShotGenerate(input, supabase, userId) {
+async function processBodyShotGenerate(input, supabase, userId, perfTracker = null, timingTracker = null) {
   const { body_photo_image_id, headshot_image_id } = input;
   if (!body_photo_image_id) {
     throw new Error("Missing body_photo_image_id");
@@ -41,16 +43,18 @@ async function processBodyShotGenerate(input, supabase, userId) {
     throw new Error("No headshot available");
   }
   // Download head and body images concurrently
-  const [headB64, bodyB64] = await Promise.all([
-    downloadImageFromStorage(supabase, headId),
-    downloadImageFromStorage(supabase, body_photo_image_id)
+  const [headResult, bodyResult] = await Promise.all([
+    downloadImageFromStorage(supabase, headId, timingTracker),
+    downloadImageFromStorage(supabase, body_photo_image_id, timingTracker)
   ]);
-  // Generate the composite body shot
+  // Generate the composite body shot - pass full result objects to include mime-types
   const studioModelB64 = await callGeminiAPI(
     PROMPTS.BODY_COMPOSITE,
-    [headB64, bodyB64],
+    [headResult, bodyResult],
     "gemini-3-pro-image-preview",
-    "IMAGE"
+    "IMAGE",
+    perfTracker,
+    timingTracker
   );
   // Upload the new body shot image
   const timestamp = Date.now();

@@ -19,25 +19,45 @@ const {
  * @param {object} input - Job input including selfie_image_id, hair_style and makeup_style
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase - Supabase client
  * @param {string} userId - The user's ID
+ * @param {object} perfTracker - Optional performance tracker for timing measurements
+ * @param {object} timingTracker - Optional timing tracker for detailed step-by-step timing
  * @returns {Promise<{image_id: number, storage_key: string}>} New headshot info
  */
-async function processHeadshotGenerate(input, supabase, userId) {
+async function processHeadshotGenerate(input, supabase, userId, perfTracker = null, timingTracker = null) {
+  console.log(`[processHeadshotGenerate] Starting for userId: ${userId}`, input);
   const { selfie_image_id, hair_style, makeup_style } = input;
   if (!selfie_image_id) {
     throw new Error("Missing selfie_image_id");
   }
   // Download the selfie used as input
-  const selfieB64 = await downloadImageFromStorage(supabase, selfie_image_id);
+  console.log(`[processHeadshotGenerate] Downloading selfie image: ${selfie_image_id}`);
+  const selfieResult = await downloadImageFromStorage(supabase, selfie_image_id, timingTracker);
+  console.log(`[processHeadshotGenerate] Downloaded selfie, base64 length: ${selfieResult.base64.length}`);
+  
+  // Validate base64
+  if (!selfieResult.base64 || selfieResult.base64.length === 0) {
+    throw new Error("Downloaded image is empty");
+  }
+  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+  if (!base64Regex.test(selfieResult.base64)) {
+    console.error(`[processHeadshotGenerate] Invalid base64 format, first 100 chars: ${selfieResult.base64.substring(0, 100)}`);
+    throw new Error("Invalid base64 image format");
+  }
+  
   const hair = hair_style || "Keep original hair";
   const makeup = makeup_style || "Natural look";
   const prompt = PROMPTS.HEADSHOT(hair, makeup);
-  // Generate the headshot via Gemini
+  console.log(`[processHeadshotGenerate] Calling Gemini API with prompt length: ${prompt.length}`);
+  // Generate the headshot via Gemini - pass full result object to include mime-type
   const headshotB64 = await callGeminiAPI(
     prompt,
-    [selfieB64],
+    [selfieResult],
     "gemini-2.5-flash-image",
-    "IMAGE"
+    "IMAGE",
+    perfTracker,
+    timingTracker
   );
+  console.log(`[processHeadshotGenerate] Gemini API returned, headshot base64 length: ${headshotB64?.length || 0}`);
   // Upload and store the headshot
   const timestamp = Date.now();
   const storagePath = `${userId}/ai/headshots/${timestamp}.jpg`;

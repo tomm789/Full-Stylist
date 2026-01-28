@@ -20,3 +20,7 @@ export * from './modals';
 
 // Loading
 export * from './loading';
+
+// Search
+export { SearchResultItem } from './SearchResultItem';
+export { SearchFilterBar } from './SearchFilterBar';

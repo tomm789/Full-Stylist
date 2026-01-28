@@ -198,3 +198,55 @@ export async function getRecentOutfitRenderJob(
     }
   });
 }
+
+/**
+ * Trigger batch job for wardrobe item (combines product_shot and auto_tag)
+ * This reduces latency by downloading the image once and running both tasks in parallel
+ */
+export async function triggerBatchJob(
+  userId: string,
+  imageId: string,
+  wardrobeItemId: string,
+  imageIds: string[]
+): Promise<QueryResult<AIJob>> {
+  return createAIJob(userId, 'batch', {
+    imageId,
+    tasks: ['product_shot', 'auto_tag'],
+    wardrobe_item_id: wardrobeItemId,
+    image_ids: imageIds,
+  });
+}
+
+/**
+ * Get active batch job for a wardrobe item
+ */
+export async function getActiveBatchJob(
+  wardrobeItemId: string,
+  userId: string
+): Promise<QueryResult<AIJob>> {
+  return getActiveJob(userId, 'batch', (job) => {
+    try {
+      const input = job.input as any;
+      return input?.wardrobe_item_id === wardrobeItemId;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * Get recently completed batch job for a wardrobe item
+ */
+export async function getRecentBatchJob(
+  wardrobeItemId: string,
+  userId: string
+): Promise<QueryResult<AIJob>> {
+  return getRecentJob(userId, 'batch', (job) => {
+    try {
+      const input = job.input as any;
+      return input?.wardrobe_item_id === wardrobeItemId;
+    } catch {
+      return false;
+    }
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,159 +6,47 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
-  Switch,
-  FlatList,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Image as ExpoImage } from 'expo-image';
-import { useAuth } from '@/contexts/AuthContext';
-import { saveLookbook } from '@/lib/lookbooks';
-import { getUserOutfits } from '@/lib/outfits';
-import { getOutfitCoverImageUrl } from '@/lib/images';
+import { useNewLookbook } from '@/hooks/lookbooks';
+import { OutfitGridSelector } from '@/components/lookbooks';
 import FilterDefinitionEditor from '@/components/FilterDefinitionEditor';
-
-type LookbookType = 'custom_manual' | 'custom_filter';
 
 export default function NewLookbookScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [type, setType] = useState<LookbookType>('custom_manual');
-  const [visibility, setVisibility] = useState<'public' | 'followers' | 'private_link'>('followers');
-  const [selectedOutfits, setSelectedOutfits] = useState<Set<string>>(new Set());
-  const [outfits, setOutfits] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [filterDefinition, setFilterDefinition] = useState<any>({});
-  const [outfitImageUrls, setOutfitImageUrls] = useState<Map<string, string | null>>(new Map());
+  const {
+    // Form state
+    title,
+    description,
+    type,
+    visibility,
+    selectedOutfits,
+    filterDefinition,
+    setTitle,
+    setDescription,
+    setType,
+    setVisibility,
+    setFilterDefinition,
 
-  useEffect(() => {
-    if (user) {
-      loadOutfits();
-    }
-  }, [user]);
+    // Outfits
+    outfits,
+    outfitImageUrls,
+    loading,
+    toggleOutfit,
+
+    // Actions
+    saving,
+    handleCreate,
+    loadOutfits,
+  } = useNewLookbook();
 
   // Reload outfits when screen comes into focus (e.g., after deleting an outfit)
   useFocusEffect(
     React.useCallback(() => {
-      if (user) {
-        loadOutfits();
-      }
-    }, [user])
+      loadOutfits();
+    }, [loadOutfits])
   );
-
-  const loadOutfits = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    const { data: userOutfits } = await getUserOutfits(user.id);
-    if (userOutfits) {
-      setOutfits(userOutfits);
-      
-      // Pre-load all outfit images
-      const imageUrlMap = new Map<string, string | null>();
-      await Promise.all(
-        userOutfits.map(async (outfit: any) => {
-          const url = await getOutfitCoverImageUrl(outfit);
-          imageUrlMap.set(outfit.id, url);
-        })
-      );
-      setOutfitImageUrls(imageUrlMap);
-    }
-    setLoading(false);
-  };
-
-  const toggleOutfit = useCallback((outfitId: string) => {
-    setSelectedOutfits((prevSelected) => {
-      const newSelected = new Set(prevSelected);
-      if (newSelected.has(outfitId)) {
-        newSelected.delete(outfitId);
-      } else {
-        newSelected.add(outfitId);
-      }
-      return newSelected;
-    });
-  }, []);
-
-  const handleCreate = async () => {
-    if (!user) return;
-
-    if (!title.trim()) {
-      Alert.alert('Error', 'Please enter a title for your lookbook');
-      return;
-    }
-
-    if (type === 'custom_manual' && selectedOutfits.size === 0) {
-      Alert.alert('Error', 'Please select at least one outfit for your lookbook');
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      const lookbookData = {
-        title: title.trim(),
-        description: description.trim() || undefined,
-        visibility: visibility,
-        type: type,
-        filter_definition: type === 'custom_filter' ? filterDefinition : undefined,
-      };
-
-      const outfitIds = type === 'custom_manual' ? Array.from(selectedOutfits) : undefined;
-
-      const { data: lookbook, error } = await saveLookbook(
-        user.id,
-        lookbookData,
-        outfitIds
-      );
-
-      if (error) {
-        throw error;
-      }
-
-      // Navigate directly to the lookbook editor
-      if (lookbook?.id) {
-        router.replace(`/lookbooks/${lookbook.id}`);
-      } else {
-        router.back();
-      }
-    } catch (error: any) {
-      Alert.alert('Error', `Failed to create lookbook: ${error.message || error}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Memoize OutfitCard - now receives pre-loaded imageUrl as prop
-  const OutfitCard = React.memo(({ item, imageUrl, isSelected, onToggle }: { item: any; imageUrl: string | null; isSelected: boolean; onToggle: (id: string) => void }) => {
-    return (
-      <TouchableOpacity
-        style={[styles.outfitCard, isSelected && styles.outfitCardSelected]}
-        onPress={() => onToggle(item.id)}
-      >
-        {imageUrl ? (
-          <ExpoImage source={{ uri: imageUrl }} style={styles.outfitImage} contentFit="cover" />
-        ) : (
-          <View style={styles.outfitImagePlaceholder}>
-            <Text style={styles.outfitImagePlaceholderText}>No Image</Text>
-          </View>
-        )}
-        <View style={styles.outfitCardOverlay}>
-          {isSelected && (
-            <View style={styles.selectedBadge}>
-              <Text style={styles.selectedBadgeText}>✓</Text>
-            </View>
-          )}
-          <Text style={styles.outfitCardTitle} numberOfLines={2}>
-            {item.title || 'Untitled Outfit'}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  });
 
   if (loading) {
     return (
@@ -292,20 +180,11 @@ export default function NewLookbookScreen() {
                 </TouchableOpacity>
               </View>
             ) : (
-              <FlatList
-                data={outfits}
-                renderItem={({ item }) => (
-                  <OutfitCard
-                    item={item}
-                    imageUrl={outfitImageUrls.get(item.id) || null}
-                    isSelected={selectedOutfits.has(item.id)}
-                    onToggle={toggleOutfit}
-                  />
-                )}
-                keyExtractor={(item) => item.id}
-                numColumns={2}
-                scrollEnabled={false}
-                contentContainerStyle={styles.outfitsList}
+              <OutfitGridSelector
+                outfits={outfits}
+                selectedIds={selectedOutfits}
+                imageUrls={outfitImageUrls}
+                onToggle={toggleOutfit}
               />
             )}
           </>
@@ -314,7 +193,6 @@ export default function NewLookbookScreen() {
         {type === 'custom_filter' && (
           <FilterDefinitionEditor
             onFilterChange={(filterDef) => {
-              // Store filter definition for saving
               setFilterDefinition(filterDef);
             }}
           />
@@ -453,65 +331,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
-  outfitsList: {
-    gap: 8,
-  },
-  outfitCard: {
-    flex: 1,
-    margin: 4,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#f9f9f9',
-    position: 'relative',
-  },
-  outfitCardSelected: {
-    borderWidth: 2,
-    borderColor: '#007AFF',
-  },
-  outfitImage: {
-    width: '100%',
-    aspectRatio: 1,
-  },
-  outfitImagePlaceholder: {
-    width: '100%',
-    aspectRatio: 1,
-    backgroundColor: '#e0e0e0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  outfitImagePlaceholderText: {
-    color: '#999',
-    fontSize: 12,
-  },
-  outfitCardOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 8,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  selectedBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedBadgeText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  outfitCardTitle: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
   emptyContainer: {
     padding: 32,
     alignItems: 'center',
@@ -531,17 +350,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
-  },
-  filterPlaceholder: {
-    padding: 24,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  filterPlaceholderText: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
   },
   savingOverlay: {
     position: 'absolute',

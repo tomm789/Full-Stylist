@@ -1,6 +1,6 @@
 import { supabase } from '../supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { Notification } from './core';
+import type { Notification } from './types';
 
 const activeNotificationChannels = new Map<string, RealtimeChannel>();
 

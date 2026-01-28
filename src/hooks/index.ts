@@ -18,3 +18,13 @@ export { useSocialEngagement } from './outfits/useSocialEngagement';
 export { useOutfitGeneration } from './outfits/useOutfitGeneration';
 
 export type { SortOption, SortOrder } from './outfits/useOutfitFilters';
+
+// Search
+export { useSearch } from './useSearch';
+export type { SearchResult, SearchResultType } from './useSearch';
+
+// PWA
+export { useAddToHomeScreenDetection } from './useAddToHomeScreenDetection';
+
+// Find Similar
+export { useFindSimilar } from './useFindSimilar';

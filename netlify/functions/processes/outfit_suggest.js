@@ -5,7 +5,7 @@
 // module exists to maintain parity with the original code structure
 // should additional functionality be added later.
 
-async function processOutfitSuggest() {
+async function processOutfitSuggest(input, supabase, userId, perfTracker = null, timingTracker = null) {
   return { message: "Not implemented" };
 }
 

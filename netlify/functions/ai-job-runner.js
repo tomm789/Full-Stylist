@@ -7,6 +7,7 @@
 // in a separate module under ./processes to improve modularity.
 
 const { supabaseAdmin } = require("./supabaseClient");
+const { createPerformanceTracker, createTimingTracker, downloadImageFromStorage } = require("./utils");
 const { processAutoTag } = require("./processes/auto_tag");
 const { processProductShot } = require("./processes/product_shot");
 const { processHeadshotGenerate } = require("./processes/headshot_generate");
@@ -137,34 +138,47 @@ exports.handler = async (event, context) => {
  */
 async function processJobAsync(job, userId) {
   const job_id = job.id;
+  
+  // Create performance tracker at the start of the request
+  const perfTracker = createPerformanceTracker();
+  console.log(`[AIJobRunner] Created performance tracker: ${perfTracker.requestId} for job ${job_id} (${job.job_type})`);
+  
+  // Create timing tracker for detailed step-by-step timing
+  const timingTracker = createTimingTracker();
+  timingTracker.startJob();
+  console.log(`[AIJobRunner] Starting job ${job_id} (${job.job_type})`);
+  
   let result;
   let error = null;
   try {
     const input = job.input;
     switch (job.job_type) {
+      case "batch":
+        result = await processBatchJob(input, supabaseAdmin, userId, perfTracker, timingTracker);
+        break;
       case "auto_tag":
-        result = await processAutoTag(input, supabaseAdmin);
+        result = await processAutoTag(input, supabaseAdmin, perfTracker, timingTracker);
         break;
       case "product_shot":
-        result = await processProductShot(input, supabaseAdmin, userId);
+        result = await processProductShot(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "headshot_generate":
-        result = await processHeadshotGenerate(input, supabaseAdmin, userId);
+        result = await processHeadshotGenerate(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "body_shot_generate":
-        result = await processBodyShotGenerate(input, supabaseAdmin, userId);
+        result = await processBodyShotGenerate(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "outfit_suggest":
-        result = await processOutfitSuggest(input, supabaseAdmin, userId);
+        result = await processOutfitSuggest(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "reference_match":
-        result = await processReferenceMatch(input, supabaseAdmin, userId);
+        result = await processReferenceMatch(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "outfit_mannequin":
-        result = await processOutfitMannequin(input, supabaseAdmin, userId);
+        result = await processOutfitMannequin(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "outfit_render":
-        result = await processOutfitRender(input, supabaseAdmin, userId);
+        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       default:
         throw new Error(`Unknown job type: ${job.job_type}`);
@@ -173,6 +187,13 @@ async function processJobAsync(job, userId) {
     error = err.message || "Unknown error";
     console.error(`[AIJobRunner] Error processing ${job.job_type} job ${job_id}:`, err);
   }
+  
+  // Log performance comparison at the end of the request
+  perfTracker.logComparison();
+  
+  // Log detailed timing breakdown
+  timingTracker.logBreakdown(job.job_type);
+  
   // Build the update payload based on success or failure
   const updateData = {
     updated_at: new Date().toISOString(),
@@ -184,4 +205,142 @@ async function processJobAsync(job, userId) {
     updateData.result = result;
   }
   await supabaseAdmin.from("ai_jobs").update(updateData).eq("id", job_id);
+}
+
+/**
+ * Processes a batch job that runs multiple tasks on the same image in parallel.
+ * Downloads the image once and passes it to all tasks to avoid redundant downloads.
+ * 
+ * Expected input format:
+ * {
+ *   imageId: string,
+ *   tasks: ['product_shot', 'auto_tag'],
+ *   wardrobe_item_id: string,
+ *   image_ids: string[] (for auto_tag)
+ * }
+ * 
+ * @param {object} input - Batch job input
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase - Supabase client
+ * @param {string} userId - ID of the job owner
+ * @param {object} perfTracker - Performance tracker
+ * @param {object} timingTracker - Timing tracker
+ * @returns {Promise<object>} Combined results from all tasks
+ */
+async function processBatchJob(input, supabase, userId, perfTracker, timingTracker) {
+  const { imageId, tasks, wardrobe_item_id, image_ids } = input;
+  
+  if (!imageId || !tasks || !Array.isArray(tasks) || tasks.length === 0) {
+    throw new Error("Batch job requires imageId and tasks array");
+  }
+  
+  if (!wardrobe_item_id) {
+    throw new Error("Batch job requires wardrobe_item_id");
+  }
+  
+  console.log(`[BatchJob] Starting batch processing for imageId: ${imageId}, tasks: ${tasks.join(', ')}`);
+  
+  // Download the image once to a buffer (returns { base64, mimeType } object)
+  console.log(`[BatchJob] Downloading image once for shared use...`);
+  const imageData = await downloadImageFromStorage(supabase, imageId, timingTracker);
+  console.log(`[BatchJob] Image downloaded successfully, length: ${imageData.base64.length}, mimeType: ${imageData.mimeType}`);
+  
+  // Prepare inputs for both tasks
+  const productShotInput = tasks.includes('product_shot') ? {
+    image_id: imageId,
+    wardrobe_item_id
+  } : null;
+  
+  const autoTagInput = tasks.includes('auto_tag') ? {
+    wardrobe_item_id,
+    image_ids: image_ids || []
+  } : null;
+  
+  // Validate auto_tag input if needed
+  if (tasks.includes('auto_tag')) {
+    if (!image_ids || !Array.isArray(image_ids) || image_ids.length === 0) {
+      throw new Error("auto_tag task requires image_ids array");
+    }
+  }
+  
+  // CRITICAL: Create both promises in the SAME synchronous block - no awaits between them
+  // This ensures both async functions start executing immediately and run in parallel
+  const batchStart = performance.now();
+  console.log(`[BatchJob] Creating both promises simultaneously (parallel execution starts now)...`);
+  
+  // Create promise array and start BOTH tasks immediately without any await
+  const taskPromises = [];
+  
+  // Create product_shot promise - function starts executing immediately (no await)
+  if (productShotInput) {
+    console.log(`[BatchJob] Creating product_shot promise (execution starts immediately)...`);
+    const productShotPromise = processProductShot(
+      productShotInput, 
+      supabase, 
+      userId, 
+      perfTracker, 
+      timingTracker, 
+      imageData
+    ).then(result => {
+      const elapsed = ((performance.now() - batchStart) / 1000).toFixed(2);
+      console.log(`[BatchJob] product_shot completed in ${elapsed}s`);
+      return { task: 'product_shot', result, error: null };
+    }).catch(err => {
+      const elapsed = ((performance.now() - batchStart) / 1000).toFixed(2);
+      console.error(`[BatchJob] product_shot failed after ${elapsed}s:`, err.message);
+      return { task: 'product_shot', result: null, error: err.message };
+    });
+    taskPromises.push(productShotPromise);
+  }
+  
+  // Create auto_tag promise IMMEDIATELY after (no await) - both run in parallel
+  if (autoTagInput) {
+    console.log(`[BatchJob] Creating auto_tag promise (execution starts immediately, parallel with product_shot)...`);
+    const autoTagPromise = processAutoTag(
+      autoTagInput, 
+      supabase, 
+      perfTracker, 
+      timingTracker, 
+      imageData
+    ).then(result => {
+      const elapsed = ((performance.now() - batchStart) / 1000).toFixed(2);
+      console.log(`[BatchJob] auto_tag completed in ${elapsed}s`);
+      return { task: 'auto_tag', result, error: null };
+    }).catch(err => {
+      const elapsed = ((performance.now() - batchStart) / 1000).toFixed(2);
+      console.error(`[BatchJob] auto_tag failed after ${elapsed}s:`, err.message);
+      return { task: 'auto_tag', result: null, error: err.message };
+    });
+    taskPromises.push(autoTagPromise);
+  }
+  
+  // Both promises are now created and executing in parallel
+  // Only NOW do we await - Promise.all waits for BOTH to complete
+  console.log(`[BatchJob] Both promises created. Awaiting ${taskPromises.length} promises with Promise.all() (both running in parallel)...`);
+  const results = await Promise.all(taskPromises);
+  
+  // Capture end time after Promise.all() completes
+  const batchEnd = performance.now();
+  const batchDuration = ((batchEnd - batchStart) / 1000).toFixed(2);
+  
+  // Track the parallel execution time
+  if (timingTracker && typeof timingTracker.setBatchAIGenerationTime === 'function') {
+    timingTracker.setBatchAIGenerationTime(parseFloat(batchDuration) * 1000); // Convert to ms
+  }
+  
+  console.log(`[BatchJob] All tasks completed in ${batchDuration}s (parallel execution - should be ~max of individual task times, not sum)`);
+  
+  // Organize results by task name
+  const taskResults = {};
+  for (const { task, result, error } of results) {
+    if (error) {
+      taskResults[task] = { error };
+      console.error(`[BatchJob] Task ${task} failed:`, error);
+    } else {
+      taskResults[task] = result;
+      console.log(`[BatchJob] Task ${task} completed successfully`);
+    }
+  }
+  
+  console.log(`[BatchJob] All tasks completed`);
+  return taskResults;
 }

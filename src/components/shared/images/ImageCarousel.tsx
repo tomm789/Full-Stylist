@@ -79,7 +79,7 @@ export default function ImageCarousel({
             style={[
               styles.imageContainer,
               { width, aspectRatio },
-              customBorderRadius && { borderRadius: customBorderRadius },
+              typeof customBorderRadius === 'number' ? { borderRadius: customBorderRadius } : undefined,
             ]}
             onPress={() => onImagePress?.(index)}
             activeOpacity={onImagePress ? 0.9 : 1}
@@ -90,7 +90,7 @@ export default function ImageCarousel({
                 source={{ uri: image.uri }}
                 style={[
                   styles.image,
-                  customBorderRadius && { borderRadius: customBorderRadius },
+                  typeof customBorderRadius === 'number' ? { borderRadius: customBorderRadius } : undefined,
                 ]}
                 contentFit="cover"
               />

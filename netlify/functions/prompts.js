@@ -41,18 +41,23 @@ const PROMPTS = {
 
   // Transform a clothing item into a professional product shot
   PRODUCT_SHOT: `
-    Transform this clothing item into a professional product photography shot.
-    REQUIREMENTS:
-    - ASPECT RATIO: Exactly 1:1 (square format)
-    - Clean white or light grey studio background
-    - Professional lighting with soft shadows
-    - Product centered and well-framed in square composition
-    - Maintain EXACT colors, textures, and details from the original
-    - Style: Ghost mannequin (for 3D items) or flat lay (for accessories)
-    - High quality, commercial product photography aesthetic
-    - Remove any background clutter or distractions
-    - Ensure the item looks professional and ready for e-commerce
-    - OUTPUT: Square image (1:1 aspect ratio) suitable for grid display
+    Transform this clothing item into a professional e-commerce product shot.
+    
+    VISUAL REQUIREMENTS:
+    1. STYLE: "Ghost Mannequin" / "Invisible Mannequin". The item must look 3D and filled out as if worn, but NO mannequin, human body parts, or stands should be visible. Hollow out the neck/sleeves.
+    2. BACKGROUND: Pure Solid White (Hex #FFFFFF). Do not use light grey or off-white. The background must be #FFFFFF.
+    3. LIGHTING: Soft, commercial studio lighting. Subtle, natural drop shadow directly underneath to ground the item (no floating).
+    4. FIDELITY: Maintain the EXACT colors, patterns, texture, and text/logos of the original item. Do not hallucinate new details.
+
+    NEGATIVE CONSTRAINTS:
+    - NO visible mannequin heads, arms, legs, or stands.
+    - NO grey backgrounds.
+    - NO complex props or clutter.
+    - NO cropping of the item (keep the full item visible).
+
+    OUTPUT FORMAT:
+    - Square aspect ratio (1:1).
+    - Center the item with balanced white padding on all sides.
   `,
 
   // Generate a professional headshot using the subject's selfie
@@ -85,33 +90,107 @@ const PROMPTS = {
   `,
 
   // Direct outfit render prompt for client-side stacked clothing items
-  OUTFIT_FINAL_STACKED: (details, itemCount) => `
+  // Dynamic builder function that adapts based on includeHeadshot parameter
+  OUTFIT_FINAL_STACKED: (details, itemCount, includeHeadshot = true) => {
+    // Dynamic indexing: adjust image indices based on headshot inclusion
+    const bodyImageIndex = 0;
+    const headImageIndex = includeHeadshot ? 1 : null;
+    const clothingImageIndex = includeHeadshot ? 2 : 1;
+
+    // Dynamic identity instructions
+    const subjectReferenceSection = includeHeadshot
+      ? `    SUBJECT REFERENCE:
+    - Image ${bodyImageIndex}: Current body state, pose, and framing.
+    - Image ${headImageIndex}: STRICT Facial Identity reference. Use the face, hair, and head from this image.`
+      : `    SUBJECT REFERENCE:
+    - Image ${bodyImageIndex}: BASE BODY & FACE. Contains the subject's real face. Do not modify.`;
+
+    const clothingReferenceSection = `    CLOTHING REFERENCE:
+    - Image ${clothingImageIndex}: A composite grid image showing ${itemCount} clothing items on a white background.
+    - The items are arranged in a grid layout for visual inventory.
+    - Analyze ALL items in this grid image carefully.`;
+
+    const clothingInstructionsSection = `    CLOTHING INSTRUCTIONS:
+    - Dress the subject in ALL ${itemCount} clothing items from Image ${clothingImageIndex} (the grid image).
+    - Image ${clothingImageIndex} is a visual inventory. The items are arranged in a grid.
+    - Combine all items into a cohesive, fashionable outfit.
+    - ${details}`;
+
+    const identityInstruction = includeHeadshot
+      ? `    1. Apply the exact facial identity, hair, and head from Image ${headImageIndex} onto the body in Image ${bodyImageIndex}.`
+      : `    1. CRITICAL: PRESERVE THE FACE. The subject in Image ${bodyImageIndex} is the real person. You must composite the new clothes onto the body WITHOUT altering the facial features, hair, or head shape. Keep the original face exactly as it appears in Image ${bodyImageIndex}.`;
+
+    return `
     Fashion Photography.
     OUTPUT FORMAT: Vertical Portrait (3:4 Aspect Ratio).
 
-    SUBJECT REFERENCE:
-    - Image 0: Current body state, pose, and framing.
-    - Image 1: STRICT Facial Identity reference. Use the face, hair, and head from this image.
+${subjectReferenceSection}
 
-    CLOTHING REFERENCE:
-    - Image 2: A vertically-stacked image showing ${itemCount} clothing items.
-    - Each item is separated by a thin grey line in the stack.
-    - Analyze ALL items in this stacked image carefully.
+${clothingReferenceSection}
 
-    CLOTHING INSTRUCTIONS:
-    - Dress the subject in ALL ${itemCount} clothing items from Image 2 (the stacked image).
-    - Combine all items into a cohesive, fashionable outfit.
-    - ${details}
+${clothingInstructionsSection}
 
     CRITICAL:
-    1. Apply the exact facial identity, hair, and head from Image 1 onto the body in Image 0.
-    2. Maintain the EXACT pose and framing from Image 0.
-    3. Use ALL clothing items visible in the stacked Image 2.
+${identityInstruction}
+    2. Maintain the EXACT pose and framing from Image ${bodyImageIndex}.
+    3. Use ALL clothing items visible in the grid Image ${clothingImageIndex}.
     4. Ensure head-to-body proportions are accurate (8-heads-tall rule). No long necks or large heads.
     5. Background: Pure white infinite studio.
     6. Create a cohesive outfit that looks natural and fashionable.
     7. Pay attention to layering: start with base layers (underwear/shirts) then add outer layers (jackets/coats).
-  `
+  `;
+  },
+
+  // Direct outfit render prompt for individual clothing items
+  // Dynamic builder function that adapts based on includeHeadshot parameter
+  OUTFIT_FINAL: (details, itemCount, includeHeadshot = true) => {
+    // Dynamic indexing: adjust image indices based on headshot inclusion
+    const bodyImageIndex = 0;
+    const headImageIndex = includeHeadshot ? 1 : null;
+    const firstClothingImageIndex = includeHeadshot ? 2 : 1;
+    const lastClothingImageIndex = includeHeadshot ? 1 + itemCount : itemCount;
+
+    // Dynamic identity instructions
+    const subjectReferenceSection = includeHeadshot
+      ? `    SUBJECT REFERENCE:
+    - Image ${bodyImageIndex}: Current body state, pose, and framing.
+    - Image ${headImageIndex}: STRICT Facial Identity reference. Use the face, hair, and head from this image.`
+      : `    SUBJECT REFERENCE:
+    - Image ${bodyImageIndex}: BASE BODY & FACE. Contains the subject's real face. Do not modify.`;
+
+    const clothingReferenceSection = `    CLOTHING REFERENCE:
+    - Images ${firstClothingImageIndex} to ${lastClothingImageIndex}: Individual clothing items.
+    - Analyze ALL items in these images carefully.`;
+
+    const clothingInstructionsSection = `    CLOTHING INSTRUCTIONS:
+    - Dress the subject in ALL ${itemCount} clothing items from Images ${firstClothingImageIndex} to ${lastClothingImageIndex}.
+    - Combine all items into a cohesive, fashionable outfit.
+    - ${details}`;
+
+    const identityInstruction = includeHeadshot
+      ? `    1. Apply the exact facial identity, hair, and head from Image ${headImageIndex} onto the body in Image ${bodyImageIndex}.`
+      : `    1. CRITICAL: PRESERVE THE FACE. The subject in Image ${bodyImageIndex} is the real person. You must composite the new clothes onto the body WITHOUT altering the facial features, hair, or head shape. Keep the original face exactly as it appears in Image ${bodyImageIndex}.`;
+
+    return `
+    Fashion Photography.
+    OUTPUT FORMAT: Vertical Portrait (3:4 Aspect Ratio).
+
+${subjectReferenceSection}
+
+${clothingReferenceSection}
+
+${clothingInstructionsSection}
+
+    CRITICAL:
+${identityInstruction}
+    2. Maintain the EXACT pose and framing from Image ${bodyImageIndex}.
+    3. Use ALL clothing items provided.
+    4. Ensure head-to-body proportions are accurate (8-heads-tall rule). No long necks or large heads.
+    5. Background: Pure white infinite studio.
+    6. Create a cohesive outfit that looks natural and fashionable.
+    7. Pay attention to layering: start with base layers (underwear/shirts) then add outer layers (jackets/coats).
+  `;
+  }
 };
 
 module.exports = { PROMPTS };

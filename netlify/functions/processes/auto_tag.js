@@ -17,16 +17,32 @@ const { downloadImageFromStorage, callGeminiAPI } = require("../utils");
  *
  * @param {object} input - Job input containing wardrobe_item_id and image_ids
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase - The Supabase client
+ * @param {object} perfTracker - Optional performance tracker for timing measurements
+ * @param {object} timingTracker - Optional timing tracker for detailed step-by-step timing
+ * @param {object} preDownloadedImageData - Optional pre-downloaded image data { base64, mimeType } to avoid redundant downloads
  * @returns {Promise<object>} A summary of the AI result and any updates applied
  */
-async function processAutoTag(input, supabase) {
+async function processAutoTag(input, supabase, perfTracker = null, timingTracker = null, preDownloadedImageData = null) {
   const { wardrobe_item_id, image_ids } = input;
   if (!wardrobe_item_id || !image_ids?.length) {
     throw new Error("Missing ID or images");
   }
-  // Fetch the primary image and necessary metadata concurrently
-  const [imageB64, catRes, subRes, attrRes] = await Promise.all([
-    downloadImageFromStorage(supabase, image_ids[0]),
+  
+  // Use pre-downloaded image if provided, otherwise download from storage
+  // Fetch the primary image (or use pre-downloaded) and necessary metadata concurrently
+  let imageB64Promise;
+  if (preDownloadedImageData && preDownloadedImageData.base64) {
+    // Use the pre-downloaded image data to avoid redundant storage download
+    console.log(`[processAutoTag] Using pre-downloaded image (skipping storage download, saving ~5s)`);
+    imageB64Promise = Promise.resolve(preDownloadedImageData);
+  } else {
+    // Download from storage if no pre-downloaded data provided
+    console.log(`[processAutoTag] Downloading image from storage (image_id: ${image_ids[0]})...`);
+    imageB64Promise = downloadImageFromStorage(supabase, image_ids[0], timingTracker);
+  }
+  
+  const [imageResult, catRes, subRes, attrRes] = await Promise.all([
+    imageB64Promise,
     supabase.from("wardrobe_categories").select("id, name").order("sort_order"),
     supabase.from("wardrobe_subcategories").select("id, name, category_id").order("sort_order"),
     supabase.from("attribute_definitions").select("id, key, name")
@@ -37,7 +53,8 @@ async function processAutoTag(input, supabase) {
   const subList = subcategories.map((s) => s.name).join(", ");
   const prompt = PROMPTS.AUTO_TAG(catList, subList);
   // Call the Gemini API with the clothing image to extract JSON attributes
-  const textResult = await callGeminiAPI(prompt, [imageB64], "gemini-2.5-flash-image", "TEXT");
+  // Pass the full result object so mime-type is included
+  const textResult = await callGeminiAPI(prompt, [imageResult], "gemini-2.5-flash-image", "TEXT", perfTracker, timingTracker);
   let result;
   try {
     // Remove possible code fences around the JSON response

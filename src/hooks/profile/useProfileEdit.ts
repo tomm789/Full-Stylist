@@ -8,7 +8,7 @@ import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { updateUserProfile } from '@/lib/user';
 import { updateUserSettings } from '@/lib/settings';
-import { uploadImageToStorage } from '@/lib/wardrobe';
+import { uploadImageToStorage } from '@/lib/utils/image-helpers';
 import { supabase } from '@/lib/supabase';
 
 interface UseProfileEditProps {

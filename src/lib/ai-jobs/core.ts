@@ -14,7 +14,8 @@ export interface AIJob {
     | 'reference_match'
     | 'outfit_render'
     | 'outfit_mannequin'
-    | 'lookbook_generate';
+    | 'lookbook_generate'
+    | 'batch';
   input: any;
   status: 'queued' | 'running' | 'succeeded' | 'failed';
   result?: any;
