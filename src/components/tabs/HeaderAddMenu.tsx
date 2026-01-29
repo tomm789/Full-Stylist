@@ -9,11 +9,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal';
 
 interface HeaderAddMenuProps {
   title: string;
@@ -52,46 +51,42 @@ export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
         <Ionicons name="add-circle-outline" size={24} color="#000" />
       </TouchableOpacity>
 
-      <Modal
+      <DropdownMenuModal
         visible={showAddMenu}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowAddMenu(false)}
+        onClose={() => setShowAddMenu(false)}
+        topOffset={100}
+        align="center"
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowAddMenu(false)}>
-          <View style={styles.dropdownMenu}>
-            <Text style={styles.menuTitle}>Add New</Text>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleAddOption('outfit')}
-            >
-              <Ionicons name="shirt-outline" size={20} color="#000" />
-              <Text style={styles.menuItemText}>Outfit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleAddOption('calendar')}
-            >
-              <Ionicons name="calendar-outline" size={20} color="#000" />
-              <Text style={styles.menuItemText}>Calendar Entry</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleAddOption('wardrobe')}
-            >
-              <Ionicons name="pricetag-outline" size={20} color="#000" />
-              <Text style={styles.menuItemText}>Wardrobe Item</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleAddOption('lookbook')}
-            >
-              <Ionicons name="book-outline" size={20} color="#000" />
-              <Text style={styles.menuItemText}>Lookbook</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
+        <Text style={styles.menuTitle}>Add New</Text>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleAddOption('outfit')}
+        >
+          <Ionicons name="shirt-outline" size={20} color="#000" />
+          <Text style={styles.menuItemText}>Outfit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleAddOption('calendar')}
+        >
+          <Ionicons name="calendar-outline" size={20} color="#000" />
+          <Text style={styles.menuItemText}>Calendar Entry</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleAddOption('wardrobe')}
+        >
+          <Ionicons name="pricetag-outline" size={20} color="#000" />
+          <Text style={styles.menuItemText}>Wardrobe Item</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleAddOption('lookbook')}
+        >
+          <Ionicons name="book-outline" size={20} color="#000" />
+          <Text style={styles.menuItemText}>Lookbook</Text>
+        </TouchableOpacity>
+      </DropdownMenuModal>
     </View>
   );
 }
@@ -109,27 +104,6 @@ const styles = StyleSheet.create({
   },
   addButton: {
     padding: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    paddingTop: 100,
-  },
-  dropdownMenu: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 8,
-    minWidth: 200,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
   menuTitle: {
     fontSize: 14,

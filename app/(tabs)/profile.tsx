@@ -9,7 +9,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +18,7 @@ import {
   ProfileTabs,
   EditProfileModal,
 } from '@/components/profile';
+import { LoadingSpinner } from '@/components/shared';
 
 type TabType = 'posts' | 'headshots' | 'bodyshots';
 
@@ -72,7 +72,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
+        <LoadingSpinner size="large" />
       </View>
     );
   }

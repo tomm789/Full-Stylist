@@ -19,6 +19,8 @@ import { supabase } from '@/lib/supabase';
 interface OutfitViewContentProps {
   outfit: any;
   coverImage: any | null;
+  /** When set, use this data URI for instant render (from job.result.base64_result); bypasses fetch from storage */
+  coverImageDataUri?: string | null;
   outfitItems: any[];
   wardrobeItems: Map<string, any>;
   itemImageUrls: Map<string, string>;
@@ -41,6 +43,7 @@ interface OutfitViewContentProps {
 export function OutfitViewContent({
   outfit,
   coverImage,
+  coverImageDataUri,
   outfitItems,
   wardrobeItems,
   itemImageUrls,
@@ -68,7 +71,8 @@ export function OutfitViewContent({
       .getPublicUrl(image.storage_key).data.publicUrl;
   };
 
-  const coverImageUrl = coverImage ? getImageUrl(coverImage) : null;
+  // Prefer instant base64 from job result to avoid a second fetch
+  const coverImageUrl = coverImageDataUri ?? (coverImage ? getImageUrl(coverImage) : null);
 
   return (
     <>

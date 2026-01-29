@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -16,6 +15,7 @@ import {
   AccountDangerZone,
   PrivacySettingsSection,
 } from '@/components/profile';
+import { LoadingSpinner } from '@/components/shared';
 
 export default function AccountSettingsScreen() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function AccountSettingsScreen() {
           <View style={styles.backButton} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" />
+          <LoadingSpinner size="large" />
         </View>
       </SafeAreaView>
     );

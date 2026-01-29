@@ -29,6 +29,7 @@ import {
   EditLookbookModal,
   SlideshowModal,
 } from '@/components/lookbooks';
+import { LoadingSpinner } from '@/components/shared';
 import { isLookbookEditable } from '@/utils/lookbookHelpers';
 
 export default function LookbookDetailScreen() {
@@ -88,7 +89,7 @@ export default function LookbookDetailScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <LoadingSpinner size="large" />
         </View>
       </View>
     );

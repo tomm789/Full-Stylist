@@ -37,12 +37,18 @@ interface OutfitDescription {
   season: string;
 }
 
+/** Optional: use pre-uploaded grid from useBackgroundGridGenerator for 0s latency */
+export interface BackgroundGridApi {
+  getStoredKeyOrAwaitPending: (selectionKey: string) => Promise<string | null>;
+}
+
 interface UseOutfitGenerationOptions {
   userId: string;
   categories: WardrobeCategory[];
+  backgroundGrid?: BackgroundGridApi | null;
 }
 
-export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationOptions) {
+export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseOutfitGenerationOptions) {
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState<GenerationProgress>({
     phase: 'saving',
@@ -285,153 +291,174 @@ export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationO
         }));
         startItemRevealAnimation(itemsForModal);
 
-        // Phase 3: Download and stack wardrobe item images
+        // Phase 3: Grid image — use pre-uploaded key if available (0s), else generate + upload
         setProgress({
           phase: 'stacking',
           message: `Preparing ${selectedItems.length} items...`,
           progress: 30,
         });
 
-        console.log(`[OutfitGeneration] Fetching images for ${selectedItems.length} items`);
+        const selectionKey = selectedItems.map((item) => item.id).join(',');
+        let stackedResult: { imageId: string; publicUrl: string; storagePath: string } | null = null;
 
-        // Get image links for all selected items
-        const wardrobeItemIds = selectedItems.map(item => item.id);
-        const { data: imageLinks, error: linksError } = await supabase
-          .from('wardrobe_item_images')
-          .select(`
-            image_id,
-            wardrobe_item_id,
-            type,
-            sort_order,
-            images!inner(storage_key)
-          `)
-          .in('wardrobe_item_id', wardrobeItemIds);
-
-        if (linksError || !imageLinks) {
-          throw new Error(`Failed to load item images: ${linksError?.message}`);
+        if (backgroundGrid) {
+          const storedKey = await backgroundGrid.getStoredKeyOrAwaitPending(selectionKey);
+          if (storedKey) {
+            stackedResult = {
+              imageId: storedKey,
+              publicUrl: supabase.storage.from('media').getPublicUrl(storedKey).data.publicUrl,
+              storagePath: storedKey,
+            };
+            console.log(`[OutfitGeneration] Using pre-uploaded grid (0s latency): ${storedKey}`);
+          }
         }
 
-        // Flatten the nested images data structure
-        const flattenedLinks = imageLinks.map(link => ({
-          image_id: link.image_id,
-          wardrobe_item_id: link.wardrobe_item_id,
-          type: link.type,
-          sort_order: link.sort_order,
-          storage_key: (link.images as any).storage_key
-        }));
+        if (!stackedResult) {
+          console.log(`[OutfitGeneration] Fetching images for ${selectedItems.length} items`);
 
-        // Get the top image for each item (prioritize product shots)
-        const imagesByItem = new Map<string, typeof flattenedLinks>();
-        flattenedLinks.forEach(link => {
-          if (!imagesByItem.has(link.wardrobe_item_id)) {
-            imagesByItem.set(link.wardrobe_item_id, []);
+          // Get image links for all selected items
+          const wardrobeItemIds = selectedItems.map(item => item.id);
+          const { data: imageLinks, error: linksError } = await supabase
+            .from('wardrobe_item_images')
+            .select(`
+              image_id,
+              wardrobe_item_id,
+              type,
+              sort_order,
+              images!inner(storage_key)
+            `)
+            .in('wardrobe_item_id', wardrobeItemIds);
+
+          if (linksError || !imageLinks) {
+            throw new Error(`Failed to load item images: ${linksError?.message}`);
           }
-          imagesByItem.get(link.wardrobe_item_id)!.push(link);
-        });
 
-        const topImages: typeof flattenedLinks = [];
-        wardrobeItemIds.forEach(itemId => {
-          const images = imagesByItem.get(itemId);
-          if (!images || images.length === 0) return;
+          // Flatten the nested images data structure
+          const flattenedLinks = imageLinks.map(link => ({
+            image_id: link.image_id,
+            wardrobe_item_id: link.wardrobe_item_id,
+            type: link.type,
+            sort_order: link.sort_order,
+            storage_key: (link.images as any).storage_key
+          }));
 
-          // Sort: product shots first, then by sort_order
-          images.sort((a, b) => {
-            if (a.type === 'product_shot' && b.type !== 'product_shot') return -1;
-            if (b.type === 'product_shot' && a.type !== 'product_shot') return 1;
-            return (a.sort_order || 999) - (b.sort_order || 999);
+          // Get the top image for each item (prioritize product shots)
+          const imagesByItem = new Map<string, typeof flattenedLinks>();
+          flattenedLinks.forEach(link => {
+            if (!imagesByItem.has(link.wardrobe_item_id)) {
+              imagesByItem.set(link.wardrobe_item_id, []);
+            }
+            imagesByItem.get(link.wardrobe_item_id)!.push(link);
           });
 
-          topImages.push(images[0]);
-        });
+          const topImages: typeof flattenedLinks = [];
+          wardrobeItemIds.forEach(itemId => {
+            const images = imagesByItem.get(itemId);
+            if (!images || images.length === 0) return;
 
-        if (topImages.length === 0) {
-          throw new Error('No images found for selected items');
-        }
+            // Sort: product shots first, then by sort_order
+            images.sort((a, b) => {
+              if (a.type === 'product_shot' && b.type !== 'product_shot') return -1;
+              if (b.type === 'product_shot' && a.type !== 'product_shot') return 1;
+              return (a.sort_order || 999) - (b.sort_order || 999);
+            });
 
-        setProgress({
-          phase: 'stacking',
-          message: `Preparing ${topImages.length} images...`,
-          progress: 40,
-        });
+            topImages.push(images[0]);
+          });
 
-        console.log(`[OutfitGeneration] Getting image URLs for ${topImages.length} images`);
+          if (topImages.length === 0) {
+            throw new Error('No images found for selected items');
+          }
 
-        // Get public URLs for all images
-        const imageUrls = topImages.map((link) => {
-          const { data: urlData } = supabase.storage
+          setProgress({
+            phase: 'stacking',
+            message: `Preparing ${topImages.length} images...`,
+            progress: 40,
+          });
+
+          console.log(`[OutfitGeneration] Getting image URLs for ${topImages.length} images`);
+
+          // Get public URLs for all images
+          const imageUrls = topImages.map((link) => {
+            const { data: urlData } = supabase.storage
+              .from('media')
+              .getPublicUrl(link.storage_key);
+
+            if (!urlData?.publicUrl) {
+              throw new Error(`Failed to get URL for image ${link.image_id}`);
+            }
+
+            return urlData.publicUrl;
+          });
+
+          console.log(`[OutfitGeneration] Got ${imageUrls.length} image URLs`);
+
+          // Generate grid using the new grid function
+          setProgress({
+            phase: 'stacking',
+            message: `Creating grid for ${imageUrls.length} items...`,
+            progress: 50,
+          });
+
+          console.log(`[OutfitGeneration] Starting grid generation...`);
+
+          const gridBase64 = await generateClothingGrid(imageUrls);
+          console.log(`[OutfitGeneration] Grid generated successfully, base64 length: ${gridBase64.length}`);
+
+          // Convert base64 to Blob and upload to storage
+          setProgress({
+            phase: 'stacking',
+            message: `Uploading grid image...`,
+            progress: 60,
+          });
+
+          // Verify user session
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError || !session?.user?.id || session.user.id !== userId) {
+            throw new Error('User not authenticated or session mismatch');
+          }
+
+          // Convert base64 to Blob
+          const byteCharacters = atob(gridBase64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const gridBlob = new Blob([byteArray], { type: 'image/jpeg' });
+
+          // Upload to Supabase storage
+          const timestamp = Date.now();
+          const fileName = `grid-${timestamp}.jpg`;
+          const storagePath = `${userId}/ai/stacked/${fileName}`;
+
+          const arrayBuffer = await gridBlob.arrayBuffer();
+          const uploadData = new Uint8Array(arrayBuffer);
+
+          const { data: uploadDataResult, error: uploadError } = await supabase.storage
             .from('media')
-            .getPublicUrl(link.storage_key);
+            .upload(storagePath, uploadData, {
+              cacheControl: '3600',
+              upsert: false,
+              contentType: 'image/jpeg',
+            });
 
-          if (!urlData?.publicUrl) {
-            throw new Error(`Failed to get URL for image ${link.image_id}`);
+          if (uploadError || !uploadDataResult) {
+            throw new Error(`Failed to upload grid image: ${uploadError?.message || 'Unknown error'}`);
           }
 
-          return urlData.publicUrl;
-        });
+          console.log(`[OutfitGeneration] Grid uploaded successfully. Storage path: ${uploadDataResult.path}`);
 
-        console.log(`[OutfitGeneration] Got ${imageUrls.length} image URLs`);
-
-        // Generate grid using the new grid function
-        setProgress({
-          phase: 'stacking',
-          message: `Creating grid for ${imageUrls.length} items...`,
-          progress: 50,
-        });
-
-        console.log(`[OutfitGeneration] Starting grid generation...`);
-
-        const gridBase64 = await generateClothingGrid(imageUrls);
-        console.log(`[OutfitGeneration] Grid generated successfully, base64 length: ${gridBase64.length}`);
-
-        // Convert base64 to Blob and upload to storage
-        setProgress({
-          phase: 'stacking',
-          message: `Uploading grid image...`,
-          progress: 60,
-        });
-
-        // Verify user session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !session?.user?.id || session.user.id !== userId) {
-          throw new Error('User not authenticated or session mismatch');
+          stackedResult = {
+            imageId: uploadDataResult.path,
+            publicUrl: supabase.storage.from('media').getPublicUrl(uploadDataResult.path).data.publicUrl,
+            storagePath: uploadDataResult.path
+          };
         }
 
-        // Convert base64 to Blob
-        const byteCharacters = atob(gridBase64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        if (!stackedResult) {
+          throw new Error('Failed to prepare grid image');
         }
-        const byteArray = new Uint8Array(byteNumbers);
-        const gridBlob = new Blob([byteArray], { type: 'image/jpeg' });
-
-        // Upload to Supabase storage
-        const timestamp = Date.now();
-        const fileName = `grid-${timestamp}.jpg`;
-        const storagePath = `${userId}/ai/stacked/${fileName}`;
-
-        const arrayBuffer = await gridBlob.arrayBuffer();
-        const uploadData = new Uint8Array(arrayBuffer);
-
-        const { data: uploadDataResult, error: uploadError } = await supabase.storage
-          .from('media')
-          .upload(storagePath, uploadData, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: 'image/jpeg',
-          });
-
-        if (uploadError || !uploadDataResult) {
-          throw new Error(`Failed to upload grid image: ${uploadError?.message || 'Unknown error'}`);
-        }
-
-        console.log(`[OutfitGeneration] Grid uploaded successfully. Storage path: ${uploadDataResult.path}`);
-
-        const stackedResult = {
-          imageId: uploadDataResult.path,
-          publicUrl: supabase.storage.from('media').getPublicUrl(uploadDataResult.path).data.publicUrl,
-          storagePath: uploadDataResult.path
-        };
 
         // Phase 4: Prepare items data for AI job
         setProgress({

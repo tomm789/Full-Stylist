@@ -10,7 +10,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,6 +34,7 @@ import {
   LookbookOutfitGrid,
   SlideshowModal,
 } from '@/components/lookbooks';
+import { LoadingSpinner } from '@/components/shared';
 import { CommentsModal } from '@/components/social';
 
 export default function LookbookViewScreen() {
@@ -161,7 +161,7 @@ export default function LookbookViewScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <LoadingSpinner size="large" />
       </View>
     );
   }

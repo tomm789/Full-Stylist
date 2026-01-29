@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LoadingSpinner } from '@/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   readLocalStorageData,
@@ -137,7 +138,7 @@ export default function ImportScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <LoadingSpinner size="large" />
       </View>
     );
   }
