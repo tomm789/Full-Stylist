@@ -2,12 +2,18 @@
  * useBackgroundGridGenerator
  * Pre-generates and uploads the outfit grid image while the user selects items,
  * so when they click "Generate" the grid is ready (0s latency) or nearly ready.
+ *
+ * Gated by EXPO_PUBLIC_PREGEND_GRID === 'true' (default OFF). When false, no
+ * grid generation or upload runs; can be re-enabled later.
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { generateClothingGrid } from '@/utils/clothing-grid';
 import type { WardrobeItem } from '@/lib/wardrobe';
+
+const PREGEND_GRID_ENABLED =
+  typeof process !== 'undefined' && process.env.EXPO_PUBLIC_PREGEND_GRID === 'true';
 
 const DEBOUNCE_MS = 2000;
 const STORAGE_PREFIX = 'background-preview';
@@ -143,7 +149,7 @@ export function useBackgroundGridGenerator(
   );
 
   useEffect(() => {
-    if (!userId || selectedItems.length === 0) {
+    if (!PREGEND_GRID_ENABLED || !userId || selectedItems.length === 0) {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
@@ -192,6 +198,7 @@ export function useBackgroundGridGenerator(
 
   const getStoredKeyOrAwaitPending = useCallback(
     async (currentSelectionKey: string): Promise<string | null> => {
+      if (!PREGEND_GRID_ENABLED) return null;
       if (preUploadedGridKey && selectionKeyForStored === currentSelectionKey) {
         return preUploadedGridKey;
       }

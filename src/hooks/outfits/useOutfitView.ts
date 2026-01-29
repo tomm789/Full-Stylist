@@ -109,6 +109,7 @@ export function useOutfitView({
             setCoverImageDataUri(urlData.publicUrl);
           }
         }
+        timeline?.mark('image_set_from_result');
 
         timeline?.mark('outfit_fetch_start');
         await refreshOutfit();

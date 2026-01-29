@@ -242,7 +242,7 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
       clearAllIntervals();
 
       const timeline = startTimeline('outfit_generation');
-      timeline.mark('generate_press');
+      timeline.mark('generate_click');
 
       try {
         // Phase 1: Save outfit
@@ -405,8 +405,10 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           });
 
           console.log(`[OutfitGeneration] Starting grid generation...`);
+          timeline.mark('grid_start');
 
           const gridBase64 = await generateClothingGrid(imageUrls);
+          timeline.mark('grid_done');
           console.log(`[OutfitGeneration] Grid generated successfully, base64 length: ${gridBase64.length}`);
 
           // Convert base64 to Blob and upload to storage
@@ -439,6 +441,7 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           const arrayBuffer = await gridBlob.arrayBuffer();
           const uploadData = new Uint8Array(arrayBuffer);
 
+          timeline.mark('upload_start');
           const { data: uploadDataResult, error: uploadError } = await supabase.storage
             .from('media')
             .upload(storagePath, uploadData, {
@@ -450,6 +453,7 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           if (uploadError || !uploadDataResult) {
             throw new Error(`Failed to upload grid image: ${uploadError?.message || 'Unknown error'}`);
           }
+          timeline.mark('upload_done');
 
           console.log(`[OutfitGeneration] Grid uploaded successfully. Storage path: ${uploadDataResult.path}`);
 
@@ -526,7 +530,7 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
         }
 
         timeline.mark('job_created', { job_id: jobData.jobId });
-        timeline.mark('execution_triggered');
+        timeline.mark('trigger_sent');
 
         console.log(`[OutfitGeneration] AI job created: ${jobData.jobId}`);
 
