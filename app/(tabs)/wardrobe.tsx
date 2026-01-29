@@ -45,6 +45,7 @@ import { findConflictingItem } from '@/utils';
 import { supabase } from '@/lib/supabase';
 import { WardrobeItem } from '@/lib/wardrobe';
 import { logClientTiming } from '@/lib/perf/logClientTiming';
+import { PERF_MODE } from '@/lib/perf/perfMode';
 
 const { colors } = theme;
 
@@ -221,8 +222,11 @@ export default function WardrobeScreen() {
       setOutfitCreatorMode(false);
       setSelectedOutfitItems([]);
 
-      // Navigate to the outfit view page
-      router.push(`/outfits/${result.outfitId}/view`);
+      const navigateAt = Date.now();
+      console.debug('[outfit_render_timing] navigate_to_view_at', { ts: navigateAt, outfitId: result.outfitId, traceId: result.renderTraceId });
+      // Navigate to the outfit view page (renderTraceId for perf timeline + cache-bust)
+      const query = result.renderTraceId ? `?renderTraceId=${encodeURIComponent(result.renderTraceId)}` : '';
+      router.push(`/outfits/${result.outfitId}/view${query}`);
     } else {
       Alert.alert('Error', result.error || 'Failed to generate outfit');
     }
@@ -324,10 +328,10 @@ export default function WardrobeScreen() {
       {/* Loading Overlay */}
       <LoadingOverlay visible={loading && filteredItems.length === 0} message="Loading wardrobe..." />
 
-      {/* Generation Progress Modal */}
-      <LoadingOverlay 
-        visible={generating} 
-        message={progress.message || 'Generating outfit...'} 
+      {/* Generation Progress Modal (hidden in PERF_MODE to measure UI overhead) */}
+      <LoadingOverlay
+        visible={PERF_MODE ? false : generating}
+        message={progress.message || 'Generating outfit...'}
       />
 
       {/* Outfit Creator Bar */}

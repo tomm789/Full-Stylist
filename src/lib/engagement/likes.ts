@@ -20,14 +20,14 @@ export async function likeEntity(
   error: any;
 }> {
   try {
-    // Check if already liked
+    // Check if already liked (.maybeSingle() avoids 406 when no row exists)
     const { data: existing } = await supabase
       .from('likes')
       .select('id')
       .eq('user_id', userId)
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       // Already liked, return existing
@@ -102,7 +102,7 @@ export async function hasLiked(
     .eq('user_id', userId)
     .eq('entity_type', entityType)
     .eq('entity_id', entityId)
-    .single();
+    .maybeSingle();
 
   return !!data;
 }

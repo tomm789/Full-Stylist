@@ -6,12 +6,14 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { saveOutfit } from '@/lib/outfits';
+import { setInitialCoverDataUri } from '@/lib/outfits/initialCoverCache';
 import { createAndTriggerJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
 import { getUserSettings } from '@/lib/settings';
 import { WardrobeItem, WardrobeCategory } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { generateClothingGrid } from '@/utils/clothing-grid';
 import { startTimeline } from '@/lib/perf/timeline';
+import { PERF_MODE } from '@/lib/perf/perfMode';
 
 interface GenerationProgress {
   phase: 'saving' | 'preparing' | 'stacking' | 'generating' | 'complete' | 'error';
@@ -229,7 +231,7 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
   }, []);
 
   const generateOutfit = useCallback(
-    async (selectedItems: WardrobeItem[]): Promise<{ success: boolean; outfitId?: string; error?: string }> => {
+    async (selectedItems: WardrobeItem[]): Promise<{ success: boolean; outfitId?: string; error?: string; renderTraceId?: string }> => {
       if (!userId || selectedItems.length === 0) {
         return { success: false, error: 'No items selected' };
       }
@@ -275,6 +277,10 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
         const outfitId = savedData.outfit.id;
         setGeneratedOutfitId(outfitId);
 
+        if (PERF_MODE) {
+          console.debug('[outfit_render_timing] perf_mode_enabled', { ts: Date.now(), traceId: timeline.traceId, outfitId, where: 'generation' });
+        }
+
         // Phase 2: Get user settings
         setProgress({
           phase: 'preparing',
@@ -287,13 +293,15 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           throw new Error('Please upload a body photo in settings before generating outfits');
         }
 
-        // NEW: Start item reveal animation
-        const itemsForModal: GenerationItem[] = selectedItems.map((item, index) => ({
-          id: item.id,
-          title: item.title || 'Untitled Item',
-          orderIndex: index,
-        }));
-        startItemRevealAnimation(itemsForModal);
+        // NEW: Start item reveal animation (skipped in PERF_MODE to measure UI overhead)
+        if (!PERF_MODE) {
+          const itemsForModal: GenerationItem[] = selectedItems.map((item, index) => ({
+            id: item.id,
+            title: item.title || 'Untitled Item',
+            orderIndex: index,
+          }));
+          startItemRevealAnimation(itemsForModal);
+        }
 
         // Phase 3: Grid image — use pre-uploaded key if available (0s), else generate + upload
         setProgress({
@@ -534,8 +542,10 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
 
         console.log(`[OutfitGeneration] AI job created: ${jobData.jobId}`);
 
-        // NEW: Start polling for description (runs in parallel with image generation)
-        startDescriptionPolling(outfitId);
+        // NEW: Start polling for description (skipped in PERF_MODE)
+        if (!PERF_MODE) {
+          startDescriptionPolling(outfitId);
+        }
 
         // Phase 6: Poll for completion
         setProgress({
@@ -549,7 +559,8 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           jobData.jobId,
           60,
           2000,
-          '[OutfitGeneration]'
+          '[OutfitGeneration]',
+          'outfit_render'
         );
 
         // Clean up intervals
@@ -564,7 +575,7 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
             progress: 100,
           });
           setModalVisible(false);
-          return { success: true, outfitId };
+          return { success: true, outfitId, renderTraceId: timeline.traceId };
         }
 
         if (completedJob.status === 'failed') {
@@ -573,22 +584,33 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
         }
 
         const resultKeys = completedJob.result ? Object.keys(completedJob.result) : [];
+        const jobStatusSucceededAt = Date.now();
         timeline.mark('poll_success', { resultKeys });
+        timeline.mark('job_status_succeeded_at', { ts: jobStatusSucceededAt });
+        console.debug('[outfit_render_timing] job_status_succeeded_at', { ts: jobStatusSucceededAt, traceId: timeline.traceId, outfitId });
 
-        // Success!
+        // Pass base64 to view so image shows immediately (no storage/CDN wait)
+        const result = completedJob.result || {};
+        if (result.base64_result) {
+          const dataUri = 'data:image/jpeg;base64,' + result.base64_result;
+          const coverSetAt = Date.now();
+          setInitialCoverDataUri(outfitId, dataUri, jobStatusSucceededAt);
+          timeline.mark('cover_set_base64_at', { ts: coverSetAt });
+          console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, traceId: timeline.traceId, outfitId, from: 'generation' });
+        } else {
+          console.debug('[outfit_render_timing] base64_result missing', { traceId: timeline.traceId, outfitId, resultKeys });
+        }
+
+        // Success! Hide modal immediately so navigation isn't delayed
         console.log(`[OutfitGeneration] Generation completed successfully!`);
         setProgress({
           phase: 'complete',
           message: 'Outfit generated successfully!',
           progress: 100,
         });
+        setModalVisible(false);
 
-        // Hide modal after a brief delay
-        setTimeout(() => {
-          setModalVisible(false);
-        }, 1500);
-
-        return { success: true, outfitId };
+        return { success: true, outfitId, renderTraceId: timeline.traceId };
       } catch (error: any) {
         console.error('[OutfitGeneration] Error:', error);
         clearAllIntervals();

@@ -3,7 +3,7 @@
  * Main content display for outfit view
  */
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -44,6 +44,12 @@ interface OutfitViewContentProps {
   onImagePress: () => void;
   /** When set, timeline logs image load events and bounded retry on error (freshly generated). */
   renderTraceId?: string;
+  /** When set, client-only log: time from job succeeded to image_load_end. */
+  jobSucceededAt?: number | null;
+  /** Called when cover image has loaded (e.g. to trigger deferred engagement fetch in PERF_MODE). Fired at most once per coverImageUrl. */
+  onCoverImageLoad?: () => void;
+  /** Called when cover image errors after MAX retries (fallback to trigger deferred engagement). Fired at most once. */
+  onCoverImageErrorAfterRetries?: () => void;
 }
 
 export function OutfitViewContent({
@@ -68,10 +74,15 @@ export function OutfitViewContent({
   onImageModalClose,
   onImagePress,
   renderTraceId,
+  jobSucceededAt,
+  onCoverImageLoad,
+  onCoverImageErrorAfterRetries,
 }: OutfitViewContentProps) {
   const router = useRouter();
   const [imageRetryKey, setImageRetryKey] = useState(0);
   const imageRetryCountRef = useRef(0);
+  const didFireCoverLoadRef = useRef(false);
+  const didFireErrorFallbackRef = useRef(false);
 
   const getImageUrl = (image: any) => {
     if (!image || !image.storage_key) return null;
@@ -80,29 +91,63 @@ export function OutfitViewContent({
       .getPublicUrl(image.storage_key).data.publicUrl;
   };
 
-  // Prefer instant base64 from job result to avoid a second fetch
-  const coverImageUrl = coverImageDataUri ?? (coverImage ? getImageUrl(coverImage) : null);
+  // Prefer instant base64 from job result; storage URL is secondary
+  const uriType: 'dataUri' | 'storageUrl' = coverImageDataUri ? 'dataUri' : 'storageUrl';
+  let coverImageUrl: string | null = coverImageDataUri ?? (coverImage ? getImageUrl(coverImage) : null);
+  // Cache-bust storage URL for newly generated renders so we don't show stale/placeholder
+  if (coverImageUrl && !coverImageDataUri && renderTraceId) {
+    const sep = coverImageUrl.includes('?') ? '&' : '?';
+    coverImageUrl = `${coverImageUrl}${sep}v=${renderTraceId}&t=${Date.now()}`;
+  }
 
   const timeline = renderTraceId ? continueTimeline(renderTraceId) : null;
 
+  // Reset "fired" refs when cover URL changes so a new image can trigger callbacks once
+  useEffect(() => {
+    didFireCoverLoadRef.current = false;
+    didFireErrorFallbackRef.current = false;
+  }, [coverImageUrl]);
+
   const handleImageLoadStart = useCallback(() => {
-    timeline?.mark('image_load_start', { uri: coverImageUrl ? 'set' : 'null' });
-  }, [timeline, coverImageUrl]);
+    const ts = Date.now();
+    const msSinceJobSucceeded = jobSucceededAt != null && typeof jobSucceededAt === 'number'
+      ? Math.round(ts - jobSucceededAt)
+      : undefined;
+    timeline?.mark('image_load_start', { uriType, msSinceJobSucceeded });
+    console.debug('[outfit_render_timing] image_load_start_at', { ts, uriType, msSinceJobSucceeded });
+  }, [timeline, uriType, jobSucceededAt]);
 
   const handleImageLoad = useCallback(() => {
-    timeline?.mark('image_load_end');
-  }, [timeline]);
+    const ts = Date.now();
+    const msSinceJobSucceeded = jobSucceededAt != null && typeof jobSucceededAt === 'number'
+      ? Math.round(ts - jobSucceededAt)
+      : undefined;
+    timeline?.mark('image_load_end', { uriType, msSinceJobSucceeded });
+    console.debug('[outfit_render_timing] image_load_end_at', { ts, uriType, msSinceJobSucceeded });
+    if (!onCoverImageLoad) return;
+    if (didFireCoverLoadRef.current) return;
+    didFireCoverLoadRef.current = true;
+    onCoverImageLoad();
+  }, [timeline, uriType, jobSucceededAt, onCoverImageLoad]);
 
   const handleImageError = useCallback(() => {
     const retryCount = imageRetryCountRef.current;
-    timeline?.mark('image_load_error', { uri: coverImageUrl ? 'set' : 'null', retryCount });
-    if (!renderTraceId || retryCount >= MAX_IMAGE_RETRIES) return;
     const delay = IMAGE_RETRY_DELAYS[retryCount] ?? 2000;
+    timeline?.mark('image_load_error', { uriType, retryCount, delay });
+    console.debug('[outfit_render_timing] image_load_error', { uriType, retryCount, delay });
+    if (retryCount >= MAX_IMAGE_RETRIES) {
+      if (onCoverImageErrorAfterRetries && !didFireErrorFallbackRef.current) {
+        didFireErrorFallbackRef.current = true;
+        onCoverImageErrorAfterRetries();
+      }
+      return;
+    }
+    if (!renderTraceId) return;
     imageRetryCountRef.current = retryCount + 1;
     setTimeout(() => {
       setImageRetryKey((k) => k + 1);
     }, delay);
-  }, [timeline, coverImageUrl, renderTraceId]);
+  }, [timeline, uriType, renderTraceId, onCoverImageErrorAfterRetries]);
 
   return (
     <>
@@ -118,6 +163,7 @@ export function OutfitViewContent({
             source={{ uri: coverImageUrl }}
             style={styles.coverImage}
             contentFit="contain"
+            cachePolicy={renderTraceId && !coverImageDataUri ? 'none' : undefined}
             onLoadStart={handleImageLoadStart}
             onLoad={handleImageLoad}
             onError={handleImageError}
@@ -227,6 +273,7 @@ export function OutfitViewContent({
                 source={{ uri: coverImageUrl }}
                 style={styles.fullscreenImage}
                 contentFit="contain"
+                cachePolicy={renderTraceId && !coverImageDataUri ? 'none' : undefined}
                 onLoadStart={handleImageLoadStart}
                 onLoad={handleImageLoad}
                 onError={handleImageError}

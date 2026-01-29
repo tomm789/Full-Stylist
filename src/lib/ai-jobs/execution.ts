@@ -9,6 +9,7 @@ export async function triggerAIJobExecution(
 ): Promise<{ error: any }> {
   const triggerStartMs = Date.now();
   console.info('[AIJobs] triggerAIJobExecution start', { jobId });
+  console.debug('[outfit_render_timing] trigger_start', { ts: triggerStartMs, jobId });
   debugIngest({ location: 'execution.ts:10', message: 'triggerAIJobExecution entry', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
   try {
@@ -83,6 +84,8 @@ export async function triggerAIJobExecution(
       signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined,
     })
       .then(async (response) => {
+        const ts = Date.now();
+        console.debug('[outfit_render_timing] trigger_timeout_or_response', { ts, jobId, status: response.status });
         debugIngest({ location: 'execution.ts:78', message: 'triggerAIJobExecution fetch response', data: { jobId, status: response.status, statusText: response.statusText, ok: response.ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
         if (!response.ok) {
@@ -99,6 +102,11 @@ export async function triggerAIJobExecution(
         return response;
       })
       .catch((error) => {
+        const isTimeoutOrAbort =
+          error?.name === 'AbortError' ||
+          error?.name === 'TimeoutError' ||
+          error?.message?.toLowerCase().includes('timeout') ||
+          error?.message?.toLowerCase().includes('abort');
         const errorDetails = {
           message: error?.message,
           name: error?.name,
@@ -106,30 +114,34 @@ export async function triggerAIJobExecution(
           baseUrl: baseUrlNormalized,
           hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL,
         };
-        console.error(
-          '[AIJobs] Failed to trigger job execution:',
-          errorDetails
-        );
-        if (error?.name === 'TimeoutError' || error?.message?.includes('timeout')) {
-          console.warn('[AIJobs] Trigger timed out (expected for long-running jobs); job will still run on server. Rely on polling.');
-        }
-        debugIngest({ location: 'execution.ts:91', message: 'triggerAIJobExecution fetch error', data: { jobId, ...errorDetails }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
-        // For network errors (not timeouts), this might be a configuration issue
-        if (error?.name === 'TypeError' && error?.message?.includes('fetch')) {
-          console.error(
-            '[AIJobs] Network error - check EXPO_PUBLIC_NETLIFY_URL configuration'
-          );
-        }
-
-        // Ignore timeout errors - the job will keep processing on the server
-        if (
-          error?.name === 'AbortError' ||
-          error?.message?.includes('timeout')
-        ) {
-          console.log(
-            '[AIJobs] Function trigger timed out (expected for long-running jobs), will poll for status'
-          );
+        if (isTimeoutOrAbort) {
+          const ts = Date.now();
+          console.debug('[outfit_render_timing] trigger_timeout_or_response', { ts, jobId, status: 'timeout' });
+          console.debug('[AIJobs] Trigger timed out (expected); job runs on server, poll for status.', { jobId });
+          debugIngest({
+            location: 'execution.ts:91',
+            message: 'triggerAIJobExecution fetch error',
+            data: { jobId, ...errorDetails, expected: true, kind: 'timeout' },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'D',
+          });
+        } else {
+          console.error('[AIJobs] Failed to trigger job execution:', errorDetails);
+          if (error?.name === 'TypeError' && error?.message?.includes('fetch')) {
+            console.error('[AIJobs] Network error - check EXPO_PUBLIC_NETLIFY_URL configuration');
+          }
+          debugIngest({
+            location: 'execution.ts:91',
+            message: 'triggerAIJobExecution fetch error',
+            data: { jobId, ...errorDetails },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'D',
+          });
         }
       });
 
