@@ -1,0 +1,1015 @@
+./archive/RESTORE_SUMMARY.md:19:### 1. `netlify/functions/ai-job-runner.ts` ✅ RESTORED
+./archive/RESTORE_SUMMARY.md:27:- Simple `downloadImageFromStorage` (no retry, no direct download fallback)
+./archive/RESTORE_SUMMARY.md:29:- Simple `processOutfitRender` (no excessive error handling, no debug logs)
+./archive/reference-match-feature-2026-01-20/IMPLEMENTATION_NOTES.md:13:- Backend implementation in `netlify/functions/ai-job-runner.ts` (reverted)
+./ai_netlify_bundle.txt:29:[functions."ai-job-runner"]
+./ai_netlify_bundle.txt:138:===== netlify/functions/ai-job-runner.js =====
+./ai_netlify_bundle.txt:148:const { createPerformanceTracker, createTimingTracker, downloadImageFromStorage } = require("./utils");
+./ai_netlify_bundle.txt:153:const { processOutfitRender } = require("./processes/outfit_render");
+./ai_netlify_bundle.txt:246:    processJobAsync(job, user.id).catch((err) => {
+./ai_netlify_bundle.txt:277:async function processJobAsync(job, userId) {
+./ai_netlify_bundle.txt:319:        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
+./ai_netlify_bundle.txt:382:  const imageData = await downloadImageFromStorage(supabase, imageId, timingTracker);
+./ai_netlify_bundle.txt:492: * import { createAIJob, pollAIJob, triggerAutoTag } from '@/lib/ai-jobs';
+./ai_netlify_bundle.txt:503:  getOutfitRenderItemLimit,
+./ai_netlify_bundle.txt:506:// Re-export from polling
+./ai_netlify_bundle.txt:508:  pollAIJob,
+./ai_netlify_bundle.txt:509:  pollAIJobWithFinalCheck,
+./ai_netlify_bundle.txt:513:} from './polling';
+./ai_netlify_bundle.txt:517:  triggerAIJobExecution,
+./ai_netlify_bundle.txt:518:  createAndTriggerJob,
+./ai_netlify_bundle.txt:530:  getActiveOutfitRenderJob,
+./ai_netlify_bundle.txt:531:  getRecentOutfitRenderJob,
+./archive/reference-match-feature-2026-01-20/from-reference.tsx:17:import { triggerReferenceMatch, triggerAIJobExecution, pollAIJob } from '@/lib/ai-jobs';
+./archive/reference-match-feature-2026-01-20/from-reference.tsx:145:      await triggerAIJobExecution(job.id);
+./archive/reference-match-feature-2026-01-20/from-reference.tsx:152:      const { data: completedJob, error: pollError } = await pollAIJob(job.id, 60, 2000);
+./archive/reference-match-feature-2026-01-20/from-reference.tsx:155:      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'from-reference.tsx:137',message:'Job polling complete',data:{status:completedJob?.status,hasPollError:!!pollError,pollError:pollError?.message,result:completedJob?.result,error:completedJob?.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D,E'})}).catch(()=>{});
+./archive/reference-match-feature-2026-01-20/from-reference.tsx:158:      if (pollError || !completedJob) {
+./archive/reference-match-feature-2026-01-20/REFERENCE_MATCH_FEATURE.md:8:### Backend (`netlify/functions/ai-job-runner.ts`)
+./netlify_ai_job_diagnosis.txt:3:===== netlify/functions/ai-job-runner.js =====
+./netlify_ai_job_diagnosis.txt:13:const { createPerformanceTracker, createTimingTracker, downloadImageFromStorage } = require("./utils");
+./netlify_ai_job_diagnosis.txt:18:const { processOutfitRender } = require("./processes/outfit_render");
+./netlify_ai_job_diagnosis.txt:111:    processJobAsync(job, user.id).catch((err) => {
+./netlify_ai_job_diagnosis.txt:142:async function processJobAsync(job, userId) {
+./netlify_ai_job_diagnosis.txt:184:        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
+./netlify_ai_job_diagnosis.txt:247:  const imageData = await downloadImageFromStorage(supabase, imageId, timingTracker);
+./netlify_ai_job_diagnosis.txt:378:[functions."ai-job-runner"]
+./netlify_ai_job_diagnosis.txt:843:    await runOutfitGeneration(baseB64, activeClothes, additionalDesc, activeHeadshotB64);
+./netlify_ai_job_diagnosis.txt:849:    await runOutfitGeneration(baseB64, activeClothes, additionalDesc, activeHeadshotB64);
+./netlify_ai_job_diagnosis.txt:1089:--- ./netlify/functions/ai-job-runner.js ---
+./netlify_ai_job_diagnosis.txt:1090:const { createPerformanceTracker, createTimingTracker, downloadImageFromStorage } = require("./utils");
+./netlify_ai_job_diagnosis.txt:1095:const { processOutfitRender } = require("./processes/outfit_render");
+./netlify_ai_job_diagnosis.txt:1132:    processJobAsync(job, user.id).catch((err) => {
+./netlify_ai_job_diagnosis.txt:1139:    processJobAsync(job, user.id).catch((err) => {
+./netlify_ai_job_diagnosis.txt:1150:async function processJobAsync(job, userId) {
+./netlify_ai_job_diagnosis.txt:1241:        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
+./netlify_ai_job_diagnosis.txt:1250:        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
+./netlify_ai_job_diagnosis.txt:1260:        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
+./netlify_ai_job_diagnosis.txt:1282:  const imageData = await downloadImageFromStorage(supabase, imageId, timingTracker);
+./netlify_ai_job_diagnosis.txt:1336:  console.log(`[downloadImageFromStorage] Starting download for imageId: ${imageId}`);
+./netlify_ai_job_diagnosis.txt:1348:  console.log(`[downloadImageFromStorage] Generating signed URL for direct download...`);
+./netlify_ai_job_diagnosis.txt:1354:    console.error(`[downloadImageFromStorage] Failed to create signed URL:`, signedUrlError);
+./netlify_ai_job_diagnosis.txt:1357:  console.log(`[downloadImageFromStorage] Downloading directly from signed URL (CDN/S3 path)...`);
+./netlify_ai_job_diagnosis.txt:1364:    console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify_ai_job_diagnosis.txt:1372:    console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify_ai_job_diagnosis.txt:1378:    console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify_ai_job_diagnosis.txt:1583:async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:1584:  console.log('[optimizeGeminiOutput] Starting optimization...');
+./netlify_ai_job_diagnosis.txt:1591:async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:1592:  console.log('[optimizeGeminiOutput] Starting optimization...');
+./netlify_ai_job_diagnosis.txt:1601:async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:1602:  console.log('[optimizeGeminiOutput] Starting optimization...');
+./netlify_ai_job_diagnosis.txt:1613:    console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:1617:    console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:1621:    console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:1625:    console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:1631:    console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:1635:    console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:1643:    console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:1657:    console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:1661:    console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:1665:    console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:1669:    console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:1672:    console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:1675:    console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:1679:    console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:1682:    console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:1687:    console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:1690:    console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:1694:    console.log('[optimizeGeminiOutput] Optimization complete');
+./netlify_ai_job_diagnosis.txt:1697:    console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:1701:    console.log('[optimizeGeminiOutput] Optimization complete');
+./netlify_ai_job_diagnosis.txt:1705:    console.error('[optimizeGeminiOutput] Optimization failed:', error);
+./netlify_ai_job_diagnosis.txt:1708:    console.log('[optimizeGeminiOutput] Optimization complete');
+./netlify_ai_job_diagnosis.txt:1712:    console.error('[optimizeGeminiOutput] Optimization failed:', error);
+./netlify_ai_job_diagnosis.txt:1714:    console.warn('[optimizeGeminiOutput] Returning original image due to error');
+./netlify_ai_job_diagnosis.txt:1721:    console.error('[optimizeGeminiOutput] Optimization failed:', error);
+./netlify_ai_job_diagnosis.txt:1723:    console.warn('[optimizeGeminiOutput] Returning original image due to error');
+./netlify_ai_job_diagnosis.txt:1732:  downloadImageFromStorage,
+./netlify_ai_job_diagnosis.txt:1736:  optimizeGeminiOutput,
+./netlify_ai_job_diagnosis.txt:1741:  downloadImageFromStorage,
+./netlify_ai_job_diagnosis.txt:1745:  optimizeGeminiOutput,
+./netlify_ai_job_diagnosis.txt:1844:  downloadImageFromStorage,
+./netlify_ai_job_diagnosis.txt:1857:    imageResult = await downloadImageFromStorage(supabase, image_id, timingTracker);
+./netlify_ai_job_diagnosis.txt:1865:    imageResult = await downloadImageFromStorage(supabase, image_id, timingTracker);
+./netlify_ai_job_diagnosis.txt:1875:    imageResult = await downloadImageFromStorage(supabase, image_id, timingTracker);
+./netlify_ai_job_diagnosis.txt:1946:const { downloadImageFromStorage, callGeminiAPI } = require("../utils");
+./netlify_ai_job_diagnosis.txt:1954:    imageB64Promise = downloadImageFromStorage(supabase, image_ids[0], timingTracker);
+./netlify_ai_job_diagnosis.txt:2039:  downloadImageFromStorage,
+./netlify_ai_job_diagnosis.txt:2044:  downloadImageFromStorage,
+./netlify_ai_job_diagnosis.txt:2069:    downloadImageFromStorage(supabase, headId, timingTracker),
+./netlify_ai_job_diagnosis.txt:2070:    downloadImageFromStorage(supabase, body_photo_image_id, timingTracker)
+./netlify_ai_job_diagnosis.txt:2075:    downloadImageFromStorage(supabase, headId, timingTracker),
+./netlify_ai_job_diagnosis.txt:2076:    downloadImageFromStorage(supabase, body_photo_image_id, timingTracker)
+./netlify_ai_job_diagnosis.txt:2112:  downloadImageFromStorage,
+./netlify_ai_job_diagnosis.txt:2148:    imageIdsToDownload.map((id) => downloadImageFromStorage(supabase, id, timingTracker))
+./netlify_ai_job_diagnosis.txt:2156:    imageIdsToDownload.map((id) => downloadImageFromStorage(supabase, id, timingTracker))
+./netlify_ai_job_diagnosis.txt:2164:    imageIdsToDownload.map((id) => downloadImageFromStorage(supabase, id, timingTracker))
+./netlify_ai_job_diagnosis.txt:2202:  downloadImageFromStorage,
+./netlify_ai_job_diagnosis.txt:2205:  optimizeGeminiOutput
+./netlify_ai_job_diagnosis.txt:2212:  downloadImageFromStorage,
+./netlify_ai_job_diagnosis.txt:2215:  optimizeGeminiOutput
+./netlify_ai_job_diagnosis.txt:2267:  console.log(`[OutfitRender] Processing outfit ${outfit_id}, using ${useStackedImage ? 'pre-stacked' : 'individual'} images`);
+./netlify_ai_job_diagnosis.txt:2302:      console.log(`[OutfitRender] Downloading pre-stacked image from storage: ${stacked_image_id}`);
+./netlify_ai_job_diagnosis.txt:2308:        console.error(`[OutfitRender] Storage download error:`, downloadError);
+./netlify_ai_job_diagnosis.txt:2313:      console.log(`[OutfitRender] Downloaded blob size: ${stackedBlob.size} bytes, type: ${stackedBlob.type}`);
+./netlify_ai_job_diagnosis.txt:2315:      console.log(`[OutfitRender] Converted to ArrayBuffer, length: ${buffer.byteLength}`);
+./netlify_ai_job_diagnosis.txt:2317:      console.log(`[OutfitRender] Converted to base64, length: ${stackedItemsB64.length} chars`);
+./netlify_ai_job_diagnosis.txt:2319:      console.log(`[OutfitRender] Pre-stacked image contains ${itemCount} items`);
+./netlify_ai_job_diagnosis.txt:2323:    console.log(`[OutfitRender] Legacy mode: fetching ${selected.length} individual items`);
+./netlify_ai_job_diagnosis.txt:2335:    console.log(`[OutfitRender] Legacy mode: downloading ${imageIdsToDownload.length} images: ${imageIdsToDownload.join(', ')}`);
+./netlify_ai_job_diagnosis.txt:2338:        console.log(`[OutfitRender] Downloading item image: ${id}`);
+./netlify_ai_job_diagnosis.txt:2339:        return downloadImageFromStorage(supabase, id, timingTracker);
+./netlify_ai_job_diagnosis.txt:2342:    console.log(`[OutfitRender] Downloading body image${includeHeadshot ? ' and headshot' : ''}`);
+./netlify_ai_job_diagnosis.txt:2343:    const downloadPromises = [downloadImageFromStorage(supabase, bodyId, timingTracker)];
+./netlify_ai_job_diagnosis.txt:2345:      downloadPromises.push(downloadImageFromStorage(supabase, headId, timingTracker));
+./netlify_ai_job_diagnosis.txt:2351:      console.log(`[OutfitRender] Downloaded head (${headResult.base64.length} chars) and body (${bodyResult.base64.length} chars)`);
+./netlify_ai_job_diagnosis.txt:2353:      console.log(`[OutfitRender] Downloaded body (${bodyResult.base64.length} chars), headshot excluded`);
+./netlify_ai_job_diagnosis.txt:2379:  console.log(`[OutfitRender] Generating outfit with model: ${preferredModel}`);
+./netlify_ai_job_diagnosis.txt:2380:  console.log(`[OutfitRender] Calling Gemini API...`);
+./netlify_ai_job_diagnosis.txt:2387:  console.log(`[OutfitRender] Generating outfit with model: ${preferredModel}`);
+./netlify_ai_job_diagnosis.txt:2388:  console.log(`[OutfitRender] Calling Gemini API...`);
+./netlify_ai_job_diagnosis.txt:2397:  console.log(`[OutfitRender] AI generation complete, result length: ${finalImageB64.length} chars`);
+./netlify_ai_job_diagnosis.txt:2400:  console.log(`[OutfitRender] Optimizing generated image...`);
+./netlify_ai_job_diagnosis.txt:2402:  const optimizedImageB64 = await optimizeGeminiOutput(finalImageB64);
+./netlify_ai_job_diagnosis.txt:2405:  console.log(`[OutfitRender] Image optimization complete`);
+./netlify_ai_job_diagnosis.txt:2421:  console.log(`[OutfitRender] Uploaded final image: ${storageKey}`);
+./netlify_ai_job_diagnosis.txt:2440:  console.log(`[OutfitRender] Outfit render complete`);
+./netlify_ai_job_diagnosis.txt:2442:  console.log(`[OutfitRender] Outfit render complete`);
+./netlify_ai_job_diagnosis.txt:2447:    console.log(`[OutfitRender] Description generation completed`);
+./netlify_ai_job_diagnosis.txt:2449:    console.error(`[OutfitRender] Description generation failed, but continuing:`, error);
+./netlify_ai_job_diagnosis.txt:2457:  downloadImageFromStorage,
+./netlify_ai_job_diagnosis.txt:2470:  const selfieResult = await downloadImageFromStorage(supabase, selfie_image_id, timingTracker);
+./netlify_ai_job_diagnosis.txt:2559:  console.log(`[downloadImageFromStorage] Starting download for imageId: ${imageId}`);
+./netlify_ai_job_diagnosis.txt:2562:    console.error(`[downloadImageFromStorage] Image not found: ${imageId}`, error);
+./netlify_ai_job_diagnosis.txt:2565:  console.log(`[downloadImageFromStorage] Found image record: bucket=${image.storage_bucket}, key=${image.storage_key}`);
+./netlify_ai_job_diagnosis.txt:2567:  console.log(`[downloadImageFromStorage] Found image record: bucket=${image.storage_bucket}, key=${image.storage_key}`);
+./netlify_ai_job_diagnosis.txt:2570:  console.log(`[downloadImageFromStorage] Generating signed URL for direct download...`);
+./netlify_ai_job_diagnosis.txt:2573:    console.error(`[downloadImageFromStorage] Failed to create signed URL:`, signedUrlError);
+./netlify_ai_job_diagnosis.txt:2579:  console.log(`[downloadImageFromStorage] Signed URL generated in ${(signedUrlDuration / 1e3).toFixed(2)}s: ${signedUrlData.signedUrl.substring(0, 80)}...`);
+./netlify_ai_job_diagnosis.txt:2581:  console.log(`[downloadImageFromStorage] Downloading directly from signed URL (CDN/S3 path)...`);
+./netlify_ai_job_diagnosis.txt:2585:    console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify_ai_job_diagnosis.txt:2588:  console.log(`[downloadImageFromStorage] Signed URL generated in ${(signedUrlDuration / 1e3).toFixed(2)}s: ${signedUrlData.signedUrl.substring(0, 80)}...`);
+./netlify_ai_job_diagnosis.txt:2590:  console.log(`[downloadImageFromStorage] Downloading directly from signed URL (CDN/S3 path)...`);
+./netlify_ai_job_diagnosis.txt:2594:    console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify_ai_job_diagnosis.txt:2601:    console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify_ai_job_diagnosis.txt:2752:async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:2758:async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:2759:  console.log("[optimizeGeminiOutput] Starting optimization...");
+./netlify_ai_job_diagnosis.txt:2763:    console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:2768:async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:2769:  console.log("[optimizeGeminiOutput] Starting optimization...");
+./netlify_ai_job_diagnosis.txt:2773:    console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:2775:async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:2776:  console.log("[optimizeGeminiOutput] Starting optimization...");
+./netlify_ai_job_diagnosis.txt:2780:    console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:2782:    console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:2786:  console.log("[optimizeGeminiOutput] Starting optimization...");
+./netlify_ai_job_diagnosis.txt:2790:    console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:2792:    console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:2800:    console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:2802:    console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:2810:    console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:2812:    console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:2824:    console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:2826:    console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:2828:    console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:2834:    console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:2836:    console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:2838:    console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:2840:    console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:2844:    console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:2846:    console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:2848:    console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:2850:    console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:2853:    console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:2855:    console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:2857:    console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:2859:    console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:2862:    console.error("[optimizeGeminiOutput] Optimization failed:", error);
+./netlify_ai_job_diagnosis.txt:2864:    console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:2866:    console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:2868:    console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:2871:    console.error("[optimizeGeminiOutput] Optimization failed:", error);
+./netlify_ai_job_diagnosis.txt:2872:    console.warn("[optimizeGeminiOutput] Returning original image due to error");
+./netlify_ai_job_diagnosis.txt:2874:    console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:2876:    console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:2879:    console.error("[optimizeGeminiOutput] Optimization failed:", error);
+./netlify_ai_job_diagnosis.txt:2880:    console.warn("[optimizeGeminiOutput] Returning original image due to error");
+./netlify_ai_job_diagnosis.txt:2886:    console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:2889:    console.error("[optimizeGeminiOutput] Optimization failed:", error);
+./netlify_ai_job_diagnosis.txt:2890:    console.warn("[optimizeGeminiOutput] Returning original image due to error");
+./netlify_ai_job_diagnosis.txt:2895:  downloadImageFromStorage,
+./netlify_ai_job_diagnosis.txt:2899:  downloadImageFromStorage,
+./netlify_ai_job_diagnosis.txt:2903:  optimizeGeminiOutput,
+./netlify_ai_job_diagnosis.txt:2908:  downloadImageFromStorage,
+./netlify_ai_job_diagnosis.txt:2912:  optimizeGeminiOutput,
+./netlify_ai_job_diagnosis.txt:2966:--- ./.netlify/functions-serve/ai-job-runner/netlify/functions/ai-job-runner.js ---
+./netlify_ai_job_diagnosis.txt:2982:      console.log(`[downloadImageFromStorage] Starting download for imageId: ${imageId}`);
+./netlify_ai_job_diagnosis.txt:2985:        console.error(`[downloadImageFromStorage] Image not found: ${imageId}`, error);
+./netlify_ai_job_diagnosis.txt:2988:      console.log(`[downloadImageFromStorage] Found image record: bucket=${image.storage_bucket}, key=${image.storage_key}`);
+./netlify_ai_job_diagnosis.txt:2990:      console.log(`[downloadImageFromStorage] Found image record: bucket=${image.storage_bucket}, key=${image.storage_key}`);
+./netlify_ai_job_diagnosis.txt:2993:      console.log(`[downloadImageFromStorage] Generating signed URL for direct download...`);
+./netlify_ai_job_diagnosis.txt:2996:        console.error(`[downloadImageFromStorage] Failed to create signed URL:`, signedUrlError);
+./netlify_ai_job_diagnosis.txt:3002:      console.log(`[downloadImageFromStorage] Signed URL generated in ${(signedUrlDuration / 1e3).toFixed(2)}s: ${signedUrlData.signedUrl.substring(0, 80)}...`);
+./netlify_ai_job_diagnosis.txt:3004:      console.log(`[downloadImageFromStorage] Downloading directly from signed URL (CDN/S3 path)...`);
+./netlify_ai_job_diagnosis.txt:3008:        console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify_ai_job_diagnosis.txt:3011:      console.log(`[downloadImageFromStorage] Signed URL generated in ${(signedUrlDuration / 1e3).toFixed(2)}s: ${signedUrlData.signedUrl.substring(0, 80)}...`);
+./netlify_ai_job_diagnosis.txt:3013:      console.log(`[downloadImageFromStorage] Downloading directly from signed URL (CDN/S3 path)...`);
+./netlify_ai_job_diagnosis.txt:3017:        console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify_ai_job_diagnosis.txt:3024:        console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify_ai_job_diagnosis.txt:3175:    async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:3181:    async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:3182:      console.log("[optimizeGeminiOutput] Starting optimization...");
+./netlify_ai_job_diagnosis.txt:3186:        console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:3191:    async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:3192:      console.log("[optimizeGeminiOutput] Starting optimization...");
+./netlify_ai_job_diagnosis.txt:3196:        console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:3198:    async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:3199:      console.log("[optimizeGeminiOutput] Starting optimization...");
+./netlify_ai_job_diagnosis.txt:3203:        console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:3205:        console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:3209:      console.log("[optimizeGeminiOutput] Starting optimization...");
+./netlify_ai_job_diagnosis.txt:3213:        console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:3215:        console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:3223:        console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:3225:        console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:3233:        console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:3235:        console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:3247:        console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:3249:        console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:3251:        console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:3257:        console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:3259:        console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:3261:        console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:3263:        console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:3267:        console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:3269:        console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:3271:        console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:3273:        console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:3276:        console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:3278:        console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:3280:        console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:3282:        console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:3285:        console.error("[optimizeGeminiOutput] Optimization failed:", error);
+./netlify_ai_job_diagnosis.txt:3287:        console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:3289:        console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:3291:        console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:3294:        console.error("[optimizeGeminiOutput] Optimization failed:", error);
+./netlify_ai_job_diagnosis.txt:3295:        console.warn("[optimizeGeminiOutput] Returning original image due to error");
+./netlify_ai_job_diagnosis.txt:3297:        console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:3299:        console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:3302:        console.error("[optimizeGeminiOutput] Optimization failed:", error);
+./netlify_ai_job_diagnosis.txt:3303:        console.warn("[optimizeGeminiOutput] Returning original image due to error");
+./netlify_ai_job_diagnosis.txt:3309:        console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:3312:        console.error("[optimizeGeminiOutput] Optimization failed:", error);
+./netlify_ai_job_diagnosis.txt:3313:        console.warn("[optimizeGeminiOutput] Returning original image due to error");
+./netlify_ai_job_diagnosis.txt:3318:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:3322:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:3326:      optimizeGeminiOutput,
+./netlify_ai_job_diagnosis.txt:3331:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:3335:      optimizeGeminiOutput,
+./netlify_ai_job_diagnosis.txt:3346:    var { downloadImageFromStorage: downloadImageFromStorage2, callGeminiAPI } = require_utils2();
+./netlify_ai_job_diagnosis.txt:3355:        imageB64Promise = downloadImageFromStorage2(supabase, image_ids[0], timingTracker);
+./netlify_ai_job_diagnosis.txt:3421:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:3434:        imageResult = await downloadImageFromStorage2(supabase, image_id, timingTracker);
+./netlify_ai_job_diagnosis.txt:3443:        imageResult = await downloadImageFromStorage2(supabase, image_id, timingTracker);
+./netlify_ai_job_diagnosis.txt:3498:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:3511:      const selfieResult = await downloadImageFromStorage2(supabase, selfie_image_id, timingTracker);
+./netlify_ai_job_diagnosis.txt:3575:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:3600:        downloadImageFromStorage2(supabase, headId, timingTracker),
+./netlify_ai_job_diagnosis.txt:3601:        downloadImageFromStorage2(supabase, body_photo_image_id, timingTracker)
+./netlify_ai_job_diagnosis.txt:3607:        downloadImageFromStorage2(supabase, headId, timingTracker),
+./netlify_ai_job_diagnosis.txt:3608:        downloadImageFromStorage2(supabase, body_photo_image_id, timingTracker)
+./netlify_ai_job_diagnosis.txt:3670:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:3674:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:3677:      optimizeGeminiOutput
+./netlify_ai_job_diagnosis.txt:3684:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:3687:      optimizeGeminiOutput
+./netlify_ai_job_diagnosis.txt:3730:      console.log(`[OutfitRender] Processing outfit ${outfit_id}, using ${useStackedImage ? "pre-stacked" : "individual"} images`);
+./netlify_ai_job_diagnosis.txt:3763:          console.log(`[OutfitRender] Downloading pre-stacked image from storage: ${stacked_image_id}`);
+./netlify_ai_job_diagnosis.txt:3766:            console.error(`[OutfitRender] Storage download error:`, downloadError);
+./netlify_ai_job_diagnosis.txt:3774:          console.log(`[OutfitRender] Downloaded blob size: ${stackedBlob.size} bytes, type: ${stackedBlob.type}`);
+./netlify_ai_job_diagnosis.txt:3776:          console.log(`[OutfitRender] Converted to ArrayBuffer, length: ${buffer.byteLength}`);
+./netlify_ai_job_diagnosis.txt:3778:          console.log(`[OutfitRender] Converted to base64, length: ${stackedItemsB643.length} chars`);
+./netlify_ai_job_diagnosis.txt:3780:          console.log(`[OutfitRender] Pre-stacked image contains ${itemCount3} items`);
+./netlify_ai_job_diagnosis.txt:3781:          console.log(`[OutfitRender] Pre-stacked image contains ${itemCount3} items`);
+./netlify_ai_job_diagnosis.txt:3784:        console.log(`[OutfitRender] Legacy mode: fetching ${selected.length} individual items`);
+./netlify_ai_job_diagnosis.txt:3796:        console.log(`[OutfitRender] Legacy mode: downloading ${imageIdsToDownload.length} images: ${imageIdsToDownload.join(", ")}`);
+./netlify_ai_job_diagnosis.txt:3799:            console.log(`[OutfitRender] Downloading item image: ${id}`);
+./netlify_ai_job_diagnosis.txt:3800:            return downloadImageFromStorage2(supabase, id, timingTracker);
+./netlify_ai_job_diagnosis.txt:3803:        console.log(`[OutfitRender] Downloading body image${includeHeadshot ? " and headshot" : ""}`);
+./netlify_ai_job_diagnosis.txt:3804:        const downloadPromises = [downloadImageFromStorage2(supabase, bodyId, timingTracker)];
+./netlify_ai_job_diagnosis.txt:3806:          downloadPromises.push(downloadImageFromStorage2(supabase, headId, timingTracker));
+./netlify_ai_job_diagnosis.txt:3812:          console.log(`[OutfitRender] Downloaded head (${headResult2.base64.length} chars) and body (${bodyResult2.base64.length} chars)`);
+./netlify_ai_job_diagnosis.txt:3815:          console.log(`[OutfitRender] Downloaded body (${bodyResult2.base64.length} chars), headshot excluded`);
+./netlify_ai_job_diagnosis.txt:3827:      console.log(`[OutfitRender] Total images being sent to AI: ${allInputs.length}`);
+./netlify_ai_job_diagnosis.txt:3829:      console.log(`[OutfitRender] Generating outfit with model: ${preferredModel}`);
+./netlify_ai_job_diagnosis.txt:3830:      console.log(`[OutfitRender] Calling Gemini API...`);
+./netlify_ai_job_diagnosis.txt:3837:      console.log(`[OutfitRender] Total images being sent to AI: ${allInputs.length}`);
+./netlify_ai_job_diagnosis.txt:3839:      console.log(`[OutfitRender] Generating outfit with model: ${preferredModel}`);
+./netlify_ai_job_diagnosis.txt:3840:      console.log(`[OutfitRender] Calling Gemini API...`);
+./netlify_ai_job_diagnosis.txt:3849:      console.log(`[OutfitRender] AI generation complete, result length: ${finalImageB64.length} chars`);
+./netlify_ai_job_diagnosis.txt:3850:      console.log(`[OutfitRender] Optimizing generated image...`);
+./netlify_ai_job_diagnosis.txt:3852:      const optimizedImageB64 = await optimizeGeminiOutput(finalImageB64);
+./netlify_ai_job_diagnosis.txt:3855:      console.log(`[OutfitRender] Image optimization complete`);
+./netlify_ai_job_diagnosis.txt:3859:      console.log(`[OutfitRender] Image optimization complete`);
+./netlify_ai_job_diagnosis.txt:3873:      console.log(`[OutfitRender] Uploaded final image: ${storageKey}`);
+./netlify_ai_job_diagnosis.txt:3886:      console.log(`[OutfitRender] Outfit render complete`);
+./netlify_ai_job_diagnosis.txt:3889:        console.log(`[OutfitRender] Description generation completed`);
+./netlify_ai_job_diagnosis.txt:3894:      console.log(`[OutfitRender] Outfit render complete`);
+./netlify_ai_job_diagnosis.txt:3897:        console.log(`[OutfitRender] Description generation completed`);
+./netlify_ai_job_diagnosis.txt:3899:        console.error(`[OutfitRender] Description generation failed, but continuing:`, error);
+./netlify_ai_job_diagnosis.txt:3905:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:3930:        imageIdsToDownload.map((id) => downloadImageFromStorage2(supabase, id, timingTracker))
+./netlify_ai_job_diagnosis.txt:3937:        imageIdsToDownload.map((id) => downloadImageFromStorage2(supabase, id, timingTracker))
+./netlify_ai_job_diagnosis.txt:3968:var { createPerformanceTracker, createTimingTracker, downloadImageFromStorage } = require_utils2();
+./netlify_ai_job_diagnosis.txt:3973:var { processOutfitRender } = require_outfit_render();
+./netlify_ai_job_diagnosis.txt:4007:    processJobAsync(job, user.id).catch((err) => {
+./netlify_ai_job_diagnosis.txt:4017:    processJobAsync(job, user.id).catch((err) => {
+./netlify_ai_job_diagnosis.txt:4028:async function processJobAsync(job, userId) {
+./netlify_ai_job_diagnosis.txt:4119:        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
+./netlify_ai_job_diagnosis.txt:4128:        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
+./netlify_ai_job_diagnosis.txt:4138:        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
+./netlify_ai_job_diagnosis.txt:4160:  const imageData = await downloadImageFromStorage(supabase, imageId, timingTracker);
+./netlify_ai_job_diagnosis.txt:4178:--- ./.netlify/functions-serve/ai-job-runner-background/netlify/functions/ai-job-runner-background.js ---
+./netlify_ai_job_diagnosis.txt:4194:      console.log(`[downloadImageFromStorage] Starting download for imageId: ${imageId}`);
+./netlify_ai_job_diagnosis.txt:4197:        console.error(`[downloadImageFromStorage] Image not found: ${imageId}`, error);
+./netlify_ai_job_diagnosis.txt:4200:      console.log(`[downloadImageFromStorage] Found image record: bucket=${image.storage_bucket}, key=${image.storage_key}`);
+./netlify_ai_job_diagnosis.txt:4202:      console.log(`[downloadImageFromStorage] Found image record: bucket=${image.storage_bucket}, key=${image.storage_key}`);
+./netlify_ai_job_diagnosis.txt:4205:      console.log(`[downloadImageFromStorage] Generating signed URL for direct download...`);
+./netlify_ai_job_diagnosis.txt:4208:        console.error(`[downloadImageFromStorage] Failed to create signed URL:`, signedUrlError);
+./netlify_ai_job_diagnosis.txt:4214:      console.log(`[downloadImageFromStorage] Signed URL generated in ${(signedUrlDuration / 1e3).toFixed(2)}s: ${signedUrlData.signedUrl.substring(0, 80)}...`);
+./netlify_ai_job_diagnosis.txt:4216:      console.log(`[downloadImageFromStorage] Downloading directly from signed URL (CDN/S3 path)...`);
+./netlify_ai_job_diagnosis.txt:4220:        console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify_ai_job_diagnosis.txt:4223:      console.log(`[downloadImageFromStorage] Signed URL generated in ${(signedUrlDuration / 1e3).toFixed(2)}s: ${signedUrlData.signedUrl.substring(0, 80)}...`);
+./netlify_ai_job_diagnosis.txt:4225:      console.log(`[downloadImageFromStorage] Downloading directly from signed URL (CDN/S3 path)...`);
+./netlify_ai_job_diagnosis.txt:4229:        console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify_ai_job_diagnosis.txt:4236:        console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify_ai_job_diagnosis.txt:4387:    async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:4393:    async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:4394:      console.log("[optimizeGeminiOutput] Starting optimization...");
+./netlify_ai_job_diagnosis.txt:4398:        console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:4403:    async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:4404:      console.log("[optimizeGeminiOutput] Starting optimization...");
+./netlify_ai_job_diagnosis.txt:4408:        console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:4410:    async function optimizeGeminiOutput(base64String) {
+./netlify_ai_job_diagnosis.txt:4411:      console.log("[optimizeGeminiOutput] Starting optimization...");
+./netlify_ai_job_diagnosis.txt:4415:        console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:4417:        console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:4421:      console.log("[optimizeGeminiOutput] Starting optimization...");
+./netlify_ai_job_diagnosis.txt:4425:        console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:4427:        console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:4435:        console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:4437:        console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:4445:        console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:4447:        console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:4459:        console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:4461:        console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:4463:        console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:4469:        console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:4471:        console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:4473:        console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:4475:        console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:4479:        console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:4481:        console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:4483:        console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:4485:        console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:4488:        console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify_ai_job_diagnosis.txt:4490:        console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:4492:        console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:4494:        console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:4497:        console.error("[optimizeGeminiOutput] Optimization failed:", error);
+./netlify_ai_job_diagnosis.txt:4499:        console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify_ai_job_diagnosis.txt:4501:        console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:4503:        console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:4506:        console.error("[optimizeGeminiOutput] Optimization failed:", error);
+./netlify_ai_job_diagnosis.txt:4507:        console.warn("[optimizeGeminiOutput] Returning original image due to error");
+./netlify_ai_job_diagnosis.txt:4509:        console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify_ai_job_diagnosis.txt:4511:        console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:4514:        console.error("[optimizeGeminiOutput] Optimization failed:", error);
+./netlify_ai_job_diagnosis.txt:4515:        console.warn("[optimizeGeminiOutput] Returning original image due to error");
+./netlify_ai_job_diagnosis.txt:4521:        console.log("[optimizeGeminiOutput] Optimization complete");
+./netlify_ai_job_diagnosis.txt:4524:        console.error("[optimizeGeminiOutput] Optimization failed:", error);
+./netlify_ai_job_diagnosis.txt:4525:        console.warn("[optimizeGeminiOutput] Returning original image due to error");
+./netlify_ai_job_diagnosis.txt:4530:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:4534:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:4538:      optimizeGeminiOutput,
+./netlify_ai_job_diagnosis.txt:4543:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:4547:      optimizeGeminiOutput,
+./netlify_ai_job_diagnosis.txt:4558:    var { downloadImageFromStorage: downloadImageFromStorage2, callGeminiAPI } = require_utils2();
+./netlify_ai_job_diagnosis.txt:4567:        imageB64Promise = downloadImageFromStorage2(supabase, image_ids[0], timingTracker);
+./netlify_ai_job_diagnosis.txt:4633:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:4646:        imageResult = await downloadImageFromStorage2(supabase, image_id, timingTracker);
+./netlify_ai_job_diagnosis.txt:4655:        imageResult = await downloadImageFromStorage2(supabase, image_id, timingTracker);
+./netlify_ai_job_diagnosis.txt:4710:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:4723:      const selfieResult = await downloadImageFromStorage2(supabase, selfie_image_id, timingTracker);
+./netlify_ai_job_diagnosis.txt:4787:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:4812:        downloadImageFromStorage2(supabase, headId, timingTracker),
+./netlify_ai_job_diagnosis.txt:4813:        downloadImageFromStorage2(supabase, body_photo_image_id, timingTracker)
+./netlify_ai_job_diagnosis.txt:4819:        downloadImageFromStorage2(supabase, headId, timingTracker),
+./netlify_ai_job_diagnosis.txt:4820:        downloadImageFromStorage2(supabase, body_photo_image_id, timingTracker)
+./netlify_ai_job_diagnosis.txt:4882:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:4886:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:4889:      optimizeGeminiOutput
+./netlify_ai_job_diagnosis.txt:4896:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:4899:      optimizeGeminiOutput
+./netlify_ai_job_diagnosis.txt:4942:      console.log(`[OutfitRender] Processing outfit ${outfit_id}, using ${useStackedImage ? "pre-stacked" : "individual"} images`);
+./netlify_ai_job_diagnosis.txt:4975:          console.log(`[OutfitRender] Downloading pre-stacked image from storage: ${stacked_image_id}`);
+./netlify_ai_job_diagnosis.txt:4978:            console.error(`[OutfitRender] Storage download error:`, downloadError);
+./netlify_ai_job_diagnosis.txt:4986:          console.log(`[OutfitRender] Downloaded blob size: ${stackedBlob.size} bytes, type: ${stackedBlob.type}`);
+./netlify_ai_job_diagnosis.txt:4988:          console.log(`[OutfitRender] Converted to ArrayBuffer, length: ${buffer.byteLength}`);
+./netlify_ai_job_diagnosis.txt:4990:          console.log(`[OutfitRender] Converted to base64, length: ${stackedItemsB643.length} chars`);
+./netlify_ai_job_diagnosis.txt:4992:          console.log(`[OutfitRender] Pre-stacked image contains ${itemCount3} items`);
+./netlify_ai_job_diagnosis.txt:4993:          console.log(`[OutfitRender] Pre-stacked image contains ${itemCount3} items`);
+./netlify_ai_job_diagnosis.txt:4996:        console.log(`[OutfitRender] Legacy mode: fetching ${selected.length} individual items`);
+./netlify_ai_job_diagnosis.txt:5008:        console.log(`[OutfitRender] Legacy mode: downloading ${imageIdsToDownload.length} images: ${imageIdsToDownload.join(", ")}`);
+./netlify_ai_job_diagnosis.txt:5011:            console.log(`[OutfitRender] Downloading item image: ${id}`);
+./netlify_ai_job_diagnosis.txt:5012:            return downloadImageFromStorage2(supabase, id, timingTracker);
+./netlify_ai_job_diagnosis.txt:5015:        console.log(`[OutfitRender] Downloading body image${includeHeadshot ? " and headshot" : ""}`);
+./netlify_ai_job_diagnosis.txt:5016:        const downloadPromises = [downloadImageFromStorage2(supabase, bodyId, timingTracker)];
+./netlify_ai_job_diagnosis.txt:5018:          downloadPromises.push(downloadImageFromStorage2(supabase, headId, timingTracker));
+./netlify_ai_job_diagnosis.txt:5024:          console.log(`[OutfitRender] Downloaded head (${headResult2.base64.length} chars) and body (${bodyResult2.base64.length} chars)`);
+./netlify_ai_job_diagnosis.txt:5027:          console.log(`[OutfitRender] Downloaded body (${bodyResult2.base64.length} chars), headshot excluded`);
+./netlify_ai_job_diagnosis.txt:5039:      console.log(`[OutfitRender] Total images being sent to AI: ${allInputs.length}`);
+./netlify_ai_job_diagnosis.txt:5041:      console.log(`[OutfitRender] Generating outfit with model: ${preferredModel}`);
+./netlify_ai_job_diagnosis.txt:5042:      console.log(`[OutfitRender] Calling Gemini API...`);
+./netlify_ai_job_diagnosis.txt:5049:      console.log(`[OutfitRender] Total images being sent to AI: ${allInputs.length}`);
+./netlify_ai_job_diagnosis.txt:5051:      console.log(`[OutfitRender] Generating outfit with model: ${preferredModel}`);
+./netlify_ai_job_diagnosis.txt:5052:      console.log(`[OutfitRender] Calling Gemini API...`);
+./netlify_ai_job_diagnosis.txt:5061:      console.log(`[OutfitRender] AI generation complete, result length: ${finalImageB64.length} chars`);
+./netlify_ai_job_diagnosis.txt:5062:      console.log(`[OutfitRender] Optimizing generated image...`);
+./netlify_ai_job_diagnosis.txt:5064:      const optimizedImageB64 = await optimizeGeminiOutput(finalImageB64);
+./netlify_ai_job_diagnosis.txt:5067:      console.log(`[OutfitRender] Image optimization complete`);
+./netlify_ai_job_diagnosis.txt:5071:      console.log(`[OutfitRender] Image optimization complete`);
+./netlify_ai_job_diagnosis.txt:5085:      console.log(`[OutfitRender] Uploaded final image: ${storageKey}`);
+./netlify_ai_job_diagnosis.txt:5098:      console.log(`[OutfitRender] Outfit render complete`);
+./netlify_ai_job_diagnosis.txt:5101:        console.log(`[OutfitRender] Description generation completed`);
+./netlify_ai_job_diagnosis.txt:5106:      console.log(`[OutfitRender] Outfit render complete`);
+./netlify_ai_job_diagnosis.txt:5109:        console.log(`[OutfitRender] Description generation completed`);
+./netlify_ai_job_diagnosis.txt:5111:        console.error(`[OutfitRender] Description generation failed, but continuing:`, error);
+./netlify_ai_job_diagnosis.txt:5117:      downloadImageFromStorage: downloadImageFromStorage2,
+./netlify_ai_job_diagnosis.txt:5142:        imageIdsToDownload.map((id) => downloadImageFromStorage2(supabase, id, timingTracker))
+./netlify_ai_job_diagnosis.txt:5149:        imageIdsToDownload.map((id) => downloadImageFromStorage2(supabase, id, timingTracker))
+./netlify_ai_job_diagnosis.txt:5180:var { createPerformanceTracker, createTimingTracker, downloadImageFromStorage } = require_utils2();
+./netlify_ai_job_diagnosis.txt:5185:var { processOutfitRender } = require_outfit_render();
+./netlify_ai_job_diagnosis.txt:5220:      await processJobAsync(job, user.id);
+./netlify_ai_job_diagnosis.txt:5229:      await processJobAsync(job, user.id);
+./netlify_ai_job_diagnosis.txt:5240:async function processJobAsync(job, userId) {
+./netlify_ai_job_diagnosis.txt:5331:        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
+./netlify_ai_job_diagnosis.txt:5340:        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
+./netlify_ai_job_diagnosis.txt:5350:        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
+./netlify_ai_job_diagnosis.txt:5372:  const imageData = await downloadImageFromStorage(supabase, imageId, timingTracker);
+./netlify_ai_job_diagnosis.txt:5474:  console.log(`[generateClothingGrid] Cell dimensions: ${cellWidth}x${cellHeight}`);
+./netlify_ai_job_diagnosis.txt:5483:        console.log(`[generateClothingGrid] Loaded image ${i + 1}/${imageUrls.length}: ${image.width}x${image.height}`);
+./netlify_ai_job_diagnosis.txt:5487:  console.log(`[generateClothingGrid] Trimming whitespace from ${images.length} images...`);
+./netlify_ai_job_diagnosis.txt:5492:    console.log(`[generateClothingGrid] Trimmed image ${i + 1}/${images.length}: ${trimmedCanvas.width}x${trimmedCanvas.height}`);
+./netlify_ai_job_diagnosis.txt:5652:  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+./netlify_ai_job_diagnosis.txt:5663:    pollingIntervalRef.current = setInterval(async () => {
+./netlify_ai_job_diagnosis.txt:5673:    pollingIntervalRef.current = setInterval(async () => {
+./netlify_ai_job_diagnosis.txt:5692:            if (pollingIntervalRef.current) {
+./netlify_ai_job_diagnosis.txt:5693:              clearInterval(pollingIntervalRef.current);
+./netlify_ai_job_diagnosis.txt:5694:              pollingIntervalRef.current = null;
+./netlify_ai_job_diagnosis.txt:5927:    // Start polling
+./netlify_ai_job_diagnosis.txt:5928:    pollingIntervalRef.current = setInterval(async () => {
+./netlify_ai_job_diagnosis.txt:6009:        const { error: execError } = await triggerAIJobExecution(batchJob.id);
+./netlify_ai_job_diagnosis.txt:6254:  // Product shot polling
+./netlify_ai_job_diagnosis.txt:6266:  // Auto-tag polling
+./netlify_ai_job_diagnosis.txt:7705:      const renderLimit = getOutfitRenderItemLimit(modelPreference);
+./netlify_ai_job_diagnosis.txt:7720:        await triggerAIJobExecution(mannequinJob.id);
+./netlify_ai_job_diagnosis.txt:7721:        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
+./netlify_ai_job_diagnosis.txt:7730:        await triggerAIJobExecution(mannequinJob.id);
+./netlify_ai_job_diagnosis.txt:7731:        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
+./netlify_ai_job_diagnosis.txt:7753:      const triggerResult = await triggerAIJobExecution(renderJob.id);
+./netlify_ai_job_diagnosis.txt:7760:      const triggerResult = await triggerAIJobExecution(renderJob.id);
+./netlify_ai_job_diagnosis.txt:7775:        const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+./netlify_ai_job_diagnosis.txt:8210:--- ./src/hooks/outfits/useOutfitGeneration.ts ---
+./netlify_ai_job_diagnosis.txt:8212:    console.log('[OutfitGeneration] Starting description polling...');
+./netlify_ai_job_diagnosis.txt:8256:          console.log(`[OutfitGeneration] Fetching images for ${selectedItems.length} items`);
+./netlify_ai_job_diagnosis.txt:8269:          console.log(`[OutfitGeneration] Starting grid generation...`);
+./netlify_ai_job_diagnosis.txt:8271:          const gridBase64 = await generateClothingGrid(imageUrls);
+./netlify_ai_job_diagnosis.txt:8272:          console.log(`[OutfitGeneration] Grid generated successfully, base64 length: ${gridBase64.length}`);
+./netlify_ai_job_diagnosis.txt:8313:        console.log(`[OutfitGeneration] Creating AI job with stacked image ID: ${stackedResult.imageId}`);
+./netlify_ai_job_diagnosis.txt:8315:        const { data: jobData, error: jobError } = await createAndTriggerJob(
+./netlify_ai_job_diagnosis.txt:8322:        console.log(`[OutfitGeneration] Creating AI job with stacked image ID: ${stackedResult.imageId}`);
+./netlify_ai_job_diagnosis.txt:8324:        const { data: jobData, error: jobError } = await createAndTriggerJob(
+./netlify_ai_job_diagnosis.txt:8337:        const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
+./netlify_ai_job_diagnosis.txt:8341:          '[OutfitGeneration]'
+./netlify_ai_job_diagnosis.txt:8372:        const gridBase64 = await generateClothingGrid(imageUrls);
+./netlify_ai_job_diagnosis.txt:8506:        const gridBase64 = await generateClothingGrid(imageUrls);
+./netlify_ai_job_diagnosis.txt:8572:      await triggerAIJobExecution(renderJob.id);
+./netlify_ai_job_diagnosis.txt:8605:  const startPollingForOutfitRender = async (jobId: string) => {
+./netlify_ai_job_diagnosis.txt:8607:      const { data: finalJob } = await pollAIJobWithFinalCheck(
+./netlify_ai_job_diagnosis.txt:8662:        const { data: activeJob } = await getActiveOutfitRenderJob(
+./netlify_ai_job_diagnosis.txt:9248:  triggerAIJobExecution,
+./netlify_ai_job_diagnosis.txt:9327:      await triggerAIJobExecution(job.id);
+./netlify_ai_job_diagnosis.txt:9338:      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+./netlify_ai_job_diagnosis.txt:9426:      await triggerAIJobExecution(job.id);
+./netlify_ai_job_diagnosis.txt:9429:      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+./netlify_ai_job_diagnosis.txt:9434:      await triggerAIJobExecution(job.id);
+./netlify_ai_job_diagnosis.txt:9437:      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+./netlify_ai_job_diagnosis.txt:9637:  triggerAIJobExecution,
+./netlify_ai_job_diagnosis.txt:9661:      await triggerAIJobExecution(job.id);
+./netlify_ai_job_diagnosis.txt:9664:      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+./netlify_ai_job_diagnosis.txt:9669:      await triggerAIJobExecution(job.id);
+./netlify_ai_job_diagnosis.txt:9672:      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+./netlify_ai_job_diagnosis.txt:9931:      const { error: execError } = await triggerAIJobExecution(productShotJob.id);
+./netlify_ai_job_diagnosis.txt:9954:    // Initial poll
+./netlify_ai_job_diagnosis.txt:9955:    await poll();
+./netlify_ai_job_diagnosis.txt:9957:    // Set up interval polling
+./netlify_ai_job_diagnosis.txt:9958:    pollingIntervalRef.current = setInterval(poll, interval);
+./netlify_ai_job_diagnosis.txt:11454:--- ./src/lib/ai-jobs/polling.ts ---
+./netlify_ai_job_diagnosis.txt:11464:        fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'polling.ts:38',message:'pollAIJob attempt',data:{jobId,attempt,maxAttempts,hasError:!!error,errorMessage:error?.message,hasData:!!data,status:data?.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+./netlify_ai_job_diagnosis.txt:11493:  const { data: completedJob, error: pollError } = await pollAIJob(
+./netlify_ai_job_diagnosis.txt:11501:    console.log(`${logPrefix} polling timed out, doing final check...`);
+./netlify_ai_job_diagnosis.txt:11511:  fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'polling.ts:114',message:'waitForAIJobCompletion entry',data:{jobId,maxAttempts,initialIntervalMs,logPrefix},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+./netlify_ai_job_diagnosis.txt:11515:    const { data: completedJob, error } = await pollAIJobWithFinalCheck(
+./netlify_ai_job_diagnosis.txt:11563:export async function getActiveOutfitRenderJob(
+./netlify_ai_job_diagnosis.txt:11568:export async function getActiveOutfitRenderJob(
+./netlify_ai_job_diagnosis.txt:11585:export async function getRecentOutfitRenderJob(
+./netlify_ai_job_diagnosis.txt:11590:export async function getRecentOutfitRenderJob(
+./netlify_ai_job_diagnosis.txt:11700:  getOutfitRenderItemLimit,
+./netlify_ai_job_diagnosis.txt:11713:    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'execution.ts:18',message:'triggerAIJobExecution session check',data:{jobId,hasSession:!!session},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+./netlify_ai_job_diagnosis.txt:11717:        fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'execution.ts:78',message:'triggerAIJobExecution fetch response',data:{jobId,status:response.status,statusText:response.statusText,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+./netlify_ai_job_diagnosis.txt:11724:          console.warn('[AIJobs] Function trigger returned non-OK response', {
+./netlify_ai_job_diagnosis.txt:11754:    const { error: triggerError } = await triggerAIJobExecution(job.id);
+./netlify_ai_job_diagnosis.txt:11758:        '[AIJobs] Failed to trigger job execution, but job was created:',
+./archive/PHASE4_VERIFICATION.md:16:- ✅ `pollAIJob()` - Poll job status
+./archive/PHASE4_VERIFICATION.md:25:### 4. Netlify Function (`netlify/functions/ai-job-runner.ts`)
+./archive/PHASE4_VERIFICATION.md:88:1. Implement `processAutoTag()` in `netlify/functions/ai-job-runner.ts`:
+./archive/PHASE4_VERIFICATION.md:97:   - Option A: Client polls and calls Netlify function
+./netlify/functions/utils.js.backup2:29:async function downloadImageFromStorage(supabase, imageId) {
+./netlify/functions/utils.js.backup2:30:  console.log(`[downloadImageFromStorage] Starting download for imageId: ${imageId}`);
+./netlify/functions/utils.js.backup2:39:    console.error(`[downloadImageFromStorage] Image not found: ${imageId}`, error);
+./netlify/functions/utils.js.backup2:43:  console.log(`[downloadImageFromStorage] Found image record: bucket=${image.storage_bucket}, key=${image.storage_key}`);
+./netlify/functions/utils.js.backup2:48:  console.log(`[downloadImageFromStorage] Downloading directly from storage...`);
+./netlify/functions/utils.js.backup2:54:    console.error(`[downloadImageFromStorage] Download failed:`, downloadError);
+./netlify/functions/utils.js.backup2:59:  console.log(`[downloadImageFromStorage] Downloaded successfully, size: ${arrayBuffer.byteLength} bytes`);
+./netlify/functions/utils.js.backup2:67:    console.error(`[downloadImageFromStorage] N    console.error(`[downloadImageFromStorage] N    con).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ')}`);
+./netlify/functions/utils.js.backup2:71:  console.log(`[downloadImageFromStorage] Valid ${isJPEG ? 'JPEG' : 'PNG'} image detected`);
+./netlify/functions/utils.js.backup2:74:  console.log(`[downloadImageFromStorage] Converted to base64, length: ${base64.length}`);
+./netlify/functions/utils.js.backup2:207:  downloadImageFromStorage,
+./archive/REFACTORING_SUMMARY.md:37:- `src/hooks/wardrobe/useWardrobeItemPolling.ts` - Generic AI job polling hook
+./archive/REFACTORING_SUMMARY.md:38:  - Consolidates product_shot and auto_tag polling patterns
+./archive/REFACTORING_SUMMARY.md:43:- Eliminated duplicate polling logic
+./src/utils/clothing-grid.js:58:export async function generateClothingGrid(imageUrls) {
+./src/utils/clothing-grid.js:68:  console.log(`[generateClothingGrid] Creating grid for ${imageUrls.length} items`);
+./src/utils/clothing-grid.js:72:  console.log(`[generateClothingGrid] Grid layout: ${cols}x${rows}`);
+./src/utils/clothing-grid.js:80:  console.log(`[generateClothingGrid] Cell dimensions: ${cellWidth}x${cellHeight}`);
+./src/utils/clothing-grid.js:89:        console.log(`[generateClothingGrid] Loaded image ${i + 1}/${imageUrls.length}: ${image.width}x${image.height}`);
+./src/utils/clothing-grid.js:101:  console.log(`[generateClothingGrid] Trimming whitespace from ${images.length} images...`);
+./src/utils/clothing-grid.js:106:    console.log(`[generateClothingGrid] Trimmed image ${i + 1}/${images.length}: ${trimmedCanvas.width}x${trimmedCanvas.height}`);
+./src/utils/clothing-grid.js:151:    console.log(`[generateClothingGrid] Drawing trimmed item ${i + 1} at (${col}, ${row}) -> (${x.toFixed(0)}, ${y.toFixed(0)}), size: ${dstWidth.toFixed(0)}x${dstHeight.toFixed(0)} (from ${trimmedWidth}x${trimmedHeight}, scale=${scale.toFixed(2)})`);
+./src/utils/clothing-grid.js:163:  console.log(`[generateClothingGrid] Grid canvas created, base64 length: ${base64String.length}`);
+./netlify/functions/ai-job-runner.js:10:const { createPerformanceTracker, createTimingTracker, downloadImageFromStorage } = require("./utils");
+./netlify/functions/ai-job-runner.js:15:const { processOutfitRender } = require("./processes/outfit_render");
+./netlify/functions/ai-job-runner.js:110:    console.log("[AIJobRunner] BEFORE await processJob", { job_id, job_type: job.job_type });
+./netlify/functions/ai-job-runner.js:114:      outcome = await processJobAsync(job, user.id);
+./netlify/functions/ai-job-runner.js:116:      console.error("[AIJobRunner] processJobAsync threw:", err);
+./netlify/functions/ai-job-runner.js:120:    console.log("[AIJobRunner] AFTER await processJob", { job_id, job_type: job.job_type });
+./netlify/functions/ai-job-runner.js:157:async function processJobAsync(job, userId) {
+./netlify/functions/ai-job-runner.js:199:        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker, job_id);
+./netlify/functions/ai-job-runner.js:264:  const imageData = await downloadImageFromStorage(supabase, imageId, timingTracker);
+./archive/SETUP.md:80:│       └── ai-job-runner.ts  # AI job processing (placeholder)
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:145:          result = await processOutfitRender(job.input as AIJobInput, supabaseAdmin, user.id);
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:195:async function downloadImageFromStorage(supabase: any, imageId: string): Promise<string> {
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:372:  const imageB64 = await downloadImageFromStorage(supabase, image_ids[0]);
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:547:  const imageB64 = await downloadImageFromStorage(supabase, image_id);
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:597:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:593',message:'processHeadshotGenerate started',data:{selfie_image_id,hair_style,makeup_style,userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:605:  const selfieB64 = await downloadImageFromStorage(supabase, selfie_image_id);
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:607:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:601',message:'Selfie downloaded',data:{hasSelfie:!!selfieB64,selfieLength:selfieB64?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:623:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:617',message:'Calling Gemini for headshot',data:{promptLength:prompt.length,hairMod,makeupMod},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:629:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:623',message:'Headshot generated',data:{hasHeadshot:!!headshotB64,headshotLength:headshotB64?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:638:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:632',message:'Headshot uploaded',data:{imageId,storageKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:648:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:641',message:'User settings updated with headshot',data:{imageId,userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:661:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:653',message:'processBodyShotGenerate started',data:{body_photo_image_id,userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:676:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:668',message:'User settings fetched',data:{hasSettings:!!userSettings,headshotId:userSettings?.headshot_image_id,hasError:!!settingsError},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:684:  const headB64 = await downloadImageFromStorage(supabase, userSettings.headshot_image_id);
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:685:  const bodyB64 = await downloadImageFromStorage(supabase, body_photo_image_id);
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:688:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:681',message:'Images downloaded',data:{hasHead:!!headB64,hasBody:!!bodyB64,headLength:headB64?.length,bodyLength:bodyB64?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:708:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:702',message:'Calling Gemini for studio model',data:{promptLength:prompt.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:715:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:709',message:'Studio model generated',data:{hasStudioModel:!!studioModelB64,studioModelLength:studioModelB64?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:724:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:718',message:'Studio model uploaded',data:{imageId,storageKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:734:  await fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ai-job-runner.ts:727',message:'User settings updated with studio model',data:{imageId,userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:759:async function processOutfitRender(
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:800:      const b64 = await downloadImageFromStorage(supabase, firstImage.id);
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:806:  const headB64 = await downloadImageFromStorage(supabase, userSettings.headshot_image_id);
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented:807:  const bodyB64 = await downloadImageFromStorage(supabase, userSettings.body_shot_image_id);
+./src/lib/perf/timeline.ts:9: * - poll_start / poll_success (resultKeys, resultSize) / outfit_fetch_start / outfit_fetch_end
+./netlify/functions/utils.js:238:async function downloadImageFromStorage(supabase, imageId, timingTracker = null) {
+./netlify/functions/utils.js:262:  console.log(`[downloadImageFromStorage] REGION DIAGNOSTICS:`, {
+./netlify/functions/utils.js:271:  console.log(`[downloadImageFromStorage] Starting download for imageId: ${imageId}`);
+./netlify/functions/utils.js:280:    console.error(`[downloadImageFromStorage] Image not found: ${imageId}`, error);
+./netlify/functions/utils.js:284:  console.log(`[downloadImageFromStorage] Found image record: bucket=${image.storage_bucket}, key=${image.storage_key}`);
+./netlify/functions/utils.js:290:  console.log(`[downloadImageFromStorage] Generating signed URL for direct download...`);
+./netlify/functions/utils.js:296:    console.error(`[downloadImageFromStorage] Failed to create signed URL:`, signedUrlError);
+./netlify/functions/utils.js:302:  console.log(`[downloadImageFromStorage] Signed URL generated in ${(signedUrlDuration / 1000).toFixed(2)}s: ${signedUrlData.signedUrl.substring(0, 80)}...`);
+./netlify/functions/utils.js:306:  console.log(`[downloadImageFromStorage] Downloading directly from signed URL (CDN/S3 path)...`);
+./netlify/functions/utils.js:313:    console.error(`[downloadImageFromStorage] Fetch failed: ${fetchResponse.status} ${fetchResponse.statusText}`, errorText);
+./netlify/functions/utils.js:324:  console.log(`[downloadImageFromStorage] Direct download completed in ${(downloadDuration / 1000).toFixed(2)}s, size: ${arrayBuffer.byteLength} bytes`);
+./netlify/functions/utils.js:341:    console.error(`[downloadImageFromStorage] Not a valid image! First bytes: ${Array.from(firstBytes).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ')}`);
+./netlify/functions/utils.js:362:    console.log(`[downloadImageFromStorage] Mime-type mismatch: DB has ${image.mime_type}, detected ${mimeType}. Using detected format.`);
+./netlify/functions/utils.js:365:  console.log(`[downloadImageFromStorage] Valid ${imageFormat} image detected (mime-type: ${mimeType})`);
+./netlify/functions/utils.js:376:  console.log(`[downloadImageFromStorage] Base64 conversion completed in ${(conversionDuration / 1000).toFixed(2)}s, length: ${base64.length}`);
+./netlify/functions/utils.js:736:async function optimizeGeminiOutput(base64String) {
+./netlify/functions/utils.js:737:  console.log('[optimizeGeminiOutput] Starting optimization...');
+./netlify/functions/utils.js:744:    console.log(`[optimizeGeminiOutput] Input size: ${inputBuffer.length} bytes (${(inputBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify/functions/utils.js:748:    console.log(`[optimizeGeminiOutput] Original dimensions: ${originalMetadata.width}x${originalMetadata.height}`);
+./netlify/functions/utils.js:762:    console.log(`[optimizeGeminiOutput] Optimized size: ${optimizedBuffer.length} bytes (${(optimizedBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+./netlify/functions/utils.js:766:    console.log(`[optimizeGeminiOutput] Optimized dimensions: ${optimizedMetadata.width}x${optimizedMetadata.height}`);
+./netlify/functions/utils.js:769:    console.log(`[optimizeGeminiOutput] Size reduction: ${sizeReduction}%`);
+./netlify/functions/utils.js:773:    console.log('[optimizeGeminiOutput] Optimization complete');
+./netlify/functions/utils.js:777:    console.error('[optimizeGeminiOutput] Optimization failed:', error);
+./netlify/functions/utils.js:779:    console.warn('[optimizeGeminiOutput] Returning original image due to error');
+./netlify/functions/utils.js:785:  downloadImageFromStorage,
+./netlify/functions/utils.js:789:  optimizeGeminiOutput,
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/README.md:20:- **I**: Body shot polling and completion
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/README.md:31:### 2. ai-job-runner.ts.instrumented
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/README.md:32:**Location**: `netlify/functions/ai-job-runner.ts`  
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/README.md:68:# Restore ai-job-runner.ts
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/README.md:69:cp archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented netlify/functions/ai-job-runner.ts
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/README.md:129:**Solution**: Increase polling attempts or check Netlify function
+./netlify/functions/processes/headshot_generate.js:9:  downloadImageFromStorage,
+./netlify/functions/processes/headshot_generate.js:35:  const selfieResult = await downloadImageFromStorage(supabase, selfie_image_id, timingTracker);
+./netlify.toml:26:[functions."ai-job-runner"]
+./src/lib/perf/logClientTiming.ts:8:export async function logClientTiming<T>(
+./netlify/functions/processes/outfit_render.js.backup:11:  downloadImageFromStorage,
+./netlify/functions/processes/outfit_render.js.backup:14:  optimizeGeminiOutput
+./netlify/functions/processes/outfit_render.js.backup:29:async function processOutfitRender(input, supabase, userId, perfTracker = null, timingTracker = null) {
+./netlify/functions/processes/outfit_render.js.backup:49:  console.log(`[OutfitRender] Processing outfit ${outfit_id}, using ${useStackedImage ? 'pre-stacked' : 'individual'} images`);
+./netlify/functions/processes/outfit_render.js.backup:78:    console.log(`[OutfitRender] Downloading pre-stacked image from storage: ${stacked_image_id}`);
+./netlify/functions/processes/outfit_render.js.backup:88:        console.error(`[OutfitRender] Storage download error:`, downloadError);
+./netlify/functions/processes/outfit_render.js.backup:96:      console.log(`[OutfitRender] Downloaded blob size: ${stackedBlob.size} bytes, type: ${stackedBlob.type}`);
+./netlify/functions/processes/outfit_render.js.backup:100:      console.log(`[OutfitRender] Converted to ArrayBuffer, length: ${buffer.byteLength}`);
+./netlify/functions/processes/outfit_render.js.backup:103:      console.log(`[OutfitRender] Converted to base64, length: ${stackedItemsB64.length} chars`);
+./netlify/functions/processes/outfit_render.js.backup:106:      console.log(`[OutfitRender] Pre-stacked image contains ${itemCount} items`);
+./netlify/functions/processes/outfit_render.js.backup:108:      console.error(`[OutfitRender] Error processing stacked image:`, error);
+./netlify/functions/processes/outfit_render.js.backup:113:    console.log(`[OutfitRender] Legacy mode: fetching ${selected.length} individual items`);
+./netlify/functions/processes/outfit_render.js.backup:151:    console.log(`[OutfitRender] Legacy mode: downloading ${imageIdsToDownload.length} images: ${imageIdsToDownload.join(', ')}`);
+./netlify/functions/processes/outfit_render.js.backup:154:        console.log(`[OutfitRender] Downloading item image: ${id}`);
+./netlify/functions/processes/outfit_render.js.backup:155:        return downloadImageFromStorage(supabase, id, timingTracker);
+./netlify/functions/processes/outfit_render.js.backup:159:    console.log(`[OutfitRender] Downloaded ${itemImageResults.length} item images`);
+./netlify/functions/processes/outfit_render.js.backup:171:  console.log(`[OutfitRender] Downloading body image${includeHeadshot ? ' and headshot' : ''}`);
+./netlify/functions/processes/outfit_render.js.backup:172:  const downloadPromises = [downloadImageFromStorage(supabase, bodyId, timingTracker)];
+./netlify/functions/processes/outfit_render.js.backup:174:    downloadPromises.push(downloadImageFromStorage(supabase, headId, timingTracker));
+./netlify/functions/processes/outfit_render.js.backup:182:    console.log(`[OutfitRender] Downloaded head (${headResult.base64.length} chars) and body (${bodyResult.base64.length} chars)`);
+./netlify/functions/processes/outfit_render.js.backup:184:    console.log(`[OutfitRender] Downloaded body (${bodyResult.base64.length} chars), headshot excluded`);
+./netlify/functions/processes/outfit_render.js.backup:207:  console.log(`[OutfitRender] Total images being sent to AI: ${allInputs.length}`);
+./netlify/functions/processes/outfit_render.js.backup:219:    console.log(`[OutfitRender] Image ${i} valid base64: ${isValidBase64(img)}`);
+./netlify/functions/processes/outfit_render.js.backup:223:  console.log(`[OutfitRender] Generating outfit with model: ${preferredModel}`);
+./netlify/functions/processes/outfit_render.js.backup:273:  console.log(`[OutfitRender] Calling Gemini API...`);
+./netlify/functions/processes/outfit_render.js.backup:284:  console.log(`[OutfitRender] AI generation complete, result length: ${finalImageB64.length} chars`);
+./netlify/functions/processes/outfit_render.js.backup:287:  console.log(`[OutfitRender] Optimizing generated image...`);
+./netlify/functions/processes/outfit_render.js.backup:288:  const optimizedImageB64 = await optimizeGeminiOutput(finalImageB64);
+./netlify/functions/processes/outfit_render.js.backup:289:  console.log(`[OutfitRender] Image optimization complete`);
+./netlify/functions/processes/outfit_render.js.backup:301:  console.log(`[OutfitRender] Uploaded final image: ${storageKey}`);
+./netlify/functions/processes/outfit_render.js.backup:321:  console.log(`[OutfitRender] Outfit render complete`);
+./netlify/functions/processes/outfit_render.js.backup:330:module.exports = { processOutfitRender };
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:38:- **No Polling/Subscriptions**: No real-time updates or polling for new data
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:60:- **Job Polling Not Implemented**: Client doesn't poll for job status after creation
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:63:- `lib/ai-jobs.ts` creates jobs and calls `triggerAIJobExecution` which calls Netlify function
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:64:- `netlify/functions/ai-job-runner.ts` processes jobs but requires manual POST request
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:65:- No polling mechanism after job creation in `app/wardrobe/add.tsx`
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:280:   # Test endpoint: http://localhost:8888/.netlify/functions/ai-job-runner
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:283:3. Add job polling UI in `app/wardrobe/add.tsx`:
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:286:   const pollJobStatus = async (jobId: string) => {
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:319:- `app/wardrobe/add.tsx` - Add job polling
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:320:- `lib/ai-jobs.ts` - Enhance polling utility
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:321:- `netlify/functions/ai-job-runner.ts` - Add better error logging
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:508:**Status**: Not implemented in `ai-job-runner.ts`
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:513:1. Implement `processOutfitSuggest` in `netlify/functions/ai-job-runner.ts`
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:515:3. Add job polling for suggestion results
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:518:- `netlify/functions/ai-job-runner.ts`
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:522:**Status**: Not implemented in `ai-job-runner.ts`
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:585:   - `netlify/functions/auto-tag-item.js` - Replaced by `ai-job-runner.ts`
+./archive/DEBUG_AND_OPTIMIZATION_PLAN.md:623:2. ⚠️ Functions deployed (verify `ai-job-runner` is accessible)
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/profile.tsx.instrumented:20:import { triggerHeadshotGenerate, triggerBodyShotGenerate, triggerAIJobExecution, pollAIJob } from '@/lib/ai-jobs';
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/profile.tsx.instrumented:463:        await triggerAIJobExecution(headshotJob.id);
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/profile.tsx.instrumented:471:        const { data: completedJob, error: pollError } = await pollAIJob(headshotJob.id, 30, 2000);
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/profile.tsx.instrumented:473:fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:273',message:'Poll result',data:{hasError:!!pollError,hasJob:!!completedJob,jobStatus:completedJob?.status,errorMsg:pollError?.message||completedJob?.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/profile.tsx.instrumented:476:        if (pollError || !completedJob) {
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/profile.tsx.instrumented:576:        await triggerAIJobExecution(bodyShotJob.id);
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/profile.tsx.instrumented:584:        const { data: completedJob, error: pollError } = await pollAIJob(bodyShotJob.id, 40, 2000);
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/profile.tsx.instrumented:586:fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profile.tsx:381',message:'Body shot poll result',data:{hasError:!!pollError,hasJob:!!completedJob,jobStatus:completedJob?.status,errorMsg:pollError?.message||completedJob?.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'I'})}).catch(()=>{});
+./archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/profile.tsx.instrumented:589:        if (pollError || !completedJob) {
+./netlify/functions/processes/outfit_render.js:9:  downloadImageFromStorage,
+./netlify/functions/processes/outfit_render.js:12:  optimizeGeminiOutput
+./netlify/functions/processes/outfit_render.js:191:async function processOutfitRender(input, supabase, userId, perfTracker = null, timingTracker = null, jobId = null) {
+./netlify/functions/processes/outfit_render.js:211:  console.log(`[OutfitRender] Processing outfit ${outfit_id}, using ${useStackedImage ? 'pre-stacked' : 'individual'} images`);
+./netlify/functions/processes/outfit_render.js:249:      console.log(`[OutfitRender] Downloading pre-stacked image from storage: ${stacked_image_id}`);
+./netlify/functions/processes/outfit_render.js:255:        console.error(`[OutfitRender] Storage download error:`, downloadError);
+./netlify/functions/processes/outfit_render.js:261:      console.log(`[OutfitRender] Downloaded blob size: ${stackedBlob.size} bytes, type: ${stackedBlob.type}`);
+./netlify/functions/processes/outfit_render.js:263:      console.log(`[OutfitRender] Converted to ArrayBuffer, length: ${buffer.byteLength}`);
+./netlify/functions/processes/outfit_render.js:265:      console.log(`[OutfitRender] Converted to base64, length: ${stackedItemsB64.length} chars`);
+./netlify/functions/processes/outfit_render.js:267:      console.log(`[OutfitRender] Pre-stacked image contains ${itemCount} items`);
+./netlify/functions/processes/outfit_render.js:271:    console.log(`[OutfitRender] Legacy mode: fetching ${selected.length} individual items`);
+./netlify/functions/processes/outfit_render.js:300:    console.log(`[OutfitRender] Legacy mode: downloading ${imageIdsToDownload.length} images: ${imageIdsToDownload.join(', ')}`);
+./netlify/functions/processes/outfit_render.js:303:        console.log(`[OutfitRender] Downloading item image: ${id}`);
+./netlify/functions/processes/outfit_render.js:304:        return downloadImageFromStorage(supabase, id, timingTracker);
+./netlify/functions/processes/outfit_render.js:307:    console.log(`[OutfitRender] Downloaded ${itemImageResults.length} item images`);
+./netlify/functions/processes/outfit_render.js:314:    console.log(`[OutfitRender] Downloading body image${includeHeadshot ? ' and headshot' : ''}`);
+./netlify/functions/processes/outfit_render.js:315:    const downloadPromises = [downloadImageFromStorage(supabase, bodyId, timingTracker)];
+./netlify/functions/processes/outfit_render.js:317:      downloadPromises.push(downloadImageFromStorage(supabase, headId, timingTracker));
+./netlify/functions/processes/outfit_render.js:323:      console.log(`[OutfitRender] Downloaded head (${headResult.base64.length} chars) and body (${bodyResult.base64.length} chars)`);
+./netlify/functions/processes/outfit_render.js:325:      console.log(`[OutfitRender] Downloaded body (${bodyResult.base64.length} chars), headshot excluded`);
+./netlify/functions/processes/outfit_render.js:350:  console.log(`[OutfitRender] Total images being sent to AI: ${allInputs.length}`);
+./netlify/functions/processes/outfit_render.js:358:  console.log(`[OutfitRender] Generating outfit with model: ${preferredModel}`);
+./netlify/functions/processes/outfit_render.js:371:  console.log(`[OutfitRender] AI generation complete, result length: ${finalImageB64.length} chars`);
+./netlify/functions/processes/outfit_render.js:374:  console.log(`[OutfitRender] Optimizing generated image...`);
+./netlify/functions/processes/outfit_render.js:376:  const optimizedImageB64 = await optimizeGeminiOutput(finalImageB64);
+./netlify/functions/processes/outfit_render.js:379:  console.log(`[OutfitRender] Image optimization complete`);
+./netlify/functions/processes/outfit_render.js:393:  console.log(`[OutfitRender] Uploaded final image: ${storageKey}`);
+./netlify/functions/processes/outfit_render.js:413:  console.log(`[OutfitRender] Outfit render complete`);
+./netlify/functions/processes/outfit_render.js:418:    console.log(`[OutfitRender] Description generation completed`);
+./netlify/functions/processes/outfit_render.js:420:    console.error(`[OutfitRender] Description generation failed, but continuing:`, error);
+./netlify/functions/processes/outfit_render.js:435:module.exports = { processOutfitRender };
+./archive/LEGACY_INTEGRATION_SUMMARY.md:13:- Backend processor: `netlify/functions/ai-job-runner.ts` (processBodyShotGenerate)
+./archive/LEGACY_INTEGRATION_SUMMARY.md:80:**Hypothesis I**: Body shot job polling and completion works
+./archive/LEGACY_INTEGRATION_SUMMARY.md:81:- Logs at: poll result, status check, error handling
+./archive/LEGACY_INTEGRATION_SUMMARY.md:89:2. **netlify/functions/ai-job-runner.ts**
+./archive/LEGACY_INTEGRATION_SUMMARY.md:106:   - Updated polling timeout to 40 attempts for studio model (longer generation time)
+./archive/LEGACY_INTEGRATION_SUMMARY.md:128:🎯 Job status tracking and polling
+./archive/LEGACY_INTEGRATION_SUMMARY.md:264:- `netlify/functions/ai-job-runner.ts:593-648` - processHeadshotGenerate()
+./archive/LEGACY_INTEGRATION_SUMMARY.md:265:- `netlify/functions/ai-job-runner.ts:650-738` - processBodyShotGenerate()
+./archive/COMPLETE_REFACTORING_FINAL.md:41:- **polling.ts** (180 lines) - Polling with circuit breaker
+./archive/COMPLETE_REFACTORING_FINAL.md:151:│   ├── polling.ts
+./archive/COMPLETE_REFACTORING_FINAL.md:299:import { pollAIJob } from '@/lib/ai-jobs/polling';
+./src/lib/ai-jobs/execution.ts:7:export async function triggerAIJobExecution(
+./src/lib/ai-jobs/execution.ts:11:  console.info('[AIJobs] triggerAIJobExecution start', { jobId });
+./src/lib/ai-jobs/execution.ts:12:  debugIngest({ location: 'execution.ts:10', message: 'triggerAIJobExecution entry', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:20:    debugIngest({ location: 'execution.ts:18', message: 'triggerAIJobExecution session check', data: { jobId, hasSession: !!session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:44:            '[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set, using window.location.origin as fallback:',
+./src/lib/ai-jobs/execution.ts:52:            '[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set and window.location unavailable, using relative URL'
+./src/lib/ai-jobs/execution.ts:60:    const functionUrl = `${baseUrlNormalized}/.netlify/functions/ai-job-runner`;
+./src/lib/ai-jobs/execution.ts:62:    debugIngest({ location: 'execution.ts:55', message: 'triggerAIJobExecution before fetch', data: { jobId, functionUrl, baseUrl, hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:70:      console.error('[AIJobs] Invalid baseUrl format:', baseUrlNormalized);
+./src/lib/ai-jobs/execution.ts:86:        debugIngest({ location: 'execution.ts:78', message: 'triggerAIJobExecution fetch response', data: { jobId, status: response.status, statusText: response.statusText, ok: response.ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:92:          console.warn('[AIJobs] Function trigger returned non-OK response', {
+./src/lib/ai-jobs/execution.ts:97:          debugIngest({ location: 'execution.ts:84', message: 'triggerAIJobExecution non-OK response', data: { jobId, status: response.status, responseText: responseText.substring(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:110:          '[AIJobs] Failed to trigger job execution:',
+./src/lib/ai-jobs/execution.ts:114:          console.warn('[AIJobs] Trigger timed out (expected for long-running jobs); job will still run on server. Rely on polling.');
+./src/lib/ai-jobs/execution.ts:116:        debugIngest({ location: 'execution.ts:91', message: 'triggerAIJobExecution fetch error', data: { jobId, ...errorDetails }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:121:            '[AIJobs] Network error - check EXPO_PUBLIC_NETLIFY_URL configuration'
+./src/lib/ai-jobs/execution.ts:131:            '[AIJobs] Function trigger timed out (expected for long-running jobs), will poll for status'
+./src/lib/ai-jobs/execution.ts:136:    debugIngest({ location: 'execution.ts:123', message: 'triggerAIJobExecution returning success', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:138:    console.info('[AIJobs] triggerAIJobExecution end', { jobId, elapsedMs });
+./src/lib/ai-jobs/execution.ts:142:    console.info('[AIJobs] triggerAIJobExecution end (error)', { jobId, elapsedMs });
+./src/lib/ai-jobs/execution.ts:149: * Does not await trigger; UI should rely on polling job status.
+./src/lib/ai-jobs/execution.ts:152:export async function createAndTriggerJob(
+./src/lib/ai-jobs/execution.ts:170:    // Fire-and-forget: do not await. Server job runs via handler; UI polls status.
+./src/lib/ai-jobs/execution.ts:171:    triggerAIJobExecution(job.id).then((result) => {
+./src/lib/ai-jobs/execution.ts:173:        console.warn('[AIJobs] Trigger returned error (job still runs on server):', result.error?.message);
+./src/lib/ai-jobs/execution.ts:176:      console.warn('[AIJobs] Trigger failed (job still runs on server):', err?.message ?? err);
+./netlify/functions/processes/outfit_mannequin.js:10:  downloadImageFromStorage,
+./netlify/functions/processes/outfit_mannequin.js:65:    imageIdsToDownload.map((id) => downloadImageFromStorage(supabase, id, timingTracker))
+./archive/DIAGNOSIS_2026-01-20.md:15:**Location:** `app/(tabs)/social.tsx:handleTryOnOutfit` → `netlify/functions/ai-job-runner.ts:processOutfitRender`
+./archive/DIAGNOSIS_2026-01-20.md:44:**Location:** `lib/ai-jobs.ts:triggerAIJobExecution` (lines 488-500)
+./archive/DIAGNOSIS_2026-01-20.md:61:3. This results in a relative URL: `/.netlify/functions/ai-job-runner`
+./archive/DIAGNOSIS_2026-01-20.md:80:**Location:** `netlify/functions/ai-job-runner.ts:downloadImageFromStorage` (lines 202-235)
+./archive/DIAGNOSIS_2026-01-20.md:137:**Location:** Multiple files, especially `app/(tabs)/social.tsx` and `netlify/functions/ai-job-runner.ts`
+./archive/DIAGNOSIS_2026-01-20.md:142:2. But in `ai-job-runner.ts:673`, the code might fail if category is empty string vs null
+./archive/DIAGNOSIS_2026-01-20.md:160:**Location:** `netlify/functions/ai-job-runner.ts:callGeminiAPI` (lines 290-449)
+./archive/DIAGNOSIS_2026-01-20.md:181:**Location:** `netlify/functions/ai-job-runner.ts:processOutfitRender` (lines 1177-1197)
+./archive/DIAGNOSIS_2026-01-20.md:190:- If the client polls and gets outfit data between steps 2 and 3, cover_image_id might not be set yet
+./archive/DIAGNOSIS_2026-01-20.md:223:2. **`netlify/functions/ai-job-runner.ts`** - Image download and processing
+./src/lib/ai-jobs/index.ts:5: * import { createAIJob, pollAIJob, triggerAutoTag } from '@/lib/ai-jobs';
+./src/lib/ai-jobs/index.ts:16:  getOutfitRenderItemLimit,
+./src/lib/ai-jobs/index.ts:19:// Re-export from polling
+./src/lib/ai-jobs/index.ts:21:  pollAIJob,
+./src/lib/ai-jobs/index.ts:22:  pollAIJobFixedInterval,
+./src/lib/ai-jobs/index.ts:23:  pollAIJobWithFinalCheck,
+./src/lib/ai-jobs/index.ts:27:} from './polling';
+./src/lib/ai-jobs/index.ts:31:  triggerAIJobExecution,
+./src/lib/ai-jobs/index.ts:32:  createAndTriggerJob,
+./src/lib/ai-jobs/index.ts:44:  getActiveOutfitRenderJob,
+./src/lib/ai-jobs/index.ts:45:  getRecentOutfitRenderJob,
+./netlify/functions/processes/body_shot_generate.js:9:  downloadImageFromStorage,
+./netlify/functions/processes/body_shot_generate.js:48:    downloadImageFromStorage(supabase, headId, timingTracker),
+./netlify/functions/processes/body_shot_generate.js:49:    downloadImageFromStorage(supabase, body_photo_image_id, timingTracker)
+./archive/NETLIFY_TIMEOUT_NOTE.md:18:[functions."ai-job-runner"]
+./src/hooks/index.ts:18:export { useOutfitGeneration } from './outfits/useOutfitGeneration';
+./src/lib/ai-jobs/core.ts:167:export function getOutfitRenderItemLimit(
+./app/(tabs)/wardrobe.tsx:20:import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits';
+./app/(tabs)/wardrobe.tsx:47:import { logClientTiming } from '@/lib/perf/logClientTiming';
+./app/(tabs)/wardrobe.tsx:102:  const { generating, progress, generatedOutfitId, generateOutfit, reset: resetGeneration } = useOutfitGeneration({
+./app/(tabs)/wardrobe.tsx:215:    const result = await logClientTiming('outfit_generation_client', async () => {
+./archive/old-ui/public/js/app.js:1422:    await runOutfitGeneration(baseB64, activeClothes, additionalDesc, activeHeadshotB64);
+./archive/old-ui/public/js/app.js:1507:async function runOutfitGeneration(baseB64, activeClothes, additionalDesc, headB64) {
+./src/lib/ai-jobs/types.ts:171:export async function getActiveOutfitRenderJob(
+./src/lib/ai-jobs/types.ts:188:export async function getRecentOutfitRenderJob(
+./netlify/functions/processes/auto_tag.js:11:const { downloadImageFromStorage, callGeminiAPI } = require("../utils");
+./netlify/functions/processes/auto_tag.js:42:    imageB64Promise = downloadImageFromStorage(supabase, image_ids[0], timingTracker);
+./docs/AI_JOBS.md:4:Client only creates ai_jobs rows and polls status.
+./src/hooks/ai/useAIJobPolling.ts:3: * Generic hook for polling AI job completion
+./src/hooks/ai/useAIJobPolling.ts:14:  maxAttempts?: number; // Maximum polling attempts
+./src/hooks/ai/useAIJobPolling.ts:15:  enabled?: boolean; // Whether to start polling
+./src/hooks/ai/useAIJobPolling.ts:31:  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+./src/hooks/ai/useAIJobPolling.ts:34:  // Stop polling
+./src/hooks/ai/useAIJobPolling.ts:36:    if (pollingIntervalRef.current) {
+./src/hooks/ai/useAIJobPolling.ts:37:      clearInterval(pollingIntervalRef.current);
+./src/hooks/ai/useAIJobPolling.ts:38:      pollingIntervalRef.current = null;
+./src/hooks/ai/useAIJobPolling.ts:43:  // Start polling
+./src/hooks/ai/useAIJobPolling.ts:54:        reason: !jobId ? 'no jobId' : !enabled ? 'not enabled' : 'already polling',
+./src/hooks/ai/useAIJobPolling.ts:59:    console.log('[useAIJobPolling] Starting polling for job:', jobId);
+./src/hooks/ai/useAIJobPolling.ts:64:    const poll = async () => {
+./src/hooks/ai/useAIJobPolling.ts:66:        console.log('[useAIJobPolling] poll() called but no jobId');
+./src/hooks/ai/useAIJobPolling.ts:131:    // Initial poll
+./src/hooks/ai/useAIJobPolling.ts:132:    await poll();
+./src/hooks/ai/useAIJobPolling.ts:134:    // Set up interval polling
+./src/hooks/ai/useAIJobPolling.ts:135:    pollingIntervalRef.current = setInterval(poll, interval);
+./src/hooks/ai/useAIJobPolling.ts:138:  // Auto-start polling when jobId changes
+./src/hooks/ai/useAIJobPolling.ts:151:      console.log('[useAIJobPolling] Not starting polling:', {
+./src/hooks/ai/useAIJobPolling.ts:152:        reason: !jobId ? 'no jobId' : !enabled ? 'not enabled' : 'already polling',
+./src/hooks/ai/useAIJobPolling.ts:160:      console.log('[useAIJobPolling] Cleanup: stopping polling for jobId:', jobId);
+./netlify/functions/processes/product_shot.js:10:  downloadImageFromStorage,
+./netlify/functions/processes/product_shot.js:44:    imageResult = await downloadImageFromStorage(supabase, image_id, timingTracker);
+./app/wardrobe/item/[id].tsx:40:  // Data loading with polling
+./docs/ENV.md:62:  - Used by: netlify/functions/ai-job-runner.ts only
+./src/lib/ai-jobs/polling.ts:15:export async function pollAIJob(
+./src/lib/ai-jobs/polling.ts:21:    debugIngest({ location: 'polling.ts:19', message: 'pollAIJob already polling', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:22:    return { data: null, error: new Error('Job already being polled') };
+./src/lib/ai-jobs/polling.ts:27:    debugIngest({ location: 'polling.ts:24', message: 'pollAIJob circuit breaker open', data: { jobId, failureCount }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:44:        debugIngest({ location: 'polling.ts:38', message: 'pollAIJob attempt', data: { jobId, attempt, maxAttempts, hasError: !!error, errorMessage: error?.message, hasData: !!data, status: data?.status }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:64:        debugIngest({ location: 'polling.ts:55', message: 'pollAIJob succeeded', data: { jobId, result: data.result }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:70:        debugIngest({ location: 'polling.ts:60', message: 'pollAIJob failed', data: { jobId, error: data.error }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:80:    debugIngest({ location: 'polling.ts:71', message: 'pollAIJob timeout', data: { jobId, maxAttempts }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:90: * Respects activePollingJobs so only one poller runs per job.
+./src/lib/ai-jobs/polling.ts:92:export async function pollAIJobFixedInterval(
+./src/lib/ai-jobs/polling.ts:98:    return { data: null, error: new Error('Job already being polled') };
+./src/lib/ai-jobs/polling.ts:126:export async function pollAIJobWithFinalCheck(
+./src/lib/ai-jobs/polling.ts:132:  const { data: completedJob, error: pollError } = await pollAIJob(
+./src/lib/ai-jobs/polling.ts:138:  if (!pollError && completedJob) {
+./src/lib/ai-jobs/polling.ts:143:    console.log(`${logPrefix} polling timed out, doing final check...`);
+./src/lib/ai-jobs/polling.ts:154:  return { data: null, error: pollError || new Error('Polling timeout') };
+./src/lib/ai-jobs/polling.ts:159: * When initialIntervalMs <= 2000 uses fixed-interval polling for faster completion detection.
+./src/lib/ai-jobs/polling.ts:168:  console.info('[AIJobs] waitForAIJobCompletion start', { jobId, maxAttempts, initialIntervalMs });
+./src/lib/ai-jobs/polling.ts:169:  debugIngest({ location: 'polling.ts:114', message: 'waitForAIJobCompletion entry', data: { jobId, maxAttempts, initialIntervalMs, logPrefix }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:176:    const { data: completedJob, error } = await pollAIJobFixedInterval(jobId, maxMs, intervalMs);
+./src/lib/ai-jobs/polling.ts:177:    debugIngest({ location: 'polling.ts:121', message: 'waitForAIJobCompletion poll result', data: { jobId, hasJob: !!completedJob, jobStatus: completedJob?.status, hasError: !!error, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:181:      console.info('[AIJobs] waitForAIJobCompletion end', { jobId, status: completedJob.status, elapsedMs });
+./src/lib/ai-jobs/polling.ts:187:        console.log(`${logPrefix} polling timed out, doing final check...`);
+./src/lib/ai-jobs/polling.ts:192:        console.info('[AIJobs] waitForAIJobCompletion end (final check)', { jobId, status: finalCheck.status, elapsedMs });
+./src/lib/ai-jobs/polling.ts:198:    console.info('[AIJobs] waitForAIJobCompletion end (error)', { jobId, errorMessage: error?.message, elapsedMs });
+./src/lib/ai-jobs/polling.ts:203:    const { data: completedJob, error } = await pollAIJobWithFinalCheck(
+./src/lib/ai-jobs/polling.ts:210:    debugIngest({ location: 'polling.ts:121', message: 'waitForAIJobCompletion poll result', data: { jobId, hasJob: !!completedJob, jobStatus: completedJob?.status, hasError: !!error, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:214:      console.info('[AIJobs] waitForAIJobCompletion end', { jobId, status: completedJob.status, elapsedMs });
+./src/lib/ai-jobs/polling.ts:220:        console.log(`${logPrefix} polling timed out, continuing to wait...`);
+./src/lib/ai-jobs/polling.ts:222:      debugIngest({ location: 'polling.ts:132', message: 'waitForAIJobCompletion timeout, continuing', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:228:    console.info('[AIJobs] waitForAIJobCompletion end (error)', { jobId, errorMessage: error?.message, elapsedMs });
+./src/lib/ai-jobs/polling.ts:229:    debugIngest({ location: 'polling.ts:139', message: 'waitForAIJobCompletion returning error', data: { jobId, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./docs/ARCHITECTURE.md:70:│   ├── ai-jobs.ts             # AI job creation and polling
+./docs/ARCHITECTURE.md:86:│       └── ai-job-runner.ts   # AI job processing
+./docs/ARCHITECTURE.md:112:2. **Client → Netlify Functions**: For AI jobs (client creates `ai_jobs` row, polls status)
+./docs/ARCHITECTURE.md:126:2. Client polls `ai_jobs` table for status updates
+./docs/ARCHITECTURE.md:127:3. Netlify Function `ai-job-runner` processes queued jobs:
+./docs/ARCHITECTURE.md:207:- **Polling**: Client polls AI jobs (consider WebSockets for future optimization)
+./src/hooks/ai/useProductShot.ts:3: * Manages product shot generation and polling
+./src/hooks/ai/useProductShot.ts:9:  triggerAIJobExecution,
+./src/hooks/ai/useProductShot.ts:36:  // Use AI job polling hook
+./src/hooks/ai/useProductShot.ts:109:      const { error: execError } = await triggerAIJobExecution(productShotJob.id);
+./src/hooks/ai/useProductShot.ts:116:      // Start polling
+./docs/README.md:127:│  │  ai-job-runner.ts                │   │
+./docs/README.md:189:│   ├── ai-jobs.ts              # AI job creation and polling
+./docs/README.md:198:│       └── ai-job-runner.ts    # AI job processing
+./docs/README.md:458:- Accessed via Netlify Functions (`ai-job-runner.ts`)
+./docs/README.md:462:- `/.netlify/functions/ai-job-runner` - AI job processing (Gemini API calls)
+./docs/README.md:500:- AI jobs created in database, polled for status updates
+./docs/README.md:516:- `EXPO_PUBLIC_PERF_LOGS` - When set to `'true'`, enables client-side timeline logs for outfit render (and other flows). Logs are emitted via `console.debug` only when enabled. Use to pinpoint delay between submit and image visible (e.g. cache/refresh vs image availability vs DB write). Events: `generate_click`, `grid_start`/`grid_done`, `upload_start`/`upload_done`, `job_created`, `trigger_sent`, `poll_start`/`poll_success`, `image_set_from_result`, `image_load_start`/`image_load_end` (or `image_load_error`). See `src/lib/perf/timeline.ts`.
+./docs/README.md:684:6. **Real-time Updates**: AI job polling could be replaced with WebSockets (future)
+./docs/README.md:697:- **API Functions**: `netlify/functions/ai-job-runner.ts`
+./docs/README.md:708:- `/.netlify/functions/ai-job-runner` - AI job processing
+./docs/README.md:709:- Jobs created in `ai_jobs` table, polled for status
+./archive/CLEANUP_SUMMARY.md:12:- `ai-job-runner.ts.instrumented` (32KB, 13 debug blocks)
+./archive/CLEANUP_SUMMARY.md:18:- `netlify/functions/ai-job-runner.ts` - Removed 13 debug log blocks (hypotheses A-G)
+./archive/CLEANUP_SUMMARY.md:48:- **ai-job-runner.ts**: ~810 lines with 13 debug blocks
+./archive/CLEANUP_SUMMARY.md:54:- **ai-job-runner.ts**: ~784 lines (26 lines removed)
+./archive/CLEANUP_SUMMARY.md:60:- **ai-job-runner.ts**: -1.8KB
+./archive/CLEANUP_SUMMARY.md:70:# Restore ai-job-runner.ts
+./archive/CLEANUP_SUMMARY.md:71:cp archive/debug-instrumentation/2026-01-20-gallery-and-legacy-integration/ai-job-runner.ts.instrumented netlify/functions/ai-job-runner.ts
+./src/hooks/wardrobe/useWardrobeItemDetail.ts:3: * Load and manage wardrobe item detail data with polling
+./src/hooks/wardrobe/useWardrobeItemDetail.ts:122:  // Product shot polling
+./src/hooks/wardrobe/useWardrobeItemDetail.ts:140:  // Auto-tag polling
+./src/hooks/wardrobe/useWardrobeItemDetail.ts:157:  // Batch job polling (handles both product_shot and auto_tag)
+./src/hooks/wardrobe/useWardrobeItemDetail.ts:180:  // Start polling when job IDs are set
+./src/hooks/profile/useHeadshotDetailActions.ts:15:  triggerAIJobExecution,
+./src/hooks/profile/useHeadshotDetailActions.ts:135:      await triggerAIJobExecution(job.id);
+./src/hooks/profile/useHeadshotDetailActions.ts:138:      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+./src/hooks/profile/useHeadshotDetailActions.ts:145:      if (pollError || !completedJob) {
+./src/hooks/social/useTryOnOutfit.ts:10:import { createAIJob, triggerAIJobExecution, waitForAIJobCompletion, getOutfitRenderItemLimit } from '@/lib/ai-jobs';
+./src/hooks/social/useTryOnOutfit.ts:117:      const renderLimit = getOutfitRenderItemLimit(modelPreference);
+./src/hooks/social/useTryOnOutfit.ts:131:        await triggerAIJobExecution(mannequinJob.id);
+./src/hooks/social/useTryOnOutfit.ts:157:      const triggerResult = await triggerAIJobExecution(renderJob.id);
+./src/hooks/social/useTryOnOutfit.ts:173:        const { data: finalJob, error: pollError } = await waitForAIJobCompletion(
+./src/hooks/social/useTryOnOutfit.ts:180:        if (pollError || !finalJob) {
+./src/hooks/social/useTryOnOutfit.ts:191:        const pollElapsedMs = Date.now() - tryOnStartMs;
+./src/hooks/social/useTryOnOutfit.ts:192:        console.info('[Social] Try-on poll succeeded', { jobId: renderJob.id, outfitId: newOutfitId, elapsedMs: pollElapsedMs });
+./src/hooks/social/useTryOnOutfit.ts:206:        console.error('[Social] Error polling outfit render:', error);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:3: * Manage wardrobe item editing with form state and AI polling
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:77:  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:88:    if (pollingIntervalRef.current) {
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:89:      clearInterval(pollingIntervalRef.current);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:92:    pollingIntervalRef.current = setInterval(async () => {
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:124:            if (pollingIntervalRef.current) {
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:125:              clearInterval(pollingIntervalRef.current);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:126:              pollingIntervalRef.current = null;
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:131:        console.error('Error polling for AI completion:', error);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:136:      if (pollingIntervalRef.current) {
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:137:        clearInterval(pollingIntervalRef.current);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:138:        pollingIntervalRef.current = null;
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:278:      if (pollingIntervalRef.current) {
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:279:        clearInterval(pollingIntervalRef.current);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:280:        pollingIntervalRef.current = null;
+./src/hooks/outfits/index.ts:9:export { useOutfitGeneration } from './useOutfitGeneration';
+./src/hooks/outfits/index.ts:17:export type { BackgroundGridApi } from './useOutfitGeneration';
+./src/hooks/wardrobe/useAddWardrobeItem.ts:14:import { triggerBatchJob, triggerAIJobExecution } from '@/lib/ai-jobs';
+./src/hooks/wardrobe/useAddWardrobeItem.ts:351:        // Set the job ID for polling
+./src/hooks/wardrobe/useAddWardrobeItem.ts:364:        const { error: execError } = await triggerAIJobExecution(batchJob.id);
+./src/hooks/profile/useImageGeneration.ts:14:  triggerAIJobExecution,
+./src/hooks/profile/useImageGeneration.ts:173:      await triggerAIJobExecution(job.id);
+./src/hooks/profile/useImageGeneration.ts:179:      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+./src/hooks/profile/useImageGeneration.ts:188:      if (pollError || !completedJob) {
+./src/hooks/profile/useImageGeneration.ts:278:      await triggerAIJobExecution(job.id);
+./src/hooks/profile/useImageGeneration.ts:281:      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+./src/hooks/profile/useImageGeneration.ts:288:      if (pollError || !completedJob) {
+./src/hooks/outfits/useOutfitEditorActions.ts:17:  triggerAIJobExecution,
+./src/hooks/outfits/useOutfitEditorActions.ts:20:import { generateClothingGrid } from '@/utils/clothing-grid';
+./src/hooks/outfits/useOutfitEditorActions.ts:212:        const gridBase64 = await generateClothingGrid(imageUrls);
+./src/hooks/outfits/useOutfitEditorActions.ts:313:      await triggerAIJobExecution(renderJob.id);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:2: * useOutfitGeneration Hook
+./src/hooks/outfits/useOutfitGeneration.ts.backup:8:import { createAndTriggerJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
+./src/hooks/outfits/useOutfitGeneration.ts.backup:12:import { generateClothingGrid } from '@/utils/clothing-grid';
+./src/hooks/outfits/useOutfitGeneration.ts.backup:20:interface UseOutfitGenerationOptions {
+./src/hooks/outfits/useOutfitGeneration.ts.backup:25:export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationOptions) {
+./src/hooks/outfits/useOutfitGeneration.ts.backup:93:        console.log(`[OutfitGeneration] Fetching images for ${selectedItems.length} items`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:155:        console.log(`[OutfitGeneration] Getting image URLs for ${topImages.length} images`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:170:        console.log(`[OutfitGeneration] Got ${imageUrls.length} image URLs`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:179:        console.log(`[OutfitGeneration] Starting grid generation...`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:181:        const gridBase64 = await generateClothingGrid(imageUrls);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:182:        console.log(`[OutfitGeneration] Grid generated successfully, base64 length: ${gridBase64.length}`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:226:        console.log(`[OutfitGeneration] Grid uploaded successfully. Storage path: ${uploadDataResult.path}`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:272:        console.log(`[OutfitGeneration] Creating AI job with stacked image ID: ${stackedResult.imageId}`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:274:        const { data: jobData, error: jobError } = await createAndTriggerJob(
+./src/hooks/outfits/useOutfitGeneration.ts.backup:295:        console.log(`[OutfitGeneration] AI job created: ${jobData.jobId}`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:304:        const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
+./src/hooks/outfits/useOutfitGeneration.ts.backup:308:          '[OutfitGeneration]'
+./src/hooks/outfits/useOutfitGeneration.ts.backup:311:        if (pollError || !completedJob) {
+./src/hooks/outfits/useOutfitGeneration.ts.backup:313:          console.warn('[OutfitGeneration] AI generation polling timed out, but outfit was saved');
+./src/hooks/outfits/useOutfitGeneration.ts.backup:327:        console.log(`[OutfitGeneration] Generation completed successfully!`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:336:        console.error('[OutfitGeneration] Error:', error);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:369:export default useOutfitGeneration;
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:3: * Generic polling for AI jobs (product shot, auto-tag, etc.)
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:29:  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:35:    console.log(`${logPrefix} Starting polling for job ${jobId}`);
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:38:    // Set timeout to stop polling
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:47:    // Start polling
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:48:    pollingIntervalRef.current = setInterval(async () => {
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:73:    if (pollingIntervalRef.current) {
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:74:      clearInterval(pollingIntervalRef.current);
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:75:      pollingIntervalRef.current = null;
+./src/hooks/outfits/useOutfitView.ts:3: * Load and manage outfit view data with polling
+./src/hooks/outfits/useOutfitView.ts:12:  getActiveOutfitRenderJob,
+./src/hooks/outfits/useOutfitView.ts:13:  pollAIJobWithFinalCheck,
+./src/hooks/outfits/useOutfitView.ts:78:  const startPollingForOutfitRender = async (jobId: string, timeline?: Timeline) => {
+./src/hooks/outfits/useOutfitView.ts:80:      timeline?.mark('poll_start');
+./src/hooks/outfits/useOutfitView.ts:81:      const { data: finalJob } = await pollAIJobWithFinalCheck(
+./src/hooks/outfits/useOutfitView.ts:91:        timeline?.mark('poll_success', {
+./src/hooks/outfits/useOutfitView.ts:123:      console.error('Error polling:', error);
+./src/hooks/outfits/useOutfitView.ts:124:      timeline?.mark('poll_error', { error: String(error) });
+./src/hooks/outfits/useOutfitView.ts:159:        const { data: activeJob } = await getActiveOutfitRenderJob(
+./src/hooks/outfits/useOutfitView.ts:177:            startPollingForOutfitRender(activeJob.id, timeline);
+./src/hooks/outfits/useOutfitView.ts:184:            : startTimeline('outfit_view_poll');
+./src/hooks/outfits/useOutfitView.ts:186:          startPollingForOutfitRender(renderJobIdParam, timeline);
+./src/hooks/outfits/useBackgroundGridGenerator.ts:12:import { generateClothingGrid } from '@/utils/clothing-grid';
+./src/hooks/outfits/useBackgroundGridGenerator.ts:108:        const gridBase64 = await generateClothingGrid(imageUrls);
+./src/hooks/outfits/useOutfitGeneration.ts:2: * useOutfitGeneration Hook
+./src/hooks/outfits/useOutfitGeneration.ts:9:import { createAndTriggerJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
+./src/hooks/outfits/useOutfitGeneration.ts:13:import { generateClothingGrid } from '@/utils/clothing-grid';
+./src/hooks/outfits/useOutfitGeneration.ts:46:interface UseOutfitGenerationOptions {
+./src/hooks/outfits/useOutfitGeneration.ts:52:export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseOutfitGenerationOptions) {
+./src/hooks/outfits/useOutfitGeneration.ts:125:    console.log('[OutfitGeneration] Starting description polling...');
+./src/hooks/outfits/useOutfitGeneration.ts:136:          console.log('[OutfitGeneration] Description received!');
+./src/hooks/outfits/useOutfitGeneration.ts:150:          // Stop polling
+./src/hooks/outfits/useOutfitGeneration.ts:157:        console.error('[OutfitGeneration] Description polling error:', error);
+./src/hooks/outfits/useOutfitGeneration.ts:316:            console.log(`[OutfitGeneration] Using pre-uploaded grid (0s latency): ${storedKey}`);
+./src/hooks/outfits/useOutfitGeneration.ts:321:          console.log(`[OutfitGeneration] Fetching images for ${selectedItems.length} items`);
+./src/hooks/outfits/useOutfitGeneration.ts:383:          console.log(`[OutfitGeneration] Getting image URLs for ${topImages.length} images`);
+./src/hooks/outfits/useOutfitGeneration.ts:398:          console.log(`[OutfitGeneration] Got ${imageUrls.length} image URLs`);
+./src/hooks/outfits/useOutfitGeneration.ts:407:          console.log(`[OutfitGeneration] Starting grid generation...`);
+./src/hooks/outfits/useOutfitGeneration.ts:410:          const gridBase64 = await generateClothingGrid(imageUrls);
+./src/hooks/outfits/useOutfitGeneration.ts:412:          console.log(`[OutfitGeneration] Grid generated successfully, base64 length: ${gridBase64.length}`);
+./src/hooks/outfits/useOutfitGeneration.ts:458:          console.log(`[OutfitGeneration] Grid uploaded successfully. Storage path: ${uploadDataResult.path}`);
+./src/hooks/outfits/useOutfitGeneration.ts:509:        console.log(`[OutfitGeneration] Creating AI job with stacked image ID: ${stackedResult.imageId}`);
+./src/hooks/outfits/useOutfitGeneration.ts:511:        const { data: jobData, error: jobError } = await createAndTriggerJob(
+./src/hooks/outfits/useOutfitGeneration.ts:535:        console.log(`[OutfitGeneration] AI job created: ${jobData.jobId}`);
+./src/hooks/outfits/useOutfitGeneration.ts:537:        // NEW: Start polling for description (runs in parallel with image generation)
+./src/hooks/outfits/useOutfitGeneration.ts:547:        timeline.mark('poll_start');
+./src/hooks/outfits/useOutfitGeneration.ts:548:        const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
+./src/hooks/outfits/useOutfitGeneration.ts:552:          '[OutfitGeneration]'
+./src/hooks/outfits/useOutfitGeneration.ts:558:        if (pollError || !completedJob) {
+./src/hooks/outfits/useOutfitGeneration.ts:559:          timeline.mark('poll_timeout');
+./src/hooks/outfits/useOutfitGeneration.ts:560:          console.warn('[OutfitGeneration] AI generation polling timed out, but outfit was saved');
+./src/hooks/outfits/useOutfitGeneration.ts:571:          timeline.mark('poll_failed', { error: completedJob.error });
+./src/hooks/outfits/useOutfitGeneration.ts:576:        timeline.mark('poll_success', { resultKeys });
+./src/hooks/outfits/useOutfitGeneration.ts:579:        console.log(`[OutfitGeneration] Generation completed successfully!`);
+./src/hooks/outfits/useOutfitGeneration.ts:593:        console.error('[OutfitGeneration] Error:', error);
+./src/hooks/outfits/useOutfitGeneration.ts:644:export default useOutfitGeneration;

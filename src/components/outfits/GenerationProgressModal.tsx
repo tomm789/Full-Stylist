@@ -35,6 +35,8 @@ interface GenerationProgressModalProps {
   completedItemsCount: number;
   phase: 'items' | 'analysis' | 'finalizing';
   activeMessage: GenerationMessage | null;
+  /** When true, show minimal static spinner only (no list/animations). Used for PERF_MODE. */
+  perfMode?: boolean;
 }
 
 export default function GenerationProgressModal({
@@ -44,7 +46,26 @@ export default function GenerationProgressModal({
   completedItemsCount,
   phase,
   activeMessage,
+  perfMode = false,
 }: GenerationProgressModalProps) {
+  if (perfMode) {
+    return (
+      <Modal
+        transparent={false}
+        visible={visible}
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.dialog}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.title, { marginTop: 16 }]}>Generating…</Text>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
   const revealedItems = items.slice(0, revealedItemsCount + 1);
   
   const modalTitle =

@@ -87,7 +87,7 @@ export async function pollAIJob(
 /**
  * Poll AI job on a fixed interval (no exponential backoff).
  * Stops when status is succeeded/failed or when elapsed > maxMs.
- * Respects activePollingJobs so only one poller runs per job.
+ * Respects activePollingJobs and circuit breaker so only one poller runs per job.
  */
 export async function pollAIJobFixedInterval(
   jobId: string,
@@ -97,23 +97,37 @@ export async function pollAIJobFixedInterval(
   if (activePollingJobs.has(jobId)) {
     return { data: null, error: new Error('Job already being polled') };
   }
+  const failureCount = failureCountByJob.get(jobId) || 0;
+  if (failureCount >= CIRCUIT_BREAKER_THRESHOLD) {
+    return {
+      data: null,
+      error: new Error('Circuit breaker open: too many failures'),
+    };
+  }
   activePollingJobs.add(jobId);
   const startMs = Date.now();
   try {
     while (Date.now() - startMs < maxMs) {
       const { data, error } = await getAIJob(jobId);
       if (error) {
+        failureCountByJob.set(jobId, failureCount + 1);
         return { data: null, error };
       }
       if (!data) {
         await new Promise((r) => setTimeout(r, intervalMs));
         continue;
       }
-      if (data.status === 'succeeded' || data.status === 'failed') {
+      if (data.status === 'succeeded') {
+        failureCountByJob.delete(jobId);
+        return { data, error: null };
+      }
+      if (data.status === 'failed') {
+        failureCountByJob.set(jobId, failureCount + 1);
         return { data, error: null };
       }
       await new Promise((r) => setTimeout(r, intervalMs));
     }
+    failureCountByJob.set(jobId, failureCount + 1);
     return { data: null, error: new Error('Polling timeout') };
   } finally {
     activePollingJobs.delete(jobId);
@@ -121,19 +135,30 @@ export async function pollAIJobFixedInterval(
 }
 
 /**
- * Poll AI job and perform a final status check on timeout
+ * Poll AI job and perform a final status check on timeout.
+ * When jobType === 'outfit_render', uses fixed-interval polling (1–1.5s) for first ~60–90s instead of exponential backoff.
  */
 export async function pollAIJobWithFinalCheck(
   jobId: string,
   maxAttempts: number = SUPABASE_CONFIG.DEV_MODE ? 30 : 60,
   initialIntervalMs: number = 2000,
-  logPrefix?: string
+  logPrefix?: string,
+  jobType?: string
 ): Promise<QueryResult<AIJob>> {
-  const { data: completedJob, error: pollError } = await pollAIJob(
-    jobId,
-    maxAttempts,
-    initialIntervalMs
-  );
+  let completedJob: AIJob | null = null;
+  let pollError: Error | null = null;
+
+  if (jobType === 'outfit_render') {
+    const maxMs = 90000;
+    const intervalMs = 1500;
+    const result = await pollAIJobFixedInterval(jobId, maxMs, intervalMs);
+    completedJob = result.data;
+    pollError = result.error ?? null;
+  } else {
+    const result = await pollAIJob(jobId, maxAttempts, initialIntervalMs);
+    completedJob = result.data;
+    pollError = result.error ?? null;
+  }
 
   if (!pollError && completedJob) {
     return { data: completedJob, error: null };

@@ -27,6 +27,7 @@ import {
   LoadingSpinner,
 } from '@/components/shared';
 import { theme, commonStyles } from '@/styles';
+import { PERF_MODE } from '@/lib/perf/perfMode';
 
 const { colors, spacing } = theme;
 
@@ -99,6 +100,7 @@ export default function OutfitEditorScreen() {
         completedItemsCount={actions.completedItemsCount}
         phase={actions.generationPhase}
         activeMessage={actions.activeMessage}
+        perfMode={PERF_MODE}
       />
 
       <Header

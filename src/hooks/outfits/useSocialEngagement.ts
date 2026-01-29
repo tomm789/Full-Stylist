@@ -3,7 +3,7 @@
  * Manages social engagement (likes, saves, comments) for entities
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   likeEntity,
   unlikeEntity,
@@ -21,11 +21,19 @@ import {
 
 type EntityType = 'outfit' | 'wardrobe_item' | 'post';
 
+export interface UseSocialEngagementOptions {
+  /** When true, do not fetch engagement on mount; call triggerLoadEngagement() after image load (e.g. PERF_MODE). */
+  deferInitialFetch?: boolean;
+}
+
 export function useSocialEngagement(
   entityType: EntityType,
   entityId: string | null,
-  userId: string | null | undefined
+  userId: string | null | undefined,
+  options?: UseSocialEngagementOptions
 ) {
+  const { deferInitialFetch = false } = options ?? {};
+  const engagementLoadStartedRef = useRef(false);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [saved, setSaved] = useState(false);
@@ -144,6 +152,15 @@ export function useSocialEngagement(
   );
 
   useEffect(() => {
+    if (!deferInitialFetch) {
+      loadEngagement();
+    }
+  }, [loadEngagement, deferInitialFetch]);
+
+  // Stable, single-fire trigger when deferInitialFetch; guards against concurrent/repeated calls
+  const triggerLoadEngagement = useCallback(() => {
+    if (engagementLoadStartedRef.current) return;
+    engagementLoadStartedRef.current = true;
     loadEngagement();
   }, [loadEngagement]);
 
@@ -159,6 +176,8 @@ export function useSocialEngagement(
     toggleSave,
     loadComments,
     submitComment,
+    /** Call after cover image loads when deferInitialFetch was true (e.g. PERF_MODE). Stable; safe to call multiple times (runs once). */
+    triggerLoadEngagement: deferInitialFetch ? triggerLoadEngagement : undefined,
   };
 }
 

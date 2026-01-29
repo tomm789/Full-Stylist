@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { getOutfit, deleteOutfit } from '@/lib/outfits';
+import { getInitialCoverDataUri } from '@/lib/outfits/initialCoverCache';
 import { getWardrobeItemImages } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import {
@@ -13,6 +14,7 @@ import {
   pollAIJobWithFinalCheck,
 } from '@/lib/ai-jobs';
 import { startTimeline, continueTimeline, type Timeline } from '@/lib/perf/timeline';
+import { PERF_MODE } from '@/lib/perf/perfMode';
 
 interface UseOutfitViewProps {
   outfitId: string | undefined;
@@ -35,6 +37,8 @@ interface UseOutfitViewReturn {
   renderJobId: string | null;
   /** Trace ID for this render (for image load timeline + bounded retry). */
   renderTraceId: string | null;
+  /** When set, used for client-only timing log: job succeeded → image_load_end. */
+  jobSucceededAt: number | null;
   refreshOutfit: () => Promise<void>;
   deleteOutfit: () => Promise<void>;
 }
@@ -58,6 +62,7 @@ export function useOutfitView({
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderJobId, setRenderJobId] = useState<string | null>(null);
+  const [jobSucceededAt, setJobSucceededAt] = useState<number | null>(null);
   const renderTraceIdRef = useRef<string | null>(renderTraceIdParam ?? null);
 
   const refreshOutfit = async () => {
@@ -80,26 +85,35 @@ export function useOutfitView({
       timeline?.mark('poll_start');
       const { data: finalJob } = await pollAIJobWithFinalCheck(
         jobId,
-        120,
-        2000,
-        '[OutfitView]'
+        60,
+        1500,
+        '[OutfitView]',
+        'outfit_render'
       );
 
       if (finalJob && finalJob.status === 'succeeded') {
         const result = finalJob.result || {};
         const resultKeys = result ? Object.keys(result) : [];
+        const jobStatusSucceededAt = Date.now();
         timeline?.mark('poll_success', {
           resultKeys,
           resultSize: typeof result === 'object' ? JSON.stringify(result).length : 0,
         });
+        timeline?.mark('job_status_succeeded_at', { ts: jobStatusSucceededAt });
+        console.debug('[outfit_render_timing] job_status_succeeded_at', { ts: jobStatusSucceededAt, outfitId, from: 'view_poll' });
 
         setRenderJobId(null);
         setIsGenerating(false);
+        setJobSucceededAt(jobStatusSucceededAt);
 
         // Immediate UI: use base64 or storage URL from job result so image shows before refetch
         if (result.base64_result) {
+          const coverSetAt = Date.now();
           setCoverImageDataUri('data:image/jpeg;base64,' + result.base64_result);
+          timeline?.mark('cover_set_base64_at', { ts: coverSetAt });
+          console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, outfitId, from: 'view_poll' });
         } else {
+          console.debug('[outfit_render_timing] base64_result missing (view poll)', { outfitId, resultKeys });
           const storageKey =
             result.storage_key ?? result.renders?.[0]?.storage_key;
           if (storageKey) {
@@ -143,8 +157,22 @@ export function useOutfitView({
     const loadOutfitData = async () => {
       setLoading(true);
       setCoverImageDataUri(null);
+      setJobSucceededAt(null);
+
+      if (PERF_MODE) {
+        console.debug('[outfit_render_timing] perf_mode_enabled', { ts: Date.now(), outfitId, where: 'view', traceId: renderTraceIdParam ?? undefined });
+      }
 
       try {
+        // Use cached cover from generation so image shows immediately
+        const cached = getInitialCoverDataUri(outfitId);
+        if (cached) {
+          const coverSetAt = Date.now();
+          setCoverImageDataUri(cached.dataUri);
+          setJobSucceededAt(cached.jobSucceededAt);
+          console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, outfitId, from: 'cache' });
+        }
+
         const { data, error } = await getOutfit(outfitId);
         if (error || !data) {
           Alert.alert('Error', 'Failed to load outfit');
@@ -257,6 +285,7 @@ export function useOutfitView({
     isGenerating,
     renderJobId,
     renderTraceId: renderTraceIdParam ?? renderTraceIdRef.current,
+    jobSucceededAt,
     refreshOutfit,
     deleteOutfit: deleteOutfitAction,
   };

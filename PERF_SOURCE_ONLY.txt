@@ -1,0 +1,423 @@
+./src/utils/imageProcessor.ts:242:        image.onload = () => resolve(image);
+./src/utils/imageProcessor.ts:243:        image.onerror = () => reject(new Error(`Failed to load trimmed image: ${file.name}`));
+./src/utils/imageProcessor.ts:346: * @param imageUrls - Array of image URLs to load and composite
+./src/utils/imageProcessor.ts:379:      image.onload = () => {
+./src/utils/imageProcessor.ts:406:  // Enable high-quality image rendering
+./netlify.toml:26:[functions."ai-job-runner"]
+./src/utils/imageUtils.ts:16:    const { data } = supabase.storage.from(bucket).getPublicUrl(storageKey);
+./src/utils/imageUtils.ts:41: * Convert URI to Blob for image uploads (handles file:// on iOS)
+./src/utils/canvasUtils.ts:24:    image.onload = () => {
+./src/utils/image-compression.ts:10: * Compress an image file for upload
+./src/components/FindSimilarModal.tsx:52:  const renderResultItem = ({ item }: { item: any }) => {
+./src/components/FindSimilarModal.tsx:56:  const renderOnlineResultItem = ({ item }: { item: any }) => {
+./src/components/FindSimilarModal.tsx:119:            renderItem={renderResultItem}
+./src/components/FindSimilarModal.tsx:133:            renderItem={renderResultItem}
+./src/components/FindSimilarModal.tsx:147:            renderItem={renderOnlineResultItem}
+./package-lock.json:5558:    "node_modules/expo-image-loader": {
+./package-lock.json:5560:      "resolved": "https://registry.npmjs.org/expo-image-loader/-/expo-image-loader-6.0.0.tgz",
+./package-lock.json:5573:        "expo-image-loader": "~6.0.0"
+./src/components/wardrobe/CategoryPills.tsx:57:        renderItem={({ item }) => (
+./app/bodyshot/[id].tsx:118:                const renderCompleteTime = performance.now();
+./app/bodyshot/[id].tsx:125:                  const totalUserWait = renderCompleteTime - startTime;
+./app/bodyshot/[id].tsx:127:                  const transferAndRender = renderCompleteTime - apiResponseTime;
+./app/bodyshot/[id].tsx:139:                  console.log('[PERF] Image loaded at:', renderCompleteTime);
+./src/lib/perf/timeline.ts:2: * Client-side end-to-end timeline for outfit render (and other flows).
+./src/lib/perf/timeline.ts:7: * Events to look for (outfit render):
+./src/lib/perf/timeline.ts:10: * - image_load_start / image_load_end (or image_load_error + retryCount)
+./src/lib/perf/timeline.ts:32: * Start a timeline for a flow (e.g. outfit render).
+./app/bodyshot/new.tsx:83:                renderItem={({ item }) => (
+./src/components/lookbooks/AddOutfitsModal.tsx:127:            renderItem={({ item }) => (
+./src/components/lookbooks/OutfitGridSelector.tsx:68:      renderItem={({ item }) => (
+./src/components/social/UserProfileHeader.tsx:23:/** Header component for user profile; accepts profile + stats and renders via ProfileHeader */
+./app/onboarding.tsx:75:      'You can add your headshot later from your profile. Without it, you won\'t be able to create a studio model for outfit rendering.',
+./app/onboarding.tsx:97:      'You can add your studio model later from your profile. Without it, you won\'t be able to render outfits on yourself.',
+./src/components/lookbooks/LookbookOutfitGrid.tsx:121:        renderItem={({ item, index }) => <OutfitCard item={item} index={index} />}
+./src/components/wardrobe/ItemCard.tsx:138:// Memoize component to prevent unnecessary re-renders
+./src/components/calendar/OutfitGridPicker.tsx:42:        renderItem={({ item }) => {
+./netlify/functions/utils.js.backup2:55:    throw new Error(`Failed to download image: ${downloadError?.message || 'Unknown error'}`);
+./netlify/functions/utils.js.backup2:110:  return { imageId: imageRecord.id, storageKey: uploadData.path };
+./src/components/profile/ProfileTabs.tsx:41:  const renderTabBar = () => (
+./src/components/profile/ProfileTabs.tsx:85:  const renderContent = () => {
+./src/components/profile/ProfileTabs.tsx:179:      {renderTabBar()}
+./src/components/profile/ProfileTabs.tsx:180:      <View style={styles.tabContent}>{renderContent()}</View>
+./src/components/wardrobe/ItemGrid.tsx:52:  const renderItem = ({ item }: { item: WardrobeItem }) => {
+./src/components/wardrobe/ItemGrid.tsx:92:      renderItem={renderItem}
+./app/users/[id]/feed.tsx:56:  const renderFeedItem = ({ item }: { item: any }) => {
+./app/users/[id]/feed.tsx:159:          renderItem={renderFeedItem}
+./src/components/social/FeedItem.tsx:3: * Single feed item renderer for social feed
+./app/marketplace.tsx:46:        .getPublicUrl(listing.images[0].image.storage_key);
+./app/marketplace.tsx:52:  const renderListing = ({ item }: { item: ListingWithImages }) => {
+./app/marketplace.tsx:108:          renderItem={renderListing}
+./src/components/profile/BodyShotSection.tsx:52:        Upload a full-body photo to create your studio model for outfit rendering
+./app/notifications.tsx:122:  const renderNotification = ({ item }: { item: Notification }) => {
+./app/notifications.tsx:141:                // Avatar load failed, will show fallback on next render
+./app/notifications.tsx:191:        renderItem={renderNotification}
+./src/lib/ai-jobs/execution.ts:7:export async function triggerAIJobExecution(
+./src/lib/ai-jobs/execution.ts:11:  console.info('[AIJobs] triggerAIJobExecution start', { jobId });
+./src/lib/ai-jobs/execution.ts:12:  debugIngest({ location: 'execution.ts:10', message: 'triggerAIJobExecution entry', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:20:    debugIngest({ location: 'execution.ts:18', message: 'triggerAIJobExecution session check', data: { jobId, hasSession: !!session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:60:    const functionUrl = `${baseUrlNormalized}/.netlify/functions/ai-job-runner`;
+./src/lib/ai-jobs/execution.ts:62:    debugIngest({ location: 'execution.ts:55', message: 'triggerAIJobExecution before fetch', data: { jobId, functionUrl, baseUrl, hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:86:        debugIngest({ location: 'execution.ts:78', message: 'triggerAIJobExecution fetch response', data: { jobId, status: response.status, statusText: response.statusText, ok: response.ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:97:          debugIngest({ location: 'execution.ts:84', message: 'triggerAIJobExecution non-OK response', data: { jobId, status: response.status, responseText: responseText.substring(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:113:        if (error?.name === 'TimeoutError' || error?.message?.includes('timeout')) {
+./src/lib/ai-jobs/execution.ts:114:          console.warn('[AIJobs] Trigger timed out (expected for long-running jobs); job will still run on server. Rely on polling.');
+./src/lib/ai-jobs/execution.ts:116:        debugIngest({ location: 'execution.ts:91', message: 'triggerAIJobExecution fetch error', data: { jobId, ...errorDetails }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:136:    debugIngest({ location: 'execution.ts:123', message: 'triggerAIJobExecution returning success', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+./src/lib/ai-jobs/execution.ts:138:    console.info('[AIJobs] triggerAIJobExecution end', { jobId, elapsedMs });
+./src/lib/ai-jobs/execution.ts:142:    console.info('[AIJobs] triggerAIJobExecution end (error)', { jobId, elapsedMs });
+./src/lib/ai-jobs/execution.ts:149: * Does not await trigger; UI should rely on polling job status.
+./src/lib/ai-jobs/execution.ts:152:export async function createAndTriggerJob(
+./src/lib/ai-jobs/execution.ts:171:    triggerAIJobExecution(job.id).then((result) => {
+./netlify/functions/processes/outfit_render.js.backup:3:// Handler for rendering an outfit on the user's body.
+./netlify/functions/processes/outfit_render.js.backup:5:// When stacked_image_id is provided, we download only 3 images total:
+./netlify/functions/processes/outfit_render.js.backup:27: * @returns {Promise<{renders: Array<{image_id: number, storage_key: string}>}>} Render results
+./netlify/functions/processes/outfit_render.js.backup:77:    // Client-side stacked image - download from storage using the path!
+./netlify/functions/processes/outfit_render.js.backup:89:        throw new Error(`Failed to download stacked image: ${downloadError.message}`);
+./netlify/functions/processes/outfit_render.js.backup:129:    const imageIdsToDownload = [];
+./netlify/functions/processes/outfit_render.js.backup:141:        imageIdsToDownload.push(links[0].image_id);
+./netlify/functions/processes/outfit_render.js.backup:145:    if (!imageIdsToDownload.length) {
+./netlify/functions/processes/outfit_render.js.backup:151:    console.log(`[OutfitRender] Legacy mode: downloading ${imageIdsToDownload.length} images: ${imageIdsToDownload.join(', ')}`);
+./netlify/functions/processes/outfit_render.js.backup:153:      imageIdsToDownload.map(id => {
+./netlify/functions/processes/outfit_render.js.backup:167:    itemCount = imageIdsToDownload.length;
+./netlify/functions/processes/outfit_render.js.backup:265:    // Don't throw - continue with the render even if debug fails
+./netlify/functions/processes/outfit_render.js.backup:286:  // Optimize the generated image before upload
+./netlify/functions/processes/outfit_render.js.backup:294:  const { imageId, storageKey } = await uploadImageToStorage(
+./netlify/functions/processes/outfit_render.js.backup:303:  // Record the render and update the outfit cover image
+./netlify/functions/processes/outfit_render.js.backup:304:  await supabase.from("outfit_renders").insert({
+./netlify/functions/processes/outfit_render.js.backup:321:  console.log(`[OutfitRender] Outfit render complete`);
+./netlify/functions/processes/outfit_render.js.backup:324:    renders: [{ image_id: imageId, storage_key: storageKey }],
+./src/lib/images.ts:12:    .getPublicUrl(image.storage_key);
+./src/lib/ai-jobs/index.ts:5: * import { createAIJob, pollAIJob, triggerAutoTag } from '@/lib/ai-jobs';
+./src/lib/ai-jobs/index.ts:19:// Re-export from polling
+./src/lib/ai-jobs/index.ts:21:  pollAIJob,
+./src/lib/ai-jobs/index.ts:22:  pollAIJobFixedInterval,
+./src/lib/ai-jobs/index.ts:23:  pollAIJobWithFinalCheck,
+./src/lib/ai-jobs/index.ts:27:} from './polling';
+./src/lib/ai-jobs/index.ts:31:  triggerAIJobExecution,
+./src/lib/ai-jobs/index.ts:32:  createAndTriggerJob,
+./src/components/outfits/GenerationProgressModal.tsx:62:        : "Polishing the render and preparing your reveal.";
+./src/components/wardrobe/ImageCropper.tsx:43:  // Only render on web platform
+./src/components/wardrobe/ImageCropper.tsx:103:  // Don't render if no image URI
+./src/lib/ai-jobs/core.ts:15:    | 'outfit_render'
+./src/lib/ai-jobs/core.ts:165: * Get outfit render item limit based on model preference
+./app/outfits/[id]/view.tsx:39:    renderJobId: renderJobIdParam,
+./app/outfits/[id]/view.tsx:40:    renderTraceId: renderTraceIdParam,
+./app/outfits/[id]/view.tsx:46:    renderJobId?: string;
+./app/outfits/[id]/view.tsx:47:    renderTraceId?: string;
+./app/outfits/[id]/view.tsx:62:    renderTraceId,
+./app/outfits/[id]/view.tsx:68:    renderJobIdParam: renderJobIdParam as string | undefined,
+./app/outfits/[id]/view.tsx:69:    renderTraceIdParam: renderTraceIdParam as string | undefined,
+./app/outfits/[id]/view.tsx:171:          renderTraceId={renderTraceId ?? undefined}
+./src/lib/ai-jobs/types.ts:169: * Get active outfit_render job for an outfit
+./src/lib/ai-jobs/types.ts:175:  return getActiveJob(userId, 'outfit_render', (job) => {
+./src/lib/ai-jobs/types.ts:186: * Get recently completed outfit_render job for an outfit
+./src/lib/ai-jobs/types.ts:192:  return getRecentJob(userId, 'outfit_render', (job) => {
+./app/outfits/[id].tsx:96:        visible={actions.rendering}
+./app/outfits/[id].tsx:161:              loading={actions.rendering}
+./app/outfits/[id].tsx:162:              disabled={actions.rendering}
+./app/outfits/[id].tsx:163:              style={styles.renderButton}
+./app/outfits/[id].tsx:193:  renderButton: {
+./src/components/outfits/ItemPickerModal.tsx:37:        renderItem={({ item }) => {
+./app/social/explore.tsx:93:          renderItem={({ item }) => {
+./src/components/shared/images/ImagePlaceholder.tsx:3: * Reusable placeholder for images that haven't loaded or don't exist
+./src/lib/ai-jobs/polling.ts:15:export async function pollAIJob(
+./src/lib/ai-jobs/polling.ts:21:    debugIngest({ location: 'polling.ts:19', message: 'pollAIJob already polling', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:27:    debugIngest({ location: 'polling.ts:24', message: 'pollAIJob circuit breaker open', data: { jobId, failureCount }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:44:        debugIngest({ location: 'polling.ts:38', message: 'pollAIJob attempt', data: { jobId, attempt, maxAttempts, hasError: !!error, errorMessage: error?.message, hasData: !!data, status: data?.status }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:64:        debugIngest({ location: 'polling.ts:55', message: 'pollAIJob succeeded', data: { jobId, result: data.result }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:70:        debugIngest({ location: 'polling.ts:60', message: 'pollAIJob failed', data: { jobId, error: data.error }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:80:    debugIngest({ location: 'polling.ts:71', message: 'pollAIJob timeout', data: { jobId, maxAttempts }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:92:export async function pollAIJobFixedInterval(
+./src/lib/ai-jobs/polling.ts:126:export async function pollAIJobWithFinalCheck(
+./src/lib/ai-jobs/polling.ts:132:  const { data: completedJob, error: pollError } = await pollAIJob(
+./src/lib/ai-jobs/polling.ts:143:    console.log(`${logPrefix} polling timed out, doing final check...`);
+./src/lib/ai-jobs/polling.ts:159: * When initialIntervalMs <= 2000 uses fixed-interval polling for faster completion detection.
+./src/lib/ai-jobs/polling.ts:169:  debugIngest({ location: 'polling.ts:114', message: 'waitForAIJobCompletion entry', data: { jobId, maxAttempts, initialIntervalMs, logPrefix }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:176:    const { data: completedJob, error } = await pollAIJobFixedInterval(jobId, maxMs, intervalMs);
+./src/lib/ai-jobs/polling.ts:177:    debugIngest({ location: 'polling.ts:121', message: 'waitForAIJobCompletion poll result', data: { jobId, hasJob: !!completedJob, jobStatus: completedJob?.status, hasError: !!error, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:187:        console.log(`${logPrefix} polling timed out, doing final check...`);
+./src/lib/ai-jobs/polling.ts:203:    const { data: completedJob, error } = await pollAIJobWithFinalCheck(
+./src/lib/ai-jobs/polling.ts:210:    debugIngest({ location: 'polling.ts:121', message: 'waitForAIJobCompletion poll result', data: { jobId, hasJob: !!completedJob, jobStatus: completedJob?.status, hasError: !!error, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:220:        console.log(`${logPrefix} polling timed out, continuing to wait...`);
+./src/lib/ai-jobs/polling.ts:222:      debugIngest({ location: 'polling.ts:132', message: 'waitForAIJobCompletion timeout, continuing', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./src/lib/ai-jobs/polling.ts:229:    debugIngest({ location: 'polling.ts:139', message: 'waitForAIJobCompletion returning error', data: { jobId, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+./app/social/following-wardrobes.tsx:73:                    .getPublicUrl(firstImage.storage_key);
+./app/social/following-wardrobes.tsx:128:          renderItem={({ item }) => (
+./src/lib/user/profile.ts:119:        .getPublicUrl(storage_key);
+./src/components/outfits/OutfitViewContent.tsx:26:  /** When set, use this data URI for instant render (from job.result.base64_result); bypasses fetch from storage */
+./src/components/outfits/OutfitViewContent.tsx:45:  /** When set, timeline logs image load events and bounded retry on error (freshly generated). */
+./src/components/outfits/OutfitViewContent.tsx:46:  renderTraceId?: string;
+./src/components/outfits/OutfitViewContent.tsx:70:  renderTraceId,
+./src/components/outfits/OutfitViewContent.tsx:80:      .getPublicUrl(image.storage_key).data.publicUrl;
+./src/components/outfits/OutfitViewContent.tsx:86:  const timeline = renderTraceId ? continueTimeline(renderTraceId) : null;
+./src/components/outfits/OutfitViewContent.tsx:89:    timeline?.mark('image_load_start', { uri: coverImageUrl ? 'set' : 'null' });
+./src/components/outfits/OutfitViewContent.tsx:93:    timeline?.mark('image_load_end');
+./src/components/outfits/OutfitViewContent.tsx:98:    timeline?.mark('image_load_error', { uri: coverImageUrl ? 'set' : 'null', retryCount });
+./src/components/outfits/OutfitViewContent.tsx:99:    if (!renderTraceId || retryCount >= MAX_IMAGE_RETRIES) return;
+./src/components/outfits/OutfitViewContent.tsx:105:  }, [timeline, coverImageUrl, renderTraceId]);
+./src/components/wardrobe/ItemImageCarousel.tsx:41:      .getPublicUrl(imageData.storage_key);
+./supabase/migrations/0003_storage.sql:2:-- Creates the 'media' bucket and configures policies for image uploads
+./supabase/migrations/0002_rls.sql:10:alter table public.outfit_renders enable row level security;
+./src/lib/utils/image-helpers.ts:18:    .getPublicUrl(image.storage_key);
+./src/lib/utils/image-helpers.ts:27:  const { data } = supabase.storage.from(bucket).getPublicUrl(key);
+./src/lib/utils/image-helpers.ts:125:      .getPublicUrl(data.path);
+./src/lib/utils/image-helpers.ts:135: * Create image record in database after upload
+./src/lib/utils/image-helpers.ts:249: * Compresses images on web platform before upload
+./supabase/migrations/0037_add_outfit_mannequin_job.sql:12:    'outfit_render',
+./app/feedback/index.tsx:83:          renderItem={({ item }) => (
+./src/lib/utils/image-helpers.ts.backup:17:    .getPublicUrl(image.storage_key);
+./src/lib/utils/image-helpers.ts.backup:26:  const { data } = supabase.storage.from(bucket).getPublicUrl(key);
+./src/lib/utils/image-helpers.ts.backup:85:      fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-helpers.ts:82',message:'uploadImageToStorage starting conversion',data:{blobSize:file.size,blobType:file.type,isBlob:file instanceof Blob,hasUri:!!(file as any)._uri},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+./src/lib/utils/image-helpers.ts.backup:96:        fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-helpers.ts:94',message:'uploadImageToStorage blob fetch success',data:{byteLength:arrayBuffer.byteLength,blobSize:file.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+./src/lib/utils/image-helpers.ts.backup:103:        fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-helpers.ts:102',message:'uploadImageToStorage blob fetch failed',data:{error:e.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+./src/lib/utils/image-helpers.ts.backup:134:    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-helpers.ts:135',message:'uploadImageToStorage before supabase upload',data:{isUint8Array:uploadData instanceof Uint8Array,length:uploadData?.length,contentType:file.type || 'image/jpeg'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+./src/lib/utils/image-helpers.ts.backup:151:      .getPublicUrl(data.path);
+./src/lib/utils/image-helpers.ts.backup:160: * Create image record in database after upload
+./src/lib/wardrobe/items-mutations.ts:33:    const { data: imageIds, errors: uploadErrors } = await batchUploadImages(
+./src/lib/wardrobe/items-mutations.ts:40:      console.warn('Some images failed to upload:', uploadErrors);
+./supabase/migrations/0013_add_body_shot_generate.sql:14:    'outfit_render',
+./supabase/migrations/0005_add_ai_job_types.sql:14:    'outfit_render',
+./supabase/migrations/0034_allow_wardrobe_items_in_owned_outfits.sql:3:-- the AI job runner can access those items' images for rendering
+./supabase/migrations/0012_fix_outfit_items_rls.sql:1:-- Add RLS policies for outfit_items, outfit_renders, and lookbook_outfits
+./supabase/migrations/0012_fix_outfit_items_rls.sql:24:-- Outfit renders: owner can manage
+./supabase/migrations/0012_fix_outfit_items_rls.sql:25:create policy "outfit_renders_owner_all" on public.outfit_renders
+./supabase/migrations/0001_init.sql:173:create table if not exists public.outfit_renders (
+./supabase/migrations/0001_init.sql:329:    'profile_photo','product_shot','auto_tag','outfit_suggest','outfit_render','lookbook_generate','reference_match'
+./supabase/migrations/0001_init.sql:344:  ai_render_limit int not null default 0,
+./supabase/migrations/0001_init.sql:362:  renders_used int not null default 0,
+./app/(tabs)/wardrobe.tsx:20:import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits';
+./app/(tabs)/wardrobe.tsx:102:  const { generating, progress, generatedOutfitId, generateOutfit, reset: resetGeneration } = useOutfitGeneration({
+./src/hooks/useImageStacker.ts:3: * Custom React hook for stacking images and uploading to Supabase storage
+./src/hooks/useImageStacker.ts:24: * Custom hook for stacking images and uploading to Supabase storage
+./src/hooks/useImageStacker.ts:81:        throw new Error(`Failed to upload image: ${uploadError.message}`);
+./src/hooks/useImageStacker.ts:93:        .getPublicUrl(uploadDataResult.path);
+./src/hooks/useImageStacker.ts:101:      // We don't need to create an images record - the Netlify function can download
+./src/hooks/useImageStacker.ts:105:        imageId: uploadDataResult.path, // Use storage path as ID
+./app/listings/new.tsx:36:  const renderItem = ({ item }: { item: typeof items[0] }) => {
+./app/listings/new.tsx:51:  const renderImage = ({
+./app/listings/new.tsx:111:            renderItem={renderItem}
+./app/listings/new.tsx:142:                renderItem={renderImage}
+./app/(tabs)/outfits.tsx:47:  const { outfits, imageCache, loading, refreshing, refresh } = useOutfits({
+./app/(tabs)/outfits.tsx:124:        renderItem={({ item }) => (
+./app/(tabs)/social.tsx:103:  const renderFeedItem = ({ item }: { item: typeof feed[0] }) => {
+./app/(tabs)/social.tsx:143:        renderItem={renderFeedItem}
+./src/hooks/index.ts:18:export { useOutfitGeneration } from './outfits/useOutfitGeneration';
+./app/wardrobe/item/[id].tsx:40:  // Data loading with polling
+./app/listings/index.tsx:72:        .getPublicUrl(listing.images[0].image.storage_key);
+./app/listings/index.tsx:78:  const renderListing = ({ item }: { item: ListingWithImages }) => {
+./app/listings/index.tsx:150:          renderItem={renderListing}
+./index.html:277:                        <input type="file" id="wardrobe-upload" hidden multiple accept="image/*" onchange="handleWardrobeUpload(this)">
+./index.html:357:        if (!src || src === "") return alert("No image to download.");
+./index.html:557:        renderHeadshotGrid();
+./index.html:560:    function renderHeadshotGrid() {
+./index.html:569:                renderHeadshotGrid();
+./index.html:591:            renderWardrobeGrid();
+./index.html:595:    function renderWardrobeGrid() {
+./index.html:604:                renderWardrobeGrid();
+./src/components/UserWardrobeScreen.tsx:66:              .getPublicUrl(images[0].image.storage_key);
+./src/components/UserWardrobeScreen.tsx:127:  const renderItem = ({ item }: { item: WardrobeItem }) => {
+./src/components/UserWardrobeScreen.tsx:193:          renderItem={renderItem}
+./app/(tabs)/lookbooks.tsx:99:        renderItem={null}
+./app/(tabs)/lookbooks.tsx:109:                  renderItem={({ item }) => (
+./app/(tabs)/lookbooks.tsx:141:                  renderItem={({ item }) => (
+./app/headshot/[id].tsx:123:                const renderCompleteTime = performance.now();
+./app/headshot/[id].tsx:130:                  const totalUserWait = renderCompleteTime - startTime;
+./app/headshot/[id].tsx:132:                  const transferAndRender = renderCompleteTime - apiResponseTime;
+./app/headshot/[id].tsx:144:                  console.log('[PERF] Image loaded at:', renderCompleteTime);
+./app/search.tsx:91:          renderItem={({ item }) => (
+./src/hooks/ai/useAIJobPolling.ts:3: * Generic hook for polling AI job completion
+./src/hooks/ai/useAIJobPolling.ts:14:  maxAttempts?: number; // Maximum polling attempts
+./src/hooks/ai/useAIJobPolling.ts:15:  enabled?: boolean; // Whether to start polling
+./src/hooks/ai/useAIJobPolling.ts:31:  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+./src/hooks/ai/useAIJobPolling.ts:34:  // Stop polling
+./src/hooks/ai/useAIJobPolling.ts:36:    if (pollingIntervalRef.current) {
+./src/hooks/ai/useAIJobPolling.ts:37:      clearInterval(pollingIntervalRef.current);
+./src/hooks/ai/useAIJobPolling.ts:38:      pollingIntervalRef.current = null;
+./src/hooks/ai/useAIJobPolling.ts:43:  // Start polling
+./src/hooks/ai/useAIJobPolling.ts:54:        reason: !jobId ? 'no jobId' : !enabled ? 'not enabled' : 'already polling',
+./src/hooks/ai/useAIJobPolling.ts:59:    console.log('[useAIJobPolling] Starting polling for job:', jobId);
+./src/hooks/ai/useAIJobPolling.ts:134:    // Set up interval polling
+./src/hooks/ai/useAIJobPolling.ts:135:    pollingIntervalRef.current = setInterval(poll, interval);
+./src/hooks/ai/useAIJobPolling.ts:138:  // Auto-start polling when jobId changes
+./src/hooks/ai/useAIJobPolling.ts:151:      console.log('[useAIJobPolling] Not starting polling:', {
+./src/hooks/ai/useAIJobPolling.ts:152:        reason: !jobId ? 'no jobId' : !enabled ? 'not enabled' : 'already polling',
+./src/hooks/ai/useAIJobPolling.ts:160:      console.log('[useAIJobPolling] Cleanup: stopping polling for jobId:', jobId);
+./src/hooks/wardrobe/useWardrobeItems.ts:90:              .getPublicUrl(images[0].image.storage_key);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:3: * Manage wardrobe item editing with form state and AI polling
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:77:  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:88:    if (pollingIntervalRef.current) {
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:89:      clearInterval(pollingIntervalRef.current);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:92:    pollingIntervalRef.current = setInterval(async () => {
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:124:            if (pollingIntervalRef.current) {
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:125:              clearInterval(pollingIntervalRef.current);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:126:              pollingIntervalRef.current = null;
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:131:        console.error('Error polling for AI completion:', error);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:136:      if (pollingIntervalRef.current) {
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:137:        clearInterval(pollingIntervalRef.current);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:138:        pollingIntervalRef.current = null;
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:278:      if (pollingIntervalRef.current) {
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:279:        clearInterval(pollingIntervalRef.current);
+./src/hooks/wardrobe/useWardrobeItemEdit.ts:280:        pollingIntervalRef.current = null;
+./src/hooks/calendar/useCalendarEntries.ts:95:          .getPublicUrl((coverImage as any).storage_key);
+./src/hooks/calendar/useUserOutfits.ts:53:                .getPublicUrl(coverImage.storage_key);
+./src/hooks/ai/useProductShot.ts:3: * Manages product shot generation and polling
+./src/hooks/ai/useProductShot.ts:9:  triggerAIJobExecution,
+./src/hooks/ai/useProductShot.ts:36:  // Use AI job polling hook
+./src/hooks/ai/useProductShot.ts:109:      const { error: execError } = await triggerAIJobExecution(productShotJob.id);
+./src/hooks/ai/useProductShot.ts:116:      // Start polling
+./src/hooks/wardrobe/useWardrobeItemDetail.ts:3: * Load and manage wardrobe item detail data with polling
+./src/hooks/wardrobe/useWardrobeItemDetail.ts:122:  // Product shot polling
+./src/hooks/wardrobe/useWardrobeItemDetail.ts:140:  // Auto-tag polling
+./src/hooks/wardrobe/useWardrobeItemDetail.ts:157:  // Batch job polling (handles both product_shot and auto_tag)
+./src/hooks/wardrobe/useWardrobeItemDetail.ts:180:  // Start polling when job IDs are set
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:3: * Generic polling for AI jobs (product shot, auto-tag, etc.)
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:29:  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:35:    console.log(`${logPrefix} Starting polling for job ${jobId}`);
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:38:    // Set timeout to stop polling
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:47:    // Start polling
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:48:    pollingIntervalRef.current = setInterval(async () => {
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:73:    if (pollingIntervalRef.current) {
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:74:      clearInterval(pollingIntervalRef.current);
+./src/hooks/wardrobe/useWardrobeItemPolling.ts:75:      pollingIntervalRef.current = null;
+./src/hooks/listings/useNewListing.ts:148:      .getPublicUrl(imageData.storage_key);
+./src/hooks/useFindSimilar.ts:124:        .getPublicUrl(key);
+./src/hooks/wardrobe/useWardrobeItemNavigation.ts:102:              .getPublicUrl(images[0].image.storage_key);
+./src/hooks/outfits/index.ts:9:export { useOutfitGeneration } from './useOutfitGeneration';
+./src/hooks/outfits/index.ts:17:export type { BackgroundGridApi } from './useOutfitGeneration';
+./src/hooks/profile/useNewBodyshot.ts:81:              .getPublicUrl(img.storage_key);
+./src/hooks/profile/useNewBodyshot.ts:122:    loadingMessage: imageGeneration.loadingMessage,
+./src/hooks/profile/useNewBodyshot.ts:123:    uploadedUri: imageGeneration.uploadedUri,
+./src/hooks/wardrobe/useAddWardrobeItem.ts:14:import { triggerBatchJob, triggerAIJobExecution } from '@/lib/ai-jobs';
+./src/hooks/wardrobe/useAddWardrobeItem.ts:66:  console.log('[useAddWardrobeItem] useAIJobPolling hook render:', {
+./src/hooks/wardrobe/useAddWardrobeItem.ts:324:        // Trigger batch job (product_shot + auto_tag) - single request, shared image download
+./src/hooks/wardrobe/useAddWardrobeItem.ts:351:        // Set the job ID for polling
+./src/hooks/wardrobe/useAddWardrobeItem.ts:364:        const { error: execError } = await triggerAIJobExecution(batchJob.id);
+./src/hooks/social/useUserProfile.ts:59:          .getPublicUrl(img.storage_key);
+./src/hooks/social/useTryOnOutfit.ts:10:import { createAIJob, triggerAIJobExecution, waitForAIJobCompletion, getOutfitRenderItemLimit } from '@/lib/ai-jobs';
+./src/hooks/social/useTryOnOutfit.ts:117:      const renderLimit = getOutfitRenderItemLimit(modelPreference);
+./src/hooks/social/useTryOnOutfit.ts:120:      if (selected.length > renderLimit) {
+./src/hooks/social/useTryOnOutfit.ts:131:        await triggerAIJobExecution(mannequinJob.id);
+./src/hooks/social/useTryOnOutfit.ts:146:      const { data: renderJob, error: jobError } = await createAIJob(userId, 'outfit_render', {
+./src/hooks/social/useTryOnOutfit.ts:153:      if (jobError || !renderJob) {
+./src/hooks/social/useTryOnOutfit.ts:154:        throw new Error('Failed to start render job');
+./src/hooks/social/useTryOnOutfit.ts:157:      const triggerResult = await triggerAIJobExecution(renderJob.id);
+./src/hooks/social/useTryOnOutfit.ts:174:          renderJob.id,
+./src/hooks/social/useTryOnOutfit.ts:192:        console.info('[Social] Try-on poll succeeded', { jobId: renderJob.id, outfitId: newOutfitId, elapsedMs: pollElapsedMs });
+./src/hooks/social/useTryOnOutfit.ts:206:        console.error('[Social] Error polling outfit render:', error);
+./src/hooks/social/useFeed.ts:71:          .getPublicUrl(img.storage_key);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:2: * useOutfitGeneration Hook
+./src/hooks/outfits/useOutfitGeneration.ts.backup:8:import { createAndTriggerJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
+./src/hooks/outfits/useOutfitGeneration.ts.backup:20:interface UseOutfitGenerationOptions {
+./src/hooks/outfits/useOutfitGeneration.ts.backup:25:export function useOutfitGeneration({ userId, categories }: UseOutfitGenerationOptions) {
+./src/hooks/outfits/useOutfitGeneration.ts.backup:93:        console.log(`[OutfitGeneration] Fetching images for ${selectedItems.length} items`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:155:        console.log(`[OutfitGeneration] Getting image URLs for ${topImages.length} images`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:161:            .getPublicUrl(link.storage_key);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:170:        console.log(`[OutfitGeneration] Got ${imageUrls.length} image URLs`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:179:        console.log(`[OutfitGeneration] Starting grid generation...`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:182:        console.log(`[OutfitGeneration] Grid generated successfully, base64 length: ${gridBase64.length}`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:223:          throw new Error(`Failed to upload grid image: ${uploadError?.message || 'Unknown error'}`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:226:        console.log(`[OutfitGeneration] Grid uploaded successfully. Storage path: ${uploadDataResult.path}`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:229:          imageId: uploadDataResult.path, // Use storage path as ID
+./src/hooks/outfits/useOutfitGeneration.ts.backup:230:          publicUrl: supabase.storage.from('media').getPublicUrl(uploadDataResult.path).data.publicUrl,
+./src/hooks/outfits/useOutfitGeneration.ts.backup:272:        console.log(`[OutfitGeneration] Creating AI job with stacked image ID: ${stackedResult.imageId}`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:274:        const { data: jobData, error: jobError } = await createAndTriggerJob(
+./src/hooks/outfits/useOutfitGeneration.ts.backup:276:          'outfit_render',
+./src/hooks/outfits/useOutfitGeneration.ts.backup:295:        console.log(`[OutfitGeneration] AI job created: ${jobData.jobId}`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:304:        const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
+./src/hooks/outfits/useOutfitGeneration.ts.backup:308:          '[OutfitGeneration]'
+./src/hooks/outfits/useOutfitGeneration.ts.backup:313:          console.warn('[OutfitGeneration] AI generation polling timed out, but outfit was saved');
+./src/hooks/outfits/useOutfitGeneration.ts.backup:327:        console.log(`[OutfitGeneration] Generation completed successfully!`);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:336:        console.error('[OutfitGeneration] Error:', error);
+./src/hooks/outfits/useOutfitGeneration.ts.backup:369:export default useOutfitGeneration;
+./src/hooks/profile/useProfileImages.ts:111:            console.warn('Active image load timeout');
+./src/hooks/profile/useProfileImages.ts:153:      const imageUrls = await loadImageUrls([imageId]);
+./src/hooks/profile/useProfileImages.ts:170:      const imageUrls = await loadImageUrls([imageId]);
+./src/hooks/outfits/useOutfitEditor.ts:67:          .getPublicUrl(imageData.storage_key);
+./src/hooks/outfits/useOutfitView.ts:3: * Load and manage outfit view data with polling
+./src/hooks/outfits/useOutfitView.ts:13:  pollAIJobWithFinalCheck,
+./src/hooks/outfits/useOutfitView.ts:20:  renderJobIdParam?: string;
+./src/hooks/outfits/useOutfitView.ts:22:  renderTraceId?: string;
+./src/hooks/outfits/useOutfitView.ts:28:  /** When set, use this data URI for instant render instead of fetching from storage (from job.result.base64_result) */
+./src/hooks/outfits/useOutfitView.ts:35:  renderJobId: string | null;
+./src/hooks/outfits/useOutfitView.ts:36:  /** Trace ID for this render (for image load timeline + bounded retry). */
+./src/hooks/outfits/useOutfitView.ts:37:  renderTraceId: string | null;
+./src/hooks/outfits/useOutfitView.ts:45:  renderJobIdParam,
+./src/hooks/outfits/useOutfitView.ts:46:  renderTraceId: renderTraceIdParam,
+./src/hooks/outfits/useOutfitView.ts:60:  const [renderJobId, setRenderJobId] = useState<string | null>(null);
+./src/hooks/outfits/useOutfitView.ts:61:  const renderTraceIdRef = useRef<string | null>(renderTraceIdParam ?? null);
+./src/hooks/outfits/useOutfitView.ts:81:      const { data: finalJob } = await pollAIJobWithFinalCheck(
+./src/hooks/outfits/useOutfitView.ts:104:            result.storage_key ?? result.renders?.[0]?.storage_key;
+./src/hooks/outfits/useOutfitView.ts:108:              .getPublicUrl(storageKey);
+./src/hooks/outfits/useOutfitView.ts:123:      console.error('Error polling:', error);
+./src/hooks/outfits/useOutfitView.ts:158:        // Check for active render jobs
+./src/hooks/outfits/useOutfitView.ts:176:            renderTraceIdRef.current = timeline.traceId;
+./src/hooks/outfits/useOutfitView.ts:179:        } else if (renderJobIdParam) {
+./src/hooks/outfits/useOutfitView.ts:181:          setRenderJobId(renderJobIdParam);
+./src/hooks/outfits/useOutfitView.ts:182:          const timeline = renderTraceIdParam
+./src/hooks/outfits/useOutfitView.ts:183:            ? continueTimeline(renderTraceIdParam)
+./src/hooks/outfits/useOutfitView.ts:185:          renderTraceIdRef.current = timeline.traceId;
+./src/hooks/outfits/useOutfitView.ts:186:          startPollingForOutfitRender(renderJobIdParam, timeline);
+./src/hooks/outfits/useOutfitView.ts:218:                      .getPublicUrl(imageRecord.storage_key);
+./src/hooks/outfits/useOutfitView.ts:247:  }, [outfitId, userId, renderJobIdParam, renderTraceIdParam]);
+./src/hooks/outfits/useOutfitView.ts:258:    renderJobId,
+./src/hooks/outfits/useOutfitView.ts:259:    renderTraceId: renderTraceIdParam ?? renderTraceIdRef.current,
+./src/hooks/outfits/useOutfitEditorActions.ts:17:  triggerAIJobExecution,
+./src/hooks/outfits/useOutfitEditorActions.ts:49:  rendering: boolean;
+./src/hooks/outfits/useOutfitEditorActions.ts:81:  const [rendering, setRendering] = useState(false);
+./src/hooks/outfits/useOutfitEditorActions.ts:183:      Alert.alert('Error', 'Please add items to the outfit before rendering');
+./src/hooks/outfits/useOutfitEditorActions.ts:196:        Alert.alert('Error', 'Failed to save outfit before rendering');
+./src/hooks/outfits/useOutfitEditorActions.ts:241:          throw new Error(`Failed to upload grid image: ${uploadError?.message || 'Unknown error'}`);
+./src/hooks/outfits/useOutfitEditorActions.ts:250:      // Prepare items for render job
+./src/hooks/outfits/useOutfitEditorActions.ts:287:      const timeline = startTimeline('outfit_render_editor');
+./src/hooks/outfits/useOutfitEditorActions.ts:290:      // Create render job
+./src/hooks/outfits/useOutfitEditorActions.ts:291:      const { data: renderJob, error } = await createAIJob(
+./src/hooks/outfits/useOutfitEditorActions.ts:293:        'outfit_render',
+./src/hooks/outfits/useOutfitEditorActions.ts:305:      if (error || !renderJob) {
+./src/hooks/outfits/useOutfitEditorActions.ts:306:        Alert.alert('Error', 'Failed to start render job');
+./src/hooks/outfits/useOutfitEditorActions.ts:311:      timeline.mark('job_created', { job_id: renderJob.id });
+./src/hooks/outfits/useOutfitEditorActions.ts:313:      await triggerAIJobExecution(renderJob.id);
+./src/hooks/outfits/useOutfitEditorActions.ts:318:        renderJobId: renderJob.id,
+./src/hooks/outfits/useOutfitEditorActions.ts:319:        renderTraceId: timeline.traceId,
+./src/hooks/outfits/useOutfitEditorActions.ts:381:    rendering,
+./src/hooks/profile/useProfileData.ts:36:        .getPublicUrl(img.storage_key!);
+./src/hooks/profile/useProfileData.ts:79:          .getPublicUrl(img.storage_key);
+./src/hooks/profile/useImageGeneration.ts:14:  triggerAIJobExecution,
+./src/hooks/profile/useImageGeneration.ts:173:      await triggerAIJobExecution(job.id);
+./src/hooks/profile/useImageGeneration.ts:278:      await triggerAIJobExecution(job.id);
+./src/hooks/profile/useHeadshotDetailActions.ts:15:  triggerAIJobExecution,
+./src/hooks/profile/useHeadshotDetailActions.ts:135:      await triggerAIJobExecution(job.id);
+./src/hooks/outfits/useBackgroundGridGenerator.ts:102:          const { data: urlData } = supabase.storage.from('media').getPublicUrl(link.storage_key);
+./src/hooks/profile/useImageEdit.ts:69:        .getPublicUrl(imageRecord.storage_key);
+./src/hooks/outfits/useOutfitGeneration.ts:2: * useOutfitGeneration Hook
+./src/hooks/outfits/useOutfitGeneration.ts:9:import { createAndTriggerJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
+./src/hooks/outfits/useOutfitGeneration.ts:46:interface UseOutfitGenerationOptions {
+./src/hooks/outfits/useOutfitGeneration.ts:52:export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseOutfitGenerationOptions) {
+./src/hooks/outfits/useOutfitGeneration.ts:125:    console.log('[OutfitGeneration] Starting description polling...');
+./src/hooks/outfits/useOutfitGeneration.ts:136:          console.log('[OutfitGeneration] Description received!');
+./src/hooks/outfits/useOutfitGeneration.ts:150:          // Stop polling
+./src/hooks/outfits/useOutfitGeneration.ts:157:        console.error('[OutfitGeneration] Description polling error:', error);
+./src/hooks/outfits/useOutfitGeneration.ts:298:        // Phase 3: Grid image — use pre-uploaded key if available (0s), else generate + upload
+./src/hooks/outfits/useOutfitGeneration.ts:313:              publicUrl: supabase.storage.from('media').getPublicUrl(storedKey).data.publicUrl,
+./src/hooks/outfits/useOutfitGeneration.ts:316:            console.log(`[OutfitGeneration] Using pre-uploaded grid (0s latency): ${storedKey}`);
+./src/hooks/outfits/useOutfitGeneration.ts:321:          console.log(`[OutfitGeneration] Fetching images for ${selectedItems.length} items`);
+./src/hooks/outfits/useOutfitGeneration.ts:383:          console.log(`[OutfitGeneration] Getting image URLs for ${topImages.length} images`);
+./src/hooks/outfits/useOutfitGeneration.ts:389:              .getPublicUrl(link.storage_key);
+./src/hooks/outfits/useOutfitGeneration.ts:398:          console.log(`[OutfitGeneration] Got ${imageUrls.length} image URLs`);
+./src/hooks/outfits/useOutfitGeneration.ts:407:          console.log(`[OutfitGeneration] Starting grid generation...`);
+./src/hooks/outfits/useOutfitGeneration.ts:412:          console.log(`[OutfitGeneration] Grid generated successfully, base64 length: ${gridBase64.length}`);
+./src/hooks/outfits/useOutfitGeneration.ts:454:            throw new Error(`Failed to upload grid image: ${uploadError?.message || 'Unknown error'}`);
+./src/hooks/outfits/useOutfitGeneration.ts:458:          console.log(`[OutfitGeneration] Grid uploaded successfully. Storage path: ${uploadDataResult.path}`);
+./src/hooks/outfits/useOutfitGeneration.ts:461:            imageId: uploadDataResult.path,
+./src/hooks/outfits/useOutfitGeneration.ts:462:            publicUrl: supabase.storage.from('media').getPublicUrl(uploadDataResult.path).data.publicUrl,
+./src/hooks/outfits/useOutfitGeneration.ts:509:        console.log(`[OutfitGeneration] Creating AI job with stacked image ID: ${stackedResult.imageId}`);
+./src/hooks/outfits/useOutfitGeneration.ts:511:        const { data: jobData, error: jobError } = await createAndTriggerJob(
+./src/hooks/outfits/useOutfitGeneration.ts:513:          'outfit_render',
+./src/hooks/outfits/useOutfitGeneration.ts:535:        console.log(`[OutfitGeneration] AI job created: ${jobData.jobId}`);
+./src/hooks/outfits/useOutfitGeneration.ts:537:        // NEW: Start polling for description (runs in parallel with image generation)
+./src/hooks/outfits/useOutfitGeneration.ts:548:        const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
+./src/hooks/outfits/useOutfitGeneration.ts:552:          '[OutfitGeneration]'
+./src/hooks/outfits/useOutfitGeneration.ts:560:          console.warn('[OutfitGeneration] AI generation polling timed out, but outfit was saved');
+./src/hooks/outfits/useOutfitGeneration.ts:579:        console.log(`[OutfitGeneration] Generation completed successfully!`);
+./src/hooks/outfits/useOutfitGeneration.ts:593:        console.error('[OutfitGeneration] Error:', error);
+./src/hooks/outfits/useOutfitGeneration.ts:644:export default useOutfitGeneration;

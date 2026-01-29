@@ -3,7 +3,7 @@
  * View outfit details with social engagement
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import {
   LoadingOverlay,
 } from '@/components/shared';
 import { theme, commonStyles } from '@/styles';
+import { PERF_MODE } from '@/lib/perf/perfMode';
 
 const { colors } = theme;
 
@@ -60,6 +61,7 @@ export default function OutfitViewScreen() {
     loading,
     isGenerating,
     renderTraceId,
+    jobSucceededAt,
     refreshOutfit,
     deleteOutfit: deleteOutfitAction,
   } = useOutfitView({
@@ -69,7 +71,7 @@ export default function OutfitViewScreen() {
     renderTraceIdParam: renderTraceIdParam as string | undefined,
   });
 
-  // Social engagement
+  // Social engagement (defer fetch until after cover load in PERF_MODE)
   const {
     liked,
     likeCount,
@@ -82,7 +84,18 @@ export default function OutfitViewScreen() {
     toggleSave,
     loadComments,
     submitComment,
-  } = useSocialEngagement('outfit', id, user?.id);
+    triggerLoadEngagement,
+  } = useSocialEngagement('outfit', id, user?.id, PERF_MODE ? { deferInitialFetch: true } : undefined);
+
+  // PERF_MODE: fallback trigger engagement after delay if image never loads (triggerLoadEngagement is single-fire inside hook)
+  const DEFERRED_ENGAGEMENT_FALLBACK_MS = 4000;
+  useEffect(() => {
+    if (!PERF_MODE || !triggerLoadEngagement) return;
+    const t = setTimeout(() => {
+      triggerLoadEngagement();
+    }, DEFERRED_ENGAGEMENT_FALLBACK_MS);
+    return () => clearTimeout(t);
+  }, [PERF_MODE, triggerLoadEngagement]);
 
   // Actions
   const actions = useOutfitViewActions({
@@ -169,6 +182,9 @@ export default function OutfitViewScreen() {
           onImageModalClose={() => actions.setShowImageModal(false)}
           onImagePress={() => actions.setShowImageModal(true)}
           renderTraceId={renderTraceId ?? undefined}
+          jobSucceededAt={jobSucceededAt ?? undefined}
+          onCoverImageLoad={PERF_MODE && triggerLoadEngagement ? triggerLoadEngagement : undefined}
+          onCoverImageErrorAfterRetries={PERF_MODE && triggerLoadEngagement ? triggerLoadEngagement : undefined}
         />
       </ScrollView>
 

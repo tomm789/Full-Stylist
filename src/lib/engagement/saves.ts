@@ -20,14 +20,14 @@ export async function saveEntity(
   error: any;
 }> {
   try {
-    // Check if already saved
+    // Check if already saved (.maybeSingle() avoids 406 when no row exists)
     const { data: existing } = await supabase
       .from('saves')
       .select('id')
       .eq('user_id', userId)
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       // Already saved, return existing
@@ -102,7 +102,7 @@ export async function hasSaved(
     .eq('user_id', userId)
     .eq('entity_type', entityType)
     .eq('entity_id', entityId)
-    .single();
+    .maybeSingle();
 
   return !!data;
 }
