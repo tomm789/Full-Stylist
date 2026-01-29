@@ -1,8 +1,5 @@
 import { supabase } from '../supabase';
-
-// Check if running in React Native
-const __DEV__ =
-  typeof process !== 'undefined' && process.env?.NODE_ENV === 'development';
+import { debugIngest } from './debug-ingest';
 
 /**
  * Trigger AI job execution by calling Netlify function
@@ -10,19 +7,17 @@ const __DEV__ =
 export async function triggerAIJobExecution(
   jobId: string
 ): Promise<{ error: any }> {
-  // #region agent log
-  fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'execution.ts:10',message:'triggerAIJobExecution entry',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-  // #endregion
+  const triggerStartMs = Date.now();
+  console.info('[AIJobs] triggerAIJobExecution start', { jobId });
+  debugIngest({ location: 'execution.ts:10', message: 'triggerAIJobExecution entry', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
   try {
     // Get current session for auth token
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'execution.ts:18',message:'triggerAIJobExecution session check',data:{jobId,hasSession:!!session},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
+
+    debugIngest({ location: 'execution.ts:18', message: 'triggerAIJobExecution session check', data: { jobId, hasSession: !!session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
     if (!session) {
       return { error: new Error('No active session') };
@@ -31,7 +26,7 @@ export async function triggerAIJobExecution(
     const isDev =
       (typeof process !== 'undefined' &&
         process.env.NODE_ENV === 'development') ||
-      __DEV__;
+      (typeof __DEV__ !== 'undefined' && (__DEV__ as boolean) === true);
     
     // Prefer the explicitly configured Netlify URL in all environments
     let baseUrl = process.env.EXPO_PUBLIC_NETLIFY_URL || '';
@@ -62,9 +57,7 @@ export async function triggerAIJobExecution(
 
     const functionUrl = `${baseUrl}/.netlify/functions/ai-job-runner`;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'execution.ts:55',message:'triggerAIJobExecution before fetch',data:{jobId,functionUrl,baseUrl,hasExpoPublicNetlifyUrl:!!process.env.EXPO_PUBLIC_NETLIFY_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
+    debugIngest({ location: 'execution.ts:55', message: 'triggerAIJobExecution before fetch', data: { jobId, functionUrl, baseUrl, hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
     // Validate URL format
     if (
@@ -88,9 +81,7 @@ export async function triggerAIJobExecution(
       signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined,
     })
       .then(async (response) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'execution.ts:78',message:'triggerAIJobExecution fetch response',data:{jobId,status:response.status,statusText:response.statusText,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
+        debugIngest({ location: 'execution.ts:78', message: 'triggerAIJobExecution fetch response', data: { jobId, status: response.status, statusText: response.statusText, ok: response.ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
         if (!response.ok) {
           const responseText = await response
@@ -101,14 +92,11 @@ export async function triggerAIJobExecution(
             statusText: response.statusText,
             responseText: responseText.substring(0, 200),
           });
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'execution.ts:84',message:'triggerAIJobExecution non-OK response',data:{jobId,status:response.status,responseText:responseText.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
+          debugIngest({ location: 'execution.ts:84', message: 'triggerAIJobExecution non-OK response', data: { jobId, status: response.status, responseText: responseText.substring(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
         }
         return response;
       })
       .catch((error) => {
-        // Log error details for debugging
         const errorDetails = {
           message: error?.message,
           name: error?.name,
@@ -120,10 +108,7 @@ export async function triggerAIJobExecution(
           '[AIJobs] Failed to trigger job execution:',
           errorDetails
         );
-
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'execution.ts:91',message:'triggerAIJobExecution fetch error',data:{jobId,...errorDetails},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
+        debugIngest({ location: 'execution.ts:91', message: 'triggerAIJobExecution fetch error', data: { jobId, ...errorDetails }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
         // For network errors (not timeouts), this might be a configuration issue
         if (error?.name === 'TypeError' && error?.message?.includes('fetch')) {
@@ -143,12 +128,13 @@ export async function triggerAIJobExecution(
         }
       });
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'execution.ts:123',message:'triggerAIJobExecution returning success',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-
+    debugIngest({ location: 'execution.ts:123', message: 'triggerAIJobExecution returning success', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+    const elapsedMs = Date.now() - triggerStartMs;
+    console.info('[AIJobs] triggerAIJobExecution end', { jobId, elapsedMs });
     return { error: null };
   } catch (error: any) {
+    const elapsedMs = Date.now() - triggerStartMs;
+    console.info('[AIJobs] triggerAIJobExecution end (error)', { jobId, elapsedMs });
     return { error };
   }
 }

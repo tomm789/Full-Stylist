@@ -19,6 +19,7 @@ export {
 // Re-export from polling
 export {
   pollAIJob,
+  pollAIJobFixedInterval,
   pollAIJobWithFinalCheck,
   waitForAIJobCompletion,
   resetCircuitBreaker,

@@ -2,6 +2,7 @@ import { SUPABASE_CONFIG } from '../supabase';
 import { getAIJob } from './core';
 import type { AIJob } from './core';
 import type { QueryResult } from '../utils/supabase-helpers';
+import { debugIngest } from './debug-ingest';
 
 // Circuit breaker state
 const activePollingJobs = new Set<string>();
@@ -17,17 +18,13 @@ export async function pollAIJob(
   initialIntervalMs: number = 2000
 ): Promise<QueryResult<AIJob>> {
   if (activePollingJobs.has(jobId)) {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'polling.ts:19',message:'pollAIJob already polling',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
+    debugIngest({ location: 'polling.ts:19', message: 'pollAIJob already polling', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
     return { data: null, error: new Error('Job already being polled') };
   }
 
   const failureCount = failureCountByJob.get(jobId) || 0;
   if (failureCount >= CIRCUIT_BREAKER_THRESHOLD) {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'polling.ts:24',message:'pollAIJob circuit breaker open',data:{jobId,failureCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
+    debugIngest({ location: 'polling.ts:24', message: 'pollAIJob circuit breaker open', data: { jobId, failureCount }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
     return {
       data: null,
       error: new Error('Circuit breaker open: too many failures'),
@@ -43,11 +40,9 @@ export async function pollAIJob(
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const { data, error } = await getAIJob(jobId);
 
-      // #region agent log
       if (attempt % 5 === 0 || data?.status === 'succeeded' || data?.status === 'failed') {
-        fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'polling.ts:38',message:'pollAIJob attempt',data:{jobId,attempt,maxAttempts,hasError:!!error,errorMessage:error?.message,hasData:!!data,status:data?.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        debugIngest({ location: 'polling.ts:38', message: 'pollAIJob attempt', data: { jobId, attempt, maxAttempts, hasError: !!error, errorMessage: error?.message, hasData: !!data, status: data?.status }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
       }
-      // #endregion
 
       if (error) {
         failureCountByJob.set(jobId, failureCount + 1);
@@ -66,17 +61,13 @@ export async function pollAIJob(
 
       if (data.status === 'succeeded') {
         failureCountByJob.delete(jobId);
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'polling.ts:55',message:'pollAIJob succeeded',data:{jobId,result:data.result},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
+        debugIngest({ location: 'polling.ts:55', message: 'pollAIJob succeeded', data: { jobId, result: data.result }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
         return { data, error: null };
       }
 
       if (data.status === 'failed') {
         failureCountByJob.set(jobId, failureCount + 1);
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'polling.ts:60',message:'pollAIJob failed',data:{jobId,error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
+        debugIngest({ location: 'polling.ts:60', message: 'pollAIJob failed', data: { jobId, error: data.error }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
         return { data, error: null };
       }
 
@@ -86,10 +77,43 @@ export async function pollAIJob(
       }
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'polling.ts:71',message:'pollAIJob timeout',data:{jobId,maxAttempts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
+    debugIngest({ location: 'polling.ts:71', message: 'pollAIJob timeout', data: { jobId, maxAttempts }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+    return { data: null, error: new Error('Polling timeout') };
+  } finally {
+    activePollingJobs.delete(jobId);
+  }
+}
 
+/**
+ * Poll AI job on a fixed interval (no exponential backoff).
+ * Stops when status is succeeded/failed or when elapsed > maxMs.
+ * Respects activePollingJobs so only one poller runs per job.
+ */
+export async function pollAIJobFixedInterval(
+  jobId: string,
+  maxMs: number = 90000,
+  intervalMs: number = 1500
+): Promise<QueryResult<AIJob>> {
+  if (activePollingJobs.has(jobId)) {
+    return { data: null, error: new Error('Job already being polled') };
+  }
+  activePollingJobs.add(jobId);
+  const startMs = Date.now();
+  try {
+    while (Date.now() - startMs < maxMs) {
+      const { data, error } = await getAIJob(jobId);
+      if (error) {
+        return { data: null, error };
+      }
+      if (!data) {
+        await new Promise((r) => setTimeout(r, intervalMs));
+        continue;
+      }
+      if (data.status === 'succeeded' || data.status === 'failed') {
+        return { data, error: null };
+      }
+      await new Promise((r) => setTimeout(r, intervalMs));
+    }
     return { data: null, error: new Error('Polling timeout') };
   } finally {
     activePollingJobs.delete(jobId);
@@ -131,7 +155,8 @@ export async function pollAIJobWithFinalCheck(
 }
 
 /**
- * Wait for AI job completion with automatic retry on timeout
+ * Wait for AI job completion with automatic retry on timeout.
+ * When initialIntervalMs <= 2000 uses fixed-interval polling for faster completion detection.
  */
 export async function waitForAIJobCompletion(
   jobId: string,
@@ -139,9 +164,40 @@ export async function waitForAIJobCompletion(
   initialIntervalMs: number = 2000,
   logPrefix?: string
 ): Promise<QueryResult<AIJob>> {
-  // #region agent log
-  fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'polling.ts:114',message:'waitForAIJobCompletion entry',data:{jobId,maxAttempts,initialIntervalMs,logPrefix},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-  // #endregion
+  const waitStartMs = Date.now();
+  console.info('[AIJobs] waitForAIJobCompletion start', { jobId, maxAttempts, initialIntervalMs });
+  debugIngest({ location: 'polling.ts:114', message: 'waitForAIJobCompletion entry', data: { jobId, maxAttempts, initialIntervalMs, logPrefix }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+
+  const useFixedInterval = initialIntervalMs <= 2000;
+  const intervalMs = useFixedInterval ? 1500 : initialIntervalMs;
+  const maxMs = Math.min(maxAttempts * initialIntervalMs, 120000);
+
+  if (useFixedInterval) {
+    const { data: completedJob, error } = await pollAIJobFixedInterval(jobId, maxMs, intervalMs);
+    debugIngest({ location: 'polling.ts:121', message: 'waitForAIJobCompletion poll result', data: { jobId, hasJob: !!completedJob, jobStatus: completedJob?.status, hasError: !!error, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+
+    if (completedJob) {
+      const elapsedMs = Date.now() - waitStartMs;
+      console.info('[AIJobs] waitForAIJobCompletion end', { jobId, status: completedJob.status, elapsedMs });
+      return { data: completedJob, error: null };
+    }
+
+    if (error?.message?.toLowerCase().includes('timeout')) {
+      if (logPrefix) {
+        console.log(`${logPrefix} polling timed out, doing final check...`);
+      }
+      const { data: finalCheck } = await getAIJob(jobId);
+      if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
+        const elapsedMs = Date.now() - waitStartMs;
+        console.info('[AIJobs] waitForAIJobCompletion end (final check)', { jobId, status: finalCheck.status, elapsedMs });
+        return { data: finalCheck, error: null };
+      }
+    }
+
+    const elapsedMs = Date.now() - waitStartMs;
+    console.info('[AIJobs] waitForAIJobCompletion end (error)', { jobId, errorMessage: error?.message, elapsedMs });
+    return { data: null, error: error || new Error('Polling timeout') };
+  }
 
   while (true) {
     const { data: completedJob, error } = await pollAIJobWithFinalCheck(
@@ -151,11 +207,11 @@ export async function waitForAIJobCompletion(
       logPrefix
     );
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'polling.ts:121',message:'waitForAIJobCompletion poll result',data:{jobId,hasJob:!!completedJob,jobStatus:completedJob?.status,hasError:!!error,errorMessage:error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
+    debugIngest({ location: 'polling.ts:121', message: 'waitForAIJobCompletion poll result', data: { jobId, hasJob: !!completedJob, jobStatus: completedJob?.status, hasError: !!error, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
 
     if (completedJob) {
+      const elapsedMs = Date.now() - waitStartMs;
+      console.info('[AIJobs] waitForAIJobCompletion end', { jobId, status: completedJob.status, elapsedMs });
       return { data: completedJob, error: null };
     }
 
@@ -163,16 +219,14 @@ export async function waitForAIJobCompletion(
       if (logPrefix) {
         console.log(`${logPrefix} polling timed out, continuing to wait...`);
       }
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'polling.ts:132',message:'waitForAIJobCompletion timeout, continuing',data:{jobId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
+      debugIngest({ location: 'polling.ts:132', message: 'waitForAIJobCompletion timeout, continuing', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+      await new Promise((r) => setTimeout(r, 500));
       continue;
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'polling.ts:139',message:'waitForAIJobCompletion returning error',data:{jobId,errorMessage:error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
-
+    const elapsedMs = Date.now() - waitStartMs;
+    console.info('[AIJobs] waitForAIJobCompletion end (error)', { jobId, errorMessage: error?.message, elapsedMs });
+    debugIngest({ location: 'polling.ts:139', message: 'waitForAIJobCompletion returning error', data: { jobId, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
     return { data: null, error };
   }
 }

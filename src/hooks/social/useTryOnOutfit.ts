@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getOutfit, saveOutfit } from '@/lib/outfits';
-import { createAIJob, triggerAIJobExecution, pollAIJobWithFinalCheck, getOutfitRenderItemLimit } from '@/lib/ai-jobs';
+import { createAIJob, triggerAIJobExecution, waitForAIJobCompletion, getOutfitRenderItemLimit } from '@/lib/ai-jobs';
 import { supabase } from '@/lib/supabase';
 import { getWardrobeCategories, getWardrobeItemsByIds } from '@/lib/wardrobe';
 
@@ -32,6 +32,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
       return;
     }
 
+    const tryOnStartMs = Date.now();
     setTryingOnOutfit(true);
 
     try {
@@ -128,7 +129,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
         }
 
         await triggerAIJobExecution(mannequinJob.id);
-        const { data: mannequinResult, error: mannequinPollError } = await pollAIJobWithFinalCheck(
+        const { data: mannequinResult, error: mannequinPollError } = await waitForAIJobCompletion(
           mannequinJob.id,
           60,
           2000,
@@ -167,17 +168,18 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
       }
 
       setGeneratingOutfitId(newOutfitId);
-      
+
       try {
-        const { data: finalJob, error: pollError } = await pollAIJobWithFinalCheck(
+        const { data: finalJob, error: pollError } = await waitForAIJobCompletion(
           renderJob.id,
           120,
           2000,
           '[Social]'
         );
-        
+
         if (pollError || !finalJob) {
           setGeneratingOutfitId(null);
+          setTryingOnOutfit(false);
           Alert.alert(
             'Generation In Progress',
             'The outfit is still generating. You can check your outfits page to see when it\'s ready.',
@@ -185,18 +187,25 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
           );
           return;
         }
-        
+
+        const pollElapsedMs = Date.now() - tryOnStartMs;
+        console.info('[Social] Try-on poll succeeded', { jobId: renderJob.id, outfitId: newOutfitId, elapsedMs: pollElapsedMs });
+
         if (finalJob.status === 'succeeded') {
-          const { data: outfitData } = await getOutfit(newOutfitId);
           setGeneratingOutfitId(null);
+          setTryingOnOutfit(false);
           router.push(`/outfits/${newOutfitId}/view`);
+          const navElapsedMs = Date.now() - tryOnStartMs;
+          console.info('[Social] Try-on navigation', { outfitId: newOutfitId, elapsedMs: navElapsedMs });
         } else if (finalJob.status === 'failed') {
           setGeneratingOutfitId(null);
+          setTryingOnOutfit(false);
           Alert.alert('Generation Failed', finalJob.error || 'Outfit generation failed');
         }
       } catch (error: any) {
         console.error('[Social] Error polling outfit render:', error);
         setGeneratingOutfitId(null);
+        setTryingOnOutfit(false);
         Alert.alert(
           'Generation Error',
           'An error occurred while generating the outfit. You can check your outfits page to see if it completed.',
