@@ -16,7 +16,7 @@ const {
  * Generates a description for an outfit based on its items
  * Runs in parallel with image generation for fast user feedback
  */
-async function generateOutfitDescription(outfitId, itemDetails, supabase, perfTracker = null) {
+async function generateOutfitDescription(outfitId, itemDetails, supabase, perfTracker = null, jobId = null) {
   console.log(`[OutfitDescription] Starting description generation for outfit ${outfitId}`);
   const startTime = Date.now();
   
@@ -55,14 +55,17 @@ Guidelines:
 Respond with ONLY the JSON object, no additional text.`;
 
     // Call Gemini with text-only model (much faster than image generation)
+    const model = "gemini-2.5-flash";
+    console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
     const response = await callGeminiAPI(
       prompt,
       [], // No images needed for description
-      'gemini-2.5-flash', // Fast text model
-      'TEXT',
+      model,
+      "TEXT",
       perfTracker,
       null
     );
+    console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
 
     // Parse the JSON response
     const description = parseDescriptionResponse(response);
@@ -182,9 +185,10 @@ async function fetchOutfitItemDetails(outfitId, supabase, userId) {
  * @param {string} userId - The ID of the user
  * @param {object} perfTracker - Optional performance tracker for timing measurements
  * @param {object} timingTracker - Optional timing tracker for detailed step-by-step timing
+ * @param {string} [jobId] - Optional job ID for logging
  * @returns {Promise<{renders: Array<{image_id: number, storage_key: string}>}>} Render results
  */
-async function processOutfitRender(input, supabase, userId, perfTracker = null, timingTracker = null) {
+async function processOutfitRender(input, supabase, userId, perfTracker = null, timingTracker = null, jobId = null) {
   const {
     outfit_id,
     stacked_image_id,
@@ -235,7 +239,7 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
   const descriptionPromise = (async () => {
     const itemDetails = await fetchOutfitItemDetails(outfit_id, supabase, userId);
     if (itemDetails.length > 0) {
-      return await generateOutfitDescription(outfit_id, itemDetails, supabase, perfTracker);
+      return await generateOutfitDescription(outfit_id, itemDetails, supabase, perfTracker, jobId);
     }
     return null;
   })();
@@ -346,12 +350,12 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
   console.log(`[OutfitRender] Total images being sent to AI: ${allInputs.length}`);
 
   // Use existing prompt system from prompts.js
-  const renderPrompt = useStackedImage 
-    ? PROMPTS.OUTFIT_FINAL_STACKED(prompt || 'Style this outfit naturally', itemCount, includeHeadshot)
-    : PROMPTS.OUTFIT_FINAL(prompt || 'Style this outfit naturally', itemCount, includeHeadshot);
+  const renderPrompt = useStackedImage
+    ? PROMPTS.OUTFIT_FINAL_STACKED(prompt || "Style this outfit naturally", itemCount, includeHeadshot)
+    : PROMPTS.OUTFIT_FINAL(prompt || "Style this outfit naturally", itemCount, includeHeadshot);
 
+  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model: preferredModel });
   console.log(`[OutfitRender] Generating outfit with model: ${preferredModel}`);
-  console.log(`[OutfitRender] Calling Gemini API...`);
 
   // Generate the outfit image
   const finalImageB64 = await callGeminiAPI(
@@ -363,6 +367,7 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
     timingTracker
   );
 
+  console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
   console.log(`[OutfitRender] AI generation complete, result length: ${finalImageB64.length} chars`);
 
   // Optimize the generated image (with timing for latency debugging)

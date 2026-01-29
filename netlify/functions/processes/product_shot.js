@@ -23,9 +23,10 @@ const {
  * @param {object} perfTracker - Optional performance tracker for timing measurements
  * @param {object} timingTracker - Optional timing tracker for detailed step-by-step timing
  * @param {object} preDownloadedImageData - Optional pre-downloaded image data { base64, mimeType } to avoid redundant downloads
+ * @param {string} [jobId] - Optional job ID for logging
  * @returns {Promise<{image_id: number, storage_key: string}>} New image record details
  */
-async function processProductShot(input, supabase, userId, perfTracker = null, timingTracker = null, preDownloadedImageData = null) {
+async function processProductShot(input, supabase, userId, perfTracker = null, timingTracker = null, preDownloadedImageData = null, jobId = null) {
   const { image_id, wardrobe_item_id } = input;
   if (!image_id || !wardrobe_item_id) {
     throw new Error("Missing ID or wardrobe_item_id");
@@ -44,14 +45,17 @@ async function processProductShot(input, supabase, userId, perfTracker = null, t
   }
   
   // Generate a product shot using Gemini - pass full result object to include mime-type
+  const model = "gemini-2.5-flash-image";
+  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
   const productShotB64 = await callGeminiAPI(
     PROMPTS.PRODUCT_SHOT,
     [imageResult],
-    "gemini-2.5-flash-image",
+    model,
     "IMAGE",
     perfTracker,
     timingTracker
   );
+  console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
   // Upload the generated image to storage
   const timestamp = Date.now();
   const storagePath = `${userId}/ai/product_shots/${timestamp}.jpg`;

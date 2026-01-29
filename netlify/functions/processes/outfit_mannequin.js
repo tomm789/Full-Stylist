@@ -23,9 +23,10 @@ const {
  * @param {string} userId - User ID
  * @param {object} perfTracker - Optional performance tracker for timing measurements
  * @param {object} timingTracker - Optional timing tracker for detailed step-by-step timing
+ * @param {string} [jobId] - Optional job ID for logging
  * @returns {Promise<{mannequin_image_id: number, storage_key: string, settings: object}>} Mannequin image info
  */
-async function processOutfitMannequin(input, supabase, userId, perfTracker = null, timingTracker = null) {
+async function processOutfitMannequin(input, supabase, userId, perfTracker = null, timingTracker = null, jobId = null) {
   const { outfit_id, selected, prompt, settings } = input;
   if (!outfit_id || !selected?.length) {
     throw new Error("Missing outfit_id or selected items");
@@ -77,6 +78,7 @@ async function processOutfitMannequin(input, supabase, userId, perfTracker = nul
     prompt || "No additional details"
   );
   // Generate the mannequin image
+  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model: preferredModel });
   const mannequinB64 = await callGeminiAPI(
     mannequinPrompt,
     itemImages,
@@ -85,6 +87,7 @@ async function processOutfitMannequin(input, supabase, userId, perfTracker = nul
     perfTracker,
     timingTracker
   );
+  console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
   // Upload the mannequin render
   const timestamp = Date.now();
   const storagePath = `${userId}/ai/outfits/${outfit_id}/mannequin/${timestamp}.jpg`;

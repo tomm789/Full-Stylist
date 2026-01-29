@@ -20,9 +20,10 @@ const { downloadImageFromStorage, callGeminiAPI } = require("../utils");
  * @param {object} perfTracker - Optional performance tracker for timing measurements
  * @param {object} timingTracker - Optional timing tracker for detailed step-by-step timing
  * @param {object} preDownloadedImageData - Optional pre-downloaded image data { base64, mimeType } to avoid redundant downloads
+ * @param {string} [jobId] - Optional job ID for logging
  * @returns {Promise<object>} A summary of the AI result and any updates applied
  */
-async function processAutoTag(input, supabase, perfTracker = null, timingTracker = null, preDownloadedImageData = null) {
+async function processAutoTag(input, supabase, perfTracker = null, timingTracker = null, preDownloadedImageData = null, jobId = null) {
   const { wardrobe_item_id, image_ids } = input;
   if (!wardrobe_item_id || !image_ids?.length) {
     throw new Error("Missing ID or images");
@@ -54,7 +55,10 @@ async function processAutoTag(input, supabase, perfTracker = null, timingTracker
   const prompt = PROMPTS.AUTO_TAG(catList, subList);
   // Call the Gemini API with the clothing image to extract JSON attributes
   // Pass the full result object so mime-type is included
-  const textResult = await callGeminiAPI(prompt, [imageResult], "gemini-2.5-flash-image", "TEXT", perfTracker, timingTracker);
+  const model = "gemini-2.5-flash-image";
+  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
+  const textResult = await callGeminiAPI(prompt, [imageResult], model, "TEXT", perfTracker, timingTracker);
+  console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
   let result;
   try {
     // Remove possible code fences around the JSON response

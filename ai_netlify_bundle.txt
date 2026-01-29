@@ -1,3 +1,141 @@
+
+
+===== netlify.toml =====
+[build]
+  command = "npx expo export --platform web --output-dir web-build"
+  publish = "web-build"
+  functions = "netlify/functions"
+
+[dev]
+  # Use static framework - we only need functions, not a dev server
+  framework = "#static"
+  # Netlify dev server port
+  port = 8888
+  # Functions directory
+  functions = "netlify/functions"
+  # Disable auto-launch of browser
+  autoLaunch = false
+  # Serve public directory for static files
+  publish = "public"
+
+[functions]
+  # Ensure TypeScript functions are included and compiled
+  node_bundler = "esbuild"
+  included_files = ["netlify/functions/**/*.ts"]
+  # Use external dependencies (Supabase, etc.) - don't bundle them
+  external_node_modules = ["@supabase/supabase-js"]
+
+# AI job runner needs extended timeout for image generation (60-90 seconds)
+[functions."ai-job-runner"]
+  timeout = 120
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for PWA and caching
+[[headers]]
+  # HTML files - no cache to ensure updates work
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
+[[headers]]
+  # Service worker - no cache to ensure updates
+  for = "/service-worker.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
+[[headers]]
+  # Manifest - short cache
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  # Static assets (hashed) - long cache
+  for = "/_expo/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  # Icons and images - medium cache
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  # Other static assets - long cache
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+
+
+===== package.json =====
+{
+  "name": "full-stylist",
+  "version": "3.1.0",
+  "description": "AI styling app for creating virtual headshots and outfits",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "dev": "netlify dev"
+  },
+  "keywords": [
+    "ai",
+    "styling",
+    "fashion",
+    "virtual-stylist"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@expo/metro-runtime": "^6.1.2",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.90.1",
+    "@types/react": "~19.1.10",
+    "browser-image-compression": "^2.0.2",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
+    "expo": "^54.0.31",
+    "expo-constants": "~18.0.13",
+    "expo-file-system": "^19.0.21",
+    "expo-image": "~3.0.11",
+    "expo-image-picker": "^17.0.10",
+    "expo-linking": "~8.0.11",
+    "expo-router": "^6.0.21",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-easy-crop": "^5.5.6",
+    "react-native": "0.81.5",
+    "react-native-gesture-handler": "~2.28.0",
+    "react-native-reanimated": "~4.1.1",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-url-polyfill": "^3.0.0",
+    "react-native-web": "^0.21.2",
+    "react-native-worklets": "0.5.1",
+    "sharp": "^0.34.5",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^5.1.2",
+    "babel-plugin-module-resolver": "^5.0.2"
+  }
+}
+
+
+
+===== netlify/functions/ai-job-runner.js =====
 "use strict";
 
 // Main Netlify function for processing AI jobs. This handler
@@ -19,15 +157,17 @@ const { processReferenceMatch } = require("./processes/reference_match");
 
 /**
  * Netlify function handler. Validates the HTTP method and the
- * Authorization header, retrieves the job from Supabase, and runs it
- * synchronously. Returns 200 on success or 500 on failure after processing completes.
+ * Authorization header, retrieves the job from Supabase, and queues it
+ * for asynchronous processing. Returns immediately with a 202 status.
  *
  * @param {object} event - The incoming request context
  * @param {object} context - The Lambda context provided by Netlify
  * @returns {Promise<object>} HTTP response object
  */
 exports.handler = async (event, context) => {
-  const handlerStartTime = Date.now();
+  // Netlify runs all functions in a single Lambda; prevent waiting on
+  // asynchronous tasks to finish before returning
+  context.callbackWaitsForEmptyEventLoop = false;
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
@@ -98,42 +238,22 @@ exports.handler = async (event, context) => {
         body: JSON.stringify({ error: "Job already running" })
       };
     }
-
-    console.log("[AIJobRunner] HANDLER START", { job_id, job_type: job.job_type });
-
-    // Update job status to running
+    // Update job status to running and queue asynchronous processing
     await supabaseAdmin
       .from("ai_jobs")
       .update({ status: "running", updated_at: new Date().toISOString() })
       .eq("id", job_id);
-
-    console.log("[AIJobRunner] BEFORE await processJob", { job_id, job_type: job.job_type });
-
-    let outcome;
-    try {
-      outcome = await processJobAsync(job, user.id);
-    } catch (err) {
-      console.error("[AIJobRunner] processJobAsync threw:", err);
-      outcome = { result: null, error: err.message || "Unknown error" };
-    }
-
-    console.log("[AIJobRunner] AFTER await processJob", { job_id, job_type: job.job_type });
-
-    const duration_ms = Date.now() - handlerStartTime;
-    const status = outcome.error ? "failed" : "succeeded";
-    console.log("[AIJobRunner] RETURNING", { job_id, status, duration_ms });
-
-    if (outcome.error) {
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ success: false, job_id, error: outcome.error })
-      };
-    }
+    processJobAsync(job, user.id).catch((err) => {
+      console.error(`[AIJobRunner] Async processing error for ${job_id}:`, err);
+    });
     return {
-      statusCode: 200,
+      statusCode: 202,
       headers,
-      body: JSON.stringify({ success: true, job_id, status: "succeeded" })
+      body: JSON.stringify({
+        success: true,
+        message: "Job queued for processing",
+        job_id
+      })
     };
   } catch (err) {
     console.error("Handler Critical Error:", err);
@@ -147,56 +267,56 @@ exports.handler = async (event, context) => {
 
 /**
  * Dispatches the job to the appropriate processor based on its type.
- * Fully awaits the selected processor. Updates the job record exactly once
- * after processing completes. Returns { result, error } for handler response.
+ * Catches errors and records them on the job record. On success,
+ * updates the job record with the result. This function is run
+ * asynchronously and does not block the HTTP response.
  *
  * @param {object} job - The job record from the database
  * @param {string} userId - ID of the job owner
- * @returns {Promise<{result: object|null, error: string|null}>}
  */
 async function processJobAsync(job, userId) {
   const job_id = job.id;
-
+  
   // Create performance tracker at the start of the request
   const perfTracker = createPerformanceTracker();
   console.log(`[AIJobRunner] Created performance tracker: ${perfTracker.requestId} for job ${job_id} (${job.job_type})`);
-
+  
   // Create timing tracker for detailed step-by-step timing
   const timingTracker = createTimingTracker();
   timingTracker.startJob();
   console.log(`[AIJobRunner] Starting job ${job_id} (${job.job_type})`);
-
+  
   let result;
   let error = null;
   try {
     const input = job.input;
     switch (job.job_type) {
       case "batch":
-        result = await processBatchJob(input, supabaseAdmin, userId, perfTracker, timingTracker, job_id);
+        result = await processBatchJob(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "auto_tag":
-        result = await processAutoTag(input, supabaseAdmin, perfTracker, timingTracker, null, job_id);
+        result = await processAutoTag(input, supabaseAdmin, perfTracker, timingTracker);
         break;
       case "product_shot":
-        result = await processProductShot(input, supabaseAdmin, userId, perfTracker, timingTracker, null, job_id);
+        result = await processProductShot(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "headshot_generate":
-        result = await processHeadshotGenerate(input, supabaseAdmin, userId, perfTracker, timingTracker, job_id);
+        result = await processHeadshotGenerate(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "body_shot_generate":
-        result = await processBodyShotGenerate(input, supabaseAdmin, userId, perfTracker, timingTracker, job_id);
+        result = await processBodyShotGenerate(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "outfit_suggest":
-        result = await processOutfitSuggest(input, supabaseAdmin, userId, perfTracker, timingTracker, job_id);
+        result = await processOutfitSuggest(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "reference_match":
-        result = await processReferenceMatch(input, supabaseAdmin, userId, perfTracker, timingTracker, job_id);
+        result = await processReferenceMatch(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "outfit_mannequin":
-        result = await processOutfitMannequin(input, supabaseAdmin, userId, perfTracker, timingTracker, job_id);
+        result = await processOutfitMannequin(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       case "outfit_render":
-        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker, job_id);
+        result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker);
         break;
       default:
         throw new Error(`Unknown job type: ${job.job_type}`);
@@ -205,14 +325,14 @@ async function processJobAsync(job, userId) {
     error = err.message || "Unknown error";
     console.error(`[AIJobRunner] Error processing ${job.job_type} job ${job_id}:`, err);
   }
-
+  
   // Log performance comparison at the end of the request
   perfTracker.logComparison();
-
+  
   // Log detailed timing breakdown
   timingTracker.logBreakdown(job.job_type);
-
-  // Build the update payload based on success or failure (exactly once after processing)
+  
+  // Build the update payload based on success or failure
   const updateData = {
     updated_at: new Date().toISOString(),
     status: error ? "failed" : "succeeded"
@@ -223,8 +343,6 @@ async function processJobAsync(job, userId) {
     updateData.result = result;
   }
   await supabaseAdmin.from("ai_jobs").update(updateData).eq("id", job_id);
-
-  return { result: error ? null : result, error };
 }
 
 /**
@@ -246,7 +364,7 @@ async function processJobAsync(job, userId) {
  * @param {object} timingTracker - Timing tracker
  * @returns {Promise<object>} Combined results from all tasks
  */
-async function processBatchJob(input, supabase, userId, perfTracker, timingTracker, jobId = null) {
+async function processBatchJob(input, supabase, userId, perfTracker, timingTracker) {
   const { imageId, tasks, wardrobe_item_id, image_ids } = input;
   
   if (!imageId || !tasks || !Array.isArray(tasks) || tasks.length === 0) {
@@ -294,13 +412,12 @@ async function processBatchJob(input, supabase, userId, perfTracker, timingTrack
   if (productShotInput) {
     console.log(`[BatchJob] Creating product_shot promise (execution starts immediately)...`);
     const productShotPromise = processProductShot(
-      productShotInput,
-      supabase,
-      userId,
-      perfTracker,
-      timingTracker,
-      imageData,
-      jobId
+      productShotInput, 
+      supabase, 
+      userId, 
+      perfTracker, 
+      timingTracker, 
+      imageData
     ).then(result => {
       const elapsed = ((performance.now() - batchStart) / 1000).toFixed(2);
       console.log(`[BatchJob] product_shot completed in ${elapsed}s`);
@@ -317,12 +434,11 @@ async function processBatchJob(input, supabase, userId, perfTracker, timingTrack
   if (autoTagInput) {
     console.log(`[BatchJob] Creating auto_tag promise (execution starts immediately, parallel with product_shot)...`);
     const autoTagPromise = processAutoTag(
-      autoTagInput,
-      supabase,
-      perfTracker,
-      timingTracker,
-      imageData,
-      jobId
+      autoTagInput, 
+      supabase, 
+      perfTracker, 
+      timingTracker, 
+      imageData
     ).then(result => {
       const elapsed = ((performance.now() - batchStart) / 1000).toFixed(2);
       console.log(`[BatchJob] auto_tag completed in ${elapsed}s`);
@@ -366,3 +482,55 @@ async function processBatchJob(input, supabase, userId, perfTracker, timingTrack
   console.log(`[BatchJob] All tasks completed`);
   return taskResults;
 }
+
+
+===== src/lib/ai-jobs/index.ts =====
+/**
+ * AI Jobs module - exports all AI job-related functions
+ * 
+ * Usage:
+ * import { createAIJob, pollAIJob, triggerAutoTag } from '@/lib/ai-jobs';
+ */
+
+// Re-export from core
+export {
+  type AIJob,
+  createAIJob,
+  getAIJob,
+  isGeminiPolicyBlockError,
+  getActiveJob,
+  getRecentJob,
+  getOutfitRenderItemLimit,
+} from './core';
+
+// Re-export from polling
+export {
+  pollAIJob,
+  pollAIJobWithFinalCheck,
+  waitForAIJobCompletion,
+  resetCircuitBreaker,
+  isCircuitBreakerOpen,
+} from './polling';
+
+// Re-export from execution
+export {
+  triggerAIJobExecution,
+  createAndTriggerJob,
+} from './execution';
+
+// Re-export from types
+export {
+  triggerAutoTag,
+  applyAutoTagResults,
+  triggerProductShot,
+  getActiveProductShotJob,
+  getRecentProductShotJob,
+  triggerHeadshotGenerate,
+  triggerBodyShotGenerate,
+  getActiveOutfitRenderJob,
+  getRecentOutfitRenderJob,
+  triggerBatchJob,
+  getActiveBatchJob,
+  getRecentBatchJob,
+} from './types';
+

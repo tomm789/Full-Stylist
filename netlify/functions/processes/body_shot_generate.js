@@ -22,9 +22,10 @@ const {
  * @param {string} userId - The user's ID
  * @param {object} perfTracker - Optional performance tracker for timing measurements
  * @param {object} timingTracker - Optional timing tracker for detailed step-by-step timing
+ * @param {string} [jobId] - Optional job ID for logging
  * @returns {Promise<{image_id: number, storage_key: string}>} New body shot info
  */
-async function processBodyShotGenerate(input, supabase, userId, perfTracker = null, timingTracker = null) {
+async function processBodyShotGenerate(input, supabase, userId, perfTracker = null, timingTracker = null, jobId = null) {
   const { body_photo_image_id, headshot_image_id } = input;
   if (!body_photo_image_id) {
     throw new Error("Missing body_photo_image_id");
@@ -48,14 +49,17 @@ async function processBodyShotGenerate(input, supabase, userId, perfTracker = nu
     downloadImageFromStorage(supabase, body_photo_image_id, timingTracker)
   ]);
   // Generate the composite body shot - pass full result objects to include mime-types
+  const model = "gemini-3-pro-image-preview";
+  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
   const studioModelB64 = await callGeminiAPI(
     PROMPTS.BODY_COMPOSITE,
     [headResult, bodyResult],
-    "gemini-3-pro-image-preview",
+    model,
     "IMAGE",
     perfTracker,
     timingTracker
   );
+  console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
   // Upload the new body shot image
   const timestamp = Date.now();
   const storagePath = `${userId}/ai/body_shots/${timestamp}.jpg`;

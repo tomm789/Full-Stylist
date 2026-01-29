@@ -21,9 +21,10 @@ const {
  * @param {string} userId - The user's ID
  * @param {object} perfTracker - Optional performance tracker for timing measurements
  * @param {object} timingTracker - Optional timing tracker for detailed step-by-step timing
+ * @param {string} [jobId] - Optional job ID for logging
  * @returns {Promise<{image_id: number, storage_key: string}>} New headshot info
  */
-async function processHeadshotGenerate(input, supabase, userId, perfTracker = null, timingTracker = null) {
+async function processHeadshotGenerate(input, supabase, userId, perfTracker = null, timingTracker = null, jobId = null) {
   console.log(`[processHeadshotGenerate] Starting for userId: ${userId}`, input);
   const { selfie_image_id, hair_style, makeup_style } = input;
   if (!selfie_image_id) {
@@ -47,16 +48,19 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
   const hair = hair_style || "Keep original hair";
   const makeup = makeup_style || "Natural look";
   const prompt = PROMPTS.HEADSHOT(hair, makeup);
+  const model = "gemini-2.5-flash-image";
+  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
   console.log(`[processHeadshotGenerate] Calling Gemini API with prompt length: ${prompt.length}`);
   // Generate the headshot via Gemini - pass full result object to include mime-type
   const headshotB64 = await callGeminiAPI(
     prompt,
     [selfieResult],
-    "gemini-2.5-flash-image",
+    model,
     "IMAGE",
     perfTracker,
     timingTracker
   );
+  console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
   console.log(`[processHeadshotGenerate] Gemini API returned, headshot base64 length: ${headshotB64?.length || 0}`);
   // Upload and store the headshot
   const timestamp = Date.now();
