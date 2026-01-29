@@ -10,11 +10,15 @@ import {
   Modal,
   ActivityIndicator,
   StyleSheet,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 
 const { colors, spacing, borderRadius, typography } = theme;
+const MODAL_MAX_HEIGHT = Math.min(640, Dimensions.get('window').height * 0.85);
+const MODAL_BODY_MAX_HEIGHT = Math.min(400, Dimensions.get('window').height * 0.4);
 
 interface GenerationItem {
   id: string;
@@ -99,100 +103,106 @@ export default function GenerationProgressModal({
           </View>
 
           {/* Body */}
-          <View style={styles.body}>
-            {/* Items Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionLabel}>Selected items</Text>
-                <Text style={styles.sectionMeta}>
-                  {completedItemsCount + 1}/{items.length}
-                </Text>
+          <ScrollView
+            style={[styles.bodyScroll, { maxHeight: MODAL_BODY_MAX_HEIGHT }]}
+            contentContainerStyle={styles.bodyScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.body}>
+              {/* Items Section */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionLabel}>Selected items</Text>
+                  <Text style={styles.sectionMeta}>
+                    {completedItemsCount + 1}/{items.length}
+                  </Text>
+                </View>
+                <View style={styles.items}>
+                  {revealedItems.map((item, index) => {
+                    const isComplete = index <= completedItemsCount;
+                    const isActive = index === revealedItemsCount && !isComplete;
+                    return (
+                      <View
+                        key={item.id}
+                        style={[
+                          styles.itemRow,
+                          isComplete && styles.itemRowComplete,
+                        ]}
+                      >
+                        <View style={styles.itemIcon}>
+                          {isComplete ? (
+                            <Ionicons
+                              name="checkmark-circle"
+                              size={20}
+                              color={colors.success}
+                            />
+                          ) : (
+                            <ActivityIndicator
+                              size="small"
+                              color={isActive ? colors.primary : colors.gray500}
+                            />
+                          )}
+                        </View>
+                        <Text
+                          style={[
+                            styles.itemText,
+                            isComplete && styles.itemTextComplete,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {item.title}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
               </View>
-              <View style={styles.items}>
-                {revealedItems.map((item, index) => {
-                  const isComplete = index <= completedItemsCount;
-                  const isActive = index === revealedItemsCount && !isComplete;
-                  return (
-                    <View
-                      key={item.id}
-                      style={[
-                        styles.itemRow,
-                        isComplete && styles.itemRowComplete,
-                      ]}
-                    >
-                      <View style={styles.itemIcon}>
-                        {isComplete ? (
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={20}
-                            color={colors.success}
-                          />
-                        ) : (
+
+              {/* Analysis Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>Stylist overview</Text>
+                <View style={styles.messageCard}>
+                  {activeMessage ? (
+                    <>
+                      <View style={styles.messageHeader}>
+                        <Ionicons
+                          name="chatbubble-ellipses"
+                          size={16}
+                          color={colors.primary}
+                        />
+                        <Text style={styles.messageLabel}>
+                          {activeMessage.kind === 'finalizing'
+                            ? 'Finishing touches'
+                            : 'Your stylist'}
+                        </Text>
+                      </View>
+                      <View style={styles.messageBody}>
+                        {activeMessage.kind === 'finalizing' && (
                           <ActivityIndicator
                             size="small"
-                            color={isActive ? colors.primary : colors.gray500}
+                            color={colors.primary}
+                            style={styles.inlineSpinner}
                           />
                         )}
+                        <Text style={styles.messageText}>
+                          {activeMessage.text}
+                        </Text>
                       </View>
-                      <Text
-                        style={[
-                          styles.itemText,
-                          isComplete && styles.itemTextComplete,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {item.title}
+                    </>
+                  ) : (
+                    <View style={styles.typingRow}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                      <Text style={styles.typingText}>
+                        {completedItemsCount >= items.length - 1
+                          ? 'Pulling together your overview…'
+                          : 'Reviewing each piece…'}
                       </Text>
                     </View>
-                  );
-                })}
+                  )}
+                </View>
               </View>
             </View>
-
-            {/* Analysis Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Stylist overview</Text>
-              <View style={styles.messageCard}>
-                {activeMessage ? (
-                  <>
-                    <View style={styles.messageHeader}>
-                      <Ionicons
-                        name="chatbubble-ellipses"
-                        size={16}
-                        color={colors.primary}
-                      />
-                      <Text style={styles.messageLabel}>
-                        {activeMessage.kind === 'finalizing'
-                          ? 'Finishing touches'
-                          : 'Your stylist'}
-                      </Text>
-                    </View>
-                    <View style={styles.messageBody}>
-                      {activeMessage.kind === 'finalizing' && (
-                        <ActivityIndicator
-                          size="small"
-                          color={colors.primary}
-                          style={styles.inlineSpinner}
-                        />
-                      )}
-                      <Text style={styles.messageText}>
-                        {activeMessage.text}
-                      </Text>
-                    </View>
-                  </>
-                ) : (
-                  <View style={styles.typingRow}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                    <Text style={styles.typingText}>
-                      {completedItemsCount >= items.length - 1
-                        ? 'Pulling together your overview…'
-                        : 'Reviewing each piece…'}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          </View>
+          </ScrollView>
 
           {/* Footer */}
           <View style={styles.footer}>
@@ -220,12 +230,19 @@ const styles = StyleSheet.create({
     padding: spacing.lg + spacing.md,
     alignItems: 'stretch',
     width: '90%',
-    maxWidth: 440,
+    maxWidth: 540,
+    maxHeight: MODAL_MAX_HEIGHT,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  bodyScroll: {
+    width: '100%',
+  },
+  bodyScrollContent: {
+    flexGrow: 1,
   },
   header: {
     alignItems: 'center',

@@ -174,6 +174,8 @@ export function useAIJobPolling({
 
   return {
     job,
+    jobId: jobId ?? null,
+    status: job?.status ?? null,
     isPolling,
     attempts,
     error,

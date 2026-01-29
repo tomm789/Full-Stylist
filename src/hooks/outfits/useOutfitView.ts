@@ -39,6 +39,10 @@ interface UseOutfitViewReturn {
   renderTraceId: string | null;
   /** When set, used for client-only timing log: job succeeded → image_load_end. */
   jobSucceededAt: number | null;
+  /** Job that produced the current cover (for feedback overlay). */
+  lastSucceededJobId: string | null;
+  /** If set, user has already submitted feedback for this job; do not show feedback overlay. */
+  lastSucceededJobFeedbackAt: string | null;
   refreshOutfit: () => Promise<void>;
   deleteOutfit: () => Promise<void>;
 }
@@ -63,6 +67,8 @@ export function useOutfitView({
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderJobId, setRenderJobId] = useState<string | null>(null);
   const [jobSucceededAt, setJobSucceededAt] = useState<number | null>(null);
+  const [lastSucceededJobId, setLastSucceededJobId] = useState<string | null>(null);
+  const [lastSucceededJobFeedbackAt, setLastSucceededJobFeedbackAt] = useState<string | null>(null);
   const renderTraceIdRef = useRef<string | null>(renderTraceIdParam ?? null);
 
   const refreshOutfit = async () => {
@@ -105,6 +111,8 @@ export function useOutfitView({
         setRenderJobId(null);
         setIsGenerating(false);
         setJobSucceededAt(jobStatusSucceededAt);
+        setLastSucceededJobId(finalJob.id);
+        setLastSucceededJobFeedbackAt((finalJob as { feedback_at?: string | null }).feedback_at ?? null);
 
         // Immediate UI: use base64 or storage URL from job result so image shows before refetch
         if (result.base64_result) {
@@ -158,6 +166,8 @@ export function useOutfitView({
       setLoading(true);
       setCoverImageDataUri(null);
       setJobSucceededAt(null);
+      setLastSucceededJobId(null);
+      setLastSucceededJobFeedbackAt(null);
 
       if (PERF_MODE) {
         console.debug('[outfit_render_timing] perf_mode_enabled', { ts: Date.now(), outfitId, where: 'view', traceId: renderTraceIdParam ?? undefined });
@@ -170,6 +180,8 @@ export function useOutfitView({
           const coverSetAt = Date.now();
           setCoverImageDataUri(cached.dataUri);
           setJobSucceededAt(cached.jobSucceededAt);
+          if (cached.jobId) setLastSucceededJobId(cached.jobId);
+          if (cached.feedbackAt !== undefined) setLastSucceededJobFeedbackAt(cached.feedbackAt);
           console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, outfitId, from: 'cache' });
         }
 
@@ -286,6 +298,8 @@ export function useOutfitView({
     renderJobId,
     renderTraceId: renderTraceIdParam ?? renderTraceIdRef.current,
     jobSucceededAt,
+    lastSucceededJobId,
+    lastSucceededJobFeedbackAt,
     refreshOutfit,
     deleteOutfit: deleteOutfitAction,
   };

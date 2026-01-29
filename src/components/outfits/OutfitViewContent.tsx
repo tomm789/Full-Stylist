@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { SocialActionBar, CommentSection } from '@/components/outfits';
+import { AIGenerationFeedback } from '@/components/ai';
 import { supabase } from '@/lib/supabase';
 import { continueTimeline } from '@/lib/perf/timeline';
 
@@ -50,6 +51,16 @@ interface OutfitViewContentProps {
   onCoverImageLoad?: () => void;
   /** Called when cover image errors after MAX retries (fallback to trigger deferred engagement). Fired at most once. */
   onCoverImageErrorAfterRetries?: () => void;
+  /** When true, show feedback UI over cover (full overlay or compact thumbs in corner). */
+  showFeedbackOverlay?: boolean;
+  /** When true, show only thumbs in bottom-right (feedback already given). */
+  feedbackCompact?: boolean;
+  /** Job id for the generation (for submit_ai_feedback). */
+  feedbackJobId?: string | null;
+  /** Job type for the generation (e.g. outfit_render). */
+  feedbackJobType?: string;
+  /** Called when user submits feedback (parent can switch to compact state). */
+  onFeedbackSubmitted?: (jobId: string) => void;
 }
 
 export function OutfitViewContent({
@@ -77,6 +88,11 @@ export function OutfitViewContent({
   jobSucceededAt,
   onCoverImageLoad,
   onCoverImageErrorAfterRetries,
+  showFeedbackOverlay,
+  feedbackCompact,
+  feedbackJobId,
+  feedbackJobType = 'outfit_render',
+  onFeedbackSubmitted,
 }: OutfitViewContentProps) {
   const router = useRouter();
   const [imageRetryKey, setImageRetryKey] = useState(0);
@@ -153,22 +169,32 @@ export function OutfitViewContent({
     <>
       {/* Cover Image */}
       {coverImageUrl && (
-        <TouchableOpacity
-          style={styles.imageContainer}
-          onPress={onImagePress}
-          activeOpacity={0.9}
-        >
-          <Image
-            key={imageRetryKey}
-            source={{ uri: coverImageUrl }}
-            style={styles.coverImage}
-            contentFit="contain"
-            cachePolicy={renderTraceId && !coverImageDataUri ? 'none' : undefined}
-            onLoadStart={handleImageLoadStart}
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-          />
-        </TouchableOpacity>
+        <View style={styles.imageContainer}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={onImagePress}
+            activeOpacity={0.9}
+          >
+            <Image
+              key={imageRetryKey}
+              source={{ uri: coverImageUrl }}
+              style={styles.coverImage}
+              contentFit="contain"
+              cachePolicy={renderTraceId && !coverImageDataUri ? 'none' : undefined}
+              onLoadStart={handleImageLoadStart}
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+            />
+          </TouchableOpacity>
+          {showFeedbackOverlay && feedbackJobId && (
+            <AIGenerationFeedback
+              jobId={feedbackJobId}
+              jobType={feedbackJobType}
+              onClose={() => onFeedbackSubmitted?.(feedbackJobId)}
+              compact={feedbackCompact}
+            />
+          )}
+        </View>
       )}
 
       {/* Social Actions */}

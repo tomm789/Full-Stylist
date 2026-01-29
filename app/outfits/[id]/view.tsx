@@ -3,7 +3,7 @@
  * View outfit details with social engagement
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,11 @@ import {
   LoadingSpinner,
   LoadingOverlay,
 } from '@/components/shared';
+import {
+  DropdownMenuModal,
+  DropdownMenuItem,
+  dropdownMenuStyles,
+} from '@/components/shared/modals';
 import { theme, commonStyles } from '@/styles';
 import { PERF_MODE } from '@/lib/perf/perfMode';
 
@@ -62,6 +67,8 @@ export default function OutfitViewScreen() {
     isGenerating,
     renderTraceId,
     jobSucceededAt,
+    lastSucceededJobId,
+    lastSucceededJobFeedbackAt,
     refreshOutfit,
     deleteOutfit: deleteOutfitAction,
   } = useOutfitView({
@@ -97,6 +104,12 @@ export default function OutfitViewScreen() {
     return () => clearTimeout(t);
   }, [PERF_MODE, triggerLoadEngagement]);
 
+  // Show feedback UI whenever we have a generation job; compact (bottom-right thumbs) after feedback given
+  const [feedbackSubmittedForJobId, setFeedbackSubmittedForJobId] = useState<string | null>(null);
+  const showFeedbackOverlay = !!(coverImageDataUri && lastSucceededJobId);
+  const feedbackGiven =
+    !!lastSucceededJobFeedbackAt || feedbackSubmittedForJobId === lastSucceededJobId;
+
   // Actions
   const actions = useOutfitViewActions({
     outfitId: id,
@@ -106,6 +119,10 @@ export default function OutfitViewScreen() {
     outfit,
     deleteOutfit: deleteOutfitAction,
   });
+
+  const [showMenu, setShowMenu] = useState(false);
+  const isOwnOutfit = outfit?.owner_user_id === user?.id;
+  const closeMenu = () => setShowMenu(false);
 
   if (loading) {
     return (
@@ -135,7 +152,7 @@ export default function OutfitViewScreen() {
           </TouchableOpacity>
         }
         rightContent={
-          outfit.owner_user_id === user?.id && (
+          isOwnOutfit ? (
             <>
               <TouchableOpacity onPress={actions.toggleFavorite}>
                 <Ionicons
@@ -144,20 +161,39 @@ export default function OutfitViewScreen() {
                   color={outfit?.is_favorite ? colors.error : colors.textPrimary}
                 />
               </TouchableOpacity>
-              <TouchableOpacity onPress={actions.handleEdit}>
-                <Ionicons
-                  name="pencil-outline"
-                  size={24}
-                  color={colors.primary}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={actions.handleDelete}>
-                <Ionicons name="trash-outline" size={24} color={colors.error} />
+              <TouchableOpacity onPress={() => setShowMenu(true)}>
+                <Ionicons name="ellipsis-vertical" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
             </>
-          )
+          ) : null
         }
       />
+
+      <DropdownMenuModal
+        visible={showMenu}
+        onClose={closeMenu}
+        topOffset={100}
+        align="right"
+      >
+        <DropdownMenuItem
+          label="Edit"
+          icon="pencil-outline"
+          onPress={() => {
+            closeMenu();
+            actions.handleEdit();
+          }}
+        />
+        <View style={dropdownMenuStyles.menuDivider} />
+        <DropdownMenuItem
+          label="Delete"
+          icon="trash-outline"
+          onPress={() => {
+            closeMenu();
+            actions.handleDelete();
+          }}
+          danger
+        />
+      </DropdownMenuModal>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         <OutfitViewContent
@@ -185,6 +221,11 @@ export default function OutfitViewScreen() {
           jobSucceededAt={jobSucceededAt ?? undefined}
           onCoverImageLoad={PERF_MODE && triggerLoadEngagement ? triggerLoadEngagement : undefined}
           onCoverImageErrorAfterRetries={PERF_MODE && triggerLoadEngagement ? triggerLoadEngagement : undefined}
+          showFeedbackOverlay={showFeedbackOverlay}
+          feedbackCompact={feedbackGiven}
+          feedbackJobId={lastSucceededJobId ?? undefined}
+          feedbackJobType="outfit_render"
+          onFeedbackSubmitted={(jobId) => setFeedbackSubmittedForJobId(jobId)}
         />
       </ScrollView>
 

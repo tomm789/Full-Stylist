@@ -3,7 +3,7 @@
  * Edit, regenerate, duplicate, or delete headshot
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,11 @@ import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHeadshotDetailActions } from '@/hooks/profile';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
+import {
+  DropdownMenuModal,
+  DropdownMenuItem,
+  dropdownMenuStyles,
+} from '@/components/shared/modals';
 
 export default function HeadshotDetailScreen() {
   const router = useRouter();
@@ -62,6 +67,9 @@ export default function HeadshotDetailScreen() {
     userId: user?.id,
   });
 
+  const [showMenu, setShowMenu] = useState(false);
+  const closeMenu = () => setShowMenu(false);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -92,24 +100,48 @@ export default function HeadshotDetailScreen() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Headshot</Text>
           <View style={styles.headerActions}>
-            <TouchableOpacity onPress={setAsActive} style={styles.headerButton}>
-              <Ionicons name="checkmark-circle-outline" size={24} color="#34c759" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleDuplicate}
-              style={styles.headerButton}
-              disabled={duplicating}
-            >
-              <Ionicons name="copy-outline" size={24} color="#007AFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowDeleteConfirm(true)}
-              style={styles.headerButton}
-            >
-              <Ionicons name="trash-outline" size={24} color="#FF3B30" />
+            <TouchableOpacity onPress={() => setShowMenu(true)}>
+              <Ionicons name="ellipsis-vertical" size={24} color="#000" />
             </TouchableOpacity>
           </View>
         </View>
+
+        <DropdownMenuModal
+          visible={showMenu}
+          onClose={closeMenu}
+          topOffset={100}
+          align="right"
+        >
+          <DropdownMenuItem
+            label="Set as active"
+            icon="checkmark-circle-outline"
+            onPress={() => {
+              closeMenu();
+              setAsActive();
+            }}
+            iconColor="#34c759"
+          />
+          <View style={dropdownMenuStyles.menuDivider} />
+          <DropdownMenuItem
+            label="Duplicate"
+            icon="copy-outline"
+            onPress={() => {
+              closeMenu();
+              handleDuplicate();
+            }}
+            disabled={duplicating}
+          />
+          <View style={dropdownMenuStyles.menuDivider} />
+          <DropdownMenuItem
+            label="Delete"
+            icon="trash-outline"
+            onPress={() => {
+              closeMenu();
+              setShowDeleteConfirm(true);
+            }}
+            danger
+          />
+        </DropdownMenuModal>
 
         <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
           <View style={styles.imageContainer}>

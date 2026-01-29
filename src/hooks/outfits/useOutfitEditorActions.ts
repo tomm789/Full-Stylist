@@ -3,7 +3,7 @@
  * Actions and handlers for outfit editor screen
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,11 +15,20 @@ import {
 import {
   createAIJob,
   triggerAIJobExecution,
+  pollAIJobWithFinalCheck,
 } from '@/lib/ai-jobs';
+import { setInitialCoverDataUri } from '@/lib/outfits/initialCoverCache';
+import {
+  outfitDescriptionToGenerationMessages,
+  runDescriptionMessageDrip,
+  type OutfitDescription,
+} from '@/lib/outfits/outfitDescriptionMessages';
 import { getUserSettings } from '@/lib/settings';
 import { generateClothingGrid } from '@/utils/clothing-grid';
 import { supabase } from '@/lib/supabase';
 import { startTimeline } from '@/lib/perf/timeline';
+
+const DESCRIPTION_POLL_MAX_MS = 30_000;
 
 interface UseOutfitEditorActionsProps {
   outfitId: string;
@@ -85,6 +94,113 @@ export function useOutfitEditorActions({
   const [revealedItemsCount, setRevealedItemsCount] = useState(0);
   const [completedItemsCount, setCompletedItemsCount] = useState(0);
   const [activeMessage, setActiveMessage] = useState<any>(null);
+
+  const descriptionPollingInterval = useRef<NodeJS.Timeout | null>(null);
+  const descriptionPollingStartedAtRef = useRef<number | null>(null);
+  const descriptionPollingOutfitIdRef = useRef<string | null>(null);
+  const itemRevealInterval = useRef<NodeJS.Timeout | null>(null);
+
+  const clearDescriptionPoll = useCallback(() => {
+    if (itemRevealInterval.current) {
+      clearInterval(itemRevealInterval.current);
+      itemRevealInterval.current = null;
+    }
+    if (descriptionPollingInterval.current) {
+      clearInterval(descriptionPollingInterval.current);
+      descriptionPollingInterval.current = null;
+      const oid = descriptionPollingOutfitIdRef.current;
+      descriptionPollingStartedAtRef.current = null;
+      descriptionPollingOutfitIdRef.current = null;
+      if (oid) {
+        console.debug('[outfit_render_timing] description_poll_stopped', { outfitId: oid, reason: 'cleanup' });
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => clearDescriptionPoll();
+  }, [clearDescriptionPoll]);
+
+  const startDescriptionPolling = useCallback((outfitId: string) => {
+    if (descriptionPollingInterval.current != null) return;
+    descriptionPollingStartedAtRef.current = Date.now();
+    descriptionPollingOutfitIdRef.current = outfitId;
+    console.debug('[outfit_render_timing] description_poll_started', { outfitId });
+
+    descriptionPollingInterval.current = setInterval(async () => {
+      const started = descriptionPollingStartedAtRef.current;
+      const elapsed = started != null ? Date.now() - started : 0;
+      if (elapsed >= DESCRIPTION_POLL_MAX_MS) {
+        if (descriptionPollingInterval.current) {
+          clearInterval(descriptionPollingInterval.current);
+          descriptionPollingInterval.current = null;
+        }
+        descriptionPollingStartedAtRef.current = null;
+        descriptionPollingOutfitIdRef.current = null;
+        console.debug('[outfit_render_timing] description_poll_timeout', { outfitId, elapsedMs: elapsed });
+        return;
+      }
+      try {
+        const { data: outfitData } = await supabase
+          .from('outfits')
+          .select('description, occasions, style_tags, season, description_generated_at')
+          .eq('id', outfitId)
+          .maybeSingle();
+
+        if (outfitData?.description_generated_at) {
+          if (descriptionPollingInterval.current) {
+            clearInterval(descriptionPollingInterval.current);
+            descriptionPollingInterval.current = null;
+          }
+          descriptionPollingStartedAtRef.current = null;
+          descriptionPollingOutfitIdRef.current = null;
+          console.debug('[outfit_render_timing] description_poll_stopped', { outfitId, reason: 'success' });
+
+          const description: OutfitDescription = {
+            description: outfitData.description ?? '',
+            occasions: outfitData.occasions ?? [],
+            styleTags: outfitData.style_tags ?? [],
+            season: outfitData.season ?? 'all-season',
+          };
+          const messages = outfitDescriptionToGenerationMessages(description);
+          setGenerationPhase('analysis');
+          runDescriptionMessageDrip(messages, setActiveMessage, setGenerationPhase);
+        }
+      } catch (e) {
+        console.error('[OutfitEditor] Description polling error:', e);
+      }
+    }, 500);
+  }, []);
+
+  type EditorGenerationItem = { id: string; title: string; orderIndex: number };
+
+  const startItemRevealAnimation = useCallback((items: EditorGenerationItem[]) => {
+    setRevealedItemsCount(-1);
+    setCompletedItemsCount(-1);
+    setGenerationPhase('items');
+
+    let currentRevealed = -1;
+    let currentCompleted = -1;
+
+    itemRevealInterval.current = setInterval(() => {
+      if (currentRevealed < items.length - 1) {
+        currentRevealed++;
+        setRevealedItemsCount(currentRevealed);
+        if (currentRevealed > 0) {
+          currentCompleted = currentRevealed - 1;
+          setCompletedItemsCount(currentCompleted);
+        }
+      } else {
+        currentCompleted = items.length - 1;
+        setCompletedItemsCount(currentCompleted);
+        setTimeout(() => setGenerationPhase('analysis'), 500);
+        if (itemRevealInterval.current) {
+          clearInterval(itemRevealInterval.current);
+          itemRevealInterval.current = null;
+        }
+      }
+    }, 500);
+  }, []);
 
   const openItemPicker = useCallback(
     async (categoryId: string) => {
@@ -188,6 +304,7 @@ export function useOutfitEditorActions({
     setGenerationPhase('items');
     setRevealedItemsCount(0);
     setCompletedItemsCount(0);
+    setActiveMessage(null);
 
     try {
       // Save outfit first
@@ -313,15 +430,80 @@ export function useOutfitEditorActions({
       await triggerAIJobExecution(renderJob.id);
       timeline.mark('execution_triggered');
 
+      clearDescriptionPoll();
+      const editorItems: EditorGenerationItem[] = Array.from(outfitItems.values()).map((item, index) => ({
+        id: item.id,
+        title: item.title || `Item ${index + 1}`,
+        orderIndex: index,
+      }));
+      startItemRevealAnimation(editorItems);
+      startDescriptionPolling(savedOutfitId);
+
+      timeline.mark('poll_start');
+      const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
+        renderJob.id,
+        60,
+        2000,
+        '[OutfitEditor]',
+        'outfit_render'
+      );
+
+      clearDescriptionPoll();
+
+      if (pollError || !completedJob) {
+        timeline.mark('poll_timeout');
+        setRendering(false);
+        const q = timeline.traceId ? `?renderTraceId=${encodeURIComponent(timeline.traceId)}` : '';
+        router.push(`/outfits/${savedOutfitId}/view${q}`);
+        timeline.mark('navigate_to_view');
+        return;
+      }
+
+      if (completedJob.status === 'failed') {
+        Alert.alert('Error', completedJob.error ?? 'Outfit generation failed');
+        setRendering(false);
+        return;
+      }
+
+      const result = completedJob.result ?? {};
+      const jobStatusSucceededAt = Date.now();
+      timeline.mark('job_status_succeeded_at', { ts: jobStatusSucceededAt });
+      console.debug('[outfit_render_timing] job_status_succeeded_at', {
+        ts: jobStatusSucceededAt,
+        outfitId: savedOutfitId,
+        from: 'editor',
+        traceId: timeline.traceId,
+      });
+
+      if (result.base64_result) {
+        const dataUri = 'data:image/jpeg;base64,' + result.base64_result;
+        setInitialCoverDataUri(
+          savedOutfitId,
+          dataUri,
+          jobStatusSucceededAt,
+          completedJob.id,
+          (completedJob as { feedback_at?: string | null }).feedback_at ?? null
+        );
+        console.debug('[outfit_render_timing] cover_set_base64_at', {
+          ts: Date.now(),
+          outfitId: savedOutfitId,
+          from: 'editor',
+          traceId: timeline.traceId,
+        });
+      }
+
       setRendering(false);
-      const query = new URLSearchParams({
-        renderJobId: renderJob.id,
-        renderTraceId: timeline.traceId,
-      }).toString();
-      router.push(`/outfits/${savedOutfitId}/view?${query}`);
+      const query = timeline.traceId ? `?renderTraceId=${encodeURIComponent(timeline.traceId)}` : '';
+      router.push(`/outfits/${savedOutfitId}/view${query}`);
       timeline.mark('navigate_to_view');
+      console.debug('[outfit_render_timing] navigate_to_view_at', {
+        ts: Date.now(),
+        outfitId: savedOutfitId,
+        traceId: timeline.traceId,
+      });
     } catch (error: any) {
       console.error('Render error:', error);
+      clearDescriptionPoll();
       Alert.alert('Error', error.message || 'An unexpected error occurred');
       setRendering(false);
     }
@@ -333,6 +515,9 @@ export function useOutfitEditorActions({
     notes,
     saveOutfit,
     router,
+    clearDescriptionPoll,
+    startDescriptionPolling,
+    startItemRevealAnimation,
   ]);
 
   const handleDelete = useCallback(() => {

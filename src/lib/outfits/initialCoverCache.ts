@@ -3,9 +3,13 @@
  * so the image can be shown immediately without waiting for storage/CDN.
  */
 
-interface CachedCover {
+export interface CachedCover {
   dataUri: string;
   jobSucceededAt: number;
+  /** Job that produced this cover (for feedback overlay). */
+  jobId?: string;
+  /** If set, feedback was already submitted for this job. */
+  feedbackAt?: string | null;
 }
 
 const cache = new Map<string, CachedCover>();
@@ -13,11 +17,13 @@ const cache = new Map<string, CachedCover>();
 export function setInitialCoverDataUri(
   outfitId: string,
   dataUri: string,
-  jobSucceededAt: number = Date.now()
+  jobSucceededAt: number = Date.now(),
+  jobId?: string,
+  feedbackAt?: string | null
 ): void {
-  cache.set(outfitId, { dataUri, jobSucceededAt });
+  cache.set(outfitId, { dataUri, jobSucceededAt, jobId, feedbackAt });
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    console.debug('[outfit_render_timing] setInitialCoverDataUri called', { outfitId, jobSucceededAt });
+    console.debug('[outfit_render_timing] setInitialCoverDataUri called', { outfitId, jobSucceededAt, jobId });
   }
 }
 

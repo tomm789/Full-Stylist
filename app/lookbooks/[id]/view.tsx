@@ -35,6 +35,10 @@ import {
   SlideshowModal,
 } from '@/components/lookbooks';
 import { LoadingSpinner } from '@/components/shared';
+import {
+  DropdownMenuModal,
+  DropdownMenuItem,
+} from '@/components/shared/modals';
 import { CommentsModal } from '@/components/social';
 
 export default function LookbookViewScreen() {
@@ -158,6 +162,9 @@ export default function LookbookViewScreen() {
     await slideshow.open(outfits);
   };
 
+  const [showMenu, setShowMenu] = useState(false);
+  const closeMenu = () => setShowMenu(false);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -189,23 +196,28 @@ export default function LookbookViewScreen() {
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>
         <View style={styles.headerActions}>
-          {outfits.length > 0 && (
-            <TouchableOpacity
-              onPress={handleOpenSlideshow}
-              disabled={slideshow.loading}
-            >
-              <Text
-                style={[
-                  styles.playButton,
-                  slideshow.loading && styles.playButtonDisabled,
-                ]}
-              >
-                {slideshow.loading ? 'Loading...' : '▶ Play'}
-              </Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity onPress={() => setShowMenu(true)}>
+            <Ionicons name="ellipsis-vertical" size={24} color="#000" />
+          </TouchableOpacity>
         </View>
       </View>
+
+      <DropdownMenuModal
+        visible={showMenu}
+        onClose={closeMenu}
+        topOffset={100}
+        align="right"
+      >
+        <DropdownMenuItem
+          label={slideshow.loading ? 'Loading...' : 'Play slideshow'}
+          icon="play-outline"
+          onPress={() => {
+            closeMenu();
+            handleOpenSlideshow();
+          }}
+          disabled={outfits.length === 0 || slideshow.loading}
+        />
+      </DropdownMenuModal>
 
       <ScrollView style={styles.content}>
         {/* Lookbook Header */}
