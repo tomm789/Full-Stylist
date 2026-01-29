@@ -21,7 +21,7 @@ import { LoadingSpinner, EmptyState } from '@/components/shared';
 
 interface PublicOutfit {
   id: string;
-  title: string;
+  title?: string;
   owner_user_id: string;
   user?: {
     display_name: string;

@@ -3,7 +3,7 @@
  * Load and cache feed items with images and engagement counts
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getFeed, FeedItem } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
 import { getLookbook } from '@/lib/lookbooks';
@@ -32,6 +32,7 @@ interface UseFeedReturn {
   outfitImages: Map<string, string | null>;
   lookbookImages: Map<string, any>;
   engagementCounts: Record<string, EngagementCounts>;
+  setEngagementCounts: React.Dispatch<React.SetStateAction<Record<string, EngagementCounts>>>;
   followStatuses: Map<string, boolean>;
   loading: boolean;
   refresh: () => Promise<void>;
@@ -343,6 +344,7 @@ export function useFeed({
     outfitImages,
     lookbookImages,
     engagementCounts,
+    setEngagementCounts,
     followStatuses,
     loading,
     refresh,

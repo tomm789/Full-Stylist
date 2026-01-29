@@ -13,6 +13,7 @@
       "@/app/*": ["./app/*"],
       "@/components/*": ["./src/components/*"],
       "@/hooks/*": ["./src/hooks/*"],
+      "@/utils": ["./src/utils/index.ts"],
       "@/utils/*": ["./src/utils/*"],
       "@/contexts/*": ["./src/contexts/*"],
       "@/hooks": ["./src/hooks/index.ts"],

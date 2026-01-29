@@ -36,6 +36,12 @@ export interface ListingWithImages extends Listing {
     title: string;
     category_id: string;
   };
+  /** Populated by getActiveListings select */
+  seller?: {
+    id: string;
+    handle: string;
+    display_name?: string;
+  };
 }
 
 /**

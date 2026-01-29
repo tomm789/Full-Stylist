@@ -46,7 +46,7 @@ export default function AddItemScreen() {
   if (wardrobeLoading) {
     return (
       <View style={styles.container}>
-        <LoadingOverlay visible={true} text="Loading..." />
+        <LoadingOverlay visible={true} message="Loading..." />
       </View>
     );
   }
@@ -125,7 +125,7 @@ export default function AddItemScreen() {
 
       <LoadingOverlay
         visible={generatingAI}
-        text={analysisStep || 'Processing your item...'}
+        message={analysisStep || 'Processing your item...'}
       />
 
       {aiError && (
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     top: spacing.xs,
     right: spacing.xs,
     backgroundColor: colors.white,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.round,
   },
   submitButton: {
     backgroundColor: colors.black,

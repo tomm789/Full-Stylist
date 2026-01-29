@@ -142,13 +142,13 @@ export default function OutfitEditorScreen() {
           categories={categories}
           selectedItems={outfitItems}
           itemImageUrls={itemImageUrls}
-          onSelectCategory={actions.openItemPicker}
+          onAddItem={actions.openItemPicker}
           onRemoveItem={actions.removeItem}
         />
 
         <View style={styles.actions}>
           <PrimaryButton
-            label="Save Outfit"
+            title="Save Outfit"
             onPress={actions.handleSave}
             loading={actions.saving}
             disabled={actions.saving}
@@ -156,7 +156,7 @@ export default function OutfitEditorScreen() {
 
           {outfitItems.size > 0 && (
             <PrimaryButton
-              label="Generate Outfit Image"
+              title="Generate Outfit Image"
               onPress={actions.handleRender}
               loading={actions.rendering}
               disabled={actions.rendering}

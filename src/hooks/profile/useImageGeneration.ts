@@ -23,6 +23,8 @@ interface UseImageGenerationReturn {
   uploadedBlob: Blob | null;
   policyModalVisible: boolean;
   policyMessage: string;
+  error: string | null;
+  clearError: () => void;
   pickImage: (useCamera?: boolean) => Promise<void>;
   clearImage: () => void;
   generateHeadshot: (
@@ -44,6 +46,9 @@ export function useImageGeneration(): UseImageGenerationReturn {
   const [uploadedBlob, setUploadedBlob] = useState<Blob | null>(null);
   const [policyModalVisible, setPolicyModalVisible] = useState(false);
   const [policyMessage, setPolicyMessage] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const clearError = () => setError(null);
 
   const pickImage = async (useCamera = false) => {
     console.log('[pickImage] Starting, useCamera:', useCamera);
@@ -213,7 +218,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
         setPolicyModalVisible(true);
         return null;
       }
-      Alert.alert('Error', message);
+      setError(message);
       return null;
     } finally {
       console.log('-> Cleanup');
@@ -311,7 +316,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
         setPolicyModalVisible(true);
         return null;
       }
-      Alert.alert('Error', message);
+      setError(message);
       return null;
     } finally {
       setGenerating(false);
@@ -331,6 +336,8 @@ export function useImageGeneration(): UseImageGenerationReturn {
     uploadedBlob,
     policyModalVisible,
     policyMessage,
+    error,
+    clearError,
     pickImage,
     clearImage,
     generateHeadshot,

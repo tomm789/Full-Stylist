@@ -18,12 +18,12 @@ interface UseCalendarDayFormProps {
   }) => Promise<{ error: any }>;
   updateEntry: (
     entryId: string,
-    updates: {
+    updates: Partial<{
       outfit_id: string | null;
       slot_preset_id: string | null;
       status: 'planned' | 'worn' | 'skipped';
       notes: string | null;
-    }
+    }>
   ) => Promise<{ error: any }>;
   deleteEntry: (entryId: string) => Promise<{ error: any }>;
   reorderEntries: (fromIndex: number, toIndex: number) => Promise<void>;

@@ -55,7 +55,12 @@ export async function searchLookbooks(query: string, limit: number = 20): Promis
       throw error;
     }
 
-    return { data: data || [], error: null };
+    // PostgREST returns FK relation as array; normalize to single object
+    const normalized = (data || []).map((row: any) => ({
+      ...row,
+      owner: Array.isArray(row.owner) ? row.owner[0] : row.owner,
+    }));
+    return { data: normalized, error: null };
   } catch (error: any) {
     return { data: [], error };
   }

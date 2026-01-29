@@ -10,6 +10,7 @@ export {
   type Outfit,
   type OutfitWithRating,
   searchOutfits,
+  getPublicOutfits,
   getUserOutfits,
   getUserOutfitsWithOptions,
   getOutfit,

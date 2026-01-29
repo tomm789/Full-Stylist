@@ -35,7 +35,7 @@ interface OutfitViewContentProps {
   onLike: () => void;
   onSave: () => void;
   onComment: () => void;
-  onSubmitComment: (text: string) => Promise<void>;
+  onSubmitComment: (text: string) => Promise<boolean>;
   onImageModalClose: () => void;
   onImagePress: () => void;
 }

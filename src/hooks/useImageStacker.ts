@@ -8,7 +8,8 @@ import { supabase } from '@/lib/supabase';
 import { processAndStackImages } from '@/utils/imageProcessor';
 
 interface StackedImageResult {
-  imageId: number;
+  /** Storage path used as identifier when no images record is created */
+  imageId: string;
   publicUrl: string;
   storagePath: string;
 }

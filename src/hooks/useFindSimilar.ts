@@ -115,9 +115,13 @@ export function useFindSimilar({
   const getItemImageUrl = useCallback(async (itemId: string): Promise<string | null> => {
     const { data: images } = await getWardrobeItemImages(itemId);
     if (images && images.length > 0) {
+      const img = images[0].image;
+      const bucket = img?.storage_bucket || 'media';
+      const key = img?.storage_key;
+      if (!key) return null;
       const { data: urlData } = supabase.storage
-        .from(images[0].storage_bucket || 'media')
-        .getPublicUrl(images[0].storage_key);
+        .from(bucket)
+        .getPublicUrl(key);
       return urlData.publicUrl;
     }
     return null;

@@ -94,9 +94,11 @@ export async function enrichWithPosts(notifications: any[], postIds: string[]): 
 
         if (lookbookOutfits) {
           lookbooksNeedingFallback.forEach((lookbook) => {
-            const firstOutfit = lookbookOutfits.find((lo) => lo.lookbook_id === lookbook.id);
-            if (firstOutfit?.outfit?.cover_image) {
-              (lookbook as any).cover_image = firstOutfit.outfit.cover_image;
+            const firstOutfit = lookbookOutfits.find((lo) => lo.lookbook_id === lookbook.id) as any;
+            const outfit = firstOutfit?.outfit != null ? (Array.isArray(firstOutfit.outfit) ? firstOutfit.outfit[0] : firstOutfit.outfit) : null;
+            const coverImage = outfit?.cover_image;
+            if (coverImage) {
+              (lookbook as any).cover_image = Array.isArray(coverImage) ? coverImage[0] : coverImage;
             }
           });
         }
@@ -175,9 +177,11 @@ export async function enrichWithLookbooks(
 
     if (lookbookOutfits) {
       lookbooksNeedingFallback.forEach((lookbook) => {
-        const firstOutfit = lookbookOutfits.find((lo) => lo.lookbook_id === lookbook.id);
-        if (firstOutfit?.outfit?.cover_image) {
-          (lookbook as any).cover_image = firstOutfit.outfit.cover_image;
+        const firstOutfit = lookbookOutfits.find((lo) => lo.lookbook_id === lookbook.id) as any;
+        const outfit = firstOutfit?.outfit != null ? (Array.isArray(firstOutfit.outfit) ? firstOutfit.outfit[0] : firstOutfit.outfit) : null;
+        const coverImage = outfit?.cover_image;
+        if (coverImage) {
+          (lookbook as any).cover_image = Array.isArray(coverImage) ? coverImage[0] : coverImage;
         }
       });
     }

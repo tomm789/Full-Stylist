@@ -47,7 +47,7 @@ export default function FeedbackThreadDetailScreen() {
     }
   };
 
-  const isOwner = thread?.owner_user_id === user?.id;
+  const isOwner = thread?.user_id === user?.id;
 
   if (loading) {
     return <LoadingSpinner />;
@@ -114,9 +114,7 @@ const styles = StyleSheet.create({
     width: 40,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
+    flex: 1,
   },
   keyboardView: {
     flex: 1,

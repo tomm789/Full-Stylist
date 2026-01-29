@@ -219,7 +219,8 @@ export async function validatePostVisibility(
 
     // Check if visibility is 'inherit' - check entity visibility
     if (post.visibility === 'inherit') {
-      return canAccessEntity(post.entity_type, post.entity_id, viewerId);
+      const res = await canAccessEntity(post.entity_type, post.entity_id, viewerId);
+      return { canView: res.canAccess, error: res.error };
     }
 
     return { canView: false, error: null };

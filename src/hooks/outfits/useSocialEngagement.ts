@@ -34,18 +34,21 @@ export function useSocialEngagement(
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
 
+  // Engagement lib supports 'outfit' | 'post' | 'lookbook' (and comments: 'feedback_thread'); skip API for wardrobe_item
+  const engagementEntityType = entityType === 'wardrobe_item' ? null : (entityType as 'outfit' | 'post' | 'lookbook');
+
   // Load engagement data
   const loadEngagement = useCallback(async () => {
-    if (!entityId || !userId) return;
+    if (!entityId || !userId || !engagementEntityType) return;
 
     try {
       const [likedRes, likeCountRes, savedRes, saveCountRes, commentCountRes] =
         await Promise.all([
-          hasLiked(userId, entityType, entityId),
-          getLikeCount(entityType, entityId),
-          hasSaved(userId, entityType, entityId),
-          getSaveCount(entityType, entityId),
-          getCommentCount(entityType, entityId),
+          hasLiked(userId, engagementEntityType, entityId),
+          getLikeCount(engagementEntityType, entityId),
+          hasSaved(userId, engagementEntityType, entityId),
+          getSaveCount(engagementEntityType, entityId),
+          getCommentCount(engagementEntityType, entityId),
         ]);
 
       setLiked(likedRes);
@@ -56,15 +59,15 @@ export function useSocialEngagement(
     } catch (error) {
       console.error('Failed to load social engagement:', error);
     }
-  }, [entityId, userId, entityType]);
+  }, [entityId, userId, engagementEntityType]);
 
   // Load comments
   const loadComments = useCallback(async () => {
-    if (!entityId) return;
+    if (!entityId || !engagementEntityType) return;
 
     setLoadingComments(true);
     try {
-      const { data } = await getComments(entityType, entityId);
+      const { data } = await getComments(engagementEntityType, entityId);
       if (data) {
         setComments(data);
       }
@@ -73,7 +76,7 @@ export function useSocialEngagement(
     } finally {
       setLoadingComments(false);
     }
-  }, [entityId, entityType]);
+  }, [entityId, engagementEntityType]);
 
   // Toggle like
   const toggleLike = useCallback(async () => {
@@ -81,18 +84,18 @@ export function useSocialEngagement(
 
     try {
       if (liked) {
-        await unlikeEntity(userId, entityType, entityId);
+        await unlikeEntity(userId, engagementEntityType!, entityId);
         setLiked(false);
         setLikeCount((prev) => Math.max(0, prev - 1));
       } else {
-        await likeEntity(userId, entityType, entityId);
+        await likeEntity(userId, engagementEntityType!, entityId);
         setLiked(true);
         setLikeCount((prev) => prev + 1);
       }
     } catch (error) {
       console.error('Failed to toggle like:', error);
     }
-  }, [userId, entityId, entityType, liked]);
+  }, [userId, entityId, engagementEntityType, liked]);
 
   // Toggle save
   const toggleSave = useCallback(async () => {
@@ -100,28 +103,28 @@ export function useSocialEngagement(
 
     try {
       if (saved) {
-        await unsaveEntity(userId, entityType, entityId);
+        await unsaveEntity(userId, engagementEntityType!, entityId);
         setSaved(false);
         setSaveCount((prev) => Math.max(0, prev - 1));
       } else {
-        await saveEntity(userId, entityType, entityId);
+        await saveEntity(userId, engagementEntityType!, entityId);
         setSaved(true);
         setSaveCount((prev) => prev + 1);
       }
     } catch (error) {
       console.error('Failed to toggle save:', error);
     }
-  }, [userId, entityId, entityType, saved]);
+  }, [userId, entityId, engagementEntityType, saved]);
 
   // Submit comment
   const submitComment = useCallback(
     async (text: string) => {
-      if (!userId || !entityId || !text.trim()) return;
+      if (!userId || !entityId || !text.trim() || !engagementEntityType) return false;
 
       try {
         const { data, error } = await createComment(
           userId,
-          entityType,
+          engagementEntityType,
           entityId,
           text.trim()
         );
@@ -137,7 +140,7 @@ export function useSocialEngagement(
         return false;
       }
     },
-    [userId, entityId, entityType]
+    [userId, entityId, engagementEntityType]
   );
 
   useEffect(() => {
