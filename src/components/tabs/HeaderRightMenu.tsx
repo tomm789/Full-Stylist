@@ -8,19 +8,18 @@ import {
   View,
   TouchableOpacity,
   StyleSheet,
-  Modal,
-  Pressable,
   Text,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal';
 
 export function HeaderRightMenu() {
   const router = useRouter();
   const { unreadCount } = useNotifications();
-  const { signOut, user } = useAuth();
+  const { signOut } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
 
   const handleMenuOption = async (action: string) => {
@@ -74,55 +73,51 @@ export function HeaderRightMenu() {
         <Ionicons name="menu-outline" size={24} color="#000" />
       </TouchableOpacity>
 
-      <Modal
+      <DropdownMenuModal
         visible={showMenu}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowMenu(false)}
+        onClose={() => setShowMenu(false)}
+        topOffset={100}
+        align="right"
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowMenu(false)}>
-          <View style={[styles.dropdownMenu, styles.menuRight]}>
-            <Text style={styles.menuTitle}>Menu</Text>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleMenuOption('outfits')}
-            >
-              <Ionicons name="shirt-outline" size={20} color="#000" />
-              <Text style={styles.menuItemText}>All Outfits</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleMenuOption('profile')}
-            >
-              <Ionicons name="person-outline" size={20} color="#000" />
-              <Text style={styles.menuItemText}>My Profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleMenuOption('settings')}
-            >
-              <Ionicons name="settings-outline" size={20} color="#000" />
-              <Text style={styles.menuItemText}>Account Settings</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleMenuOption('feedback')}
-            >
-              <Ionicons name="chatbubbles-outline" size={20} color="#000" />
-              <Text style={styles.menuItemText}>Feedback</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleMenuOption('logout')}
-            >
-              <Ionicons name="log-out-outline" size={20} color="#ff3b30" />
-              <Text style={[styles.menuItemText, styles.logoutText]}>Log Out</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
+        <Text style={styles.menuTitle}>Menu</Text>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleMenuOption('outfits')}
+        >
+          <Ionicons name="shirt-outline" size={20} color="#000" />
+          <Text style={styles.menuItemText}>All Outfits</Text>
+        </TouchableOpacity>
+        <View style={styles.menuDivider} />
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleMenuOption('profile')}
+        >
+          <Ionicons name="person-outline" size={20} color="#000" />
+          <Text style={styles.menuItemText}>My Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleMenuOption('settings')}
+        >
+          <Ionicons name="settings-outline" size={20} color="#000" />
+          <Text style={styles.menuItemText}>Account Settings</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleMenuOption('feedback')}
+        >
+          <Ionicons name="chatbubbles-outline" size={20} color="#000" />
+          <Text style={styles.menuItemText}>Feedback</Text>
+        </TouchableOpacity>
+        <View style={styles.menuDivider} />
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleMenuOption('logout')}
+        >
+          <Ionicons name="log-out-outline" size={20} color="#ff3b30" />
+          <Text style={[styles.menuItemText, styles.logoutText]}>Log Out</Text>
+        </TouchableOpacity>
+      </DropdownMenuModal>
     </View>
   );
 }
@@ -154,31 +149,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: '700',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    paddingTop: 100,
-  },
-  dropdownMenu: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 8,
-    minWidth: 200,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  menuRight: {
-    marginRight: 16,
-    alignSelf: 'flex-end',
   },
   menuTitle: {
     fontSize: 14,

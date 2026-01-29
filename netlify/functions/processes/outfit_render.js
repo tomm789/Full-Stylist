@@ -58,7 +58,7 @@ Respond with ONLY the JSON object, no additional text.`;
     const response = await callGeminiAPI(
       prompt,
       [], // No images needed for description
-      'gemini-2.0-flash-exp', // Fast text model
+      'gemini-2.5-flash', // Fast text model
       'TEXT',
       perfTracker,
       null
@@ -229,8 +229,9 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
   const preferredModel = userSettings?.ai_model_preference || "gemini-2.5-flash-image";
 
   // START PARALLEL OPERATIONS
-  // 1. Fetch item details and generate description (fast: 1-3s)
-  // 2. Process images and generate render (slow: 28s)
+  // 1. Description (fast: 1-3s) — fire-and-forget until end
+  // 2. Outfit image(s) — stacked or legacy
+  // 3. Body (+ optional headshot) — required for AI
   const descriptionPromise = (async () => {
     const itemDetails = await fetchOutfitItemDetails(outfit_id, supabase, userId);
     if (itemDetails.length > 0) {
@@ -239,53 +240,36 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
     return null;
   })();
 
-  // Continue with image generation (original flow)
-  let stackedItemsB64;
-  let itemCount;
-
-  if (useStackedImage) {
-    // Client-side stacked image - download from storage using the path!
-    console.log(`[OutfitRender] Downloading pre-stacked image from storage: ${stacked_image_id}`);
-    
-    try {
+  const outfitImagePromise = (async () => {
+    if (useStackedImage) {
+      console.log(`[OutfitRender] Downloading pre-stacked image from storage: ${stacked_image_id}`);
       const { data: stackedBlob, error: downloadError } = await supabase
         .storage
         .from('media')
         .download(stacked_image_id);
-      
       if (downloadError) {
         console.error(`[OutfitRender] Storage download error:`, downloadError);
         throw new Error(`Failed to download stacked image: ${downloadError.message}`);
       }
-      
       if (!stackedBlob) {
         throw new Error('Downloaded blob is null or undefined');
       }
-      
       console.log(`[OutfitRender] Downloaded blob size: ${stackedBlob.size} bytes, type: ${stackedBlob.type}`);
-      
       const buffer = await stackedBlob.arrayBuffer();
       console.log(`[OutfitRender] Converted to ArrayBuffer, length: ${buffer.byteLength}`);
-      
-      stackedItemsB64 = Buffer.from(buffer).toString('base64');
+      const stackedItemsB64 = Buffer.from(buffer).toString('base64');
       console.log(`[OutfitRender] Converted to base64, length: ${stackedItemsB64.length} chars`);
-      
-      itemCount = settings?.items_count || selected?.length || 0;
+      const itemCount = settings?.items_count || selected?.length || 0;
       console.log(`[OutfitRender] Pre-stacked image contains ${itemCount} items`);
-    } catch (error) {
-      console.error(`[OutfitRender] Error processing stacked image:`, error);
-      throw new Error(`Failed to process stacked image: ${error.message}`);
+      return { stackedItemsB64, itemCount };
     }
-  } else {
     // Legacy mode: fetch individual items
     console.log(`[OutfitRender] Legacy mode: fetching ${selected.length} individual items`);
-    
     const wardrobeItemIds = selected.map((s) => s.wardrobe_item_id);
     const { data: allLinks } = await supabase
       .from("wardrobe_item_images")
       .select("wardrobe_item_id, type, sort_order, image_id")
       .in("wardrobe_item_id", wardrobeItemIds);
-
     const linksByItem = new Map();
     (allLinks || []).forEach((link) => {
       if (!linksByItem.has(link.wardrobe_item_id)) {
@@ -293,27 +277,22 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
       }
       linksByItem.get(link.wardrobe_item_id).push(link);
     });
-
     const imageIdsToDownload = [];
     wardrobeItemIds.forEach((itemId) => {
       const links = linksByItem.get(itemId);
       if (!links?.length) return;
-
       links.sort((a, b) => {
         if (a.type === "product_shot" && b.type !== "product_shot") return -1;
         if (b.type === "product_shot" && a.type !== "product_shot") return 1;
         return (a.sort_order || 999) - (b.sort_order || 999);
       });
-
       if (links[0]?.image_id) {
         imageIdsToDownload.push(links[0].image_id);
       }
     });
-
     if (!imageIdsToDownload.length) {
       throw new Error("No valid images found for outfit items");
     }
-
     console.log(`[OutfitRender] Legacy mode: downloading ${imageIdsToDownload.length} images: ${imageIdsToDownload.join(', ')}`);
     const itemImageResults = await Promise.all(
       imageIdsToDownload.map(id => {
@@ -321,30 +300,34 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
         return downloadImageFromStorage(supabase, id, timingTracker);
       })
     );
-    
     console.log(`[OutfitRender] Downloaded ${itemImageResults.length} item images`);
-    const itemImagesB64 = itemImageResults.map(result => result.base64);
-    stackedItemsB64 = itemImagesB64; 
-    itemCount = imageIdsToDownload.length;
-  }
+    const stackedItemsB64 = itemImageResults.map(result => result.base64);
+    const itemCount = imageIdsToDownload.length;
+    return { stackedItemsB64, itemCount };
+  })();
 
-  // Download body (always required) and headshot (conditionally)
-  console.log(`[OutfitRender] Downloading body image${includeHeadshot ? ' and headshot' : ''}`);
-  const downloadPromises = [downloadImageFromStorage(supabase, bodyId, timingTracker)];
-  if (includeHeadshot && headId) {
-    downloadPromises.push(downloadImageFromStorage(supabase, headId, timingTracker));
-  }
-  
-  const downloadedImageResults = await Promise.all(downloadPromises);
-  const bodyResult = downloadedImageResults[0];
-  const headResult = includeHeadshot && downloadedImageResults[1] ? downloadedImageResults[1] : null;
+  const bodyImagePromise = (async () => {
+    console.log(`[OutfitRender] Downloading body image${includeHeadshot ? ' and headshot' : ''}`);
+    const downloadPromises = [downloadImageFromStorage(supabase, bodyId, timingTracker)];
+    if (includeHeadshot && headId) {
+      downloadPromises.push(downloadImageFromStorage(supabase, headId, timingTracker));
+    }
+    const downloadedImageResults = await Promise.all(downloadPromises);
+    const bodyResult = downloadedImageResults[0];
+    const headResult = includeHeadshot && downloadedImageResults[1] ? downloadedImageResults[1] : null;
+    if (includeHeadshot && headResult) {
+      console.log(`[OutfitRender] Downloaded head (${headResult.base64.length} chars) and body (${bodyResult.base64.length} chars)`);
+    } else {
+      console.log(`[OutfitRender] Downloaded body (${bodyResult.base64.length} chars), headshot excluded`);
+    }
+    return { bodyResult, headResult };
+  })();
 
-  if (includeHeadshot && headResult) {
-    console.log(`[OutfitRender] Downloaded head (${headResult.base64.length} chars) and body (${bodyResult.base64.length} chars)`);
-  } else {
-    console.log(`[OutfitRender] Downloaded body (${bodyResult.base64.length} chars), headshot excluded`);
-  }
-  
+  const [{ stackedItemsB64, itemCount }, { bodyResult, headResult }] = await Promise.all([
+    outfitImagePromise,
+    bodyImagePromise
+  ]);
+
   // Prepare all inputs for Gemini
   let allInputs = [bodyResult];
   if (includeHeadshot && headResult) {
@@ -382,21 +365,26 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
 
   console.log(`[OutfitRender] AI generation complete, result length: ${finalImageB64.length} chars`);
 
-  // Optimize the generated image
+  // Optimize the generated image (with timing for latency debugging)
   console.log(`[OutfitRender] Optimizing generated image...`);
+  const optStart = Date.now();
   const optimizedImageB64 = await optimizeGeminiOutput(finalImageB64);
+  const optMs = Date.now() - optStart;
+  console.log(`[Perf] Optimization took: ${optMs} ms`);
   console.log(`[OutfitRender] Image optimization complete`);
 
-  // Upload the optimized final composite
+  // Upload the optimized final composite (with timing for latency debugging)
   const timestamp = Date.now();
   const storagePath = `${userId}/ai/outfits/${outfit_id}/${timestamp}.jpg`;
+  const uploadStart = Date.now();
   const { imageId, storageKey } = await uploadImageToStorage(
     supabase,
     userId,
     optimizedImageB64,
     storagePath
   );
-
+  const uploadMs = Date.now() - uploadStart;
+  console.log(`[Perf] Upload to Supabase took: ${uploadMs} ms`);
   console.log(`[OutfitRender] Uploaded final image: ${storageKey}`);
 
   // Record the render and update the outfit cover image
@@ -430,7 +418,8 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
   return { 
     renders: [{ image_id: imageId, storage_key: storageKey }],
     items_count: itemCount,
-    used_stacked_image: useStackedImage
+    used_stacked_image: useStackedImage,
+    base64_result: optimizedImageB64
   };
 }
 

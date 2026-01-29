@@ -6,7 +6,7 @@
  * AFTER: ~250 lines of clean, focused code
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, Alert, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,7 +17,7 @@ import {
   useWardrobeItems,
   useFilters,
 } from '@/hooks';
-import { useOutfitGeneration } from '@/hooks/outfits';
+import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits';
 
 // Shared Components
 import { LoadingOverlay, EmptyState } from '@/components/shared';
@@ -56,27 +56,17 @@ export default function WardrobeScreen() {
   
   // Wardrobe data
   const { wardrobeId, categories, getCategoryById } = useWardrobe(user?.id);
-  
-  // Outfit generation
-  const { generating, progress, generatedOutfitId, generateOutfit, reset: resetGeneration } = useOutfitGeneration({
-    userId: user?.id || '',
-    categories,
-  });
-  
-  // === Local UI State ===
+
+  // Local UI state (must be before useMemo/backgroundGrid that depend on selectedOutfitItems + allItems)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
-  
-  // Outfit creator mode
   const [outfitCreatorMode, setOutfitCreatorMode] = useState(false);
   const [selectedOutfitItems, setSelectedOutfitItems] = useState<string[]>([]);
-  
-  // Item modal
   const [selectedItem, setSelectedItem] = useState<WardrobeItem | null>(null);
   const [showItemModal, setShowItemModal] = useState(false);
 
-  // Items data with caching
+  // Items data with caching (allItems required for selectedItemsForGeneration)
   const {
     allItems,
     imageCache,
@@ -88,6 +78,30 @@ export default function WardrobeScreen() {
     userId: user?.id,
     categoryId: selectedCategoryId,
     searchQuery,
+  });
+
+  // Selected items as WardrobeItem[] (for background grid + generate); memoized so background hook debounce is stable
+  const selectedItemsForGeneration = useMemo(
+    () =>
+      selectedOutfitItems
+        .map((id) => allItems.find((item) => item.id === id))
+        .filter((item): item is WardrobeItem => Boolean(item)),
+    [selectedOutfitItems, allItems]
+  );
+
+  // Background grid: pre-upload grid while user selects (2s debounce) for 0s latency on Generate
+  const backgroundGrid = useBackgroundGridGenerator(
+    selectedItemsForGeneration,
+    user?.id ?? null
+  );
+
+  // Outfit generation (uses pre-uploaded grid when available)
+  const { generating, progress, generatedOutfitId, generateOutfit, reset: resetGeneration } = useOutfitGeneration({
+    userId: user?.id || '',
+    categories,
+    backgroundGrid: backgroundGrid
+      ? { getStoredKeyOrAwaitPending: backgroundGrid.getStoredKeyOrAwaitPending }
+      : null,
   });
 
   // Filtering

@@ -51,6 +51,7 @@ export default function OutfitViewScreen() {
   const {
     outfit,
     coverImage,
+    coverImageDataUri,
     outfitItems,
     wardrobeItems,
     itemImageUrls,
@@ -145,6 +146,7 @@ export default function OutfitViewScreen() {
         <OutfitViewContent
           outfit={outfit}
           coverImage={coverImage}
+          coverImageDataUri={coverImageDataUri}
           outfitItems={outfitItems}
           wardrobeItems={wardrobeItems}
           itemImageUrls={itemImageUrls}

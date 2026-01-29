@@ -24,6 +24,8 @@ interface UseOutfitViewProps {
 interface UseOutfitViewReturn {
   outfit: any | null;
   coverImage: any | null;
+  /** When set, use this data URI for instant render instead of fetching from storage (from job.result.base64_result) */
+  coverImageDataUri: string | null;
   outfitItems: any[];
   wardrobeItems: Map<string, any>;
   itemImageUrls: Map<string, string>;
@@ -41,6 +43,7 @@ export function useOutfitView({
 }: UseOutfitViewProps): UseOutfitViewReturn {
   const [outfit, setOutfit] = useState<any | null>(null);
   const [coverImage, setCoverImage] = useState<any | null>(null);
+  const [coverImageDataUri, setCoverImageDataUri] = useState<string | null>(null);
   const [outfitItems, setOutfitItems] = useState<any[]>([]);
   const [wardrobeItems, setWardrobeItems] = useState<Map<string, any>>(
     new Map()
@@ -64,6 +67,10 @@ export function useOutfitView({
       if (finalJob && finalJob.status === 'succeeded') {
         setRenderJobId(null);
         setIsGenerating(false);
+        // Instant render: use base64 from job result to avoid a second fetch
+        if (finalJob.result?.base64_result) {
+          setCoverImageDataUri('data:image/jpeg;base64,' + finalJob.result.base64_result);
+        }
         await refreshOutfit();
       } else if (finalJob && finalJob.status === 'failed') {
         setRenderJobId(null);
@@ -107,6 +114,7 @@ export function useOutfitView({
 
     const loadOutfitData = async () => {
       setLoading(true);
+      setCoverImageDataUri(null);
 
       try {
         const { data, error } = await getOutfit(outfitId);
@@ -207,6 +215,7 @@ export function useOutfitView({
   return {
     outfit,
     coverImage,
+    coverImageDataUri,
     outfitItems,
     wardrobeItems,
     itemImageUrls,

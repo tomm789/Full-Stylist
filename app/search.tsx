@@ -6,14 +6,13 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearch } from '@/hooks';
-import { SearchResultItem, SearchFilterBar } from '@/components/shared';
+import { SearchResultItem, SearchFilterBar, LoadingSpinner } from '@/components/shared';
 
 export default function SearchScreen() {
   const { user } = useAuth();
@@ -84,7 +83,7 @@ export default function SearchScreen() {
       {/* Results */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <LoadingSpinner size="large" />
         </View>
       ) : (
         <FlatList
