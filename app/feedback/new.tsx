@@ -56,11 +56,11 @@ export default function NewFeedbackScreen() {
       const { data, error } = await supabase
         .from('feedback_threads')
         .insert({
-          owner_user_id: user.id,
-          category,
+          user_id: user.id,
+          category: category,
           status: 'open',
           title: title.trim(),
-          body: body.trim(),
+          body: body.trim()
         })
         .select()
         .single();
@@ -73,6 +73,7 @@ export default function NewFeedbackScreen() {
         router.back();
       }
     } catch (error: any) {
+      console.error('Submission error:', error);
       Alert.alert('Error', error.message || 'Failed to create feedback thread');
     } finally {
       setSubmitting(false);

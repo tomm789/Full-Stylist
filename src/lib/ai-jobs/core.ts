@@ -22,6 +22,8 @@ export interface AIJob {
   error?: string;
   created_at: string;
   updated_at: string;
+  /** Set when user has submitted feedback for this job (from ai_generation_feedback). */
+  feedback_at?: string | null;
 }
 
 // Policy block patterns for Gemini errors

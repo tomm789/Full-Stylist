@@ -3,7 +3,7 @@
  * View and manage a single wardrobe item
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,11 @@ import {
   ItemNavigation,
   ItemActions,
 } from '@/components/wardrobe';
+import {
+  DropdownMenuModal,
+  DropdownMenuItem,
+  dropdownMenuStyles,
+} from '@/components/shared/modals';
 
 export default function ItemDetailScreen() {
   const { id, itemIds, readOnly } = useLocalSearchParams<{
@@ -72,6 +77,9 @@ export default function ItemDetailScreen() {
   });
 
   const isOwnItem = item && user && item.owner_user_id === user.id && !isReadOnly;
+  const [showMenu, setShowMenu] = useState(false);
+
+  const closeMenu = () => setShowMenu(false);
 
   if (loading) {
     return (
@@ -112,24 +120,53 @@ export default function ItemDetailScreen() {
               />
             </TouchableOpacity>
           )}
-          {isOwnItem && (
-            <TouchableOpacity onPress={actions.handleEdit} style={styles.headerButton}>
-              <Ionicons name="pencil-outline" size={24} color="#007AFF" />
-            </TouchableOpacity>
-          )}
-          {isOwnItem && (
-            <TouchableOpacity
-              onPress={actions.handleDelete}
-              style={[styles.headerButton, styles.deleteButton]}
-            >
-              <Ionicons name="trash-outline" size={24} color="#FF3B30" />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity onPress={actions.handleShare} style={styles.headerButton}>
-            <Ionicons name="share-outline" size={24} color="#007AFF" />
+          <TouchableOpacity
+            onPress={() => setShowMenu(true)}
+            style={styles.headerButton}
+          >
+            <Ionicons name="ellipsis-vertical" size={24} color="#000" />
           </TouchableOpacity>
         </View>
       </View>
+
+      <DropdownMenuModal
+        visible={showMenu}
+        onClose={closeMenu}
+        topOffset={100}
+        align="right"
+      >
+        {isOwnItem && (
+          <>
+            <DropdownMenuItem
+              label="Edit"
+              icon="pencil-outline"
+              onPress={() => {
+                closeMenu();
+                actions.handleEdit();
+              }}
+            />
+            <View style={dropdownMenuStyles.menuDivider} />
+            <DropdownMenuItem
+              label="Delete"
+              icon="trash-outline"
+              onPress={() => {
+                closeMenu();
+                actions.handleDelete();
+              }}
+              danger
+            />
+            <View style={dropdownMenuStyles.menuDivider} />
+          </>
+        )}
+        <DropdownMenuItem
+          label="Share"
+          icon="share-outline"
+          onPress={() => {
+            closeMenu();
+            actions.handleShare();
+          }}
+        />
+      </DropdownMenuModal>
 
       {/* Scrollable Content */}
       <ScrollView

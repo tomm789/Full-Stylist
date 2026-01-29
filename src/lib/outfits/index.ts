@@ -35,3 +35,11 @@ export {
   getOutfitEngagement,
   getTopRatedOutfits,
 } from './ratings';
+
+// Outfit description → modal messages (shared)
+export {
+  type OutfitDescription,
+  type GenerationMessage,
+  outfitDescriptionToGenerationMessages,
+  runDescriptionMessageDrip,
+} from './outfitDescriptionMessages';

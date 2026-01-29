@@ -4,9 +4,15 @@
  * NOW WITH REAL-TIME DESCRIPTION POLLING
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { saveOutfit } from '@/lib/outfits';
 import { setInitialCoverDataUri } from '@/lib/outfits/initialCoverCache';
+import {
+  outfitDescriptionToGenerationMessages,
+  runDescriptionMessageDrip,
+  type OutfitDescription,
+  type GenerationMessage,
+} from '@/lib/outfits/outfitDescriptionMessages';
 import { createAndTriggerJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
 import { getUserSettings } from '@/lib/settings';
 import { WardrobeItem, WardrobeCategory } from '@/lib/wardrobe';
@@ -14,6 +20,8 @@ import { supabase } from '@/lib/supabase';
 import { generateClothingGrid } from '@/utils/clothing-grid';
 import { startTimeline } from '@/lib/perf/timeline';
 import { PERF_MODE } from '@/lib/perf/perfMode';
+
+const DESCRIPTION_POLL_MAX_MS = 30_000;
 
 interface GenerationProgress {
   phase: 'saving' | 'preparing' | 'stacking' | 'generating' | 'complete' | 'error';
@@ -25,19 +33,6 @@ interface GenerationItem {
   id: string;
   title: string;
   orderIndex: number;
-}
-
-interface GenerationMessage {
-  id: string;
-  kind: 'description' | 'contexts' | 'style' | 'versatility' | 'finalizing';
-  text: string;
-}
-
-interface OutfitDescription {
-  description: string;
-  occasions: string[];
-  styleTags: string[];
-  season: string;
 }
 
 /** Optional: use pre-uploaded grid from useBackgroundGridGenerator for 0s latency */
@@ -72,17 +67,29 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
   // Polling interval refs
   const descriptionPollingInterval = useRef<NodeJS.Timeout | null>(null);
   const itemRevealInterval = useRef<NodeJS.Timeout | null>(null);
+  const descriptionPollingStartedAtRef = useRef<number | null>(null);
+  const descriptionPollingOutfitIdRef = useRef<string | null>(null);
 
   const clearAllIntervals = useCallback(() => {
     if (descriptionPollingInterval.current) {
       clearInterval(descriptionPollingInterval.current);
       descriptionPollingInterval.current = null;
+      const outfitId = descriptionPollingOutfitIdRef.current;
+      descriptionPollingStartedAtRef.current = null;
+      descriptionPollingOutfitIdRef.current = null;
+      if (outfitId) {
+        console.debug('[outfit_render_timing] description_poll_stopped', { outfitId, reason: 'cleanup' });
+      }
     }
     if (itemRevealInterval.current) {
       clearInterval(itemRevealInterval.current);
       itemRevealInterval.current = null;
     }
   }, []);
+
+  useEffect(() => {
+    return () => clearAllIntervals();
+  }, [clearAllIntervals]);
 
   // NEW: Animate item checking
   const startItemRevealAnimation = useCallback((items: GenerationItem[]) => {
@@ -119,115 +126,65 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           itemRevealInterval.current = null;
         }
       }
-    }, 400); // Reveal one item every 400ms
+    }, 500); // Reveal one item every 500ms
   }, []);
 
-  // NEW: Poll for outfit description from backend
+  // Poll for outfit description from backend (Supabase only). Max 30s; stop on success or timeout.
   const startDescriptionPolling = useCallback((outfitId: string) => {
-    console.log('[OutfitGeneration] Starting description polling...');
+    if (descriptionPollingInterval.current != null) {
+      return;
+    }
+
+    descriptionPollingStartedAtRef.current = Date.now();
+    descriptionPollingOutfitIdRef.current = outfitId;
+    console.debug('[outfit_render_timing] description_poll_started', { outfitId });
 
     descriptionPollingInterval.current = setInterval(async () => {
+      const started = descriptionPollingStartedAtRef.current;
+      const elapsed = started != null ? Date.now() - started : 0;
+      if (elapsed >= DESCRIPTION_POLL_MAX_MS) {
+        if (descriptionPollingInterval.current) {
+          clearInterval(descriptionPollingInterval.current);
+          descriptionPollingInterval.current = null;
+        }
+        descriptionPollingStartedAtRef.current = null;
+        descriptionPollingOutfitIdRef.current = null;
+        console.debug('[outfit_render_timing] description_poll_timeout', { outfitId, elapsedMs: elapsed });
+        return;
+      }
+
       try {
         const { data: outfitData } = await supabase
           .from('outfits')
           .select('description, occasions, style_tags, season, description_generated_at')
           .eq('id', outfitId)
-          .single();
+          .maybeSingle();
 
         if (outfitData?.description_generated_at) {
-          console.log('[OutfitGeneration] Description received!');
-
-          const description: OutfitDescription = {
-            description: outfitData.description || '',
-            occasions: outfitData.occasions || [],
-            styleTags: outfitData.style_tags || [],
-            season: outfitData.season || 'all-season',
-          };
-
-          setOutfitDescription(description);
-
-          // Animate through messages
-          animateDescriptionMessages(description);
-
-          // Stop polling
           if (descriptionPollingInterval.current) {
             clearInterval(descriptionPollingInterval.current);
             descriptionPollingInterval.current = null;
           }
+          descriptionPollingStartedAtRef.current = null;
+          descriptionPollingOutfitIdRef.current = null;
+          console.debug('[outfit_render_timing] description_poll_stopped', { outfitId, reason: 'success' });
+
+          const description: OutfitDescription = {
+            description: outfitData.description ?? '',
+            occasions: outfitData.occasions ?? [],
+            styleTags: outfitData.style_tags ?? [],
+            season: outfitData.season ?? 'all-season',
+          };
+
+          setOutfitDescription(description);
+          setModalPhase('analysis');
+          const messages = outfitDescriptionToGenerationMessages(description);
+          runDescriptionMessageDrip(messages, setActiveMessage, setModalPhase);
         }
       } catch (error) {
         console.error('[OutfitGeneration] Description polling error:', error);
       }
-    }, 500); // Poll every 500ms
-  }, []);
-
-  // NEW: Animate through description messages
-  const animateDescriptionMessages = useCallback((description: OutfitDescription) => {
-    const messages: GenerationMessage[] = [];
-
-    // Message 1: Description
-    if (description.description) {
-      messages.push({
-        id: 'msg-description',
-        kind: 'description',
-        text: description.description,
-      });
-    }
-
-    // Message 2: Occasions (contexts)
-    if (description.occasions.length > 0) {
-      messages.push({
-        id: 'msg-contexts',
-        kind: 'contexts',
-        text: `Perfect for ${description.occasions.join(', ')}.`,
-      });
-    }
-
-    // Message 3: Style tags
-    if (description.styleTags.length > 0) {
-      messages.push({
-        id: 'msg-style',
-        kind: 'style',
-        text: `This outfit embodies ${description.styleTags.join(', ')} vibes.`,
-      });
-    }
-
-    // Message 4: Versatility/Season
-    if (description.season && description.season !== 'all-season') {
-      messages.push({
-        id: 'msg-versatility',
-        kind: 'versatility',
-        text: `Best suited for ${description.season} weather.`,
-      });
-    } else {
-      messages.push({
-        id: 'msg-versatility',
-        kind: 'versatility',
-        text: `A versatile outfit that works year-round.`,
-      });
-    }
-
-    // Animate through messages
-    let currentIndex = 0;
-
-    const showNextMessage = () => {
-      if (currentIndex < messages.length) {
-        setActiveMessage(messages[currentIndex]);
-        currentIndex++;
-        setTimeout(showNextMessage, 2000); // Show each message for 2 seconds
-      } else {
-        // All messages shown, transition to finalizing
-        setModalPhase('finalizing');
-        setActiveMessage({
-          id: 'msg-finalizing',
-          kind: 'finalizing',
-          text: 'Applying final touches to your outfit visualization...',
-        });
-      }
-    };
-
-    // Start animation after a brief delay
-    setTimeout(showNextMessage, 300);
+    }, 500);
   }, []);
 
   const generateOutfit = useCallback(
@@ -594,7 +551,13 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
         if (result.base64_result) {
           const dataUri = 'data:image/jpeg;base64,' + result.base64_result;
           const coverSetAt = Date.now();
-          setInitialCoverDataUri(outfitId, dataUri, jobStatusSucceededAt);
+          setInitialCoverDataUri(
+            outfitId,
+            dataUri,
+            jobStatusSucceededAt,
+            completedJob.id,
+            (completedJob as { feedback_at?: string | null }).feedback_at ?? null
+          );
           timeline.mark('cover_set_base64_at', { ts: coverSetAt });
           console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, traceId: timeline.traceId, outfitId, from: 'generation' });
         } else {
