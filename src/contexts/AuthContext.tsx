@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { debugIngest } from '@/lib/ai-jobs/debug-ingest';
 
 interface AuthContextType {
   session: Session | null;
@@ -42,19 +43,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:44',message:'onAuthStateChange fired',data:{event,hasSession:!!session,userId:session?.user?.id||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
+      debugIngest({ location: 'AuthContext.tsx:44', message: 'onAuthStateChange fired', data: { event, hasSession: !!session, userId: session?.user?.id || 'null' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H2' });
       console.log('[AuthContext] Auth state changed:', event, session ? 'Session found' : 'No session');
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:49',message:'Before updating state from onAuthStateChange',data:{event,currentSession:session?session.user.id:'null',currentStateSession:session?session.user.id:'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
+      debugIngest({ location: 'AuthContext.tsx:49', message: 'Before updating state from onAuthStateChange', data: { event, currentSession: session?.user?.id ?? 'null', currentStateSession: session?.user?.id ?? 'null' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H2' });
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:54',message:'State updated after auth change',data:{event,hasSession:!!session},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
+      debugIngest({ location: 'AuthContext.tsx:54', message: 'State updated after auth change', data: { event, hasSession: !!session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H2' });
     });
 
     return () => {
@@ -65,22 +60,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password?: string) => {
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:signIn:entry',message:'signIn called',data:{email,usePassword:!!password},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3,H4,H5'})}).catch(()=>{});
-      // #endregion
+      debugIngest({ location: 'AuthContext.tsx:signIn:entry', message: 'signIn called', data: { email, usePassword: !!password }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H3,H4,H5' });
       if (password) {
         // Password sign in
         console.log('[AuthContext] Attempting password sign in for:', email);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:signIn:beforePassword',message:'before signInWithPassword',data:{email},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3,H4'})}).catch(()=>{});
-        // #endregion
+        debugIngest({ location: 'AuthContext.tsx:signIn:beforePassword', message: 'before signInWithPassword', data: { email }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H3,H4' });
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:signIn:afterPassword',message:'after signInWithPassword',data:{hasError:!!error,errorMessage:error?.message,errorStatus:(error as any)?.status,hasSession:!!data?.session},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3,H4'})}).catch(()=>{});
-        // #endregion
+        debugIngest({ location: 'AuthContext.tsx:signIn:afterPassword', message: 'after signInWithPassword', data: { hasError: !!error, errorMessage: error?.message, errorStatus: (error as any)?.status, hasSession: !!data?.session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H3,H4' });
         if (error) {
           console.error('[AuthContext] Password sign in error:', error);
         } else {
@@ -139,50 +128,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:138',message:'signOut called',data:{sessionBefore:session?session.user.id:'null',userBefore:user?user.id:'null',hasSession:!!session},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
+    debugIngest({ location: 'AuthContext.tsx:138', message: 'signOut called', data: { sessionBefore: session?.user?.id ?? 'null', userBefore: user?.id ?? 'null', hasSession: !!session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
     try {
       console.log('[AuthContext] Signing out...');
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:143',message:'Before signOut API call',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
+      debugIngest({ location: 'AuthContext.tsx:143', message: 'Before signOut API call', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
       const { error } = await supabase.auth.signOut();
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:146',message:'signOut API call completed',data:{error:error?error.message:'none',errorStatus:(error as any)?.status,hasError:!!error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
-      // #region agent log
+      debugIngest({ location: 'AuthContext.tsx:146', message: 'signOut API call completed', data: { error: error?.message ?? 'none', errorStatus: (error as any)?.status, hasError: !!error }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
       const { data: sessionAfterApi } = await supabase.auth.getSession();
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:149',message:'Session check after signOut API',data:{hasSession:!!sessionAfterApi.session,userId:sessionAfterApi.session?.user?.id||'null'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
-      // #endregion
+      debugIngest({ location: 'AuthContext.tsx:149', message: 'Session check after signOut API', data: { hasSession: !!sessionAfterApi.session, userId: sessionAfterApi.session?.user?.id ?? 'null' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H3' });
       if (error) {
         console.error('[AuthContext] Sign out error:', error);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:152',message:'Sign out error detected, clearing local state',data:{errorMessage:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1,H2'})}).catch(()=>{});
-        // #endregion
+        debugIngest({ location: 'AuthContext.tsx:152', message: 'Sign out error detected, clearing local state', data: { errorMessage: error.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1,H2' });
         // Clear local state even if API call failed (for PWA scenarios)
         setSession(null);
         setUser(null);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:156',message:'Local state cleared after signOut error',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
+        debugIngest({ location: 'AuthContext.tsx:156', message: 'Local state cleared after signOut error', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
       } else {
         console.log('[AuthContext] Sign out successful');
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:160',message:'Sign out successful, waiting for onAuthStateChange',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-        // #endregion
+        debugIngest({ location: 'AuthContext.tsx:160', message: 'Sign out successful, waiting for onAuthStateChange', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H2' });
       }
     } catch (error: any) {
       console.error('[AuthContext] Exception during sign out:', error);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:164',message:'signOut exception, clearing local state',data:{error:error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
+      debugIngest({ location: 'AuthContext.tsx:164', message: 'signOut exception, clearing local state', data: { error: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
       // Clear local state even if exception occurred
       setSession(null);
       setUser(null);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/28071d19-db3c-4f6a-8e23-153951e513d0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:169',message:'Local state cleared after signOut exception',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
+      debugIngest({ location: 'AuthContext.tsx:169', message: 'Local state cleared after signOut exception', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
     }
   };
 

@@ -20,14 +20,14 @@
       "@/styles": ["./src/styles"]  // ← ADD THIS LINE
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "netlify/functions/prompts.js",
-    "netlify/functions/ai-job-runner.js"
-  ],
-  "exclude": [
-    "archive",
-    "archive/**"
-  ]
+"include": [
+  "src/**/*.ts",
+  "src/**/*.tsx",
+  "netlify/functions/**/*.js"
+],
+"exclude": [
+  "archive/**",
+  "**/*.backup",
+  "**/*.instrumented*"
+]
 }

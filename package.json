@@ -49,6 +49,7 @@
   },
   "devDependencies": {
     "@netlify/functions": "^5.1.2",
-    "babel-plugin-module-resolver": "^5.0.2"
+    "babel-plugin-module-resolver": "^5.0.2",
+    "tsx": "^4.21.0"
   }
 }
