@@ -3,7 +3,7 @@
  * Main content display for outfit view
  */
 
-import React from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,10 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { SocialActionBar, CommentSection } from '@/components/outfits';
 import { supabase } from '@/lib/supabase';
+import { continueTimeline } from '@/lib/perf/timeline';
+
+const IMAGE_RETRY_DELAYS = [500, 1000, 2000];
+const MAX_IMAGE_RETRIES = 3;
 
 interface OutfitViewContentProps {
   outfit: any;
@@ -38,6 +42,8 @@ interface OutfitViewContentProps {
   onSubmitComment: (text: string) => Promise<boolean>;
   onImageModalClose: () => void;
   onImagePress: () => void;
+  /** When set, timeline logs image load events and bounded retry on error (freshly generated). */
+  renderTraceId?: string;
 }
 
 export function OutfitViewContent({
@@ -61,8 +67,11 @@ export function OutfitViewContent({
   onSubmitComment,
   onImageModalClose,
   onImagePress,
+  renderTraceId,
 }: OutfitViewContentProps) {
   const router = useRouter();
+  const [imageRetryKey, setImageRetryKey] = useState(0);
+  const imageRetryCountRef = useRef(0);
 
   const getImageUrl = (image: any) => {
     if (!image || !image.storage_key) return null;
@@ -74,6 +83,27 @@ export function OutfitViewContent({
   // Prefer instant base64 from job result to avoid a second fetch
   const coverImageUrl = coverImageDataUri ?? (coverImage ? getImageUrl(coverImage) : null);
 
+  const timeline = renderTraceId ? continueTimeline(renderTraceId) : null;
+
+  const handleImageLoadStart = useCallback(() => {
+    timeline?.mark('image_load_start', { uri: coverImageUrl ? 'set' : 'null' });
+  }, [timeline, coverImageUrl]);
+
+  const handleImageLoad = useCallback(() => {
+    timeline?.mark('image_load_end');
+  }, [timeline]);
+
+  const handleImageError = useCallback(() => {
+    const retryCount = imageRetryCountRef.current;
+    timeline?.mark('image_load_error', { uri: coverImageUrl ? 'set' : 'null', retryCount });
+    if (!renderTraceId || retryCount >= MAX_IMAGE_RETRIES) return;
+    const delay = IMAGE_RETRY_DELAYS[retryCount] ?? 2000;
+    imageRetryCountRef.current = retryCount + 1;
+    setTimeout(() => {
+      setImageRetryKey((k) => k + 1);
+    }, delay);
+  }, [timeline, coverImageUrl, renderTraceId]);
+
   return (
     <>
       {/* Cover Image */}
@@ -84,9 +114,13 @@ export function OutfitViewContent({
           activeOpacity={0.9}
         >
           <Image
+            key={imageRetryKey}
             source={{ uri: coverImageUrl }}
             style={styles.coverImage}
             contentFit="contain"
+            onLoadStart={handleImageLoadStart}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
           />
         </TouchableOpacity>
       )}
@@ -193,6 +227,9 @@ export function OutfitViewContent({
                 source={{ uri: coverImageUrl }}
                 style={styles.fullscreenImage}
                 contentFit="contain"
+                onLoadStart={handleImageLoadStart}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
               />
             )}
           </TouchableOpacity>

@@ -37,12 +37,14 @@ export default function OutfitViewScreen() {
     filters,
     returnTo,
     renderJobId: renderJobIdParam,
+    renderTraceId: renderTraceIdParam,
   } = useLocalSearchParams<{
     id: string;
     outfitIds?: string;
     filters?: string;
     returnTo?: string;
     renderJobId?: string;
+    renderTraceId?: string;
   }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -57,12 +59,14 @@ export default function OutfitViewScreen() {
     itemImageUrls,
     loading,
     isGenerating,
+    renderTraceId,
     refreshOutfit,
     deleteOutfit: deleteOutfitAction,
   } = useOutfitView({
     outfitId: id,
     userId: user?.id,
     renderJobIdParam: renderJobIdParam as string | undefined,
+    renderTraceIdParam: renderTraceIdParam as string | undefined,
   });
 
   // Social engagement
@@ -164,6 +168,7 @@ export default function OutfitViewScreen() {
           onSubmitComment={submitComment}
           onImageModalClose={() => actions.setShowImageModal(false)}
           onImagePress={() => actions.setShowImageModal(true)}
+          renderTraceId={renderTraceId ?? undefined}
         />
       </ScrollView>
 

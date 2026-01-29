@@ -19,6 +19,7 @@ import {
 import { getUserSettings } from '@/lib/settings';
 import { generateClothingGrid } from '@/utils/clothing-grid';
 import { supabase } from '@/lib/supabase';
+import { startTimeline } from '@/lib/perf/timeline';
 
 interface UseOutfitEditorActionsProps {
   outfitId: string;
@@ -283,6 +284,9 @@ export function useOutfitEditorActions({
       const modelPreference =
         userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
 
+      const timeline = startTimeline('outfit_render_editor');
+      timeline.mark('generate_press');
+
       // Create render job
       const { data: renderJob, error } = await createAIJob(
         user.id,
@@ -304,11 +308,18 @@ export function useOutfitEditorActions({
         return;
       }
 
+      timeline.mark('job_created', { job_id: renderJob.id });
+
       await triggerAIJobExecution(renderJob.id);
+      timeline.mark('execution_triggered');
+
       setRendering(false);
-      router.push(
-        `/outfits/${savedOutfitId}/view?renderJobId=${renderJob.id}`
-      );
+      const query = new URLSearchParams({
+        renderJobId: renderJob.id,
+        renderTraceId: timeline.traceId,
+      }).toString();
+      router.push(`/outfits/${savedOutfitId}/view?${query}`);
+      timeline.mark('navigate_to_view');
     } catch (error: any) {
       console.error('Render error:', error);
       Alert.alert('Error', error.message || 'An unexpected error occurred');
