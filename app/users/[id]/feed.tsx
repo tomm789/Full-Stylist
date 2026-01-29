@@ -29,7 +29,7 @@ export default function UserFeedScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Load feed filtered by user
-  const { feed, outfitImages, lookbookImages, engagementCounts, loading, refresh } =
+  const { feed, outfitImages, lookbookImages, engagementCounts, setEngagementCounts, loading, refresh } =
     useFeed({
       userId: user?.id,
       filterByUserId: userId,
@@ -39,7 +39,9 @@ export default function UserFeedScreen() {
   const { handleLike, handleSave, handleRepost, liking, saving, reposting } =
     useSocialEngagement({
       userId: user?.id,
-      onRepostComplete: refresh,
+      engagementCounts,
+      setEngagementCounts,
+      onRepost: refresh,
     });
 
   // Slideshow for lookbooks
@@ -72,32 +74,29 @@ export default function UserFeedScreen() {
 
       return (
         <FeedCard
-          userName={post.user?.display_name || post.user?.handle || 'User'}
-          userAvatar={post.user?.headshot_image_url}
-          timestamp={post.created_at}
+          item={item}
+          counts={engagement}
+          currentUserId={user?.id}
+          onUserPress={() => {}}
+          onMenuPress={() => {}}
           caption={post.caption}
-          isRepost={item.type === 'repost'}
+          actions={
+            <SocialActionBar
+              counts={engagement}
+              onLike={() => handleLike(post.id)}
+              onComment={() => {}}
+              onRepost={() => handleRepost(post.id)}
+              onSave={() => handleSave(post.id)}
+              liking={liking.has(post.id)}
+              saving={saving.has(post.id)}
+              reposting={reposting.has(post.id)}
+            />
+          }
         >
           <FeedOutfitCard
             outfit={outfit}
             imageUrl={imageUrl}
             onPress={() => {}}
-          />
-          <SocialActionBar
-            likes={engagement.likes}
-            comments={engagement.comments}
-            reposts={engagement.reposts}
-            saves={engagement.saves}
-            hasLiked={engagement.hasLiked}
-            hasSaved={engagement.hasSaved}
-            hasReposted={engagement.hasReposted}
-            onLike={() => handleLike(post.id, engagement.hasLiked)}
-            onComment={() => {}}
-            onRepost={() => handleRepost(post.id, engagement.hasReposted)}
-            onSave={() => handleSave(post.id, engagement.hasSaved)}
-            liking={liking[post.id]}
-            saving={saving[post.id]}
-            reposting={reposting[post.id]}
           />
         </FeedCard>
       );
@@ -106,40 +105,34 @@ export default function UserFeedScreen() {
     // Render lookbook post
     if (post.entity_type === 'lookbook' && item.entity?.lookbook) {
       const lookbook = item.entity.lookbook;
-      const thumbnailUrl = lookbookImages.get(lookbook.id);
-      const outfits = lookbookImages.get(`${lookbook.id}_outfits`) || [];
 
+      const lookbookOutfits = lookbookImages.get(`${lookbook.id}_outfits`) || [];
       return (
         <FeedCard
-          userName={post.user?.display_name || post.user?.handle || 'User'}
-          userAvatar={post.user?.headshot_image_url}
-          timestamp={post.created_at}
+          item={item}
+          counts={engagement}
+          currentUserId={user?.id}
+          onUserPress={() => {}}
+          onMenuPress={() => {}}
           caption={post.caption}
-          isRepost={item.type === 'repost'}
+          actions={
+            <SocialActionBar
+              counts={engagement}
+              onLike={() => handleLike(post.id)}
+              onComment={() => {}}
+              onRepost={() => handleRepost(post.id)}
+              onSave={() => handleSave(post.id)}
+              liking={liking.has(post.id)}
+              saving={saving.has(post.id)}
+              reposting={reposting.has(post.id)}
+            />
+          }
         >
           <FeedLookbookCarousel
             lookbook={lookbook}
-            outfits={outfits}
-            thumbnailUrl={thumbnailUrl}
             lookbookImages={lookbookImages}
-            onPlayPress={() => slideshow.openSlideshow(outfits)}
+            onPlayPress={() => slideshow.open(lookbookOutfits)}
             onPress={() => {}}
-          />
-          <SocialActionBar
-            likes={engagement.likes}
-            comments={engagement.comments}
-            reposts={engagement.reposts}
-            saves={engagement.saves}
-            hasLiked={engagement.hasLiked}
-            hasSaved={engagement.hasSaved}
-            hasReposted={engagement.hasReposted}
-            onLike={() => handleLike(post.id, engagement.hasLiked)}
-            onComment={() => {}}
-            onRepost={() => handleRepost(post.id, engagement.hasReposted)}
-            onSave={() => handleSave(post.id, engagement.hasSaved)}
-            liking={liking[post.id]}
-            saving={saving[post.id]}
-            reposting={reposting[post.id]}
           />
         </FeedCard>
       );
@@ -174,13 +167,15 @@ export default function UserFeedScreen() {
 
       {/* Slideshow Modal */}
       <SlideshowModal
-        visible={slideshow.slideshowVisible}
-        outfits={slideshow.slideshowOutfits}
-        initialIndex={slideshow.currentIndex}
-        onClose={slideshow.closeSlideshow}
-        onIndexChange={slideshow.setCurrentIndex}
-        isPlaying={slideshow.isPlaying}
-        onTogglePlay={slideshow.togglePlay}
+        visible={slideshow.visible}
+        outfits={slideshow.outfits}
+        images={slideshow.images}
+        currentIndex={slideshow.currentIndex}
+        isAutoPlaying={slideshow.isAutoPlaying}
+        onClose={slideshow.close}
+        onNext={slideshow.next}
+        onPrevious={slideshow.previous}
+        onToggleAutoPlay={slideshow.toggleAutoPlay}
       />
     </View>
   );

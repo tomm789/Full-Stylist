@@ -3,7 +3,7 @@
  * Actions and handlers for outfit editor screen
  */
 
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,7 +29,7 @@ interface UseOutfitEditorActionsProps {
   itemImageUrls: Map<string, string>;
   notes: string;
   saveOutfit: () => Promise<string | null>;
-  setOutfitItems: (items: Map<string, WardrobeItem>) => void;
+  setOutfitItems: React.Dispatch<React.SetStateAction<Map<string, WardrobeItem>>>;
   getItemImageUrl: (itemId: string) => Promise<string | null>;
 }
 
@@ -125,7 +125,7 @@ export function useOutfitEditorActions({
     async (item: WardrobeItem) => {
       if (!selectedCategory) return;
 
-      setOutfitItems((prev) => {
+      setOutfitItems((prev: Map<string, WardrobeItem>) => {
         const updated = new Map(prev);
         updated.set(selectedCategory, item);
         return updated;
@@ -139,7 +139,7 @@ export function useOutfitEditorActions({
 
   const removeItem = useCallback(
     (categoryId: string) => {
-      setOutfitItems((prev) => {
+      setOutfitItems((prev: Map<string, WardrobeItem>) => {
         const updated = new Map(prev);
         updated.delete(categoryId);
         return updated;

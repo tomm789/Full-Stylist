@@ -62,7 +62,7 @@ const AddOutfitCard = React.memo(
               <Text style={styles.selectedBadgeText}>✓</Text>
             </View>
           )}
-          <Text style={styles.title} numberOfLines={2}>
+          <Text style={styles.badgeTitle} numberOfLines={2}>
             {item.title || 'Untitled Outfit'}
           </Text>
         </View>
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  title: {
+  badgeTitle: {
     color: '#fff',
     fontSize: 13,
     fontWeight: '600',

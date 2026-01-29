@@ -56,7 +56,50 @@ export async function searchOutfits(query: string, limit: number = 20): Promise<
       throw error;
     }
 
-    return { data: data || [], error: null };
+    // PostgREST returns FK relation as array; normalize to single object
+    const normalized = (data || []).map((row: any) => ({
+      ...row,
+      owner: Array.isArray(row.owner) ? row.owner[0] : row.owner,
+    }));
+    return { data: normalized, error: null };
+  } catch (error: any) {
+    return { data: [], error };
+  }
+}
+
+/**
+ * Get public outfits (visibility = 'public') for explore
+ */
+export async function getPublicOutfits(
+  limit: number = 20,
+  offset: number = 0
+): Promise<{
+  data: Array<{
+    id: string;
+    owner_user_id: string;
+    title?: string;
+    visibility: string;
+    created_at: string;
+    owner?: { handle: string; display_name: string };
+  }>;
+  error: any;
+}> {
+  try {
+    const { data, error } = await supabase
+      .from('outfits')
+      .select('id, owner_user_id, title, visibility, created_at, owner:users!owner_user_id(handle, display_name)')
+      .eq('visibility', 'public')
+      .is('archived_at', null)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) throw error;
+
+    const normalized = (data || []).map((row: any) => ({
+      ...row,
+      owner: Array.isArray(row.owner) ? row.owner[0] : row.owner,
+    }));
+    return { data: normalized, error: null };
   } catch (error: any) {
     return { data: [], error };
   }
@@ -214,14 +257,14 @@ export async function getOutfitWithDetails(outfitId: string, userId: string): Pr
     p_viewer_id: userId,
   });
 
-  if (itemsError) {
-    return { data: null, error: itemsError };
+  if (error) {
+    return { data: null, error };
   }
 
   return { 
     data: { 
       outfit, 
-      items: itemsWithDetails || [], 
+      items: data || [], 
       coverImage: outfit.cover_image 
     }, 
     error: null 

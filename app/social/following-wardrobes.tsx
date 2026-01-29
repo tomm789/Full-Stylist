@@ -77,8 +77,12 @@ export default function FollowingWardrobesScreen() {
             }
           }
 
+          const followed = followedUser.followed;
           return {
-            ...followedUser,
+            id: followedUser.followed_user_id,
+            display_name: followed?.display_name ?? '',
+            handle: followed?.handle ?? '',
+            headshot_image_url: null,
             wardrobeId,
             itemCount,
             previewImage,
@@ -115,10 +119,8 @@ export default function FollowingWardrobesScreen() {
           icon="people-outline"
           title="Not following anyone yet"
           message="Follow users to see their wardrobes here"
-          action={{
-            label: 'Explore',
-            onPress: () => router.push('/social/explore'),
-          }}
+          actionLabel="Explore"
+          onAction={() => router.push('/social/explore')}
         />
       ) : (
         <FlatList

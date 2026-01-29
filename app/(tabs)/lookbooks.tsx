@@ -161,7 +161,7 @@ export default function LookbooksScreen() {
                 <EmptyState
                   title="No lookbooks yet"
                   message="Create your first lookbook!"
-                  actionText="Create Lookbook"
+                  actionLabel="Create Lookbook"
                   onAction={() => router.push('/lookbooks/new')}
                 />
               )}
@@ -172,7 +172,7 @@ export default function LookbooksScreen() {
               <EmptyState
                 title="No outfits yet"
                 message="Start by creating your first outfit"
-                actionText="Create Outfit"
+                actionLabel="Create Outfit"
                 onAction={() => router.push('/outfits/new')}
               />
             )}

@@ -17,8 +17,39 @@ import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile, useFollowStatus } from '@/hooks/social';
-import { UserProfileHeader } from '@/components/social';
+import { ProfileHeader } from '@/components/profile';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
+
+/** Header component for user profile; accepts profile + stats and renders via ProfileHeader */
+export function UserProfileHeader({
+  profile,
+  outfitCount,
+  isOwnProfile,
+  isFollowing,
+  followStatus,
+  loadingFollow,
+  onFollowPress,
+}: {
+  profile: any;
+  outfitCount: number;
+  isOwnProfile: boolean;
+  isFollowing: boolean;
+  followStatus: string;
+  loadingFollow: boolean;
+  onFollowPress: () => Promise<void>;
+}) {
+  return (
+    <ProfileHeader
+      profile={profile}
+      primaryStat={{ label: 'Outfits', value: outfitCount }}
+      isOwnProfile={isOwnProfile}
+      isFollowing={isFollowing}
+      followStatus={followStatus}
+      loadingFollow={loadingFollow}
+      onFollowPress={onFollowPress}
+    />
+  );
+}
 
 type TabType = 'outfits' | 'lookbooks';
 

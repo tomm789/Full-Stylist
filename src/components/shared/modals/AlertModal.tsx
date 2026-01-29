@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
-import { colors, spacing, borderRadius, typography } from '@/styles/theme';
+import { theme } from '@/styles';
+const { colors, spacing, borderRadius, typography } = theme;
 
 export type AlertModalProps = {
   visible: boolean;

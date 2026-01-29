@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, commonStyles } from '@/styles';
+import type { DimensionValue } from 'react-native';
 
 const { colors, spacing, borderRadius, typography } = theme;
 
@@ -27,7 +28,7 @@ interface BottomSheetProps extends Partial<ModalProps> {
   children: React.ReactNode;
   headerRight?: React.ReactNode;
   footerContent?: React.ReactNode;
-  maxHeight?: string | number;
+  maxHeight?: DimensionValue;
   style?: ViewStyle;
 }
 

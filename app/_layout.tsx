@@ -77,7 +77,7 @@ export default function RootLayout() {
           return;
         }
         if (originalUnhandled) {
-          originalUnhandled(event);
+          originalUnhandled.call(window, event);
         }
       };
 

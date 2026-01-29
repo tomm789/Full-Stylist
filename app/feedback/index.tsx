@@ -74,10 +74,8 @@ export default function FeedbackListScreen() {
         <EmptyState
           icon="chatbubbles-outline"
           title="No feedback threads yet"
-          action={{
-            label: 'Create your first feedback thread',
-            onPress: () => router.push('/feedback/new'),
-          }}
+          actionLabel="Create your first feedback thread"
+          onAction={() => router.push('/feedback/new')}
         />
       ) : (
         <FlatList

@@ -3,7 +3,7 @@
  * State and handlers for attribute editing
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
 import {
   EntityAttribute,
@@ -45,7 +45,7 @@ interface UseAttributeEditorReturn {
   newAttributeValue: string;
   groupedAttributes: Record<string, AttributeGroup>;
   setEditingAttributeTypeKey: (key: string | null) => void;
-  setEditingAttributeValues: (values: Record<string, string>) => void;
+  setEditingAttributeValues: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   setShowAddAttribute: (show: boolean) => void;
   setNewAttributeKey: (key: string) => void;
   setNewAttributeValue: (value: string) => void;

@@ -102,13 +102,7 @@ export default function OutfitsScreen() {
       <View style={styles.filterBar}>
         <PillButton
           label="Favorites"
-          icon={
-            <Ionicons
-              name={filters.showFavoritesOnly ? 'heart' : 'heart-outline'}
-              size={16}
-              color={filters.showFavoritesOnly ? colors.white : colors.textSecondary}
-            />
-          }
+          icon={filters.showFavoritesOnly ? 'heart' : 'heart-outline'}
           selected={filters.showFavoritesOnly}
           onPress={() =>
             updateFilter('showFavoritesOnly', !filters.showFavoritesOnly)

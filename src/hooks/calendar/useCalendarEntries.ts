@@ -87,11 +87,12 @@ export function useCalendarEntries({
     const outfitResults = await Promise.all(outfitPromises);
 
     for (const { data: outfit } of outfitResults) {
-      if (outfit?.cover_image?.storage_key) {
-        const storageBucket = (outfit.cover_image as any).storage_bucket || 'media';
+      const coverImage = Array.isArray(outfit?.cover_image) ? outfit?.cover_image?.[0] : outfit?.cover_image;
+      if (coverImage?.storage_key) {
+        const storageBucket = (coverImage as any).storage_bucket || 'media';
         const { data: urlData } = supabase.storage
           .from(storageBucket)
-          .getPublicUrl((outfit.cover_image as any).storage_key);
+          .getPublicUrl((coverImage as any).storage_key);
 
         if (urlData?.publicUrl) {
           imagesMap.set(outfit.id, urlData.publicUrl);

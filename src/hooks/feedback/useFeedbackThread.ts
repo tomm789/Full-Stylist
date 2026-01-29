@@ -25,7 +25,7 @@ interface UseFeedbackThreadReturn {
   loading: boolean;
   submittingComment: boolean;
   refresh: () => Promise<void>;
-  submitComment: (text: string) => Promise<void>;
+  submitComment: (text: string) => Promise<boolean>;
   updateStatus: (
     status: 'open' | 'in_progress' | 'resolved' | 'closed'
   ) => Promise<void>;
@@ -62,8 +62,8 @@ export function useFeedbackThread({
     await loadThread();
   };
 
-  const submitComment = async (text: string) => {
-    if (!userId || !threadId || !text.trim()) return;
+  const submitComment = async (text: string): Promise<boolean> => {
+    if (!userId || !threadId || !text.trim()) return false;
 
     setSubmittingComment(true);
 
@@ -78,11 +78,13 @@ export function useFeedbackThread({
 
       if (comment) {
         setComments([comment, ...comments]);
-        // Refresh thread to update comment count
         await loadThread();
+        return true;
       }
+      return false;
     } catch (error: any) {
       Alert.alert('Error', `Failed to post comment: ${error.message || error}`);
+      return false;
     } finally {
       setSubmittingComment(false);
     }

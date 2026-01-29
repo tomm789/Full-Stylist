@@ -9,7 +9,7 @@ import { searchOutfits } from '@/lib/outfits';
 import { searchLookbooks } from '@/lib/lookbooks';
 import { searchWardrobeItems } from '@/lib/wardrobe';
 
-type SearchResultType = 'user' | 'outfit' | 'lookbook' | 'wardrobe_item';
+export type SearchResultType = 'user' | 'outfit' | 'lookbook' | 'wardrobe_item';
 
 export interface SearchResult {
   id: string;

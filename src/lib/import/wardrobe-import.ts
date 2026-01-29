@@ -32,7 +32,7 @@ export async function importWardrobeItems(
   error: any;
 }> {
   try {
-    const wardrobeId = await getDefaultWardrobeId(userId);
+    const { data: wardrobeId } = await getDefaultWardrobeId(userId);
     if (!wardrobeId) {
       throw new Error('Wardrobe not found');
     }

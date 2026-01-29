@@ -92,7 +92,7 @@ export async function isUserProfileComplete(userId: string): Promise<boolean> {
       // PGRST116 = not found
       // 406 = Not Acceptable (can occur with RLS when user doesn't exist)
       // PGRST301 = no rows returned
-      if (userError.code === 'PGRST116' || userError.code === 'PGRST301' || userError.status === 406) {
+      if (userError.code === 'PGRST116' || userError.code === 'PGRST301' || (userError as any).status === 406) {
         console.log('[isUserProfileComplete] User not found in users table (expected for new users)');
       } else {
         // Log unexpected errors but still return false (treat as incomplete)
@@ -118,7 +118,7 @@ export async function isUserProfileComplete(userId: string): Promise<boolean> {
     if (settingsError) {
       console.error('[isUserProfileComplete] Error checking settings:', settingsError);
       // Handle various "not found" error codes
-      if (settingsError.code === 'PGRST116' || settingsError.code === 'PGRST301' || settingsError.status === 406) {
+      if (settingsError.code === 'PGRST116' || settingsError.code === 'PGRST301' || (settingsError as any).status === 406) {
         console.log('[isUserProfileComplete] Settings not found');
       } else {
         console.warn('[isUserProfileComplete] Unexpected error checking settings:', settingsError.code, settingsError.message);
