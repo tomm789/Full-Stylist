@@ -420,7 +420,11 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
     console.error(`[OutfitRender] Description generation failed, but continuing:`, error);
   }
 
-  return { 
+  // Job result: include outfit_id and render pointer so client can show image immediately
+  return {
+    outfit_id: outfit_id,
+    image_id: imageId,
+    storage_key: storageKey,
     renders: [{ image_id: imageId, storage_key: storageKey }],
     items_count: itemCount,
     used_stacked_image: useStackedImage,

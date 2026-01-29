@@ -3,22 +3,23 @@
  * Load and manage outfit view data with polling
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { getOutfit, deleteOutfit } from '@/lib/outfits';
 import { getWardrobeItemImages } from '@/lib/wardrobe';
-import { getOutfitCoverImageUrl } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
 import {
   getActiveOutfitRenderJob,
-  getRecentOutfitRenderJob,
   pollAIJobWithFinalCheck,
 } from '@/lib/ai-jobs';
+import { startTimeline, continueTimeline, type Timeline } from '@/lib/perf/timeline';
 
 interface UseOutfitViewProps {
   outfitId: string | undefined;
   userId: string | undefined;
   renderJobIdParam?: string;
+  /** When present, timeline marks are logged under this trace (e.g. from editor navigate). */
+  renderTraceId?: string;
 }
 
 interface UseOutfitViewReturn {
@@ -32,6 +33,8 @@ interface UseOutfitViewReturn {
   loading: boolean;
   isGenerating: boolean;
   renderJobId: string | null;
+  /** Trace ID for this render (for image load timeline + bounded retry). */
+  renderTraceId: string | null;
   refreshOutfit: () => Promise<void>;
   deleteOutfit: () => Promise<void>;
 }
@@ -40,6 +43,7 @@ export function useOutfitView({
   outfitId,
   userId,
   renderJobIdParam,
+  renderTraceId: renderTraceIdParam,
 }: UseOutfitViewProps): UseOutfitViewReturn {
   const [outfit, setOutfit] = useState<any | null>(null);
   const [coverImage, setCoverImage] = useState<any | null>(null);
@@ -54,33 +58,7 @@ export function useOutfitView({
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderJobId, setRenderJobId] = useState<string | null>(null);
-
-  const startPollingForOutfitRender = async (jobId: string) => {
-    try {
-      const { data: finalJob } = await pollAIJobWithFinalCheck(
-        jobId,
-        120,
-        2000,
-        '[OutfitView]'
-      );
-
-      if (finalJob && finalJob.status === 'succeeded') {
-        setRenderJobId(null);
-        setIsGenerating(false);
-        // Instant render: use base64 from job result to avoid a second fetch
-        if (finalJob.result?.base64_result) {
-          setCoverImageDataUri('data:image/jpeg;base64,' + finalJob.result.base64_result);
-        }
-        await refreshOutfit();
-      } else if (finalJob && finalJob.status === 'failed') {
-        setRenderJobId(null);
-        setIsGenerating(false);
-        Alert.alert('Error', 'Outfit generation failed');
-      }
-    } catch (error) {
-      console.error('Error polling:', error);
-    }
-  };
+  const renderTraceIdRef = useRef<string | null>(renderTraceIdParam ?? null);
 
   const refreshOutfit = async () => {
     if (!outfitId) return;
@@ -94,6 +72,55 @@ export function useOutfitView({
       if (data.coverImage) {
         setIsGenerating(false);
       }
+    }
+  };
+
+  const startPollingForOutfitRender = async (jobId: string, timeline?: Timeline) => {
+    try {
+      timeline?.mark('poll_start');
+      const { data: finalJob } = await pollAIJobWithFinalCheck(
+        jobId,
+        120,
+        2000,
+        '[OutfitView]'
+      );
+
+      if (finalJob && finalJob.status === 'succeeded') {
+        const result = finalJob.result || {};
+        const resultKeys = result ? Object.keys(result) : [];
+        timeline?.mark('poll_success', {
+          resultKeys,
+          resultSize: typeof result === 'object' ? JSON.stringify(result).length : 0,
+        });
+
+        setRenderJobId(null);
+        setIsGenerating(false);
+
+        // Immediate UI: use base64 or storage URL from job result so image shows before refetch
+        if (result.base64_result) {
+          setCoverImageDataUri('data:image/jpeg;base64,' + result.base64_result);
+        } else {
+          const storageKey =
+            result.storage_key ?? result.renders?.[0]?.storage_key;
+          if (storageKey) {
+            const { data: urlData } = supabase.storage
+              .from('media')
+              .getPublicUrl(storageKey);
+            setCoverImageDataUri(urlData.publicUrl);
+          }
+        }
+
+        timeline?.mark('outfit_fetch_start');
+        await refreshOutfit();
+        timeline?.mark('outfit_fetch_end');
+      } else if (finalJob && finalJob.status === 'failed') {
+        setRenderJobId(null);
+        setIsGenerating(false);
+        Alert.alert('Error', 'Outfit generation failed');
+      }
+    } catch (error) {
+      console.error('Error polling:', error);
+      timeline?.mark('poll_error', { error: String(error) });
     }
   };
 
@@ -144,12 +171,18 @@ export function useOutfitView({
           if (shouldHandleActiveJob) {
             setRenderJobId(activeJob.id);
             setIsGenerating(true);
-            startPollingForOutfitRender(activeJob.id);
+            const timeline = startTimeline('outfit_view_active_job');
+            renderTraceIdRef.current = timeline.traceId;
+            startPollingForOutfitRender(activeJob.id, timeline);
           }
         } else if (renderJobIdParam) {
           setIsGenerating(true);
           setRenderJobId(renderJobIdParam);
-          startPollingForOutfitRender(renderJobIdParam);
+          const timeline = renderTraceIdParam
+            ? continueTimeline(renderTraceIdParam)
+            : startTimeline('outfit_view_poll');
+          renderTraceIdRef.current = timeline.traceId;
+          startPollingForOutfitRender(renderJobIdParam, timeline);
         }
 
         // Load wardrobe items
@@ -210,7 +243,7 @@ export function useOutfitView({
     };
 
     loadOutfitData();
-  }, [outfitId, userId, renderJobIdParam]);
+  }, [outfitId, userId, renderJobIdParam, renderTraceIdParam]);
 
   return {
     outfit,
@@ -222,6 +255,7 @@ export function useOutfitView({
     loading,
     isGenerating,
     renderJobId,
+    renderTraceId: renderTraceIdParam ?? renderTraceIdRef.current,
     refreshOutfit,
     deleteOutfit: deleteOutfitAction,
   };

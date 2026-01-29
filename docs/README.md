@@ -513,7 +513,7 @@ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   - **Required**: Yes (function fails if missing)
 
 **Frontend**:
-- **None**: No environment variables in client-side code
+- `EXPO_PUBLIC_PERF_LOGS` - When set to `'true'`, enables client-side timeline logs for outfit render (and other flows). Logs are emitted via `console.debug` only when enabled. Use to pinpoint delay between submit and image visible (e.g. cache/refresh vs image availability vs DB write). Events: `generate_press`, `job_created`, `execution_triggered`, `navigate_to_view`, `poll_start`, `poll_success`, `outfit_fetch_start`, `outfit_fetch_end`, `image_load_start`, `image_load_end` (or `image_load_error`). See `src/lib/perf/timeline.ts`.
 
 ### Config Files
 

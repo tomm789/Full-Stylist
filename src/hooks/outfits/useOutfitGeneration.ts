@@ -11,6 +11,7 @@ import { getUserSettings } from '@/lib/settings';
 import { WardrobeItem, WardrobeCategory } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { generateClothingGrid } from '@/utils/clothing-grid';
+import { startTimeline } from '@/lib/perf/timeline';
 
 interface GenerationProgress {
   phase: 'saving' | 'preparing' | 'stacking' | 'generating' | 'complete' | 'error';
@@ -239,6 +240,9 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
       setOutfitDescription(null);
       setActiveMessage(null);
       clearAllIntervals();
+
+      const timeline = startTimeline('outfit_generation');
+      timeline.mark('generate_press');
 
       try {
         // Phase 1: Save outfit
@@ -521,6 +525,9 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           throw new Error('Failed to start AI generation');
         }
 
+        timeline.mark('job_created', { job_id: jobData.jobId });
+        timeline.mark('execution_triggered');
+
         console.log(`[OutfitGeneration] AI job created: ${jobData.jobId}`);
 
         // NEW: Start polling for description (runs in parallel with image generation)
@@ -533,6 +540,7 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           progress: 90,
         });
 
+        timeline.mark('poll_start');
         const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
           jobData.jobId,
           60,
@@ -544,6 +552,7 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
         clearAllIntervals();
 
         if (pollError || !completedJob) {
+          timeline.mark('poll_timeout');
           console.warn('[OutfitGeneration] AI generation polling timed out, but outfit was saved');
           setProgress({
             phase: 'complete',
@@ -555,8 +564,12 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
         }
 
         if (completedJob.status === 'failed') {
+          timeline.mark('poll_failed', { error: completedJob.error });
           throw new Error(completedJob.error || 'AI generation failed');
         }
+
+        const resultKeys = completedJob.result ? Object.keys(completedJob.result) : [];
+        timeline.mark('poll_success', { resultKeys });
 
         // Success!
         console.log(`[OutfitGeneration] Generation completed successfully!`);
