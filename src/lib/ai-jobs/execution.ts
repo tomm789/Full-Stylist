@@ -55,17 +55,19 @@ export async function triggerAIJobExecution(
       }
     }
 
-    const functionUrl = `${baseUrl}/.netlify/functions/ai-job-runner`;
+    // Never produce //.netlify: strip trailing slashes from base URL
+    const baseUrlNormalized = baseUrl.replace(/\/+$/, '');
+    const functionUrl = `${baseUrlNormalized}/.netlify/functions/ai-job-runner`;
 
     debugIngest({ location: 'execution.ts:55', message: 'triggerAIJobExecution before fetch', data: { jobId, functionUrl, baseUrl, hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
     // Validate URL format
     if (
-      baseUrl &&
-      !baseUrl.startsWith('http://') &&
-      !baseUrl.startsWith('https://')
+      baseUrlNormalized &&
+      !baseUrlNormalized.startsWith('http://') &&
+      !baseUrlNormalized.startsWith('https://')
     ) {
-      console.error('[AIJobs] Invalid baseUrl format:', baseUrl);
+      console.error('[AIJobs] Invalid baseUrl format:', baseUrlNormalized);
       return { error: new Error('Invalid Netlify function URL configuration') };
     }
 
@@ -101,13 +103,16 @@ export async function triggerAIJobExecution(
           message: error?.message,
           name: error?.name,
           functionUrl,
-          baseUrl,
+          baseUrl: baseUrlNormalized,
           hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL,
         };
         console.error(
           '[AIJobs] Failed to trigger job execution:',
           errorDetails
         );
+        if (error?.name === 'TimeoutError' || error?.message?.includes('timeout')) {
+          console.warn('[AIJobs] Trigger timed out (expected for long-running jobs); job will still run on server. Rely on polling.');
+        }
         debugIngest({ location: 'execution.ts:91', message: 'triggerAIJobExecution fetch error', data: { jobId, ...errorDetails }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
         // For network errors (not timeouts), this might be a configuration issue
@@ -140,7 +145,9 @@ export async function triggerAIJobExecution(
 }
 
 /**
- * Create job and trigger execution
+ * Create job and trigger execution (fire-and-forget trigger).
+ * Does not await trigger; UI should rely on polling job status.
+ * Timeouts on the trigger call are logged but do not block or fail the flow.
  */
 export async function createAndTriggerJob(
   userId: string,
@@ -160,15 +167,14 @@ export async function createAndTriggerJob(
       return { data: null, error };
     }
 
-    // Trigger execution
-    const { error: triggerError } = await triggerAIJobExecution(job.id);
-
-    if (triggerError) {
-      console.warn(
-        '[AIJobs] Failed to trigger job execution, but job was created:',
-        triggerError
-      );
-    }
+    // Fire-and-forget: do not await. Server job runs via handler; UI polls status.
+    triggerAIJobExecution(job.id).then((result) => {
+      if (result.error) {
+        console.warn('[AIJobs] Trigger returned error (job still runs on server):', result.error?.message);
+      }
+    }).catch((err) => {
+      console.warn('[AIJobs] Trigger failed (job still runs on server):', err?.message ?? err);
+    });
 
     return { data: { jobId: job.id }, error: null };
   } catch (error: any) {

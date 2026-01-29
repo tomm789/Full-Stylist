@@ -44,6 +44,7 @@ import { theme, commonStyles } from '@/styles';
 import { findConflictingItem } from '@/utils';
 import { supabase } from '@/lib/supabase';
 import { WardrobeItem } from '@/lib/wardrobe';
+import { logClientTiming } from '@/lib/perf/logClientTiming';
 
 const { colors } = theme;
 
@@ -89,19 +90,22 @@ export default function WardrobeScreen() {
     [selectedOutfitItems, allItems]
   );
 
-  // Background grid: pre-upload grid while user selects (2s debounce) for 0s latency on Generate
+  // Background grid: pre-upload grid while user selects (gated by EXPO_PUBLIC_PREGEND_GRID, default OFF)
   const backgroundGrid = useBackgroundGridGenerator(
     selectedItemsForGeneration,
     user?.id ?? null
   );
+  const pregenGridEnabled =
+    typeof process !== 'undefined' && process.env.EXPO_PUBLIC_PREGEND_GRID === 'true';
 
-  // Outfit generation (uses pre-uploaded grid when available)
+  // Outfit generation: single path (grid once on Generate) when pregen off; can use pre-uploaded grid when pregen on
   const { generating, progress, generatedOutfitId, generateOutfit, reset: resetGeneration } = useOutfitGeneration({
     userId: user?.id || '',
     categories,
-    backgroundGrid: backgroundGrid
-      ? { getStoredKeyOrAwaitPending: backgroundGrid.getStoredKeyOrAwaitPending }
-      : null,
+    backgroundGrid:
+      pregenGridEnabled && backgroundGrid
+        ? { getStoredKeyOrAwaitPending: backgroundGrid.getStoredKeyOrAwaitPending }
+        : null,
   });
 
   // Filtering
@@ -208,7 +212,9 @@ export default function WardrobeScreen() {
     }
 
     // Generate outfit using the hook
-    const result = await generateOutfit(selectedItems);
+    const result = await logClientTiming('outfit_generation_client', async () => {
+      return generateOutfit(selectedItems);
+    });
 
     if (result.success && result.outfitId) {
       // Clear selection and exit outfit creator mode

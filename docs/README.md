@@ -513,7 +513,8 @@ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   - **Required**: Yes (function fails if missing)
 
 **Frontend**:
-- `EXPO_PUBLIC_PERF_LOGS` - When set to `'true'`, enables client-side timeline logs for outfit render (and other flows). Logs are emitted via `console.debug` only when enabled. Use to pinpoint delay between submit and image visible (e.g. cache/refresh vs image availability vs DB write). Events: `generate_press`, `job_created`, `execution_triggered`, `navigate_to_view`, `poll_start`, `poll_success`, `outfit_fetch_start`, `outfit_fetch_end`, `image_load_start`, `image_load_end` (or `image_load_error`). See `src/lib/perf/timeline.ts`.
+- `EXPO_PUBLIC_PERF_LOGS` - When set to `'true'`, enables client-side timeline logs for outfit render (and other flows). Logs are emitted via `console.debug` only when enabled. Use to pinpoint delay between submit and image visible (e.g. cache/refresh vs image availability vs DB write). Events: `generate_click`, `grid_start`/`grid_done`, `upload_start`/`upload_done`, `job_created`, `trigger_sent`, `poll_start`/`poll_success`, `image_set_from_result`, `image_load_start`/`image_load_end` (or `image_load_error`). See `src/lib/perf/timeline.ts`.
+- `EXPO_PUBLIC_PREGEND_GRID` - When set to `'true'`, enables pre-generation of the outfit grid while the user selects items (default OFF). When false, grid is generated once on Generate click. Re-enable for experimentation; when OFF, trigger timeouts no longer block the flow.
 
 ### Config Files
 
