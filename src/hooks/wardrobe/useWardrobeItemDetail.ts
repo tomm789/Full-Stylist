@@ -10,11 +10,13 @@ import {
   getRecentProductShotJob,
   getActiveBatchJob,
   getRecentBatchJob,
+  getActiveWardrobeItemRenderJob,
 } from '@/lib/ai-jobs';
 import { getWardrobeItemImages } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { useWardrobeItemData } from './useWardrobeItemData';
 import { useWardrobeItemPolling } from './useWardrobeItemPolling';
+import { getInitialItemData } from '@/lib/wardrobe/initialItemCache';
 
 interface UseWardrobeItemDetailProps {
   itemId: string | undefined;
@@ -32,6 +34,11 @@ interface UseWardrobeItemDetailReturn {
   isGeneratingProductShot: boolean;
   refreshImages: () => Promise<void>;
   refreshAttributes: () => Promise<void>;
+  // Fast-path cache data
+  initialImageDataUri: string | null;
+  initialTitle: string | null;
+  initialDescription: string | null;
+  jobSucceededAt: number | null;
 }
 
 export function useWardrobeItemDetail({
@@ -43,6 +50,13 @@ export function useWardrobeItemDetail({
   const [productShotJobId, setProductShotJobId] = useState<string | null>(null);
   const [autoTagJobId, setAutoTagJobId] = useState<string | null>(null);
   const [batchJobId, setBatchJobId] = useState<string | null>(null);
+  const [renderJobId, setRenderJobId] = useState<string | null>(null);
+
+  // Fast-path cache state
+  const [initialImageDataUri, setInitialImageDataUri] = useState<string | null>(null);
+  const [initialTitle, setInitialTitle] = useState<string | null>(null);
+  const [initialDescription, setInitialDescription] = useState<string | null>(null);
+  const [jobSucceededAt, setJobSucceededAt] = useState<number | null>(null);
 
   // Data loading
   const data = useWardrobeItemData({ itemId });
@@ -159,12 +173,10 @@ export function useWardrobeItemDetail({
     jobId: batchJobId,
     onComplete: async () => {
       setIsGeneratingProductShot(false);
-      // Refresh both images and attributes since batch job handles both
       await data.refreshImages();
       await data.refreshAttributes();
     },
     onError: () => {
-      // Fallback to periodic refresh if batch job fails
       startPeriodicImageRefresh();
       startPeriodicAttributeRefresh();
     },
@@ -172,9 +184,23 @@ export function useWardrobeItemDetail({
       startPeriodicImageRefresh();
       startPeriodicAttributeRefresh();
     },
-    timeout: 90000, // Longer timeout for batch jobs
+    timeout: 90000,
     interval: 2000,
     logPrefix: '[BatchJob]',
+  });
+
+  // Wardrobe item render job polling (image-only; used when landing on detail with job in progress)
+  const renderJobPolling = useWardrobeItemPolling({
+    jobId: renderJobId,
+    onComplete: async () => {
+      setIsGeneratingProductShot(false);
+      await data.refreshImages();
+    },
+    onError: () => startPeriodicImageRefresh(),
+    onTimeout: () => startPeriodicImageRefresh(),
+    timeout: 60000,
+    interval: 2000,
+    logPrefix: '[WardrobeItemRender]',
   });
 
   // Start polling when job IDs are set
@@ -202,6 +228,14 @@ export function useWardrobeItemDetail({
     }
   }, [batchJobId, batchJobPolling]);
 
+  useEffect(() => {
+    if (renderJobId) {
+      renderJobPolling.startPolling();
+    } else {
+      renderJobPolling.stopPolling();
+    }
+  }, [renderJobId, renderJobPolling]);
+
   // Initial data load and job detection
   useEffect(() => {
     if (!itemId || !userId) {
@@ -213,16 +247,67 @@ export function useWardrobeItemDetail({
       setLoading(true);
 
       try {
-        await data.loadItemData();
-
-        // Check for batch job first (new approach - combines product_shot and auto_tag)
-        const { data: activeBatchJob } = await getActiveBatchJob(itemId, userId);
+        // Check for fast-path cache entry before loading data
+        // Only consume if it matches navigation context (itemId + optional jobId/traceId)
+        const cachedItem = getInitialItemData(itemId);
         
+        if (cachedItem) {
+          // Cache hit - set initial values for fast-path rendering
+          const firstPaintReadyAt = Date.now();
+          setInitialImageDataUri(cachedItem.dataUri);
+          setInitialTitle(cachedItem.title || null);
+          setInitialDescription(cachedItem.description || null);
+          setJobSucceededAt(cachedItem.jobSucceededAt);
+          
+          console.debug('[wardrobe_item_render_timing] first_paint_ready_at', {
+            ts: firstPaintReadyAt,
+            itemId,
+            jobId: cachedItem.jobId,
+            traceId: cachedItem.traceId,
+            msSinceJobSucceeded: firstPaintReadyAt - cachedItem.jobSucceededAt,
+          });
+        } else {
+          // Cache miss - clear any stale initial values
+          setInitialImageDataUri(null);
+          setInitialTitle(null);
+          setInitialDescription(null);
+          setJobSucceededAt(null);
+        }
+        
+        // Load full data in parallel (doesn't block first paint)
+        const loadItemDataStart = Date.now();
+        console.debug('[wardrobe_item_render_timing] load_item_data_start', {
+          ts: loadItemDataStart,
+          itemId,
+          hasCache: !!cachedItem,
+        });
+        
+        await data.loadItemData();
+        
+        const loadItemDataEnd = Date.now();
+        console.debug('[wardrobe_item_render_timing] load_item_data_end', {
+          ts: loadItemDataEnd,
+          itemId,
+          duration: loadItemDataEnd - loadItemDataStart,
+        });
+        
+        // After loadItemData completes, merge initial values if they exist
+        // (API data takes precedence, but initial values were already shown for first paint)
+        if (cachedItem && cachedItem.title && !data.item?.title) {
+          // If API didn't return title yet, keep initial title
+          // (data.setItem will be called by loadItemData, so we don't need to update here)
+        }
+
+        // Check for batch job first (backward compatibility)
+        const { data: activeBatchJob } = await getActiveBatchJob(itemId, userId);
+        const { data: activeRenderJob } = await getActiveWardrobeItemRenderJob(itemId, userId);
+
         if (activeBatchJob) {
-          // Batch job is active - use it for both product shot and auto tag
           setIsGeneratingProductShot(true);
           setBatchJobId(activeBatchJob.id);
-          // Don't check for individual jobs if batch job exists
+        } else if (activeRenderJob) {
+          setIsGeneratingProductShot(true);
+          setRenderJobId(activeRenderJob.id);
         } else {
           // No active batch job - check for recent batch job
           const { data: recentBatchJob } = await getRecentBatchJob(itemId, userId);
@@ -333,6 +418,7 @@ export function useWardrobeItemDetail({
       productShotPolling.stopPolling();
       autoTagPolling.stopPolling();
       batchJobPolling.stopPolling();
+      renderJobPolling.stopPolling();
     };
   }, [itemId, userId]);
 
@@ -358,5 +444,10 @@ export function useWardrobeItemDetail({
     isGeneratingProductShot,
     refreshImages: data.refreshImages,
     refreshAttributes: data.refreshAttributes,
+    // Fast-path cache data
+    initialImageDataUri,
+    initialTitle,
+    initialDescription,
+    jobSucceededAt,
   };
 }

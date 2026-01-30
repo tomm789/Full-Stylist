@@ -1,0 +1,49 @@
+app/wardrobe/item/[id].tsx:19:  useWardrobeItemDetail,
+app/wardrobe/item/[id].tsx:20:  useWardrobeItemNavigation,
+app/wardrobe/item/[id].tsx:21:  useWardrobeItemDetailActions,
+app/wardrobe/item/[id].tsx:54:  } = useWardrobeItemDetail({
+app/wardrobe/item/[id].tsx:65:  } = useWardrobeItemNavigation({
+app/wardrobe/item/[id].tsx:72:  const actions = useWardrobeItemDetailActions({
+app/wardrobe/item/[id]/edit.tsx:19:  useWardrobeItemEdit,
+app/wardrobe/item/[id]/edit.tsx:62:  } = useWardrobeItemEdit({
+app/(tabs)/wardrobe.tsx:16:  useWardrobe,
+app/(tabs)/wardrobe.tsx:17:  useWardrobeItems,
+app/(tabs)/wardrobe.tsx:60:  const { wardrobeId, categories, getCategoryById } = useWardrobe(user?.id);
+app/(tabs)/wardrobe.tsx:78:  } = useWardrobeItems({
+src/hooks/index.ts:9:export * from './wardrobe/useWardrobe';
+src/hooks/index.ts:10:export * from './wardrobe/useWardrobeItems';
+src/hooks/wardrobe/useWardrobeItems.ts:2: * useWardrobeItems Hook
+src/hooks/wardrobe/useWardrobeItems.ts:32:export function useWardrobeItems({
+src/hooks/wardrobe/useWardrobeItems.ts:131:export default useWardrobeItems;
+src/hooks/wardrobe/useWardrobe.ts:2: * useWardrobe Hook
+src/hooks/wardrobe/useWardrobe.ts:10:export function useWardrobe(userId: string | null | undefined) {
+src/hooks/wardrobe/useWardrobe.ts:55:export default useWardrobe;
+src/hooks/wardrobe/useWardrobeItemPolling.ts:2: * useWardrobeItemPolling Hook
+src/hooks/wardrobe/useWardrobeItemPolling.ts:19:export const useWardrobeItemPolling = ({
+src/hooks/wardrobe/useWardrobeItemDetail.ts:2: * useWardrobeItemDetail Hook
+src/hooks/wardrobe/useWardrobeItemDetail.ts:16:import { useWardrobeItemData } from './useWardrobeItemData';
+src/hooks/wardrobe/useWardrobeItemDetail.ts:17:import { useWardrobeItemPolling } from './useWardrobeItemPolling';
+src/hooks/wardrobe/useWardrobeItemDetail.ts:37:export function useWardrobeItemDetail({
+src/hooks/wardrobe/useWardrobeItemDetail.ts:48:  const data = useWardrobeItemData({ itemId });
+src/hooks/wardrobe/useWardrobeItemDetail.ts:123:  const productShotPolling = useWardrobeItemPolling({
+src/hooks/wardrobe/useWardrobeItemDetail.ts:141:  const autoTagPolling = useWardrobeItemPolling({
+src/hooks/wardrobe/useWardrobeItemDetail.ts:158:  const batchJobPolling = useWardrobeItemPolling({
+src/hooks/wardrobe/index.ts:6:export { useWardrobe } from './useWardrobe';
+src/hooks/wardrobe/index.ts:7:export { useWardrobeItems } from './useWardrobeItems';
+src/hooks/wardrobe/index.ts:10:export { useWardrobeItemPolling } from './useWardrobeItemPolling';
+src/hooks/wardrobe/index.ts:11:export { useWardrobeItemData } from './useWardrobeItemData';
+src/hooks/wardrobe/index.ts:12:export { useWardrobeItemDetail } from './useWardrobeItemDetail';
+src/hooks/wardrobe/index.ts:13:export { useWardrobeItemNavigation } from './useWardrobeItemNavigation';
+src/hooks/wardrobe/index.ts:14:export { useWardrobeItemEdit } from './useWardrobeItemEdit';
+src/hooks/wardrobe/index.ts:16:export { useWardrobeItemDetailActions } from './useWardrobeItemDetailActions';
+src/hooks/wardrobe/index.ts:21:export type { WardrobeItemsState } from './useWardrobeItems';
+src/hooks/wardrobe/useWardrobeItemEdit.ts:2: * useWardrobeItemEdit Hook
+src/hooks/wardrobe/useWardrobeItemEdit.ts:55:export function useWardrobeItemEdit({
+src/hooks/wardrobe/useAddWardrobeItem.ts:11:import { useWardrobe } from './useWardrobe';
+src/hooks/wardrobe/useAddWardrobeItem.ts:51:  const { wardrobeId, loading: wardrobeLoading } = useWardrobe(user?.id);
+src/hooks/wardrobe/useWardrobeItemDetailActions.ts:2: * useWardrobeItemDetailActions Hook
+src/hooks/wardrobe/useWardrobeItemDetailActions.ts:45:export function useWardrobeItemDetailActions({
+src/hooks/wardrobe/useWardrobeItemNavigation.ts:2: * useWardrobeItemNavigation Hook
+src/hooks/wardrobe/useWardrobeItemNavigation.ts:31:export function useWardrobeItemNavigation({
+src/hooks/wardrobe/useWardrobeItemData.ts:2: * useWardrobeItemData Hook
+src/hooks/wardrobe/useWardrobeItemData.ts:39:export function useWardrobeItemData({

@@ -1,10 +1,11 @@
 /**
  * useAIJobPolling Hook
- * Generic hook for polling AI job completion
+ * Generic hook for polling AI job completion.
+ * Single poller per jobId; onComplete called at most once; uses no-store fetch for fresh status.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getAIJob, AIJob } from '@/lib/ai-jobs';
+import { getAIJobNoStore, AIJob } from '@/lib/ai-jobs';
 
 interface UseAIJobPollingOptions {
   jobId: string | null;
@@ -12,7 +13,7 @@ interface UseAIJobPollingOptions {
   onError?: (error: Error) => void;
   interval?: number; // Polling interval in ms
   maxAttempts?: number; // Maximum polling attempts
-  enabled?: boolean; // Whether to start polling
+  enabled?: boolean; // Whether to start polling. Prefer: enabled = Boolean(jobId) && !completed && !cancelled
 }
 
 export function useAIJobPolling({
@@ -28,147 +29,109 @@ export function useAIJobPolling({
   const [attempts, setAttempts] = useState(0);
   const [error, setError] = useState<Error | null>(null);
 
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
+  const isPollingRef = useRef(false);
+  const didCompleteRef = useRef(false);
   const attemptsRef = useRef(0);
+  const currentJobIdRef = useRef<string | null>(null);
 
-  // Stop polling
   const stopPolling = useCallback(() => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
+    if (intervalIdRef.current) {
+      clearInterval(intervalIdRef.current);
+      intervalIdRef.current = null;
     }
+    isPollingRef.current = false;
     setIsPolling(false);
   }, []);
 
-  // Start polling
   const startPolling = useCallback(async () => {
-    console.log('[useAIJobPolling] startPolling called:', {
-      jobId,
-      enabled,
-      isPolling,
-      willProceed: !!(jobId && enabled && !isPolling),
-    });
-    
-    if (!jobId || !enabled || isPolling) {
-      console.log('[useAIJobPolling] startPolling aborted:', {
-        reason: !jobId ? 'no jobId' : !enabled ? 'not enabled' : 'already polling',
-      });
-      return;
-    }
+    if (!jobId || !enabled) return;
+    if (isPollingRef.current && currentJobIdRef.current === jobId) return;
 
-    console.log('[useAIJobPolling] Starting polling for job:', jobId);
-    setIsPolling(true);
-    setError(null);
+    currentJobIdRef.current = jobId;
+    didCompleteRef.current = false;
     attemptsRef.current = 0;
+    setError(null);
+    isPollingRef.current = true;
+    setIsPolling(true);
 
     const poll = async () => {
-      if (!jobId) {
-        console.log('[useAIJobPolling] poll() called but no jobId');
-        return;
-      }
+      const id = currentJobIdRef.current;
+      if (!id) return;
 
       try {
         attemptsRef.current += 1;
         setAttempts(attemptsRef.current);
-        
-        console.log(`[useAIJobPolling] Polling attempt ${attemptsRef.current} for job:`, jobId);
 
-        const { data: jobData, error: jobError } = await getAIJob(jobId);
+        const { data: jobData, error: jobError } = await getAIJobNoStore(id);
 
         if (jobError) {
           throw jobError;
         }
-
         if (!jobData) {
           throw new Error('Job not found');
         }
 
         setJob(jobData);
-        
-        console.log(`[useAIJobPolling] Job status update (attempt ${attemptsRef.current}):`, {
-          jobId,
-          status: jobData.status,
-          jobType: jobData.job_type,
-          hasResult: !!jobData.result,
-        });
 
-        // Check if job is complete
         if (jobData.status === 'succeeded' || jobData.status === 'failed') {
-          console.log(`[useAIJobPolling] Job completed with status: ${jobData.status}`, {
-            jobId,
-            jobType: jobData.job_type,
-            result: jobData.result,
-            error: jobData.error,
-          });
           stopPolling();
+          currentJobIdRef.current = null;
+          if (didCompleteRef.current) return;
+          didCompleteRef.current = true;
 
           if (jobData.status === 'succeeded') {
-            console.log('[useAIJobPolling] Calling onComplete callback');
             onComplete?.(jobData);
           } else {
-            const error = new Error(jobData.error || 'Job failed');
-            setError(error);
-            console.log('[useAIJobPolling] Calling onError callback');
-            onError?.(error);
+            const err = new Error(jobData.error || 'Job failed');
+            setError(err);
+            onError?.(err);
           }
+          return;
         }
 
-        // Check if max attempts reached
         if (attemptsRef.current >= maxAttempts) {
           stopPolling();
-          const error = new Error('Polling timeout - max attempts reached');
-          setError(error);
-          onError?.(error);
+          currentJobIdRef.current = null;
+          if (didCompleteRef.current) return;
+          didCompleteRef.current = true;
+          const err = new Error('Polling timeout - max attempts reached');
+          setError(err);
+          onError?.(err);
         }
       } catch (err) {
-        const error = err as Error;
-        setError(error);
-        onError?.(error);
+        const e = err as Error;
+        setError(e);
+        onError?.(e);
         stopPolling();
+        currentJobIdRef.current = null;
       }
     };
 
-    // Initial poll
     await poll();
+    if (intervalIdRef.current) clearInterval(intervalIdRef.current);
+    intervalIdRef.current = setInterval(poll, interval);
+  }, [jobId, enabled, interval, maxAttempts, onComplete, onError, stopPolling]);
 
-    // Set up interval polling
-    pollingIntervalRef.current = setInterval(poll, interval);
-  }, [jobId, enabled, isPolling, interval, maxAttempts, onComplete, onError, stopPolling]);
-
-  // Auto-start polling when jobId changes
   useEffect(() => {
-    console.log('[useAIJobPolling] useEffect triggered:', {
-      jobId,
-      enabled,
-      isPolling,
-      willStartPolling: !!(jobId && enabled && !isPolling),
-    });
-    
-    if (jobId && enabled && !isPolling) {
-      console.log('[useAIJobPolling] Starting watch for Job ID:', jobId);
-      startPolling();
-    } else {
-      console.log('[useAIJobPolling] Not starting polling:', {
-        reason: !jobId ? 'no jobId' : !enabled ? 'not enabled' : 'already polling',
-        jobId,
-        enabled,
-        isPolling,
-      });
-    }
-
-    return () => {
-      console.log('[useAIJobPolling] Cleanup: stopping polling for jobId:', jobId);
+    if (!jobId || !enabled) {
       stopPolling();
+      currentJobIdRef.current = null;
+      return;
+    }
+    startPolling();
+    return () => {
+      stopPolling();
+      currentJobIdRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId, enabled]);
 
-  // Manual retry
   const retry = useCallback(() => {
     stopPolling();
     setError(null);
     setAttempts(0);
     attemptsRef.current = 0;
+    didCompleteRef.current = false;
     startPolling();
   }, [startPolling, stopPolling]);
 

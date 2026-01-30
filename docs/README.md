@@ -54,7 +54,10 @@ The application is functional and deployed. Features include:
 
 ### AI/ML
 - **Google Gemini API**: AI capabilities including:
-  - `auto_tag`: Automatic wardrobe item attribute extraction
+  - `wardrobe_item_generate`: Unified job for new items (image + text in parallel; ~10-15s target). Replaces the two-job `wardrobe_item_render` + `wardrobe_item_tag` flow.
+  - `wardrobe_item_render`: Legacy image-only job (kept for backward compatibility).
+  - `wardrobe_item_tag`: Legacy follow-up tagging job (kept for backward compatibility).
+  - `auto_tag`: Automatic wardrobe item attribute extraction (also used by `wardrobe_item_tag`).
   - `outfit_suggest`: AI-powered outfit suggestions per category
   - `reference_match`: Reference image matching for outfit creation
   - `outfit_render`: Full outfit image generation
@@ -513,7 +516,7 @@ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   - **Required**: Yes (function fails if missing)
 
 **Frontend**:
-- `EXPO_PUBLIC_PERF_LOGS` - When set to `'true'`, enables client-side timeline logs for outfit render (and other flows). Logs are emitted via `console.debug` only when enabled. Use to pinpoint delay between submit and image visible (e.g. cache/refresh vs image availability vs DB write). Events: `generate_click`, `grid_start`/`grid_done`, `upload_start`/`upload_done`, `job_created`, `trigger_sent`, `poll_start`/`poll_success`, `image_set_from_result`, `image_load_start`/`image_load_end` (or `image_load_error`). See `src/lib/perf/timeline.ts`.
+- `EXPO_PUBLIC_PERF_LOGS` - When set to `'true'`, enables client-side timeline logs for outfit render and wardrobe item add flows. Logs are emitted via `console.debug` only when enabled. Use to measure: click → job created → poll success → image_set_from_result → image_load_end. **How to enable**: set `EXPO_PUBLIC_PERF_LOGS=true` in `.env` or in the shell before starting (e.g. `EXPO_PUBLIC_PERF_LOGS=true npx expo start --web`). Wardrobe add events: `add_item_click`, `upload_start`/`upload_end`, `job_created`, `poll_start`, `poll_success`, `image_set_from_result`, `image_load_start`/`image_load_end`/`image_load_error` (on detail). See `src/lib/perf/timeline.ts`.
 - `EXPO_PUBLIC_PREGEND_GRID` - When set to `'true'`, enables pre-generation of the outfit grid while the user selects items (default OFF). When false, grid is generated once on Generate click. Re-enable for experimentation; when OFF, trigger timeouts no longer block the flow.
 
 ### Config Files

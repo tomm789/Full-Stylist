@@ -1,0 +1,172 @@
+src/lib/feedback.ts:65:          .from('comments')
+src/lib/feedback.ts:111:      .from('comments')
+src/lib/feedback.ts:212:      .from('comments')
+src/lib/feedback.ts:231: * Get comments for a feedback thread
+app/lookbooks/[id]/view.tsx:64:  const [comments, setComments] = useState<Comment[]>([]);
+app/lookbooks/[id]/view.tsx:132:    if (!showComments && comments.length === 0) {
+app/lookbooks/[id]/view.tsx:288:        comments={comments}
+app/users/[id]/feed.tsx:15:import { useFeed, useSocialEngagement } from '@/hooks/social';
+app/users/[id]/feed.tsx:40:    useSocialEngagement({
+app/users/[id]/feed.tsx:61:      likes: 0,
+app/users/[id]/feed.tsx:62:      saves: 0,
+app/users/[id]/feed.tsx:63:      comments: 0,
+app/outfits/[id]/view.tsx:19:import { useOutfitView, useSocialEngagement, useOutfitViewActions } from '@/hooks/outfits';
+app/outfits/[id]/view.tsx:88:    comments,
+app/outfits/[id]/view.tsx:95:  } = useSocialEngagement('outfit', id, user?.id, PERF_MODE ? { deferInitialFetch: true } : undefined);
+app/outfits/[id]/view.tsx:211:          comments={comments}
+app/outfits/[id]/view.tsx:216:          onComment={() => actions.handleCommentPress(comments, loadComments)}
+src/lib/engagement/likes.ts:25:      .from('likes')
+src/lib/engagement/likes.ts:35:        .from('likes')
+src/lib/engagement/likes.ts:44:      .from('likes')
+src/lib/engagement/likes.ts:75:      .from('likes')
+src/lib/engagement/likes.ts:100:    .from('likes')
+src/lib/engagement/likes.ts:118:    .from('likes')
+src/lib/engagement/likes.ts:139:      .from('likes')
+src/lib/outfits/ratings.ts:8:  likes: 1,
+src/lib/outfits/ratings.ts:9:  comments: 2,
+src/lib/outfits/ratings.ts:10:  saves: 3,
+src/lib/outfits/ratings.ts:17:  const [likes, comments, saves] = await Promise.all([
+src/lib/outfits/ratings.ts:24:    likes * RATING_WEIGHTS.likes +
+src/lib/outfits/ratings.ts:25:    comments * RATING_WEIGHTS.comments +
+src/lib/outfits/ratings.ts:26:    saves * RATING_WEIGHTS.saves;
+src/lib/outfits/ratings.ts:55:  likes: number;
+src/lib/outfits/ratings.ts:56:  comments: number;
+src/lib/outfits/ratings.ts:57:  saves: number;
+src/lib/outfits/ratings.ts:60:  const [likes, comments, saves] = await Promise.all([
+src/lib/outfits/ratings.ts:67:    likes * RATING_WEIGHTS.likes +
+src/lib/outfits/ratings.ts:68:    comments * RATING_WEIGHTS.comments +
+src/lib/outfits/ratings.ts:69:    saves * RATING_WEIGHTS.saves;
+src/lib/outfits/ratings.ts:71:  return { likes, comments, saves, rating };
+src/lib/engagement/index.ts:8:// Re-export from likes
+src/lib/engagement/index.ts:16:} from './likes';
+src/lib/engagement/index.ts:18:// Re-export from saves
+src/lib/engagement/index.ts:26:} from './saves';
+src/lib/engagement/index.ts:28:// Re-export from comments
+src/lib/engagement/index.ts:37:} from './comments';
+src/lib/engagement/saves.ts:25:      .from('saves')
+src/lib/engagement/saves.ts:35:        .from('saves')
+src/lib/engagement/saves.ts:44:      .from('saves')
+src/lib/engagement/saves.ts:75:      .from('saves')
+src/lib/engagement/saves.ts:100:    .from('saves')
+src/lib/engagement/saves.ts:118:    .from('saves')
+src/lib/engagement/saves.ts:139:      .from('saves')
+src/lib/engagement/comments.ts:36:      .from('comments')
+src/lib/engagement/comments.ts:63: * Get comments for an entity
+src/lib/engagement/comments.ts:73:    const { data: comments, error } = await supabase
+src/lib/engagement/comments.ts:74:      .from('comments')
+src/lib/engagement/comments.ts:84:      .is('parent_comment_id', null) // Only top-level comments for MVP
+src/lib/engagement/comments.ts:91:    return { data: (comments as any) || [], error: null };
+src/lib/engagement/comments.ts:105:    .from('comments')
+src/lib/engagement/comments.ts:125:      .from('comments')
+src/lib/engagement/comments.ts:153:      .from('comments')
+src/lib/engagement/comments.ts:189:      .from('comments')
+app/feedback/[id].tsx:31:    comments,
+app/feedback/[id].tsx:83:          <CommentsList comments={comments} />
+app/(tabs)/social.tsx:218:        comments={modals.comments}
+src/hooks/index.ts:17:export { useSocialEngagement } from './outfits/useSocialEngagement';
+src/hooks/feedback/useFeedbackThread.ts:3: * Load thread details, comments, and handle interactions
+src/hooks/feedback/useFeedbackThread.ts:24:  comments: Comment[];
+src/hooks/feedback/useFeedbackThread.ts:39:  const [comments, setComments] = useState<Comment[]>([]);
+src/hooks/feedback/useFeedbackThread.ts:53:    const { data: commentsData } = await getFeedbackThreadComments(threadId);
+src/hooks/feedback/useFeedbackThread.ts:54:    if (commentsData) {
+src/hooks/feedback/useFeedbackThread.ts:55:      setComments(commentsData);
+src/hooks/feedback/useFeedbackThread.ts:80:        setComments([comment, ...comments]);
+src/hooks/feedback/useFeedbackThread.ts:123:    comments,
+src/hooks/outfits/index.ts:8:export { useSocialEngagement } from './useSocialEngagement';
+src/hooks/outfits/useSocialEngagement.ts:2: * useSocialEngagement Hook
+src/hooks/outfits/useSocialEngagement.ts:3: * Manages social engagement (likes, saves, comments) for entities
+src/hooks/outfits/useSocialEngagement.ts:29:export function useSocialEngagement(
+src/hooks/outfits/useSocialEngagement.ts:42:  const [comments, setComments] = useState<Comment[]>([]);
+src/hooks/outfits/useSocialEngagement.ts:45:  // Engagement lib supports 'outfit' | 'post' | 'lookbook' (and comments: 'feedback_thread'); skip API for wardrobe_item
+src/hooks/outfits/useSocialEngagement.ts:72:  // Load comments
+src/hooks/outfits/useSocialEngagement.ts:83:      console.error('Failed to load comments:', error);
+src/hooks/outfits/useSocialEngagement.ts:173:    comments,
+src/hooks/outfits/useSocialEngagement.ts:184:export default useSocialEngagement;
+src/hooks/outfits/useOutfitViewActions.ts:42:  handleCommentPress: (comments: any[], loadComments: () => Promise<void>) => Promise<void>;
+src/hooks/outfits/useOutfitViewActions.ts:192:    async (comments: any[], loadComments: () => Promise<void>) => {
+src/hooks/outfits/useOutfitViewActions.ts:193:      if (!showComments && comments.length === 0) {
+src/hooks/social/useFeed.ts:15:  likes: number;
+src/hooks/social/useFeed.ts:16:  saves: number;
+src/hooks/social/useFeed.ts:17:  comments: number;
+src/hooks/social/useFeed.ts:89:  // 🔥 Single query to get all likes, saves, and user interactions
+src/hooks/social/useFeed.ts:91:    { data: likesData },
+src/hooks/social/useFeed.ts:92:    { data: savesData },
+src/hooks/social/useFeed.ts:93:    { data: commentsData },
+src/hooks/social/useFeed.ts:97:    // Get all likes grouped by post
+src/hooks/social/useFeed.ts:99:      .from('likes')
+src/hooks/social/useFeed.ts:104:    // Get all saves grouped by post
+src/hooks/social/useFeed.ts:106:      .from('saves')
+src/hooks/social/useFeed.ts:111:    // Get all comments grouped by post
+src/hooks/social/useFeed.ts:113:      .from('comments')
+src/hooks/social/useFeed.ts:118:    // Get user's likes
+src/hooks/social/useFeed.ts:120:      .from('likes')
+src/hooks/social/useFeed.ts:126:    // Get user's saves
+src/hooks/social/useFeed.ts:128:      .from('saves')
+src/hooks/social/useFeed.ts:142:  (likesData || []).forEach(({ entity_id }) => {
+src/hooks/social/useFeed.ts:146:  (savesData || []).forEach(({ entity_id }) => {
+src/hooks/social/useFeed.ts:150:  (commentsData || []).forEach(({ entity_id }) => {
+src/hooks/social/useFeed.ts:159:      likes: likeCounts.get(postId) || 0,
+src/hooks/social/useFeed.ts:160:      saves: saveCounts.get(postId) || 0,
+src/hooks/social/useFeed.ts:161:      comments: commentCounts.get(postId) || 0,
+src/hooks/social/useEngagementActions.ts:21:    likes: number;
+src/hooks/social/useEngagementActions.ts:22:    saves: number;
+src/hooks/social/useEngagementActions.ts:23:    comments: number;
+src/hooks/social/useEngagementActions.ts:46:    const [likes, liked] = await Promise.all([
+src/hooks/social/useEngagementActions.ts:55:        likes,
+src/hooks/social/useEngagementActions.ts:73:    const [saves, saved] = await Promise.all([
+src/hooks/social/useEngagementActions.ts:82:        saves,
+src/hooks/social/useEngagementActions.ts:125:        comments: count,
+src/hooks/social/useSocialModals.ts:22:  comments: Comment[];
+src/hooks/social/useSocialModals.ts:25:  setComments: (comments: Comment[]) => void;
+src/hooks/social/useSocialModals.ts:74:  const [comments, setComments] = useState<Comment[]>([]);
+src/hooks/social/useSocialModals.ts:107:      const { data: commentsData } = await getComments('post', post.id);
+src/hooks/social/useSocialModals.ts:108:      if (commentsData) {
+src/hooks/social/useSocialModals.ts:109:        setComments(commentsData);
+src/hooks/social/useSocialModals.ts:219:    comments,
+src/hooks/social/index.ts:8:export { useSocialEngagement } from './useSocialEngagement';
+src/hooks/social/useSocialEngagement.ts:2: * useSocialEngagement Hook
+src/hooks/social/useSocialEngagement.ts:38:export function useSocialEngagement({
+src/hooks/social/useSocialEngagement.ts:63:      const [likes, liked] = await Promise.all([
+src/hooks/social/useSocialEngagement.ts:72:          likes,
+src/hooks/social/useSocialEngagement.ts:102:      const [saves, saved] = await Promise.all([
+src/hooks/social/useSocialEngagement.ts:111:          saves,
+src/components/social/SocialActionBar.tsx:50:        {counts.likes > 0 && <Text style={styles.actionCount}>{counts.likes}</Text>}
+src/components/social/SocialActionBar.tsx:56:        {counts.comments > 0 && (
+src/components/social/SocialActionBar.tsx:57:          <Text style={styles.actionCount}>{counts.comments}</Text>
+src/components/social/SocialActionBar.tsx:86:        {counts.saves > 0 && <Text style={styles.actionCount}>{counts.saves}</Text>}
+src/components/outfits/CommentSection.tsx:3: * Section for displaying and submitting comments
+src/components/outfits/CommentSection.tsx:21:  comments: Comment[];
+src/components/outfits/CommentSection.tsx:26:  comments,
+src/components/outfits/CommentSection.tsx:73:      {comments.map((comment) => (
+src/components/social/CommentsModal.tsx:3: * Modal for viewing and adding comments
+src/components/social/CommentsModal.tsx:23:  comments: Comment[];
+src/components/social/CommentsModal.tsx:24:  onCommentsUpdate: (comments: Comment[]) => void;
+src/components/social/CommentsModal.tsx:33:  comments,
+src/components/social/CommentsModal.tsx:45:      // Refresh comments
+src/components/social/CommentsModal.tsx:71:        <ScrollView style={styles.commentsList}>
+src/components/social/CommentsModal.tsx:72:          {comments.length === 0 ? (
+src/components/social/CommentsModal.tsx:73:            <Text style={styles.noComments}>No comments yet</Text>
+src/components/social/CommentsModal.tsx:75:            comments.map((comment) => (
+src/components/social/CommentsModal.tsx:129:  commentsList: {
+src/components/outfits/OutfitViewContent.tsx:37:  comments: any[];
+src/components/outfits/OutfitViewContent.tsx:78:  comments,
+src/components/outfits/OutfitViewContent.tsx:214:        <View style={styles.commentsContainer}>
+src/components/outfits/OutfitViewContent.tsx:215:          <CommentSection comments={comments} onSubmit={onSubmitComment} />
+src/components/outfits/OutfitViewContent.tsx:331:  commentsContainer: {
+src/components/social/FeedItem.tsx:22:      likes: number;
+src/components/social/FeedItem.tsx:23:      saves: number;
+src/components/social/FeedItem.tsx:24:      comments: number;
+src/components/social/FeedItem.tsx:72:    likes: 0,
+src/components/social/FeedItem.tsx:73:    saves: 0,
+src/components/social/FeedItem.tsx:74:    comments: 0,
+src/components/social/FeedItem.tsx:203:            {counts.likes > 0 && <Text style={styles.actionCount}>{counts.likes}</Text>}
+src/components/social/FeedItem.tsx:208:            {counts.comments > 0 && <Text style={styles.actionCount}>{counts.comments}</Text>}
+src/components/social/FeedItem.tsx:226:            {counts.saves > 0 && <Text style={styles.actionCount}>{counts.saves}</Text>}
+src/components/feedback/CommentsList.tsx:3: * List of comments for feedback thread
+src/components/feedback/CommentsList.tsx:12:  comments: Comment[];
+src/components/feedback/CommentsList.tsx:15:export function CommentsList({ comments }: CommentsListProps) {
+src/components/feedback/CommentsList.tsx:17:    <View style={styles.commentsSection}>
+src/components/feedback/CommentsList.tsx:18:      <Text style={styles.commentsTitle}>Comments ({comments.length})</Text>
+src/components/feedback/CommentsList.tsx:20:      {comments.map((comment) => (
+src/components/feedback/CommentsList.tsx:40:  commentsSection: {
+src/components/feedback/CommentsList.tsx:43:  commentsTitle: {

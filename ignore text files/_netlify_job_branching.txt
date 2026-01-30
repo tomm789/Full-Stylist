@@ -1,0 +1,73 @@
+netlify/functions/style-advice.js:30:            prompt = `You are a professional fashion stylist. The user has selected these items from their wardrobe:
+netlify/functions/style-advice.js:33:Available wardrobe items:
+netlify/functions/style-advice.js:38:2. Suggest 3-5 additional items from the available wardrobe that would complement the selected items
+netlify/functions/style-advice.js:44:    "suggestedItems": [array of item IDs from the available wardrobe that would pair well]
+netlify/functions/style-advice.js:47:            prompt = `You are a professional fashion stylist. Analyze the user's wardrobe and provide:
+netlify/functions/style-advice.js:52:Available wardrobe items:
+netlify/functions/ai-job-runner.js:15:const { processOutfitRender } = require("./processes/outfit_render");
+netlify/functions/ai-job-runner.js:198:      case "outfit_render":
+netlify/functions/ai-job-runner.js:238: *   wardrobe_item_id: string,
+netlify/functions/ai-job-runner.js:250:  const { imageId, tasks, wardrobe_item_id, image_ids } = input;
+netlify/functions/ai-job-runner.js:256:  if (!wardrobe_item_id) {
+netlify/functions/ai-job-runner.js:257:    throw new Error("Batch job requires wardrobe_item_id");
+netlify/functions/ai-job-runner.js:270:    wardrobe_item_id
+netlify/functions/ai-job-runner.js:274:    wardrobe_item_id,
+netlify/functions/processes/outfit_mannequin.js:16: * Generates a mannequin image for the selected wardrobe items. It fetches
+netlify/functions/processes/outfit_mannequin.js:34:  const wardrobeItemIds = selected.map((s) => s.wardrobe_item_id);
+netlify/functions/processes/outfit_mannequin.js:36:    .from("wardrobe_item_images")
+netlify/functions/processes/outfit_mannequin.js:37:    .select("wardrobe_item_id, type, sort_order, image_id")
+netlify/functions/processes/outfit_mannequin.js:38:    .in("wardrobe_item_id", wardrobeItemIds);
+netlify/functions/processes/outfit_mannequin.js:40:    throw new Error(`Failed to load wardrobe item images: ${linksError.message}`);
+netlify/functions/processes/outfit_mannequin.js:44:    if (!linksByItem.has(link.wardrobe_item_id)) linksByItem.set(link.wardrobe_item_id, []);
+netlify/functions/processes/outfit_mannequin.js:45:    linksByItem.get(link.wardrobe_item_id).push(link);
+netlify/functions/processes/outfit_mannequin.js:48:  wardrobeItemIds.forEach((itemId) => {
+netlify/functions/processes/auto_tag.js:4:// downloads the image associated with the wardrobe item, constructs
+netlify/functions/processes/auto_tag.js:16: * updates to the wardrobe item into Supabase.
+netlify/functions/processes/auto_tag.js:18: * @param {object} input - Job input containing wardrobe_item_id and image_ids
+netlify/functions/processes/auto_tag.js:27:  const { wardrobe_item_id, image_ids } = input;
+netlify/functions/processes/auto_tag.js:28:  if (!wardrobe_item_id || !image_ids?.length) {
+netlify/functions/processes/auto_tag.js:47:    supabase.from("wardrobe_categories").select("id, name").order("sort_order"),
+netlify/functions/processes/auto_tag.js:48:    supabase.from("wardrobe_subcategories").select("id, name, category_id").order("sort_order"),
+netlify/functions/processes/auto_tag.js:98:          entity_type: "wardrobe_item",
+netlify/functions/processes/auto_tag.js:99:          entity_id: wardrobe_item_id,
+netlify/functions/processes/auto_tag.js:113:  // Determine updates to the wardrobe item record based on AI output
+netlify/functions/processes/auto_tag.js:137:  // Apply updates to the wardrobe item record
+netlify/functions/processes/auto_tag.js:139:    await supabase.from("wardrobe_items").update(updates).eq("id", wardrobe_item_id);
+netlify/functions/processes/product_shot.js:3:// Handler for generating a product photography shot from a wardrobe item image.
+netlify/functions/processes/product_shot.js:6:// image is uploaded to Supabase storage and linked to the wardrobe item.
+netlify/functions/processes/product_shot.js:16: * Generates a product shot for a given wardrobe item and stores the result
+netlify/functions/processes/product_shot.js:18: * wardrobe item's image ordering by incrementing existing sort orders.
+netlify/functions/processes/product_shot.js:20: * @param {object} input - Job input with image_id and wardrobe_item_id
+netlify/functions/processes/product_shot.js:30:  const { image_id, wardrobe_item_id } = input;
+netlify/functions/processes/product_shot.js:31:  if (!image_id || !wardrobe_item_id) {
+netlify/functions/processes/product_shot.js:32:    throw new Error("Missing ID or wardrobe_item_id");
+netlify/functions/processes/product_shot.js:70:    .from("wardrobe_item_images")
+netlify/functions/processes/product_shot.js:72:    .eq("wardrobe_item_id", wardrobe_item_id)
+netlify/functions/processes/product_shot.js:76:      .from("wardrobe_item_images")
+netlify/functions/processes/product_shot.js:81:  await supabase.from("wardrobe_item_images").insert({
+netlify/functions/processes/product_shot.js:82:    wardrobe_item_id,
+netlify/functions/processes/outfit_render.js.backup:19: * 1. stacked_image_id: Pre-stacked wardrobe items (recommended, faster)
+netlify/functions/processes/outfit_render.js.backup:20: * 2. selected: Array of wardrobe items to fetch individually (legacy)
+netlify/functions/processes/outfit_render.js.backup:115:    const wardrobeItemIds = selected.map((s) => s.wardrobe_item_id);
+netlify/functions/processes/outfit_render.js.backup:117:      .from("wardrobe_item_images")
+netlify/functions/processes/outfit_render.js.backup:118:      .select("wardrobe_item_id, type, sort_order, image_id")
+netlify/functions/processes/outfit_render.js.backup:119:      .in("wardrobe_item_id", wardrobeItemIds);
+netlify/functions/processes/outfit_render.js.backup:123:      if (!linksByItem.has(link.wardrobe_item_id)) {
+netlify/functions/processes/outfit_render.js.backup:124:        linksByItem.set(link.wardrobe_item_id, []);
+netlify/functions/processes/outfit_render.js.backup:126:      linksByItem.get(link.wardrobe_item_id).push(link);
+netlify/functions/processes/outfit_render.js.backup:130:    wardrobeItemIds.forEach((itemId) => {
+netlify/functions/processes/outfit_render.js.backup:304:  await supabase.from("outfit_renders").insert({
+netlify/functions/processes/outfit_render.js:139:    // Use the existing function to get outfit items with wardrobe details
+netlify/functions/processes/outfit_render.js:156:    // Extract wardrobe item details from the JSONB column
+netlify/functions/processes/outfit_render.js:158:      const item = row.wardrobe_item;
+netlify/functions/processes/outfit_render.js:178: * 1. stacked_image_id: Pre-stacked wardrobe items (recommended, faster)
+netlify/functions/processes/outfit_render.js:179: * 2. selected: Array of wardrobe items to fetch individually (legacy)
+netlify/functions/processes/outfit_render.js:272:    const wardrobeItemIds = selected.map((s) => s.wardrobe_item_id);
+netlify/functions/processes/outfit_render.js:274:      .from("wardrobe_item_images")
+netlify/functions/processes/outfit_render.js:275:      .select("wardrobe_item_id, type, sort_order, image_id")
+netlify/functions/processes/outfit_render.js:276:      .in("wardrobe_item_id", wardrobeItemIds);
+netlify/functions/processes/outfit_render.js:279:      if (!linksByItem.has(link.wardrobe_item_id)) {
+netlify/functions/processes/outfit_render.js:280:        linksByItem.set(link.wardrobe_item_id, []);
+netlify/functions/processes/outfit_render.js:282:      linksByItem.get(link.wardrobe_item_id).push(link);
+netlify/functions/processes/outfit_render.js:285:    wardrobeItemIds.forEach((itemId) => {
+netlify/functions/processes/outfit_render.js:396:  await supabase.from("outfit_renders").insert({

@@ -3,7 +3,7 @@
  * Form state and handlers for adding a new wardrobe item
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -11,7 +11,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWardrobe } from './useWardrobe';
 import { useAIJobPolling } from '@/hooks/ai';
 import { createWardrobeItem } from '@/lib/wardrobe';
-import { triggerBatchJob, triggerAIJobExecution } from '@/lib/ai-jobs';
+import {
+  triggerWardrobeItemGenerate,
+  triggerAIJobExecution,
+} from '@/lib/ai-jobs';
+import { setInitialItemData } from '@/lib/wardrobe/initialItemCache';
+import { startTimeline, isPerfLogsEnabled } from '@/lib/perf/timeline';
 
 interface SelectedImage {
   uri: string;
@@ -62,25 +67,60 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
   const [cropperVisible, setCropperVisible] = useState(false);
   const [cropperImageUri, setCropperImageUri] = useState<string | null>(null);
 
-  // Poll AI job for completion
-  console.log('[useAddWardrobeItem] useAIJobPolling hook render:', {
-    aiJobId,
-    generatingAI,
-    enabled: !!aiJobId && generatingAI,
-  });
-  
-  const { job: aiJob } = useAIJobPolling({
-    jobId: aiJobId,
-    enabled: !!aiJobId && generatingAI,
-    onComplete: (job) => {
-      console.log('[useAddWardrobeItem] onComplete callback triggered:', {
-        jobId: job.id,
-        jobType: job.job_type,
-        status: job.status,
-        hasResult: !!job.result,
-      });
+  // Store image ids for tagging follow-up when render succeeds (non-blocking)
+  const pendingImageIdsRef = useRef<string[]>([]);
+  const timelineRef = useRef<ReturnType<typeof startTimeline> | null>(null);
+
+  const onComplete = useCallback(
+    (job: import('@/lib/ai-jobs').AIJob) => {
       if (job.status === 'succeeded' && pendingItemId) {
-        // Handle batch job results
+        const jobStatusSucceededAt = Date.now();
+        if (typeof __DEV__ !== 'undefined' && __DEV__) {
+          console.debug('[wardrobe_item_render_timing] job_status_succeeded_at', {
+            ts: jobStatusSucceededAt,
+            jobId: job.id,
+            jobType: job.job_type,
+            itemId: pendingItemId,
+          });
+        }
+        
+        // Primary path: wardrobe_item_generate (image + text in parallel)
+        if (job.job_type === 'wardrobe_item_generate') {
+          const result = job.result;
+          const base64Result = result?.base64_result;
+          let dataUri: string | null = null;
+          if (base64Result) {
+            dataUri = base64Result.startsWith('data:')
+              ? base64Result
+              : `data:image/jpeg;base64,${base64Result}`;
+          }
+          if (isPerfLogsEnabled()) timelineRef.current?.mark('poll_success', { resultKeys: result ? Object.keys(result) : [] });
+          if (dataUri) {
+            if (isPerfLogsEnabled()) timelineRef.current?.mark('image_set_from_result');
+            // Set initial item data with both image and text (title, description)
+            setInitialItemData(
+              pendingItemId,
+              job.id,
+              dataUri,
+              jobStatusSucceededAt,
+              timelineRef.current?.traceId,
+              result?.suggested_title,
+              result?.suggested_notes
+            );
+          }
+          setAnalysisStep('Product shot and details generated successfully');
+          const traceId = timelineRef.current?.traceId;
+          setTimeout(() => {
+            setGeneratingAI(false);
+            const url = traceId
+              ? `/wardrobe/item/${pendingItemId}?refresh=${Date.now()}&traceId=${traceId}`
+              : `/wardrobe/item/${pendingItemId}?refresh=${Date.now()}`;
+            router.replace(url);
+          }, 800);
+          return;
+        }
+        
+        // Backward compatibility: batch job results
         if (job.job_type === 'batch') {
           // Extract product_shot result from batch job
           const batchResult = job.result;
@@ -103,6 +143,44 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
             (productShotResult.image_id || productShotResult.storage_key);
           
           if (productShotSucceeded) {
+            // Product shot succeeded - populate fast-path cache
+            const base64Result = productShotResult.base64_result;
+            if (base64Result) {
+              // Build dataUri from base64_result (add mime prefix if not present)
+              const dataUri = base64Result.startsWith('data:') 
+                ? base64Result 
+                : `data:image/jpeg;base64,${base64Result}`;
+              
+              // Extract title and description from auto_tag result
+              const title = autoTagResult?.suggested_title;
+              const description = autoTagResult?.suggested_notes;
+              
+              // Populate cache for fast-path rendering
+              const cacheSetAt = Date.now();
+              setInitialItemData(
+                pendingItemId,
+                job.id,
+                dataUri,
+                jobStatusSucceededAt,
+                undefined, // traceId - not available in add flow
+                title,
+                description
+              );
+              console.debug('[wardrobe_item_render_timing] cache_set_at', {
+                ts: cacheSetAt,
+                itemId: pendingItemId,
+                jobId: job.id,
+                hasTitle: !!title,
+                hasDescription: !!description,
+              });
+            } else {
+              console.debug('[wardrobe_item_render_timing] base64_result missing', {
+                itemId: pendingItemId,
+                jobId: job.id,
+                resultKeys: productShotResult ? Object.keys(productShotResult) : [],
+              });
+            }
+            
             // Product shot succeeded - update UI immediately
             setAnalysisStep('Product shot generated successfully');
             // The backend has already applied the product shot to the database,
@@ -129,21 +207,21 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
             }, 800);
           }
         } else {
-          // Handle non-batch jobs (legacy support)
+          // Legacy: product_shot or other job types
           setTimeout(() => {
             setGeneratingAI(false);
             router.replace(`/wardrobe/item/${pendingItemId}`);
           }, 800);
         }
       } else if (job.status === 'failed') {
-        // Check if it's a batch job with partial results
+        if (job.job_type === 'wardrobe_item_generate') {
+          setAiError('Sorry, the item failed to add to your wardrobe.');
+          return;
+        }
         if (job.job_type === 'batch' && job.result) {
           const batchResult = job.result;
           const productShotResult = batchResult?.product_shot;
-          
-          // Even if the overall job failed, check if product_shot succeeded
           if (productShotResult && !productShotResult.error) {
-            console.log('[BatchJob] Job marked as failed but product_shot succeeded');
             setAnalysisStep('Product shot generated (some tasks may have failed)');
             setTimeout(() => {
               setGeneratingAI(false);
@@ -157,6 +235,13 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
         }
       }
     },
+    [pendingItemId, user?.id, router]
+  );
+
+  const { job: aiJob } = useAIJobPolling({
+    jobId: aiJobId,
+    enabled: !!aiJobId && generatingAI,
+    onComplete,
     onError: () => {
       setAiError('Sorry, the item failed to add to your wardrobe.');
     },
@@ -292,7 +377,13 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
     setLoading(true);
     setAiError(null);
 
+    if (isPerfLogsEnabled()) {
+      timelineRef.current = startTimeline('wardrobe_add');
+      timelineRef.current.mark('add_item_click');
+    }
+
     try {
+      if (isPerfLogsEnabled()) timelineRef.current?.mark('upload_start');
       // Create item with placeholder title
       const { data, error } = await createWardrobeItem(
         user.id,
@@ -314,60 +405,37 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
       }
 
       if (data?.item && data?.images && data.images.length > 0) {
+        if (isPerfLogsEnabled()) timelineRef.current?.mark('upload_end');
         const itemId = data.item.id;
         const imageIds = data.images.map((img: any) => img.image_id);
+        const sourceImageId = imageIds[0];
 
         setPendingItemId(itemId);
+        pendingImageIdsRef.current = imageIds;
         setGeneratingAI(true);
         setAnalysisStep('Preparing item...');
 
-        // Trigger batch job (product_shot + auto_tag) - single request, shared image download
-        console.log('[useAddWardrobeItem] Creating batch job...', {
-          userId: user.id,
-          imageId: imageIds[0],
-          itemId,
-          imageIds,
-        });
-        
-        const { data: batchJob, error: batchError } = await triggerBatchJob(
+        // Unified path: wardrobe_item_generate (image + text in parallel)
+        const { data: generateJob, error: generateError } = await triggerWardrobeItemGenerate(
           user.id,
-          imageIds[0],
           itemId,
-          imageIds
+          sourceImageId
         );
 
-        if (batchError || !batchJob) {
-          console.error('[useAddWardrobeItem] Batch job creation failed:', batchError);
-          throw new Error(batchError?.message || 'Failed to create batch job');
+        if (generateError || !generateJob) {
+          console.error('[useAddWardrobeItem] Generate job creation failed:', generateError);
+          throw new Error(generateError?.message || 'Failed to create generate job');
         }
 
-        console.log('[useAddWardrobeItem] Batch Job Started:', batchJob.id, {
-          jobId: batchJob.id,
-          jobType: batchJob.job_type,
-          status: batchJob.status,
-          input: batchJob.input,
-        });
+        if (isPerfLogsEnabled()) {
+          timelineRef.current?.mark('job_created', { jobId: generateJob.id });
+          timelineRef.current?.mark('poll_start');
+        }
+        setAiJobId(generateJob.id);
 
-        // Set the job ID for polling
-        console.log('[useAddWardrobeItem] Setting aiJobId state to:', batchJob.id);
-        setAiJobId(batchJob.id);
-        
-        // Log current state values for debugging
-        console.log('[useAddWardrobeItem] State after setAiJobId:', {
-          aiJobId: batchJob.id, // This will be the new value
-          generatingAI,
-          pendingItemId: itemId,
-        });
-
-        // Trigger job execution
-        console.log('[useAddWardrobeItem] Triggering job execution for:', batchJob.id);
-        const { error: execError } = await triggerAIJobExecution(batchJob.id);
-        
+        const { error: execError } = await triggerAIJobExecution(generateJob.id);
         if (execError) {
           console.warn('[useAddWardrobeItem] Job trigger returned error (may still work):', execError);
-          // Continue anyway - job might still be triggered
-        } else {
-          console.log('[useAddWardrobeItem] Job execution triggered successfully');
         }
       }
     } catch (error: any) {

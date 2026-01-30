@@ -1,0 +1,158 @@
+netlify/functions/utils.js:26: * Tracks storage downloads, base64 conversions, and API calls separately.
+netlify/functions/utils.js:33:    base64ConversionTime: 0,
+netlify/functions/utils.js:53:     * Add base64 conversion time
+netlify/functions/utils.js:56:      this.base64ConversionTime += durationMs;
+netlify/functions/utils.js:86:      return this.storageDownloadTime + this.base64ConversionTime;
+netlify/functions/utils.js:367:  // Track base64 conversion time
+netlify/functions/utils.js:369:  const base64 = Buffer.from(arrayBuffer).toString("base64");
+netlify/functions/utils.js:376:  console.log(`[downloadImageFromStorage] Base64 conversion completed in ${(conversionDuration / 1000).toFixed(2)}s, length: ${base64.length}`);
+netlify/functions/utils.js:378:  // Return both base64 and mime-type for downstream processing
+netlify/functions/utils.js:379:  return { base64, mimeType };
+netlify/functions/utils.js:381:async function uploadImageToStorage(supabase, userId, base64Data, storagePath) {
+netlify/functions/utils.js:383:  const isPng = isPngBase64(base64Data);
+netlify/functions/utils.js:385:  const rawBase64 = base64Data.replace(/^data:image\/\w+;base64,/, "");
+netlify/functions/utils.js:386:  const buffer = Buffer.from(rawBase64, "base64");
+netlify/functions/utils.js:458:    // Support both string (backward compatible) and object { base64, mimeType } formats
+netlify/functions/utils.js:463:    } else if (imageInput && typeof imageInput === 'object' && imageInput.base64) {
+netlify/functions/utils.js:464:      imageB64 = imageInput.base64;
+netlify/functions/utils.js:467:      throw new Error("Invalid image input - must be string or { base64, mimeType } object");
+netlify/functions/utils.js:470:    // Validate base64 data
+netlify/functions/utils.js:472:      throw new Error("Invalid base64 image data");
+netlify/functions/utils.js:474:    // Check if base64 is valid (basic check)
+netlify/functions/utils.js:475:    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+netlify/functions/utils.js:476:    if (!base64Regex.test(imageB64)) {
+netlify/functions/utils.js:477:      throw new Error("Invalid base64 format");
+netlify/functions/utils.js:621: * @param {Array<Buffer|string>} imageInputs - Array of image buffers or base64 strings
+netlify/functions/utils.js:674:      // Convert input to buffer if it's a base64 string
+netlify/functions/utils.js:677:        // Assume it's base64
+netlify/functions/utils.js:678:        const rawBase64 = imageInput.replace(/^data:image\/\w+;base64,/, '');
+netlify/functions/utils.js:679:        imageBuffer = Buffer.from(rawBase64, 'base64');
+netlify/functions/utils.js:721:  // Convert to base64
+netlify/functions/utils.js:722:  const base64 = finalImage.toString('base64');
+netlify/functions/utils.js:723:  console.log(`[compositeOutfitGrid] Composite complete, base64 length: ${base64.length}`);
+netlify/functions/utils.js:725:  return base64;
+netlify/functions/utils.js:730: * Converts the base64 input to a Buffer, resizes to max width 1024px (maintaining aspect ratio),
+netlify/functions/utils.js:731: * converts to JPEG with quality 80 and mozjpeg compression, then returns as base64 string.
+netlify/functions/utils.js:733: * @param {string} base64String - Base64 encoded image string from Gemini API
+netlify/functions/utils.js:734: * @returns {Promise<string>} Optimized base64 encoded JPEG image string
+netlify/functions/utils.js:736:async function optimizeGeminiOutput(base64String) {
+netlify/functions/utils.js:740:    // Convert base64 to buffer
+netlify/functions/utils.js:741:    const rawBase64 = base64String.replace(/^data:image\/\w+;base64,/, '');
+netlify/functions/utils.js:742:    const inputBuffer = Buffer.from(rawBase64, 'base64');
+netlify/functions/utils.js:771:    // Convert back to base64 string
+netlify/functions/utils.js:772:    const optimizedBase64 = optimizedBuffer.toString('base64');
+netlify/functions/utils.js:780:    return base64String;
+netlify/functions/utils.js.backup2:73:  const base64 = Buffer.from(arrayBuffer).toString("base64");
+netlify/functions/utils.js.backup2:74:  console.log(`[downloadImageFromStorage] Converted to base64, length: ${base64.length}`);
+netlify/functions/utils.js.backup2:76:  return base64;
+netlify/functions/utils.js.backup2:79:async function uploadImageToStorage(supabase, userId, base64Data, storagePath) {
+netlify/functions/utils.js.backup2:81:  const isPng = isPngBase64(base64Data);
+netlify/functions/utils.js.backup2:83:  const rawBase64 = base64Data.replace(/^data:image\/\w+;base64,/, "");
+netlify/functions/utils.js.backup2:84:  const buffer = Buffer.from(rawBase64, "base64");
+netlify/functions/utils.js.backup2:133:    // Validate base64 data
+netlify/functions/utils.js.backup2:135:      throw new Error("Invalid base64 image data");
+netlify/functions/utils.js.backup2:137:    // Check if base64 is valid (basic check)
+netlify/functions/utils.js.backup2:138:    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+netlify/functions/utils.js.backup2:139:    if (!base64Regex.test(imageB64)) {
+netlify/functions/utils.js.backup2:140:      throw new Error("Invalid base64 format");
+src/lib/import/wardrobe-import.ts:53:        const base64WithPrefix = item.b64.startsWith('data:') 
+src/lib/import/wardrobe-import.ts:55:          : `data:image/png;base64,${item.b64}`;
+src/lib/import/wardrobe-import.ts:58:          uri: base64WithPrefix,
+src/lib/utils/image-helpers.ts:39:    const base64 = await FileSystem.readAsStringAsync(uri, {
+src/lib/utils/image-helpers.ts:40:      encoding: 'base64' as any,
+src/lib/utils/image-helpers.ts:43:    const dataUrl = `data:${mimeType};base64,${base64}`;
+netlify/functions/ai-job-runner.js:262:  // Download the image once to a buffer (returns { base64, mimeType } object)
+netlify/functions/ai-job-runner.js:265:  console.log(`[BatchJob] Image downloaded successfully, length: ${imageData.base64.length}, mimeType: ${imageData.mimeType}`);
+src/lib/utils/image-helpers.ts.backup:31: * Convert base64 string to ArrayBuffer (for React Native compatibility)
+src/lib/utils/image-helpers.ts.backup:33:function base64ToArrayBuffer(base64: string): ArrayBuffer {
+src/lib/utils/image-helpers.ts.backup:34:  const binaryString = atob(base64);
+src/lib/utils/image-helpers.ts.backup:50:    const base64 = await FileSystem.readAsStringAsync(uri, {
+src/lib/utils/image-helpers.ts.backup:51:      encoding: 'base64' as any,
+src/lib/utils/image-helpers.ts.backup:54:    const dataUrl = `data:${mimeType};base64,${base64}`;
+src/lib/utils/image-helpers.ts.backup:88:      // Use the native Blob's internal data if possible, or convert to base64 then ArrayBuffer
+src/lib/utils/image-helpers.ts.backup:107:        const base64 = await new Promise<string>((resolve, reject) => {
+src/lib/utils/image-helpers.ts.backup:111:            const base64Data = result.includes(',') ? result.split(',')[1] : result;
+src/lib/utils/image-helpers.ts.backup:112:            resolve(base64Data);
+src/lib/utils/image-helpers.ts.backup:118:        const binaryString = atob(base64);
+src/lib/outfits/initialCoverCache.ts:2: * Client-only cache for passing outfit render result (base64) from generation to view
+netlify/functions/processes/headshot_generate.js:36:  console.log(`[processHeadshotGenerate] Downloaded selfie, base64 length: ${selfieResult.base64.length}`);
+netlify/functions/processes/headshot_generate.js:38:  // Validate base64
+netlify/functions/processes/headshot_generate.js:39:  if (!selfieResult.base64 || selfieResult.base64.length === 0) {
+netlify/functions/processes/headshot_generate.js:42:  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+netlify/functions/processes/headshot_generate.js:43:  if (!base64Regex.test(selfieResult.base64)) {
+netlify/functions/processes/headshot_generate.js:44:    console.error(`[processHeadshotGenerate] Invalid base64 format, first 100 chars: ${selfieResult.base64.substring(0, 100)}`);
+netlify/functions/processes/headshot_generate.js:45:    throw new Error("Invalid base64 image format");
+netlify/functions/processes/headshot_generate.js:64:  console.log(`[processHeadshotGenerate] Gemini API returned, headshot base64 length: ${headshotB64?.length || 0}`);
+netlify/functions/processes/outfit_mannequin.js:67:  // Pass full result objects to include mime-types (callGeminiAPI will extract base64)
+netlify/functions/processes/auto_tag.js:22: * @param {object} preDownloadedImageData - Optional pre-downloaded image data { base64, mimeType } to avoid redundant downloads
+netlify/functions/processes/auto_tag.js:35:  if (preDownloadedImageData && preDownloadedImageData.base64) {
+netlify/functions/processes/outfit_render.js.backup:98:      // Convert blob to base64
+netlify/functions/processes/outfit_render.js.backup:102:      stackedItemsB64 = Buffer.from(buffer).toString('base64');
+netlify/functions/processes/outfit_render.js.backup:103:      console.log(`[OutfitRender] Converted to base64, length: ${stackedItemsB64.length} chars`);
+netlify/functions/processes/outfit_render.js.backup:161:    // Extract base64 from results
+netlify/functions/processes/outfit_render.js.backup:162:    const itemImagesB64 = itemImageResults.map(result => result.base64);
+netlify/functions/processes/outfit_render.js.backup:182:    console.log(`[OutfitRender] Downloaded head (${headResult.base64.length} chars) and body (${bodyResult.base64.length} chars)`);
+netlify/functions/processes/outfit_render.js.backup:184:    console.log(`[OutfitRender] Downloaded body (${bodyResult.base64.length} chars), headshot excluded`);
+netlify/functions/processes/outfit_render.js.backup:197:      typeof b64 === 'string' ? { base64: b64, mimeType: 'image/jpeg' } : b64
+netlify/functions/processes/outfit_render.js.backup:202:      ? { base64: stackedItemsB64, mimeType: 'image/jpeg' }
+netlify/functions/processes/outfit_render.js.backup:209:  // Verify all images are valid base64
+netlify/functions/processes/outfit_render.js.backup:219:    console.log(`[OutfitRender] Image ${i} valid base64: ${isValidBase64(img)}`);
+netlify/functions/processes/outfit_render.js.backup:227:    // Decode base64 and get metadata for body image
+netlify/functions/processes/outfit_render.js.backup:228:    const bodyBuffer = Buffer.from(bodyB64, 'base64');
+netlify/functions/processes/outfit_render.js.backup:231:    // Decode base64 and get metadata for head image (if included)
+netlify/functions/processes/outfit_render.js.backup:234:      const headBuffer = Buffer.from(headB64, 'base64');
+netlify/functions/processes/outfit_render.js.backup:243:        const firstItemBuffer = Buffer.from(stackedItemsB64[0], 'base64');
+netlify/functions/processes/outfit_render.js.backup:250:          const itemBuffer = Buffer.from(stackedItemsB64[i], 'base64');
+netlify/functions/processes/outfit_render.js.backup:257:      const stackedBuffer = Buffer.from(stackedItemsB64, 'base64');
+netlify/functions/processes/outfit_render.js:264:      const stackedItemsB64 = Buffer.from(buffer).toString('base64');
+netlify/functions/processes/outfit_render.js:265:      console.log(`[OutfitRender] Converted to base64, length: ${stackedItemsB64.length} chars`);
+netlify/functions/processes/outfit_render.js:308:    const stackedItemsB64 = itemImageResults.map(result => result.base64);
+netlify/functions/processes/outfit_render.js:323:      console.log(`[OutfitRender] Downloaded head (${headResult.base64.length} chars) and body (${bodyResult.base64.length} chars)`);
+netlify/functions/processes/outfit_render.js:325:      console.log(`[OutfitRender] Downloaded body (${bodyResult.base64.length} chars), headshot excluded`);
+netlify/functions/processes/outfit_render.js:343:      typeof b64 === 'string' ? { base64: b64, mimeType: 'image/jpeg' } : b64
+netlify/functions/processes/outfit_render.js:347:    allInputs.push({ base64: stackedItemsB64, mimeType: 'image/jpeg' });
+netlify/functions/processes/outfit_render.js:431:    base64_result: optimizedImageB64
+netlify/functions/processes/product_shot.js:25: * @param {object} preDownloadedImageData - Optional pre-downloaded image data { base64, mimeType } to avoid redundant downloads
+netlify/functions/processes/product_shot.js:37:  if (preDownloadedImageData && preDownloadedImageData.base64) {
+src/utils/imageProcessor.ts:140:            const base64Data = dataUrl.split(',')[1];
+src/utils/imageProcessor.ts:141:            const byteCharacters = atob(base64Data);
+src/utils/imageProcessor.ts:188:          const base64Data = dataUrl.split(',')[1];
+src/utils/imageProcessor.ts:189:          const byteCharacters = atob(base64Data);
+src/utils/imageProcessor.ts:324:      const base64Data = dataUrl.split(',')[1];
+src/utils/imageProcessor.ts:325:      const byteCharacters = atob(base64Data);
+src/utils/imageProcessor.ts:454:      const base64Data = dataUrl.split(',')[1];
+src/utils/imageProcessor.ts:455:      const byteCharacters = atob(base64Data);
+src/utils/clothing-grid.js:157:  // Convert to JPEG base64 string with quality 0.8
+src/utils/clothing-grid.js:160:  // Extract base64 string (remove data URL prefix)
+src/utils/clothing-grid.js:161:  const base64String = dataUrl.split(',')[1];
+src/utils/clothing-grid.js:163:  console.log(`[generateClothingGrid] Grid canvas created, base64 length: ${base64String.length}`);
+src/utils/clothing-grid.js:165:  return base64String;
+src/hooks/wardrobe/useAddWardrobeItem.ts:266:        const base64 = btoa(binary);
+src/hooks/wardrobe/useAddWardrobeItem.ts:267:        const dataUri = `data:image/jpeg;base64,${base64}`;
+src/hooks/outfits/useOutfitView.ts:30:  /** When set, use this data URI for instant render instead of fetching from storage (from job.result.base64_result) */
+src/hooks/outfits/useOutfitView.ts:117:        // Immediate UI: use base64 or storage URL from job result so image shows before refetch
+src/hooks/outfits/useOutfitView.ts:118:        if (result.base64_result) {
+src/hooks/outfits/useOutfitView.ts:120:          setCoverImageDataUri('data:image/jpeg;base64,' + result.base64_result);
+src/hooks/outfits/useOutfitView.ts:121:          timeline?.mark('cover_set_base64_at', { ts: coverSetAt });
+src/hooks/outfits/useOutfitView.ts:122:          console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, outfitId, from: 'view_poll' });
+src/hooks/outfits/useOutfitView.ts:124:          console.debug('[outfit_render_timing] base64_result missing (view poll)', { outfitId, resultKeys });
+src/hooks/outfits/useOutfitView.ts:185:          console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, outfitId, from: 'cache' });
+src/hooks/outfits/useOutfitGeneration.ts:377:          console.log(`[OutfitGeneration] Grid generated successfully, base64 length: ${gridBase64.length}`);
+src/hooks/outfits/useOutfitGeneration.ts:379:          // Convert base64 to Blob and upload to storage
+src/hooks/outfits/useOutfitGeneration.ts:392:          // Convert base64 to Blob
+src/hooks/outfits/useOutfitGeneration.ts:549:        // Pass base64 to view so image shows immediately (no storage/CDN wait)
+src/hooks/outfits/useOutfitGeneration.ts:551:        if (result.base64_result) {
+src/hooks/outfits/useOutfitGeneration.ts:552:          const dataUri = 'data:image/jpeg;base64,' + result.base64_result;
+src/hooks/outfits/useOutfitGeneration.ts:561:          timeline.mark('cover_set_base64_at', { ts: coverSetAt });
+src/hooks/outfits/useOutfitGeneration.ts:562:          console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, traceId: timeline.traceId, outfitId, from: 'generation' });
+src/hooks/outfits/useOutfitGeneration.ts:564:          console.debug('[outfit_render_timing] base64_result missing', { traceId: timeline.traceId, outfitId, resultKeys });
+src/hooks/outfits/useOutfitEditorActions.ts:330:        console.log(`[OutfitEditor] Grid generated successfully, base64 length: ${gridBase64.length}`);
+src/hooks/outfits/useOutfitEditorActions.ts:332:        // Convert base64 to Blob and upload to storage
+src/hooks/outfits/useOutfitEditorActions.ts:478:      if (result.base64_result) {
+src/hooks/outfits/useOutfitEditorActions.ts:479:        const dataUri = 'data:image/jpeg;base64,' + result.base64_result;
+src/hooks/outfits/useOutfitEditorActions.ts:487:        console.debug('[outfit_render_timing] cover_set_base64_at', {
+src/hooks/outfits/useOutfitGeneration.ts.backup:182:        console.log(`[OutfitGeneration] Grid generated successfully, base64 length: ${gridBase64.length}`);
+src/hooks/outfits/useOutfitGeneration.ts.backup:184:        // Convert base64 to Blob and upload to storage
+src/hooks/outfits/useOutfitGeneration.ts.backup:197:        // Convert base64 to Blob
+src/components/outfits/OutfitViewContent.tsx:27:  /** When set, use this data URI for instant render (from job.result.base64_result); bypasses fetch from storage */
+src/components/outfits/OutfitViewContent.tsx:110:  // Prefer instant base64 from job result; storage URL is secondary

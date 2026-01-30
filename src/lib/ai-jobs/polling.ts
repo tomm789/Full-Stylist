@@ -148,7 +148,7 @@ export async function pollAIJobWithFinalCheck(
   let completedJob: AIJob | null = null;
   let pollError: Error | null = null;
 
-  if (jobType === 'outfit_render') {
+  if (jobType === 'outfit_render' || jobType === 'wardrobe_item_generate') {
     const maxMs = 90000;
     const intervalMs = 1500;
     const result = await pollAIJobFixedInterval(jobId, maxMs, intervalMs);

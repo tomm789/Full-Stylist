@@ -15,7 +15,10 @@ export interface AIJob {
     | 'outfit_render'
     | 'outfit_mannequin'
     | 'lookbook_generate'
-    | 'batch';
+    | 'batch'
+    | 'wardrobe_item_render'
+    | 'wardrobe_item_tag'
+    | 'wardrobe_item_generate';
   input: any;
   status: 'queued' | 'running' | 'succeeded' | 'failed';
   result?: any;
@@ -65,7 +68,8 @@ export async function createAIJob(
 }
 
 /**
- * Get AI job by ID
+ * Get AI job by ID (may be cached by browser/service worker).
+ * Use getAIJobNoStore for polling so status is always fresh.
  */
 export async function getAIJob(jobId: string): Promise<QueryResult<AIJob>> {
   try {
@@ -76,6 +80,39 @@ export async function getAIJob(jobId: string): Promise<QueryResult<AIJob>> {
       .maybeSingle();
 
     return { data, error };
+  } catch (error: any) {
+    return { data: null, error };
+  }
+}
+
+/**
+ * Get AI job by ID with cache-control no-store so polling always sees latest status.
+ * Use this inside polling hooks to avoid stale/cached job status.
+ */
+export async function getAIJobNoStore(jobId: string): Promise<QueryResult<AIJob>> {
+  try {
+    const { data: session } = await supabase.auth.getSession();
+    const token = session?.session?.access_token;
+    if (!token) {
+      // Fallback to regular getAIJob if no session
+      return getAIJob(jobId);
+    }
+    const url = `${SUPABASE_CONFIG.url}/rest/v1/ai_jobs?id=eq.${jobId}&select=*`;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_CONFIG.anonKey,
+        'Cache-Control': 'no-store',
+        Pragma: 'no-cache',
+      },
+    });
+    if (!res.ok) {
+      return { data: null, error: new Error(`getAIJobNoStore: ${res.status}`) };
+    }
+    const rows = await res.json();
+    const data = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+    return { data, error: null };
   } catch (error: any) {
     return { data: null, error };
   }

@@ -1,0 +1,23 @@
+netlify/functions/utils.js:78:      if (!this.jobStartTime) return 0;
+netlify/functions/ai-job-runner.js:73:    if (!job_id) {
+netlify/functions/ai-job-runner.js:87:    if (jobError || !job) {
+netlify/functions/ai-job-runner.js:94:    if (job.status === "running") {
+netlify/functions/ai-job-runner.js:102:    console.log("[AIJobRunner] HANDLER START", { job_id, job_type: job.job_type });
+netlify/functions/ai-job-runner.js:110:    console.log("[AIJobRunner] BEFORE await processJob", { job_id, job_type: job.job_type });
+netlify/functions/ai-job-runner.js:120:    console.log("[AIJobRunner] AFTER await processJob", { job_id, job_type: job.job_type });
+netlify/functions/ai-job-runner.js:162:  console.log(`[AIJobRunner] Created performance tracker: ${perfTracker.requestId} for job ${job_id} (${job.job_type})`);
+netlify/functions/ai-job-runner.js:167:  console.log(`[AIJobRunner] Starting job ${job_id} (${job.job_type})`);
+netlify/functions/ai-job-runner.js:173:    switch (job.job_type) {
+netlify/functions/ai-job-runner.js:174:      case "batch":
+netlify/functions/ai-job-runner.js:177:      case "auto_tag":
+netlify/functions/ai-job-runner.js:180:      case "product_shot":
+netlify/functions/ai-job-runner.js:183:      case "headshot_generate":
+netlify/functions/ai-job-runner.js:186:      case "body_shot_generate":
+netlify/functions/ai-job-runner.js:189:      case "outfit_suggest":
+netlify/functions/ai-job-runner.js:192:      case "reference_match":
+netlify/functions/ai-job-runner.js:195:      case "outfit_mannequin":
+netlify/functions/ai-job-runner.js:198:      case "outfit_render":
+netlify/functions/ai-job-runner.js:202:        throw new Error(`Unknown job type: ${job.job_type}`);
+netlify/functions/ai-job-runner.js:206:    console.error(`[AIJobRunner] Error processing ${job.job_type} job ${job_id}:`, err);
+netlify/functions/ai-job-runner.js:213:  timingTracker.logBreakdown(job.job_type);
+netlify/functions/processes/auto_tag.js:80:      // Look up existing attribute values (case‑insensitive)

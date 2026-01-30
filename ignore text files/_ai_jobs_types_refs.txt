@@ -1,0 +1,16 @@
+src/lib/ai-jobs/types.ts:17:    wardrobe_item_id: wardrobeItemId,
+src/lib/ai-jobs/types.ts:49:      'wardrobe_item',
+src/lib/ai-jobs/types.ts:69:        .from('wardrobe_items')
+src/lib/ai-jobs/types.ts:94:    wardrobe_item_id: wardrobeItemId,
+src/lib/ai-jobs/types.ts:108:      return input?.wardrobe_item_id === wardrobeItemId;
+src/lib/ai-jobs/types.ts:125:      return input?.wardrobe_item_id === wardrobeItemId;
+src/lib/ai-jobs/types.ts:215:    wardrobe_item_id: wardrobeItemId,
+src/lib/ai-jobs/types.ts:230:      return input?.wardrobe_item_id === wardrobeItemId;
+src/lib/ai-jobs/types.ts:247:      return input?.wardrobe_item_id === wardrobeItemId;
+src/lib/ai-jobs/core.ts:8:  job_type:
+src/lib/ai-jobs/core.ts:46:  jobType: AIJob['job_type'],
+src/lib/ai-jobs/core.ts:54:        job_type: jobType,
+src/lib/ai-jobs/core.ts:98:  jobType: AIJob['job_type'],
+src/lib/ai-jobs/core.ts:105:      .eq('job_type', jobType)
+src/lib/ai-jobs/core.ts:133:  jobType: AIJob['job_type'],
+src/lib/ai-jobs/core.ts:142:      .eq('job_type', jobType)

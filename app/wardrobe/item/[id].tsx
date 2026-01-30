@@ -3,7 +3,7 @@
  * View and manage a single wardrobe item
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useWardrobeItemDetail,
@@ -26,6 +27,7 @@ import {
   ItemNavigation,
   ItemActions,
 } from '@/components/wardrobe';
+import { continueTimeline, isPerfLogsEnabled } from '@/lib/perf/timeline';
 import {
   DropdownMenuModal,
   DropdownMenuItem,
@@ -33,11 +35,14 @@ import {
 } from '@/components/shared/modals';
 
 export default function ItemDetailScreen() {
-  const { id, itemIds, readOnly } = useLocalSearchParams<{
+  const { id, itemIds, readOnly, traceId: traceIdParam } = useLocalSearchParams<{
     id: string;
     itemIds?: string;
     readOnly?: string;
+    traceId?: string;
+    refresh?: string;
   }>();
+  const timeline = traceIdParam && isPerfLogsEnabled() ? continueTimeline(traceIdParam) : null;
   const router = useRouter();
   const { user } = useAuth();
   const isReadOnly = readOnly === 'true';
@@ -51,10 +56,109 @@ export default function ItemDetailScreen() {
     tags,
     loading,
     isGeneratingProductShot,
+    initialImageDataUri,
+    initialTitle,
+    initialDescription,
+    jobSucceededAt,
   } = useWardrobeItemDetail({
     itemId: id,
     userId: user?.id,
   });
+  
+  // Fast-path image rendering state
+  const [showCarousel, setShowCarousel] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
+  const didFireImageLoadRef = useRef(false);
+  const didFireErrorFallbackRef = useRef(false);
+  const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Fallback timeout: mount carousel after 4s if image never loads
+  const DEFERRED_CAROUSEL_FALLBACK_MS = 4000;
+  
+  useEffect(() => {
+    // Reset refs when initialImageDataUri changes
+    didFireImageLoadRef.current = false;
+    didFireErrorFallbackRef.current = false;
+    setImageLoadError(false);
+    
+    // If no fast-path image, show carousel immediately
+    if (!initialImageDataUri) {
+      setShowCarousel(true);
+      return;
+    }
+    
+    // Set fallback timeout to mount carousel if image never loads
+    fallbackTimeoutRef.current = setTimeout(() => {
+      if (!didFireImageLoadRef.current && !showCarousel) {
+        console.debug('[wardrobe_item_render_timing] carousel_mounted_fallback_timeout', {
+          itemId: id,
+          msSinceMount: DEFERRED_CAROUSEL_FALLBACK_MS,
+        });
+        setShowCarousel(true);
+      }
+    }, DEFERRED_CAROUSEL_FALLBACK_MS);
+    
+    return () => {
+      if (fallbackTimeoutRef.current) {
+        clearTimeout(fallbackTimeoutRef.current);
+        fallbackTimeoutRef.current = null;
+      }
+    };
+  }, [initialImageDataUri, id]);
+  
+  const handleFastPathImageLoadStart = useCallback(() => {
+    if (isPerfLogsEnabled()) timeline?.mark('image_load_start');
+    const imageLoadStartAt = Date.now();
+    const msSinceJobSucceeded = jobSucceededAt != null && typeof jobSucceededAt === 'number'
+      ? Math.round(imageLoadStartAt - jobSucceededAt)
+      : undefined;
+    if (isPerfLogsEnabled()) {
+      console.debug('[wardrobe_item_render_timing] image_load_start_at', {
+        ts: imageLoadStartAt,
+        itemId: id,
+        uriType: 'dataUri',
+        msSinceJobSucceeded,
+      });
+    }
+  }, [id, jobSucceededAt, timeline]);
+  
+  const handleFastPathImageLoad = useCallback(() => {
+    if (didFireImageLoadRef.current) return;
+    didFireImageLoadRef.current = true;
+    if (isPerfLogsEnabled()) timeline?.mark('image_load_end');
+    const imageLoadEndAt = Date.now();
+    const msSinceJobSucceeded = jobSucceededAt != null && typeof jobSucceededAt === 'number'
+      ? Math.round(imageLoadEndAt - jobSucceededAt)
+      : undefined;
+    if (isPerfLogsEnabled()) {
+      console.debug('[wardrobe_item_render_timing] image_load_end_at', {
+        ts: imageLoadEndAt,
+        itemId: id,
+        uriType: 'dataUri',
+        msSinceJobSucceeded,
+      });
+    }
+    setShowCarousel(true);
+    if (fallbackTimeoutRef.current) {
+      clearTimeout(fallbackTimeoutRef.current);
+      fallbackTimeoutRef.current = null;
+    }
+  }, [id, jobSucceededAt, timeline]);
+  
+  const handleFastPathImageError = useCallback(() => {
+    if (didFireErrorFallbackRef.current) return;
+    didFireErrorFallbackRef.current = true;
+    if (isPerfLogsEnabled()) timeline?.mark('image_load_error');
+    if (isPerfLogsEnabled()) {
+      console.debug('[wardrobe_item_render_timing] image_load_error', { itemId: id, uriType: 'dataUri' });
+    }
+    setImageLoadError(true);
+    setShowCarousel(true);
+    if (fallbackTimeoutRef.current) {
+      clearTimeout(fallbackTimeoutRef.current);
+      fallbackTimeoutRef.current = null;
+    }
+  }, [id, timeline]);
 
   // Navigation
   const {
@@ -174,17 +278,41 @@ export default function ItemDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Image Carousel */}
-        <ItemImageCarousel
-          images={displayImages}
-          currentScreenWidth={currentScreenWidth}
-          onImageIndexChange={actions.setCurrentImageIndex}
-          currentImageIndex={actions.currentImageIndex}
-        />
+        {/* Fast-path image (single ExpoImage) or carousel */}
+        {initialImageDataUri && !showCarousel ? (
+          <View style={[styles.fastPathImageContainer, { width: currentScreenWidth }]}>
+            <Image
+              source={{ uri: initialImageDataUri }}
+              style={styles.fastPathImage}
+              contentFit="contain"
+              onLoadStart={handleFastPathImageLoadStart}
+              onLoad={handleFastPathImageLoad}
+              onError={handleFastPathImageError}
+            />
+            {imageLoadError && (
+              <View style={styles.imageErrorContainer}>
+                <Text style={styles.imageErrorText}>Failed to load image</Text>
+              </View>
+            )}
+          </View>
+        ) : showCarousel ? (
+          <ItemImageCarousel
+            images={displayImages}
+            currentScreenWidth={currentScreenWidth}
+            onImageIndexChange={actions.setCurrentImageIndex}
+            currentImageIndex={actions.currentImageIndex}
+          />
+        ) : (
+          <View style={[styles.imagePlaceholder, { width: currentScreenWidth }]}>
+            <ActivityIndicator size="large" color="#666" />
+          </View>
+        )}
 
         {/* Item Details */}
         <View style={styles.detailsContent}>
-          <Text style={styles.itemTitle}>{item.title}</Text>
+          <Text style={styles.itemTitle}>
+            {initialTitle || item.title || 'New Item'}
+          </Text>
 
           {item.brand && <Text style={styles.itemBrand}>{item.brand}</Text>}
 
@@ -192,8 +320,10 @@ export default function ItemDetailScreen() {
             <Text style={styles.itemCategory}>{category.name}</Text>
           )}
 
-          {item.description && (
-            <Text style={styles.itemDescription}>{item.description}</Text>
+          {(initialDescription || item.description) && (
+            <Text style={styles.itemDescription}>
+              {initialDescription || item.description}
+            </Text>
           )}
 
           {/* Attributes and Tags */}
@@ -307,5 +437,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 40,
+  },
+  fastPathImageContainer: {
+    aspectRatio: 1,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+  },
+  fastPathImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imageErrorContainer: {
+    position: 'absolute',
+    bottom: 20,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  imageErrorText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  imagePlaceholder: {
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    alignSelf: 'center',
   },
 });
