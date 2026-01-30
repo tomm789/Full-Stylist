@@ -15,6 +15,7 @@ import {
 } from '@/lib/ai-jobs';
 import { startTimeline, continueTimeline, type Timeline } from '@/lib/perf/timeline';
 import { PERF_MODE } from '@/lib/perf/perfMode';
+import { toDataUri } from '@/lib/images/dataUri';
 
 interface UseOutfitViewProps {
   outfitId: string | undefined;
@@ -117,7 +118,7 @@ export function useOutfitView({
         // Immediate UI: use base64 or storage URL from job result so image shows before refetch
         if (result.base64_result) {
           const coverSetAt = Date.now();
-          setCoverImageDataUri('data:image/jpeg;base64,' + result.base64_result);
+          setCoverImageDataUri(toDataUri(result.base64_result, result.mime_type));
           timeline?.mark('cover_set_base64_at', { ts: coverSetAt });
           console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, outfitId, from: 'view_poll' });
         } else {

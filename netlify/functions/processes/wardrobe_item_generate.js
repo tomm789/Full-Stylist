@@ -89,38 +89,37 @@ async function processWardrobeItemGenerate(
     const uploadMs = Date.now() - uploadStart;
     console.log(`[WardrobeItemGenerate] Image branch upload took: ${uploadMs} ms`);
 
-    // Persist pointers: bump existing sort_order, insert new product_shot at sort_order=0
-    const { data: existingImages, error: existingErr } = await supabase
-      .from("wardrobe_item_images")
-      .select("id, sort_order")
-      .eq("wardrobe_item_id", wardrobe_item_id)
-      .order("sort_order", { ascending: false });
-
-    if (existingErr) throw existingErr;
-
-    for (const img of existingImages || []) {
-      const { error: bumpErr } = await supabase
-        .from("wardrobe_item_images")
-        .update({ sort_order: (img.sort_order || 0) + 1 })
-        .eq("id", img.id);
-      if (bumpErr) throw bumpErr;
-    }
-
-    const { error: insertErr } = await supabase.from("wardrobe_item_images").insert({
-      wardrobe_item_id,
-      image_id: imageId,
-      type: "product_shot",
-      sort_order: 0,
+    // Persist pointers: atomic bump + insert under advisory lock (avoids duplicate sort_order=0)
+    const { error: rpcErr } = await supabase.rpc("bump_and_insert_product_shot", {
+      p_wardrobe_item_id: wardrobe_item_id,
+      p_image_id: imageId,
+      p_type: "product_shot",
     });
-    if (insertErr) throw insertErr;
+    if (rpcErr) throw rpcErr;
 
     const imageBranchMs = Date.now() - imageStart;
     console.log(`[WardrobeItemGenerate] Image branch complete in ${imageBranchMs} ms`);
+
+    // Partial result so client can paint image before text branch completes (~12–13s vs ~17s)
+    if (jobId) {
+      const partialResult = {
+        base64_result: optimizedB64,
+        mime_type: "image/jpeg",
+        image_id: imageId,
+        storage_key: storageKey,
+      };
+      await supabase
+        .from("ai_jobs")
+        .update({ result: partialResult, updated_at: new Date().toISOString() })
+        .eq("id", jobId);
+      console.log(`[WardrobeItemGenerate] Partial result written (image only), job_id: ${jobId}`);
+    }
 
     return {
       image_id: imageId,
       storage_key: storageKey,
       base64_result: optimizedB64,
+      mime_type: "image/jpeg",
     };
   })();
 
@@ -289,6 +288,7 @@ async function processWardrobeItemGenerate(
     image_id: imageResult.image_id,
     storage_key: imageResult.storage_key,
     base64_result: imageResult.base64_result,
+    mime_type: imageResult.mime_type || "image/jpeg",
 
     // Generated text payload
     suggested_title: textResult.suggested_title,

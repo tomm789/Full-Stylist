@@ -65,25 +65,13 @@ async function processProductShot(input, supabase, userId, perfTracker = null, t
     productShotB64,
     storagePath
   );
-  // Adjust existing images' sort orders to ensure the new shot appears first
-  const { data: existingImages } = await supabase
-    .from("wardrobe_item_images")
-    .select("id, sort_order")
-    .eq("wardrobe_item_id", wardrobe_item_id)
-    .order("sort_order", { ascending: false });
-  for (const img of existingImages || []) {
-    await supabase
-      .from("wardrobe_item_images")
-      .update({ sort_order: (img.sort_order || 0) + 1 })
-      .eq("id", img.id);
-  }
-  // Insert the new product shot as sort_order=0
-  await supabase.from("wardrobe_item_images").insert({
-    wardrobe_item_id,
-    image_id: imageId,
-    type: "product_shot",
-    sort_order: 0
+  // Atomic bump + insert under advisory lock (avoids duplicate sort_order=0)
+  const { error: rpcErr } = await supabase.rpc("bump_and_insert_product_shot", {
+    p_wardrobe_item_id: wardrobe_item_id,
+    p_image_id: imageId,
+    p_type: "product_shot",
   });
+  if (rpcErr) throw rpcErr;
   // Return base64_result for fast-path rendering (raw base64 as produced, no optimization in this change)
   return { image_id: imageId, storage_key: storageKey, base64_result: productShotB64 };
 }

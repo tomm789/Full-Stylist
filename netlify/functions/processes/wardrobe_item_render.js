@@ -21,10 +21,11 @@ const {
  * @param {string} userId - ID of the user
  * @param {object} perfTracker - Optional performance tracker
  * @param {object} timingTracker - Optional timing tracker
+ * @param {object} preDownloadedImageData - Optional { base64, mimeType } to skip download
  * @param {string} [jobId] - Optional job ID for logging
  * @returns {Promise<object>} { item_id, image_id, storage_key, base64_result? }
  */
-async function processWardrobeItemRender(input, supabase, userId, perfTracker = null, timingTracker = null, jobId = null) {
+async function processWardrobeItemRender(input, supabase, userId, perfTracker = null, timingTracker = null, preDownloadedImageData = null, jobId = null) {
   const setupStart = Date.now();
   const { item_id, source_image_id } = input;
   const wardrobe_item_id = item_id;
@@ -33,9 +34,14 @@ async function processWardrobeItemRender(input, supabase, userId, perfTracker = 
     throw new Error("wardrobe_item_render requires item_id and source_image_id");
   }
 
-  // Download source image once
-  console.log(`[WardrobeItemRender] Downloading source image (source_image_id: ${source_image_id})...`);
-  const imageResult = await downloadImageFromStorage(supabase, source_image_id, timingTracker);
+  let imageResult;
+  if (preDownloadedImageData && preDownloadedImageData.base64) {
+    console.log(`[WardrobeItemRender] Using pre-downloaded image (skipping storage download)`);
+    imageResult = preDownloadedImageData;
+  } else {
+    console.log(`[WardrobeItemRender] Downloading source image (source_image_id: ${source_image_id})...`);
+    imageResult = await downloadImageFromStorage(supabase, source_image_id, timingTracker);
+  }
   const setupMs = Date.now() - setupStart;
   console.log(`[WardrobeItemRender] Setup/download took: ${setupMs} ms`);
 
@@ -73,36 +79,24 @@ async function processWardrobeItemRender(input, supabase, userId, perfTracker = 
   const uploadMs = Date.now() - uploadStart;
   console.log(`[WardrobeItemRender] Upload took: ${uploadMs} ms`);
 
-  // Persist pointers: bump existing sort_order, insert new product_shot at sort_order=0
-  const { data: existingImages } = await supabase
-    .from("wardrobe_item_images")
-    .select("id, sort_order")
-    .eq("wardrobe_item_id", wardrobe_item_id)
-    .order("sort_order", { ascending: false });
-
-  for (const img of existingImages || []) {
-    await supabase
-      .from("wardrobe_item_images")
-      .update({ sort_order: (img.sort_order || 0) + 1 })
-      .eq("id", img.id);
-  }
-
-  await supabase.from("wardrobe_item_images").insert({
-    wardrobe_item_id,
-    image_id: imageId,
-    type: "product_shot",
-    sort_order: 0
+  // Persist pointers: atomic bump + insert under advisory lock (avoids duplicate sort_order=0)
+  const { error: rpcErr } = await supabase.rpc("bump_and_insert_product_shot", {
+    p_wardrobe_item_id: wardrobe_item_id,
+    p_image_id: imageId,
+    p_type: "product_shot",
   });
+  if (rpcErr) throw rpcErr;
 
   const totalMs = Date.now() - setupStart;
   console.log(`[WardrobeItemRender] Total duration: ${totalMs} ms`);
 
-  // Result for client fast-path (base64_result optional but cheap — we have optimizedB64)
+  // Result for client fast-path (base64_result + mime_type for data URI)
   return {
     item_id: wardrobe_item_id,
     image_id: imageId,
     storage_key: storageKey,
-    base64_result: optimizedB64
+    base64_result: optimizedB64,
+    mime_type: "image/jpeg",
   };
 }
 

@@ -428,7 +428,8 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
     renders: [{ image_id: imageId, storage_key: storageKey }],
     items_count: itemCount,
     used_stacked_image: useStackedImage,
-    base64_result: optimizedImageB64
+    base64_result: optimizedImageB64,
+    mime_type: "image/jpeg",
   };
 }
 

@@ -15,8 +15,10 @@ import {
   triggerWardrobeItemGenerate,
   triggerAIJobExecution,
 } from '@/lib/ai-jobs';
-import { setInitialItemData } from '@/lib/wardrobe/initialItemCache';
+import { setInitialItemData, setPendingItemJob } from '@/lib/wardrobe/initialItemCache';
+import { toDataUri } from '@/lib/images/dataUri';
 import { startTimeline, isPerfLogsEnabled } from '@/lib/perf/timeline';
+import { logWardrobeAddTiming } from '@/lib/perf/wardrobeAddTiming';
 
 interface SelectedImage {
   uri: string;
@@ -73,6 +75,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
 
   const onComplete = useCallback(
     (job: import('@/lib/ai-jobs').AIJob) => {
+      logWardrobeAddTiming('job_status_transition', { status: job.status, jobId: job.id, jobType: job.job_type });
       if (job.status === 'succeeded' && pendingItemId) {
         const jobStatusSucceededAt = Date.now();
         if (typeof __DEV__ !== 'undefined' && __DEV__) {
@@ -84,20 +87,17 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
           });
         }
         
-        // Primary path: wardrobe_item_generate (image + text in parallel)
+        // Primary path: wardrobe_item_generate (navigation already done; cache update for back-navigation)
         if (job.job_type === 'wardrobe_item_generate') {
-          const result = job.result;
+          const result = job.result as { base64_result?: string; mime_type?: string; suggested_title?: string; suggested_notes?: string } | undefined;
           const base64Result = result?.base64_result;
           let dataUri: string | null = null;
           if (base64Result) {
-            dataUri = base64Result.startsWith('data:')
-              ? base64Result
-              : `data:image/jpeg;base64,${base64Result}`;
+            dataUri = toDataUri(base64Result, result?.mime_type);
           }
           if (isPerfLogsEnabled()) timelineRef.current?.mark('poll_success', { resultKeys: result ? Object.keys(result) : [] });
           if (dataUri) {
             if (isPerfLogsEnabled()) timelineRef.current?.mark('image_set_from_result');
-            // Set initial item data with both image and text (title, description)
             setInitialItemData(
               pendingItemId,
               job.id,
@@ -109,14 +109,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
             );
           }
           setAnalysisStep('Product shot and details generated successfully');
-          const traceId = timelineRef.current?.traceId;
-          setTimeout(() => {
-            setGeneratingAI(false);
-            const url = traceId
-              ? `/wardrobe/item/${pendingItemId}?refresh=${Date.now()}&traceId=${traceId}`
-              : `/wardrobe/item/${pendingItemId}?refresh=${Date.now()}`;
-            router.replace(url);
-          }, 800);
+          setGeneratingAI(false);
           return;
         }
         
@@ -146,10 +139,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
             // Product shot succeeded - populate fast-path cache
             const base64Result = productShotResult.base64_result;
             if (base64Result) {
-              // Build dataUri from base64_result (add mime prefix if not present)
-              const dataUri = base64Result.startsWith('data:') 
-                ? base64Result 
-                : `data:image/jpeg;base64,${base64Result}`;
+              const dataUri = toDataUri(base64Result, productShotResult.mime_type);
               
               // Extract title and description from auto_tag result
               const title = autoTagResult?.suggested_title;
@@ -376,6 +366,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
 
     setLoading(true);
     setAiError(null);
+    logWardrobeAddTiming('add_button_pressed');
 
     if (isPerfLogsEnabled()) {
       timelineRef.current = startTimeline('wardrobe_add');
@@ -384,6 +375,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
 
     try {
       if (isPerfLogsEnabled()) timelineRef.current?.mark('upload_start');
+      logWardrobeAddTiming('create_job_request_start');
       // Create item with placeholder title
       const { data, error } = await createWardrobeItem(
         user.id,
@@ -410,6 +402,10 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
         const imageIds = data.images.map((img: any) => img.image_id);
         const sourceImageId = imageIds[0];
 
+        if (__DEV__) {
+          console.log('[WardrobeItemAdd] itemId created', { itemId });
+        }
+
         setPendingItemId(itemId);
         pendingImageIdsRef.current = imageIds;
         setGeneratingAI(true);
@@ -427,6 +423,11 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
           throw new Error(generateError?.message || 'Failed to create generate job');
         }
 
+        if (__DEV__) {
+          console.log('[WardrobeItemAdd] jobId started', { itemId, jobId: generateJob.id });
+        }
+
+        logWardrobeAddTiming('create_job_response_received', { job_id: generateJob.id, item_id: itemId });
         if (isPerfLogsEnabled()) {
           timelineRef.current?.mark('job_created', { jobId: generateJob.id });
           timelineRef.current?.mark('poll_start');
@@ -437,6 +438,11 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
         if (execError) {
           console.warn('[useAddWardrobeItem] Job trigger returned error (may still work):', execError);
         }
+
+        setPendingItemJob(itemId, generateJob.id);
+        logWardrobeAddTiming('navigation_start', { item_id: itemId, job_id: generateJob.id });
+        router.replace(`/wardrobe/item/${itemId}?refresh=${Date.now()}`);
+        logWardrobeAddTiming('navigation_dispatched');
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'An unexpected error occurred');

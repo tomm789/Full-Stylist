@@ -18,6 +18,7 @@ import {
   pollAIJobWithFinalCheck,
 } from '@/lib/ai-jobs';
 import { setInitialCoverDataUri } from '@/lib/outfits/initialCoverCache';
+import { toDataUri } from '@/lib/images/dataUri';
 import {
   outfitDescriptionToGenerationMessages,
   runDescriptionMessageDrip,
@@ -476,7 +477,7 @@ export function useOutfitEditorActions({
       });
 
       if (result.base64_result) {
-        const dataUri = 'data:image/jpeg;base64,' + result.base64_result;
+        const dataUri = toDataUri(result.base64_result, result.mime_type);
         setInitialCoverDataUri(
           savedOutfitId,
           dataUri,

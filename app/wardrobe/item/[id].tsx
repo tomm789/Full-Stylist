@@ -28,6 +28,7 @@ import {
   ItemActions,
 } from '@/components/wardrobe';
 import { continueTimeline, isPerfLogsEnabled } from '@/lib/perf/timeline';
+import { logWardrobeAddTiming } from '@/lib/perf/wardrobeAddTiming';
 import {
   DropdownMenuModal,
   DropdownMenuItem,
@@ -52,10 +53,14 @@ export default function ItemDetailScreen() {
     item,
     category,
     displayImages,
+    activeImageId,
     attributes,
     tags,
     loading,
     isGeneratingProductShot,
+    isGeneratingDetails,
+    generationFailed,
+    retryGeneration,
     initialImageDataUri,
     initialTitle,
     initialDescription,
@@ -74,6 +79,10 @@ export default function ItemDetailScreen() {
   
   // Fallback timeout: mount carousel after 4s if image never loads
   const DEFERRED_CAROUSEL_FALLBACK_MS = 4000;
+
+  useEffect(() => {
+    logWardrobeAddTiming('first_render_item_screen', { itemId: id });
+  }, [id]);
   
   useEffect(() => {
     // Reset refs when initialImageDataUri changes
@@ -180,6 +189,11 @@ export default function ItemDetailScreen() {
     isReadOnly,
   });
 
+  // When active image changes (e.g. generation finished), show index 0 (active is first in ordered list)
+  useEffect(() => {
+    actions.setCurrentImageIndex(0);
+  }, [activeImageId]);
+
   const isOwnItem = item && user && item.owner_user_id === user.id && !isReadOnly;
   const [showMenu, setShowMenu] = useState(false);
 
@@ -283,12 +297,18 @@ export default function ItemDetailScreen() {
           <View style={[styles.fastPathImageContainer, { width: currentScreenWidth }]}>
             <Image
               source={{ uri: initialImageDataUri }}
-              style={styles.fastPathImage}
+              style={[styles.fastPathImage, isGeneratingDetails && styles.fastPathImageDimmed]}
               contentFit="contain"
               onLoadStart={handleFastPathImageLoadStart}
               onLoad={handleFastPathImageLoad}
               onError={handleFastPathImageError}
             />
+            {isGeneratingDetails && (
+              <View style={styles.generatingOverlay} pointerEvents="none">
+                <ActivityIndicator size="large" color="#fff" />
+                <Text style={styles.generatingOverlayText}>Generating details…</Text>
+              </View>
+            )}
             {imageLoadError && (
               <View style={styles.imageErrorContainer}>
                 <Text style={styles.imageErrorText}>Failed to load image</Text>
@@ -296,12 +316,21 @@ export default function ItemDetailScreen() {
             )}
           </View>
         ) : showCarousel ? (
-          <ItemImageCarousel
-            images={displayImages}
-            currentScreenWidth={currentScreenWidth}
-            onImageIndexChange={actions.setCurrentImageIndex}
-            currentImageIndex={actions.currentImageIndex}
-          />
+          <View style={styles.carouselWrapper}>
+            <ItemImageCarousel
+              key={activeImageId ?? 'carousel'}
+              images={displayImages}
+              currentScreenWidth={currentScreenWidth}
+              onImageIndexChange={actions.setCurrentImageIndex}
+              currentImageIndex={actions.currentImageIndex}
+            />
+            {isGeneratingDetails && (
+              <View style={[styles.generatingOverlay, { width: currentScreenWidth }]} pointerEvents="none">
+                <ActivityIndicator size="large" color="#fff" />
+                <Text style={styles.generatingOverlayText}>Generating details…</Text>
+              </View>
+            )}
+          </View>
         ) : (
           <View style={[styles.imagePlaceholder, { width: currentScreenWidth }]}>
             <ActivityIndicator size="large" color="#666" />
@@ -310,9 +339,25 @@ export default function ItemDetailScreen() {
 
         {/* Item Details */}
         <View style={styles.detailsContent}>
-          <Text style={styles.itemTitle}>
-            {initialTitle || item.title || 'New Item'}
-          </Text>
+          {isGeneratingDetails && !initialTitle && (!item?.title || item.title === 'New Item') ? (
+            <View style={styles.titleSkeleton}>
+              <View style={styles.skeletonLine} />
+              <View style={[styles.skeletonLine, styles.skeletonLineShort]} />
+            </View>
+          ) : (
+            <Text style={styles.itemTitle}>
+              {initialTitle || (item?.title && item.title !== 'New Item' ? item.title : '') || 'Untitled'}
+            </Text>
+          )}
+
+          {generationFailed && (
+            <View style={styles.generationErrorBox}>
+              <Text style={styles.generationErrorText}>Details couldn&apos;t be generated.</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={retryGeneration}>
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {item.brand && <Text style={styles.itemBrand}>{item.brand}</Text>}
 
@@ -320,11 +365,17 @@ export default function ItemDetailScreen() {
             <Text style={styles.itemCategory}>{category.name}</Text>
           )}
 
-          {(initialDescription || item.description) && (
+          {isGeneratingDetails && !initialDescription && !item?.description ? (
+            <View style={styles.descriptionSkeleton}>
+              <View style={styles.skeletonLine} />
+              <View style={styles.skeletonLine} />
+              <View style={[styles.skeletonLine, styles.skeletonLineShort]} />
+            </View>
+          ) : (initialDescription || item?.description) ? (
             <Text style={styles.itemDescription}>
               {initialDescription || item.description}
             </Text>
-          )}
+          ) : null}
 
           {/* Attributes and Tags */}
           <ItemAttributes attributes={attributes} tags={tags} item={item} />
@@ -444,10 +495,68 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
+    position: 'relative',
   },
   fastPathImage: {
     width: '100%',
     height: '100%',
+  },
+  fastPathImageDimmed: {
+    opacity: 0.7,
+  },
+  generatingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  generatingOverlayText: {
+    color: '#fff',
+    fontSize: 16,
+    marginTop: 12,
+    fontWeight: '500',
+  },
+  carouselWrapper: {
+    position: 'relative',
+  },
+  titleSkeleton: {
+    marginBottom: 8,
+  },
+  descriptionSkeleton: {
+    marginBottom: 20,
+  },
+  skeletonLine: {
+    height: 16,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    marginBottom: 8,
+    width: '100%',
+  },
+  skeletonLineShort: {
+    width: '60%',
+  },
+  generationErrorBox: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#fff3f3',
+    borderRadius: 8,
+  },
+  generationErrorText: {
+    color: '#c00',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  retryButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   imageErrorContainer: {
     position: 'absolute',
