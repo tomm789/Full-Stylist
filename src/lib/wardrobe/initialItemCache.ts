@@ -17,6 +17,9 @@ export interface CachedItem {
 // Cache key format: `${wardrobeItemId}:${jobId}` or `${wardrobeItemId}:${traceId}`
 const cache = new Map<string, CachedItem>();
 
+// Pending job: item created, job running, no result yet (navigate immediately, detail polls)
+const pendingJobs = new Map<string, string>(); // itemId -> jobId
+
 // Optional TTL: evict entries older than 5 minutes
 const TTL_MS = 5 * 60 * 1000;
 
@@ -138,4 +141,24 @@ export function getInitialItemData(
   }
   
   return entry;
+}
+
+/** Store pending job so detail screen knows to poll (no image yet). */
+export function setPendingItemJob(wardrobeItemId: string, jobId: string): void {
+  pendingJobs.set(wardrobeItemId, jobId);
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    console.debug('[wardrobe_item_render_timing] setPendingItemJob', { wardrobeItemId, jobId });
+  }
+}
+
+/** Get pending job id for item (consumed by detail screen to start polling). */
+export function getPendingItemJob(wardrobeItemId: string): { jobId: string } | null {
+  const jobId = pendingJobs.get(wardrobeItemId);
+  if (!jobId) return null;
+  return { jobId };
+}
+
+/** Clear pending job after detail screen has started polling. */
+export function clearPendingItemJob(wardrobeItemId: string): void {
+  pendingJobs.delete(wardrobeItemId);
 }

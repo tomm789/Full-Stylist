@@ -49,6 +49,7 @@ export {
   getRecentBatchJob,
   triggerWardrobeItemRender,
   getActiveWardrobeItemRenderJob,
+  getActiveWardrobeItemGenerateJob,
   triggerWardrobeItemTag,
   triggerWardrobeItemGenerate,
 } from './types';

@@ -20,6 +20,7 @@ import { supabase } from '@/lib/supabase';
 import { generateClothingGrid } from '@/utils/clothing-grid';
 import { startTimeline } from '@/lib/perf/timeline';
 import { PERF_MODE } from '@/lib/perf/perfMode';
+import { toDataUri } from '@/lib/images/dataUri';
 
 const DESCRIPTION_POLL_MAX_MS = 30_000;
 
@@ -549,7 +550,7 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
         // Pass base64 to view so image shows immediately (no storage/CDN wait)
         const result = completedJob.result || {};
         if (result.base64_result) {
-          const dataUri = 'data:image/jpeg;base64,' + result.base64_result;
+          const dataUri = toDataUri(result.base64_result, result.mime_type);
           const coverSetAt = Date.now();
           setInitialCoverDataUri(
             outfitId,

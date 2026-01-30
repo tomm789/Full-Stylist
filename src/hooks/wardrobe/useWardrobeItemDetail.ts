@@ -3,7 +3,7 @@
  * Load and manage wardrobe item detail data with polling
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Alert } from 'react-native';
 import {
   getActiveProductShotJob,
@@ -11,12 +11,16 @@ import {
   getActiveBatchJob,
   getRecentBatchJob,
   getActiveWardrobeItemRenderJob,
+  getActiveWardrobeItemGenerateJob,
 } from '@/lib/ai-jobs';
-import { getWardrobeItemImages } from '@/lib/wardrobe';
+import { getWardrobeItemImages, updateWardrobeItem } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
+import { triggerWardrobeItemGenerate, triggerAIJobExecution } from '@/lib/ai-jobs';
 import { useWardrobeItemData } from './useWardrobeItemData';
 import { useWardrobeItemPolling } from './useWardrobeItemPolling';
-import { getInitialItemData } from '@/lib/wardrobe/initialItemCache';
+import { getInitialItemData, setInitialItemData, getPendingItemJob, clearPendingItemJob } from '@/lib/wardrobe/initialItemCache';
+import { toDataUri } from '@/lib/images/dataUri';
+import { logWardrobeAddTiming } from '@/lib/perf/wardrobeAddTiming';
 
 interface UseWardrobeItemDetailProps {
   itemId: string | undefined;
@@ -27,11 +31,20 @@ interface UseWardrobeItemDetailReturn {
   item: any | null;
   category: any | null;
   allImages: Array<{ id: string; image_id: string; type: string; image: any }>;
+  /** Carousel images with active (e.g. generated) image first. */
   displayImages: Array<{ id: string; image_id: string; type: string; image: any }>;
+  /** Image id that should be shown first in carousel (uploaded or generated). */
+  activeImageId: string | null;
   attributes: any[];
   tags: Array<{ id: string; name: string }>;
   loading: boolean;
   isGeneratingProductShot: boolean;
+  /** True when wardrobe_item_generate is in progress (details not yet available). */
+  isGeneratingDetails: boolean;
+  /** True when generate job failed or timed out; show error + Retry. */
+  generationFailed: boolean;
+  /** Trigger a new generate job for the same item (retry). */
+  retryGeneration: () => Promise<void>;
   refreshImages: () => Promise<void>;
   refreshAttributes: () => Promise<void>;
   // Fast-path cache data
@@ -51,6 +64,13 @@ export function useWardrobeItemDetail({
   const [autoTagJobId, setAutoTagJobId] = useState<string | null>(null);
   const [batchJobId, setBatchJobId] = useState<string | null>(null);
   const [renderJobId, setRenderJobId] = useState<string | null>(null);
+  const [generateJobId, setGenerateJobId] = useState<string | null>(null);
+  const [generationFailed, setGenerationFailed] = useState(false);
+  /** Which image to show first in carousel (image_id). Default: uploaded; switch to generated when available. */
+  const [activeImageId, setActiveImageId] = useState<string | null>(null);
+
+  // Log "first time generated fields available" once per job
+  const didLogGeneratedFieldsRef = useRef(false);
 
   // Fast-path cache state
   const [initialImageDataUri, setInitialImageDataUri] = useState<string | null>(null);
@@ -203,175 +223,257 @@ export function useWardrobeItemDetail({
     logPrefix: '[WardrobeItemRender]',
   });
 
-  // Start polling when job IDs are set
+  // Refs so effects depend only on jobId (not polling object identity)
+  const productShotPollingRef = useRef(productShotPolling);
+  const autoTagPollingRef = useRef(autoTagPolling);
+  const batchJobPollingRef = useRef(batchJobPolling);
+  const renderJobPollingRef = useRef(renderJobPolling);
+  productShotPollingRef.current = productShotPolling;
+  autoTagPollingRef.current = autoTagPolling;
+  batchJobPollingRef.current = batchJobPolling;
+  renderJobPollingRef.current = renderJobPolling;
+
+  // Wardrobe item generate job polling (paint as soon as result.base64_result exists, before succeeded)
+  const generateJobPolling = useWardrobeItemPolling({
+    jobId: generateJobId,
+    interval: 800,
+    onJobUpdate: (job) => {
+      logWardrobeAddTiming('job_status_transition', { status: job.status, jobId: job.id });
+      const result = job.result as { base64_result?: string; mime_type?: string; suggested_title?: string; suggested_notes?: string } | undefined;
+      if (result?.base64_result && itemId) {
+        logWardrobeAddTiming('first_set_initialImageDataUri_from_base64', { jobId: job.id });
+        const dataUri = toDataUri(result.base64_result, result.mime_type);
+        setInitialImageDataUri(dataUri);
+        setJobSucceededAt(Date.now());
+        if (result.suggested_title != null) setInitialTitle(result.suggested_title);
+        if (result.suggested_notes != null) setInitialDescription(result.suggested_notes);
+        if ((result.suggested_title != null || result.suggested_notes != null) && !didLogGeneratedFieldsRef.current) {
+          didLogGeneratedFieldsRef.current = true;
+          if (__DEV__) {
+            console.log('[WardrobeItemGenerate] first time generated fields available', { jobId: job.id, itemId });
+          }
+        }
+      }
+    },
+    onComplete: async (job) => {
+      setIsGeneratingProductShot(false);
+      setGenerationFailed(false);
+      if (job?.status === 'succeeded' && job?.result && itemId && userId) {
+        const result = job.result as { base64_result?: string; mime_type?: string; suggested_title?: string; suggested_notes?: string };
+        if (result.suggested_title != null) setInitialTitle(result.suggested_title);
+        if (result.suggested_notes != null) setInitialDescription(result.suggested_notes);
+        setInitialItemData(
+          itemId,
+          job.id,
+          toDataUri(result.base64_result ?? '', result.mime_type),
+          Date.now(),
+          undefined,
+          result.suggested_title,
+          result.suggested_notes
+        );
+        const title = result.suggested_title ?? data.item?.title ?? '';
+        const description = result.suggested_notes ?? data.item?.description ?? '';
+        const { error: updateError } = await updateWardrobeItem(itemId, userId, { title, description });
+        if (updateError) {
+          console.error('[WardrobeItemGenerate] updateWardrobeItem failed', updateError);
+        } else if (__DEV__) {
+          console.log('[WardrobeItemGenerate] item updated', { itemId, jobId: job.id });
+        }
+        await data.loadItemData();
+        if (__DEV__) {
+          console.log('[WardrobeItemGenerate] generation finished', { itemId, jobId: job.id });
+        }
+      }
+      await data.refreshImages();
+      logWardrobeAddTiming('refreshImages_completion', { itemId });
+      await data.refreshAttributes();
+    },
+    onError: () => {
+      setIsGeneratingProductShot(false);
+      setGenerationFailed(true);
+      if (__DEV__) console.log('[WardrobeItemGenerate] generation failed', { itemId, jobId: generateJobId });
+      startPeriodicImageRefresh();
+      startPeriodicAttributeRefresh();
+    },
+    onTimeout: () => {
+      setIsGeneratingProductShot(false);
+      setGenerationFailed(true);
+      if (__DEV__) console.log('[WardrobeItemGenerate] generation failed (timeout)', { itemId, jobId: generateJobId });
+      startPeriodicImageRefresh();
+      startPeriodicAttributeRefresh();
+    },
+    timeout: 90000,
+    logPrefix: '[WardrobeItemGenerate]',
+  });
+
+  const generateJobPollingRef = useRef(generateJobPolling);
+  generateJobPollingRef.current = generateJobPolling;
+
+  const retryGeneration = async () => {
+    if (!userId || !itemId) return;
+    const sourceImageId = data.allImages?.[0]?.image_id;
+    if (!sourceImageId) {
+      console.warn('[WardrobeItemGenerate] retry skipped: no source image', { itemId });
+      return;
+    }
+    setGenerationFailed(false);
+    didLogGeneratedFieldsRef.current = false;
+    const { data: generateJob, error: generateError } = await triggerWardrobeItemGenerate(userId, itemId, sourceImageId);
+    if (generateError || !generateJob) {
+      console.error('[WardrobeItemGenerate] retry job creation failed', generateError);
+      setGenerationFailed(true);
+      return;
+    }
+    if (__DEV__) console.log('[WardrobeItemGenerate] jobId started (retry)', { itemId, jobId: generateJob.id });
+    setGenerateJobId(generateJob.id);
+    setIsGeneratingProductShot(true);
+    const { error: execError } = await triggerAIJobExecution(generateJob.id);
+    if (execError) console.warn('[WardrobeItemGenerate] retry trigger error', execError);
+  };
+
+  // Start polling when job IDs are set (effects depend only on jobId to avoid restarts)
   useEffect(() => {
     if (productShotJobId) {
-      productShotPolling.startPolling();
+      productShotPollingRef.current.startPolling();
     } else {
-      productShotPolling.stopPolling();
+      productShotPollingRef.current.stopPolling();
     }
-  }, [productShotJobId, productShotPolling]);
+    return () => productShotPollingRef.current.stopPolling();
+  }, [productShotJobId]);
 
   useEffect(() => {
     if (autoTagJobId) {
-      autoTagPolling.startPolling();
+      autoTagPollingRef.current.startPolling();
     } else {
-      autoTagPolling.stopPolling();
+      autoTagPollingRef.current.stopPolling();
     }
-  }, [autoTagJobId, autoTagPolling]);
+    return () => autoTagPollingRef.current.stopPolling();
+  }, [autoTagJobId]);
 
   useEffect(() => {
     if (batchJobId) {
-      batchJobPolling.startPolling();
+      batchJobPollingRef.current.startPolling();
     } else {
-      batchJobPolling.stopPolling();
+      batchJobPollingRef.current.stopPolling();
     }
-  }, [batchJobId, batchJobPolling]);
+    return () => batchJobPollingRef.current.stopPolling();
+  }, [batchJobId]);
 
   useEffect(() => {
     if (renderJobId) {
-      renderJobPolling.startPolling();
+      renderJobPollingRef.current.startPolling();
     } else {
-      renderJobPolling.stopPolling();
+      renderJobPollingRef.current.stopPolling();
     }
-  }, [renderJobId, renderJobPolling]);
+    return () => renderJobPollingRef.current.stopPolling();
+  }, [renderJobId]);
 
-  // Initial data load and job detection
+  useEffect(() => {
+    if (generateJobId) {
+      generateJobPollingRef.current.startPolling();
+    } else {
+      generateJobPollingRef.current.stopPolling();
+    }
+    return () => generateJobPollingRef.current.stopPolling();
+  }, [generateJobId]);
+
+  // Initial data load and job detection (first paint unblocked: pending/cache/skeleton, then load in background)
   useEffect(() => {
     if (!itemId || !userId) {
       setLoading(false);
       return;
     }
 
-    const loadItemData = async () => {
-      setLoading(true);
+    setLoading(true);
 
+    const pending = getPendingItemJob(itemId);
+    if (pending) {
+      if (__DEV__) console.log('[WardrobeItemGenerate] jobId started (pending)', { itemId, jobId: pending.jobId });
+      setGenerateJobId(pending.jobId);
+      clearPendingItemJob(itemId);
+      setIsGeneratingProductShot(true);
+      // Keep loading true until loadItemData() completes so we have item to render
+    }
+
+    const cachedItem = getInitialItemData(itemId);
+    if (cachedItem) {
+      logWardrobeAddTiming('first_paint_ready_at', { itemId, jobId: cachedItem.jobId });
+      setInitialImageDataUri(cachedItem.dataUri);
+      setInitialTitle(cachedItem.title || null);
+      setInitialDescription(cachedItem.description || null);
+      setJobSucceededAt(cachedItem.jobSucceededAt);
+      setLoading(false);
+    } else if (!pending) {
+      setInitialImageDataUri(null);
+      setInitialTitle(null);
+      setInitialDescription(null);
+      setJobSucceededAt(null);
+      setLoading(false);
+    }
+
+    void data.loadItemData().then(async () => {
       try {
-        // Check for fast-path cache entry before loading data
-        // Only consume if it matches navigation context (itemId + optional jobId/traceId)
-        const cachedItem = getInitialItemData(itemId);
-        
-        if (cachedItem) {
-          // Cache hit - set initial values for fast-path rendering
-          const firstPaintReadyAt = Date.now();
-          setInitialImageDataUri(cachedItem.dataUri);
-          setInitialTitle(cachedItem.title || null);
-          setInitialDescription(cachedItem.description || null);
-          setJobSucceededAt(cachedItem.jobSucceededAt);
-          
-          console.debug('[wardrobe_item_render_timing] first_paint_ready_at', {
-            ts: firstPaintReadyAt,
-            itemId,
-            jobId: cachedItem.jobId,
-            traceId: cachedItem.traceId,
-            msSinceJobSucceeded: firstPaintReadyAt - cachedItem.jobSucceededAt,
-          });
-        } else {
-          // Cache miss - clear any stale initial values
-          setInitialImageDataUri(null);
-          setInitialTitle(null);
-          setInitialDescription(null);
-          setJobSucceededAt(null);
-        }
-        
-        // Load full data in parallel (doesn't block first paint)
-        const loadItemDataStart = Date.now();
-        console.debug('[wardrobe_item_render_timing] load_item_data_start', {
-          ts: loadItemDataStart,
-          itemId,
-          hasCache: !!cachedItem,
-        });
-        
-        await data.loadItemData();
-        
-        const loadItemDataEnd = Date.now();
-        console.debug('[wardrobe_item_render_timing] load_item_data_end', {
-          ts: loadItemDataEnd,
-          itemId,
-          duration: loadItemDataEnd - loadItemDataStart,
-        });
-        
-        // After loadItemData completes, merge initial values if they exist
-        // (API data takes precedence, but initial values were already shown for first paint)
-        if (cachedItem && cachedItem.title && !data.item?.title) {
-          // If API didn't return title yet, keep initial title
-          // (data.setItem will be called by loadItemData, so we don't need to update here)
-        }
+        logWardrobeAddTiming('load_item_data_completion', { itemId });
 
-        // Check for batch job first (backward compatibility)
-        const { data: activeBatchJob } = await getActiveBatchJob(itemId, userId);
-        const { data: activeRenderJob } = await getActiveWardrobeItemRenderJob(itemId, userId);
+        let activeBatchJob: { id: string } | null = null;
+        if (!pending) {
+          const { data: activeGenerateJob } = await getActiveWardrobeItemGenerateJob(itemId, userId);
+          const batchRes = await getActiveBatchJob(itemId, userId);
+          activeBatchJob = batchRes.data;
+          const { data: activeRenderJob } = await getActiveWardrobeItemRenderJob(itemId, userId);
 
-        if (activeBatchJob) {
-          setIsGeneratingProductShot(true);
-          setBatchJobId(activeBatchJob.id);
-        } else if (activeRenderJob) {
-          setIsGeneratingProductShot(true);
-          setRenderJobId(activeRenderJob.id);
-        } else {
-          // No active batch job - check for recent batch job
-          const { data: recentBatchJob } = await getRecentBatchJob(itemId, userId);
-          
-          if (recentBatchJob && recentBatchJob.status === 'succeeded') {
-            // Recent batch job completed - refresh data
-            await data.refreshImages();
-            await data.refreshAttributes();
+          if (activeGenerateJob) {
+            if (__DEV__) console.log('[WardrobeItemGenerate] jobId started (active)', { itemId, jobId: activeGenerateJob.id });
+            setIsGeneratingProductShot(true);
+            setGenerateJobId(activeGenerateJob.id);
+          } else if (activeBatchJob) {
+            setIsGeneratingProductShot(true);
+            setBatchJobId(activeBatchJob.id);
+          } else if (activeRenderJob) {
+            setIsGeneratingProductShot(true);
+            setRenderJobId(activeRenderJob.id);
           } else {
-            // No batch job found - fall back to checking individual jobs (legacy support)
-            const itemImages = data.allImages;
-
-            if (itemImages && itemImages.length > 0) {
-              const hasProductShot = itemImages.some(
-                (img) => img.type === 'product_shot'
-              );
-              const productShotCreatedAt = itemImages
-                .filter(
-                  (img) => img.type === 'product_shot' && img.image?.created_at
-                )
-                .map((img) => new Date(img.image.created_at).getTime())
-                .reduce((latest, current) => Math.max(latest, current), 0) || null;
-
-              const { data: activeJob } = await getActiveProductShotJob(
-                itemId,
-                userId
-              );
-
-              if (activeJob) {
-                const activeJobCreatedAt = new Date(activeJob.created_at).getTime();
-                const shouldHandleActiveJob =
-                  !productShotCreatedAt ||
-                  productShotCreatedAt < activeJobCreatedAt;
-
-                if (shouldHandleActiveJob) {
-                  setIsGeneratingProductShot(true);
-                  setProductShotJobId(activeJob.id);
-                } else {
-                  setIsGeneratingProductShot(false);
-                }
-              } else if (!hasProductShot) {
-                const { data: recentJob } = await getRecentProductShotJob(
-                  itemId,
-                  userId
-                );
-
-                if (recentJob && recentJob.status === 'succeeded') {
-                  await data.refreshImages();
-                } else {
-                  setIsGeneratingProductShot(true);
-                  startPeriodicImageRefresh();
+            const { data: recentBatchJob } = await getRecentBatchJob(itemId, userId);
+            if (recentBatchJob && recentBatchJob.status === 'succeeded') {
+              await data.refreshImages();
+              await data.refreshAttributes();
+            } else {
+              const itemImages = data.allImages;
+              if (itemImages && itemImages.length > 0) {
+                const hasProductShot = itemImages.some((img) => img.type === 'product_shot');
+                const productShotCreatedAt = itemImages
+                  .filter((img) => img.type === 'product_shot' && img.image?.created_at)
+                  .map((img) => new Date(img.image.created_at).getTime())
+                  .reduce((latest, current) => Math.max(latest, current), 0) || null;
+                const { data: activeJob } = await getActiveProductShotJob(itemId, userId);
+                if (activeJob) {
+                  const activeJobCreatedAt = new Date(activeJob.created_at).getTime();
+                  const shouldHandleActiveJob = !productShotCreatedAt || productShotCreatedAt < activeJobCreatedAt;
+                  if (shouldHandleActiveJob) {
+                    setIsGeneratingProductShot(true);
+                    setProductShotJobId(activeJob.id);
+                  } else {
+                    setIsGeneratingProductShot(false);
+                  }
+                } else if (!hasProductShot) {
+                  const { data: recentJob } = await getRecentProductShotJob(itemId, userId);
+                  if (recentJob && recentJob.status === 'succeeded') {
+                    await data.refreshImages();
+                  } else {
+                    setIsGeneratingProductShot(true);
+                    startPeriodicImageRefresh();
+                  }
                 }
               }
             }
           }
         }
 
-        // Check for auto-tag job (only if no batch job is active)
-        if (!activeBatchJob) {
+        if (!activeBatchJob && userId) {
           const currentAttributes = data.attributes;
           const currentItem = data.item;
           if (
-            (!currentAttributes || currentAttributes.length === 0 || currentItem?.title === 'New Item') &&
-            userId
+            (!currentAttributes || currentAttributes.length === 0 || currentItem?.title === 'New Item')
           ) {
             const { data: activeAutoTagJobs } = await supabase
               .from('ai_jobs')
@@ -381,25 +483,17 @@ export function useWardrobeItemDetail({
               .in('status', ['queued', 'running'])
               .order('created_at', { ascending: false })
               .limit(5);
-
             if (activeAutoTagJobs) {
               const itemAutoTagJob = activeAutoTagJobs.find((job: any) => {
                 try {
-                  const input = job.input as any;
-                  return input?.wardrobe_item_id === itemId;
+                  return (job.input as any)?.wardrobe_item_id === itemId;
                 } catch {
                   return false;
                 }
               });
-
-              if (itemAutoTagJob) {
-                setAutoTagJobId(itemAutoTagJob.id);
-              } else {
-                startPeriodicAttributeRefresh();
-              }
-            } else {
-              startPeriodicAttributeRefresh();
-            }
+              if (itemAutoTagJob) setAutoTagJobId(itemAutoTagJob.id);
+              else startPeriodicAttributeRefresh();
+            } else startPeriodicAttributeRefresh();
           }
         }
       } catch (error: any) {
@@ -408,9 +502,7 @@ export function useWardrobeItemDetail({
       } finally {
         setLoading(false);
       }
-    };
-
-    loadItemData();
+    });
 
     return () => {
       stopPeriodicImageRefresh();
@@ -419,6 +511,7 @@ export function useWardrobeItemDetail({
       autoTagPolling.stopPolling();
       batchJobPolling.stopPolling();
       renderJobPolling.stopPolling();
+      generateJobPolling.stopPolling();
     };
   }, [itemId, userId]);
 
@@ -433,15 +526,51 @@ export function useWardrobeItemDetail({
     }
   }, [data.displayImages, isGeneratingProductShot]);
 
+  // Single source of truth for which image is "active" in carousel: prefer generated (product_shot) when present
+  useEffect(() => {
+    const imgs = data.displayImages;
+    if (!imgs?.length) return;
+    const productShot = imgs.find((i) => i.type === 'product_shot');
+    const generatedIndex = productShot ? imgs.findIndex((i) => i.type === 'product_shot') : -1;
+    const newActiveId = productShot ? productShot.image_id : imgs[0].image_id;
+    setActiveImageId((prev) => {
+      if (prev === newActiveId) return prev;
+      if (__DEV__) {
+        console.log('[ItemCarousel] activeImageId changed', {
+          from: prev,
+          to: newActiveId,
+          generatedIndex,
+          hasProductShot: !!productShot,
+        });
+      }
+      return newActiveId;
+    });
+  }, [data.displayImages]);
+
+  // Reorder so active image is first; carousel shows index 0 = active
+  const displayImagesOrdered = useMemo(() => {
+    const imgs = data.displayImages;
+    if (!imgs?.length || !activeImageId) return imgs;
+    const activeIndex = imgs.findIndex((i) => i.image_id === activeImageId);
+    if (activeIndex <= 0) return imgs;
+    const active = imgs[activeIndex];
+    const rest = imgs.filter((_, idx) => idx !== activeIndex);
+    return [active, ...rest];
+  }, [data.displayImages, activeImageId]);
+
   return {
     item: data.item,
     category: data.category,
     allImages: data.allImages,
-    displayImages: data.displayImages,
+    displayImages: displayImagesOrdered,
+    activeImageId,
     attributes: data.attributes,
     tags: data.tags,
     loading,
     isGeneratingProductShot,
+    isGeneratingDetails: !!generateJobId && isGeneratingProductShot,
+    generationFailed,
+    retryGeneration,
     refreshImages: data.refreshImages,
     refreshAttributes: data.refreshAttributes,
     // Fast-path cache data

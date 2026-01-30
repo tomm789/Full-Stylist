@@ -202,7 +202,7 @@ async function processJobAsync(job, userId) {
         result = await processOutfitRender(input, supabaseAdmin, userId, perfTracker, timingTracker, job_id);
         break;
       case "wardrobe_item_render":
-        result = await processWardrobeItemRender(input, supabaseAdmin, userId, perfTracker, timingTracker, job_id);
+        result = await processWardrobeItemRender(input, supabaseAdmin, userId, perfTracker, timingTracker, null, job_id);
         break;
       case "wardrobe_item_tag":
         result = await processWardrobeItemTag(input, supabaseAdmin, perfTracker, timingTracker, job_id);

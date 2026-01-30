@@ -284,6 +284,23 @@ export async function getActiveWardrobeItemRenderJob(
 }
 
 /**
+ * Get active wardrobe_item_generate job for an item (unified image + text).
+ */
+export async function getActiveWardrobeItemGenerateJob(
+  itemId: string,
+  userId: string
+): Promise<QueryResult<AIJob>> {
+  return getActiveJob(userId, 'wardrobe_item_generate', (job) => {
+    try {
+      const input = job.input as any;
+      return input?.item_id === itemId;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
  * Trigger wardrobe_item_tag job (follow-up: title, description, attributes).
  * Call after wardrobe_item_render succeeds; do not block UI on this.
  */
