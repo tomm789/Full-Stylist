@@ -12,14 +12,19 @@ import {
   getRecentBatchJob,
   getActiveWardrobeItemRenderJob,
   getActiveWardrobeItemGenerateJob,
+  getAIJob,
+  getAIJobNoStore,
+  getRecentWardrobeItemJobForFeedback,
+  triggerWardrobeItemGenerate,
+  triggerAIJobExecution,
 } from '@/lib/ai-jobs';
 import { getWardrobeItemImages, updateWardrobeItem } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
-import { triggerWardrobeItemGenerate, triggerAIJobExecution } from '@/lib/ai-jobs';
 import { useWardrobeItemData } from './useWardrobeItemData';
 import { useWardrobeItemPolling } from './useWardrobeItemPolling';
 import { getInitialItemData, setInitialItemData, getPendingItemJob, clearPendingItemJob } from '@/lib/wardrobe/initialItemCache';
 import { toDataUri } from '@/lib/images/dataUri';
+import { checkFeedbackExistsForJob } from '@/lib/ai-feedback';
 import { logWardrobeAddTiming } from '@/lib/perf/wardrobeAddTiming';
 
 interface UseWardrobeItemDetailProps {
@@ -52,6 +57,12 @@ interface UseWardrobeItemDetailReturn {
   initialTitle: string | null;
   initialDescription: string | null;
   jobSucceededAt: number | null;
+  /** Job that produced the current generated image (for feedback overlay). */
+  lastSucceededJobId: string | null;
+  /** If set, user has already submitted feedback for this job; show compact thumbs. */
+  lastSucceededJobFeedbackAt: string | null;
+  /** Job type for feedback RPC (wardrobe_item_generate or wardrobe_item_render). */
+  lastSucceededJobType: 'wardrobe_item_generate' | 'wardrobe_item_render' | null;
 }
 
 export function useWardrobeItemDetail({
@@ -77,6 +88,9 @@ export function useWardrobeItemDetail({
   const [initialTitle, setInitialTitle] = useState<string | null>(null);
   const [initialDescription, setInitialDescription] = useState<string | null>(null);
   const [jobSucceededAt, setJobSucceededAt] = useState<number | null>(null);
+  const [lastSucceededJobId, setLastSucceededJobId] = useState<string | null>(null);
+  const [lastSucceededJobFeedbackAt, setLastSucceededJobFeedbackAt] = useState<string | null>(null);
+  const [lastSucceededJobType, setLastSucceededJobType] = useState<'wardrobe_item_generate' | 'wardrobe_item_render' | null>(null);
 
   // Data loading
   const data = useWardrobeItemData({ itemId });
@@ -212,8 +226,13 @@ export function useWardrobeItemDetail({
   // Wardrobe item render job polling (image-only; used when landing on detail with job in progress)
   const renderJobPolling = useWardrobeItemPolling({
     jobId: renderJobId,
-    onComplete: async () => {
+    onComplete: async (job) => {
       setIsGeneratingProductShot(false);
+      if (job?.status === 'succeeded') {
+        setLastSucceededJobId(job.id);
+        setLastSucceededJobFeedbackAt((job as { feedback_at?: string | null }).feedback_at ?? null);
+        setLastSucceededJobType('wardrobe_item_render');
+      }
       await data.refreshImages();
     },
     onError: () => startPeriodicImageRefresh(),
@@ -258,6 +277,11 @@ export function useWardrobeItemDetail({
     onComplete: async (job) => {
       setIsGeneratingProductShot(false);
       setGenerationFailed(false);
+      if (job?.status === 'succeeded') {
+        setLastSucceededJobId(job.id);
+        setLastSucceededJobFeedbackAt((job as { feedback_at?: string | null }).feedback_at ?? null);
+        setLastSucceededJobType('wardrobe_item_generate');
+      }
       if (job?.status === 'succeeded' && job?.result && itemId && userId) {
         const result = job.result as { base64_result?: string; mime_type?: string; suggested_title?: string; suggested_notes?: string };
         if (result.suggested_title != null) setInitialTitle(result.suggested_title);
@@ -402,12 +426,37 @@ export function useWardrobeItemDetail({
       setInitialTitle(cachedItem.title || null);
       setInitialDescription(cachedItem.description || null);
       setJobSucceededAt(cachedItem.jobSucceededAt);
+      setLastSucceededJobId(cachedItem.jobId);
+      setLastSucceededJobType('wardrobe_item_generate');
+      getAIJob(cachedItem.jobId).then(({ data: job }) => {
+        if (job) {
+          const feedbackAt = (job as { feedback_at?: string | null }).feedback_at ?? null;
+          setLastSucceededJobFeedbackAt(feedbackAt);
+          if (feedbackAt == null) {
+            getAIJobNoStore(cachedItem.jobId).then(({ data: refetched }) => {
+              const refetchedAt = (refetched as { feedback_at?: string | null })?.feedback_at ?? null;
+              if (refetchedAt != null) {
+                setLastSucceededJobFeedbackAt(refetchedAt);
+              } else {
+                checkFeedbackExistsForJob(cachedItem.jobId).then(({ exists, created_at }) => {
+                  if (exists) {
+                    setLastSucceededJobFeedbackAt(created_at ?? new Date().toISOString());
+                  }
+                });
+              }
+            });
+          }
+        }
+      });
       setLoading(false);
     } else if (!pending) {
       setInitialImageDataUri(null);
       setInitialTitle(null);
       setInitialDescription(null);
       setJobSucceededAt(null);
+      setLastSucceededJobId(null);
+      setLastSucceededJobFeedbackAt(null);
+      setLastSucceededJobType(null);
       setLoading(false);
     }
 
@@ -465,6 +514,31 @@ export function useWardrobeItemDetail({
                   }
                 }
               }
+            }
+          }
+        }
+
+        if (!pending) {
+          const { data: recentJobForFeedback } = await getRecentWardrobeItemJobForFeedback(itemId, userId);
+          if (recentJobForFeedback) {
+            const jobId = recentJobForFeedback.id;
+            setLastSucceededJobId(jobId);
+            const feedbackAt = (recentJobForFeedback as { feedback_at?: string | null }).feedback_at ?? null;
+            setLastSucceededJobFeedbackAt(feedbackAt);
+            setLastSucceededJobType(recentJobForFeedback.job_type as 'wardrobe_item_generate' | 'wardrobe_item_render');
+            if (feedbackAt == null) {
+              getAIJobNoStore(jobId).then(({ data: refetched }) => {
+                const refetchedAt = (refetched as { feedback_at?: string | null })?.feedback_at ?? null;
+                if (refetchedAt != null) {
+                  setLastSucceededJobFeedbackAt(refetchedAt);
+                } else {
+                  checkFeedbackExistsForJob(jobId).then(({ exists, created_at }) => {
+                    if (exists) {
+                      setLastSucceededJobFeedbackAt(created_at ?? new Date().toISOString());
+                    }
+                  });
+                }
+              });
             }
           }
         }
@@ -578,5 +652,8 @@ export function useWardrobeItemDetail({
     initialTitle,
     initialDescription,
     jobSucceededAt,
+    lastSucceededJobId,
+    lastSucceededJobFeedbackAt,
+    lastSucceededJobType,
   };
 }

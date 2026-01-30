@@ -3,7 +3,7 @@
  * Edit, regenerate, duplicate, or delete headshot
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHeadshotDetailActions } from '@/hooks/profile';
+import { getRecentHeadshotJobForImage, getAIJobNoStore } from '@/lib/ai-jobs';
+import { checkFeedbackExistsForJob } from '@/lib/ai-feedback';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
+import { AIGenerationFeedback } from '@/components/ai';
 import {
   DropdownMenuModal,
   DropdownMenuItem,
@@ -69,6 +72,40 @@ export default function HeadshotDetailScreen() {
 
   const [showMenu, setShowMenu] = useState(false);
   const closeMenu = () => setShowMenu(false);
+
+  const [lastSucceededJobId, setLastSucceededJobId] = useState<string | null>(null);
+  const [lastSucceededJobFeedbackAt, setLastSucceededJobFeedbackAt] = useState<string | null>(null);
+  const [feedbackSubmittedForJobId, setFeedbackSubmittedForJobId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.id || !headshot?.id) return;
+    getRecentHeadshotJobForImage(user.id, headshot.id).then(({ data: job }) => {
+      if (job) {
+        const jobId = job.id;
+        setLastSucceededJobId(jobId);
+        const feedbackAt = (job as { feedback_at?: string | null }).feedback_at ?? null;
+        setLastSucceededJobFeedbackAt(feedbackAt);
+        if (feedbackAt == null) {
+          getAIJobNoStore(jobId).then(({ data: refetched }) => {
+            const refetchedAt = (refetched as { feedback_at?: string | null })?.feedback_at ?? null;
+            if (refetchedAt != null) {
+              setLastSucceededJobFeedbackAt(refetchedAt);
+            } else {
+              checkFeedbackExistsForJob(jobId).then(({ exists, created_at }) => {
+                if (exists) {
+                  setLastSucceededJobFeedbackAt(created_at ?? new Date().toISOString());
+                }
+              });
+            }
+          });
+        }
+      }
+    });
+  }, [user?.id, headshot?.id]);
+
+  const showFeedbackOverlay = !!(headshot && lastSucceededJobId);
+  const feedbackGiven =
+    !!lastSucceededJobFeedbackAt || feedbackSubmittedForJobId === lastSucceededJobId;
 
   if (loading) {
     return (
@@ -177,6 +214,14 @@ export default function HeadshotDetailScreen() {
                 }
               }}
             />
+            {showFeedbackOverlay && lastSucceededJobId && (
+              <AIGenerationFeedback
+                jobId={lastSucceededJobId}
+                jobType="headshot_generate"
+                onClose={(id) => id != null && setFeedbackSubmittedForJobId(id)}
+                compact={feedbackGiven}
+              />
+            )}
           </View>
 
           <View style={styles.refineSection}>

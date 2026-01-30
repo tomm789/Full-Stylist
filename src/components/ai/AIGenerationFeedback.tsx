@@ -25,7 +25,8 @@ const FEEDBACK_TAG_VALUES = FEEDBACK_TAGS as readonly string[];
 interface AIGenerationFeedbackProps {
   jobId: string;
   jobType: string;
-  onClose: () => void;
+  /** Called when feedback is submitted; receives the jobId so parent can avoid stale closure. */
+  onClose: (jobId: string) => void;
   /** When true, show only thumbs in bottom-right corner (feedback already given). */
   compact?: boolean;
 }
@@ -72,7 +73,7 @@ export function AIGenerationFeedback({
       rating: 1,
     });
     setSubmitting(false);
-    if (!error) onClose();
+    if (!error) onClose(jobId);
   };
 
   const handleThumbsDownSubmit = async () => {
@@ -87,7 +88,7 @@ export function AIGenerationFeedback({
     setSubmitting(false);
     if (!error) {
       setShowThumbsDownModal(false);
-      onClose();
+      onClose(jobId);
     }
   };
 

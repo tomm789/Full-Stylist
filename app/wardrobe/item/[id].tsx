@@ -27,6 +27,7 @@ import {
   ItemNavigation,
   ItemActions,
 } from '@/components/wardrobe';
+import { AIGenerationFeedback } from '@/components/ai';
 import { continueTimeline, isPerfLogsEnabled } from '@/lib/perf/timeline';
 import { logWardrobeAddTiming } from '@/lib/perf/wardrobeAddTiming';
 import {
@@ -65,10 +66,18 @@ export default function ItemDetailScreen() {
     initialTitle,
     initialDescription,
     jobSucceededAt,
+    lastSucceededJobId,
+    lastSucceededJobFeedbackAt,
+    lastSucceededJobType,
   } = useWardrobeItemDetail({
     itemId: id,
     userId: user?.id,
   });
+
+  const [feedbackSubmittedForJobId, setFeedbackSubmittedForJobId] = useState<string | null>(null);
+  const showFeedbackOverlay = !!(initialImageDataUri && lastSucceededJobId);
+  const feedbackGiven =
+    !!lastSucceededJobFeedbackAt || feedbackSubmittedForJobId === lastSucceededJobId;
   
   // Fast-path image rendering state
   const [showCarousel, setShowCarousel] = useState(false);
@@ -314,6 +323,14 @@ export default function ItemDetailScreen() {
                 <Text style={styles.imageErrorText}>Failed to load image</Text>
               </View>
             )}
+            {showFeedbackOverlay && lastSucceededJobId && lastSucceededJobType && (
+              <AIGenerationFeedback
+                jobId={lastSucceededJobId}
+                jobType={lastSucceededJobType}
+                onClose={(id) => id != null && setFeedbackSubmittedForJobId(id)}
+                compact={feedbackGiven}
+              />
+            )}
           </View>
         ) : showCarousel ? (
           <View style={styles.carouselWrapper}>
@@ -324,6 +341,17 @@ export default function ItemDetailScreen() {
               onImageIndexChange={actions.setCurrentImageIndex}
               currentImageIndex={actions.currentImageIndex}
             />
+            {showFeedbackOverlay &&
+              lastSucceededJobId &&
+              lastSucceededJobType &&
+              actions.currentImageIndex === 0 && (
+                <AIGenerationFeedback
+                  jobId={lastSucceededJobId}
+                  jobType={lastSucceededJobType}
+                  onClose={(id) => id != null && setFeedbackSubmittedForJobId(id)}
+                  compact={feedbackGiven}
+                />
+              )}
             {isGeneratingDetails && (
               <View style={[styles.generatingOverlay, { width: currentScreenWidth }]} pointerEvents="none">
                 <ActivityIndicator size="large" color="#fff" />

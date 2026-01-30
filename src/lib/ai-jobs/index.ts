@@ -50,6 +50,12 @@ export {
   triggerWardrobeItemRender,
   getActiveWardrobeItemRenderJob,
   getActiveWardrobeItemGenerateJob,
+  getRecentWardrobeItemGenerateJob,
+  getRecentWardrobeItemRenderJob,
+  getActiveWardrobeItemJob,
+  getRecentWardrobeItemJobForFeedback,
   triggerWardrobeItemTag,
   triggerWardrobeItemGenerate,
+  getRecentHeadshotJobForImage,
+  getRecentBodyshotJobForImage,
 } from './types';
