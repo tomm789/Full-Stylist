@@ -3,7 +3,7 @@
  * View outfit details with social engagement
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOutfitView, useSocialEngagement, useOutfitViewActions } from '@/hooks/outfits';
+import { useCalendarDayForm, useSlotPresets } from '@/hooks/calendar';
 import {
   OutfitViewContent,
   OutfitNavigation,
@@ -27,12 +28,22 @@ import {
   LoadingOverlay,
 } from '@/components/shared';
 import {
+  CalendarDatePickerModal,
+  CalendarDayEntryForm,
+  CreatePresetModal,
+} from '@/components/calendar';
+import {
   DropdownMenuModal,
   DropdownMenuItem,
   dropdownMenuStyles,
 } from '@/components/shared/modals';
 import { theme, commonStyles } from '@/styles';
 import { PERF_MODE } from '@/lib/perf/perfMode';
+import {
+  CalendarEntry,
+  createCalendarEntry,
+  getCalendarEntriesForDate,
+} from '@/lib/calendar';
 
 const { colors } = theme;
 
@@ -123,6 +134,54 @@ export default function OutfitViewScreen() {
   const [showMenu, setShowMenu] = useState(false);
   const isOwnOutfit = outfit?.owner_user_id === user?.id;
   const closeMenu = () => setShowMenu(false);
+  const [showDatePickerModal, setShowDatePickerModal] = useState(false);
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+  const [entriesForDate, setEntriesForDate] = useState<CalendarEntry[]>([]);
+  const [loadingEntriesForDate, setLoadingEntriesForDate] = useState(false);
+
+  const { presets, createPreset } = useSlotPresets({ userId: user?.id });
+
+  const loadEntriesForDate = useCallback(async (dateKey: string) => {
+    if (!user?.id) return;
+    setLoadingEntriesForDate(true);
+    const { data, error } = await getCalendarEntriesForDate(user.id, dateKey);
+    if (error) {
+      console.error('Failed to load calendar entries for date', error);
+    }
+    setEntriesForDate(data || []);
+    setLoadingEntriesForDate(false);
+  }, [user?.id]);
+
+  const addEntry = useCallback(async (entry: {
+    outfit_id?: string;
+    slot_preset_id: string;
+    status: 'planned' | 'worn' | 'skipped';
+    notes?: string;
+    sort_order: number;
+  }) => {
+    if (!user?.id || !selectedDateKey) {
+      return { error: new Error('Missing date or user') };
+    }
+    return createCalendarEntry(user.id, selectedDateKey, entry);
+  }, [selectedDateKey, user?.id]);
+
+  const form = useCalendarDayForm({
+    entries: entriesForDate,
+    addEntry,
+    updateEntry: async () => ({ error: null }),
+    deleteEntry: async () => ({ error: null }),
+    reorderEntries: async () => {},
+  });
+
+  const handleDateSelect = useCallback(async (date: Date) => {
+    const dateKey = date.toISOString().split('T')[0];
+    setSelectedDateKey(dateKey);
+    setShowDatePickerModal(false);
+    await loadEntriesForDate(dateKey);
+    form.resetForm();
+    form.setSelectedOutfit(id);
+    form.setShowAddModal(true);
+  }, [form, id, loadEntriesForDate]);
 
   if (loading) {
     return (
@@ -154,6 +213,9 @@ export default function OutfitViewScreen() {
         rightContent={
           isOwnOutfit ? (
             <>
+              <TouchableOpacity onPress={() => setShowDatePickerModal(true)}>
+                <Ionicons name="calendar-outline" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
               <TouchableOpacity onPress={actions.toggleFavorite}>
                 <Ionicons
                   name={outfit?.is_favorite ? 'heart' : 'heart-outline'}
@@ -234,6 +296,44 @@ export default function OutfitViewScreen() {
         outfits={actions.navigationOutfits}
         currentOutfitId={id}
         onNavigate={actions.navigateToOutfit}
+      />
+
+      <CalendarDatePickerModal
+        visible={showDatePickerModal}
+        onClose={() => setShowDatePickerModal(false)}
+        onSelectDate={handleDateSelect}
+      />
+
+      <CalendarDayEntryForm
+        visible={form.showAddModal}
+        editingEntry={null}
+        presets={presets}
+        outfits={[]}
+        outfitImages={new Map()}
+        showOutfitPicker={false}
+        selectedPreset={form.selectedPreset}
+        selectedOutfit={form.selectedOutfit}
+        entryStatus={form.entryStatus}
+        editNotes={form.editNotes}
+        saving={form.saving || loadingEntriesForDate}
+        onClose={form.handleCloseModal}
+        onSelectPreset={form.setSelectedPreset}
+        onSelectOutfit={form.setSelectedOutfit}
+        onStatusChange={form.setEntryStatus}
+        onNotesChange={form.setEditNotes}
+        onSubmit={form.handleAddEntry}
+        onCreatePreset={() => form.setShowCreatePresetModal(true)}
+      />
+
+      <CreatePresetModal
+        visible={form.showCreatePresetModal}
+        presetName={form.newPresetName}
+        onPresetNameChange={form.setNewPresetName}
+        onCreate={() => form.handleCreatePreset(createPreset)}
+        onClose={() => {
+          form.setShowCreatePresetModal(false);
+          form.setNewPresetName('');
+        }}
       />
 
       {/* Delete Confirmation Modal */}
