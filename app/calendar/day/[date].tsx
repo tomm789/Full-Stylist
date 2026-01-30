@@ -65,11 +65,14 @@ export default function CalendarDayScreen() {
   // Auto-open add modal if autoAdd parameter is present
   useEffect(() => {
     if (autoAdd === 'true' && !loading) {
-      setTimeout(() => {
+      const t = setTimeout(() => {
         form.setShowAddModal(true);
       }, 100);
+  
+      return () => clearTimeout(t);
     }
-  }, [autoAdd, loading, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAdd, loading]);
 
   // Reload data when screen comes into focus
   useFocusEffect(
