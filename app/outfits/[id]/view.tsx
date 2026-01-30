@@ -14,7 +14,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOutfitView, useSocialEngagement, useOutfitViewActions } from '@/hooks/outfits';
 import { useCalendarDayForm, useSlotPresets } from '@/hooks/calendar';
@@ -27,6 +26,7 @@ import {
   LoadingSpinner,
   LoadingOverlay,
 } from '@/components/shared';
+import { HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 import {
   CalendarDatePickerModal,
   CalendarDayEntryForm,
@@ -206,26 +206,32 @@ export default function OutfitViewScreen() {
       {/* Header */}
       <Header
         leftContent={
-          <TouchableOpacity onPress={actions.handleBackPress}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          <HeaderActionButton
+            label="Back"
+            onPress={actions.handleBackPress}
+          />
         }
         rightContent={
           isOwnOutfit ? (
             <>
-              <TouchableOpacity onPress={() => setShowDatePickerModal(true)}>
-                <Ionicons name="calendar-outline" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={actions.toggleFavorite}>
-                <Ionicons
-                  name={outfit?.is_favorite ? 'heart' : 'heart-outline'}
-                  size={24}
-                  color={outfit?.is_favorite ? colors.error : colors.textPrimary}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setShowMenu(true)}>
-                <Ionicons name="ellipsis-vertical" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
+              <HeaderIconButton
+                icon="calendar-outline"
+                color={colors.textPrimary}
+                onPress={() => setShowDatePickerModal(true)}
+                accessibilityLabel="Open calendar"
+              />
+              <HeaderIconButton
+                icon={outfit?.is_favorite ? 'heart' : 'heart-outline'}
+                color={outfit?.is_favorite ? colors.error : colors.textPrimary}
+                onPress={actions.toggleFavorite}
+                accessibilityLabel="Toggle favorite"
+              />
+              <HeaderIconButton
+                icon="ellipsis-vertical"
+                color={colors.textPrimary}
+                onPress={() => setShowMenu(true)}
+                accessibilityLabel="Open menu"
+              />
             </>
           ) : null
         }
@@ -377,11 +383,6 @@ export default function OutfitViewScreen() {
 }
 
 const styles = StyleSheet.create({
-  backText: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
   content: {
     flex: 1,
   },

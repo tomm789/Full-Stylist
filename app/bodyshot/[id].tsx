@@ -28,6 +28,7 @@ import {
   DropdownMenuItem,
   dropdownMenuStyles,
 } from '@/components/shared/modals';
+import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 
 export default function BodyshotDetailScreen() {
   const { user } = useAuth();
@@ -104,13 +105,15 @@ export default function BodyshotDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Bodyshot</Text>
-          <View style={styles.backButton} />
-        </View>
+        <Header
+          title="Bodyshot"
+          leftContent={
+            <HeaderActionButton
+              label="Back"
+              onPress={() => router.back()}
+            />
+          }
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" />
         </View>
@@ -125,17 +128,22 @@ export default function BodyshotDetailScreen() {
   return (
     <>
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Bodyshot</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity onPress={() => setShowMenu(true)}>
-              <Ionicons name="ellipsis-vertical" size={24} color="#000" />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <Header
+          title="Bodyshot"
+          leftContent={
+            <HeaderActionButton
+              label="Back"
+              onPress={() => router.back()}
+            />
+          }
+          rightContent={
+            <HeaderIconButton
+              icon="ellipsis-vertical"
+              onPress={() => setShowMenu(true)}
+              accessibilityLabel="Open menu"
+            />
+          }
+        />
 
         <DropdownMenuModal
           visible={showMenu}
@@ -297,32 +305,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    padding: 8,
-    width: 40,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  headerButton: {
-    padding: 8,
   },
   scrollContainer: {
     flex: 1,

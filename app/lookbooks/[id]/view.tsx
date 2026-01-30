@@ -40,6 +40,7 @@ import {
   DropdownMenuItem,
 } from '@/components/shared/modals';
 import { CommentsModal } from '@/components/social';
+import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 
 export default function LookbookViewScreen() {
   const { id } = useLocalSearchParams();
@@ -176,11 +177,14 @@ export default function LookbookViewScreen() {
   if (!lookbook) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backButton}>← Back</Text>
-          </TouchableOpacity>
-        </View>
+        <Header
+          leftContent={
+            <HeaderActionButton
+              label="Back"
+              onPress={() => router.back()}
+            />
+          }
+        />
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Lookbook not found</Text>
         </View>
@@ -191,16 +195,21 @@ export default function LookbookViewScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={() => setShowMenu(true)}>
-            <Ionicons name="ellipsis-vertical" size={24} color="#000" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Header
+        leftContent={
+          <HeaderActionButton
+            label="Back"
+            onPress={() => router.back()}
+          />
+        }
+        rightContent={
+          <HeaderIconButton
+            icon="ellipsis-vertical"
+            onPress={() => setShowMenu(true)}
+            accessibilityLabel="Open menu"
+          />
+        }
+      />
 
       <DropdownMenuModal
         visible={showMenu}
@@ -316,25 +325,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 12,
   },
   playButton: {
     fontSize: 16,

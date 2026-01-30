@@ -35,6 +35,7 @@ import {
   DropdownMenuItem,
   dropdownMenuStyles,
 } from '@/components/shared/modals';
+import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 
 export default function ItemDetailScreen() {
   const { id, itemIds, readOnly, traceId: traceIdParam } = useLocalSearchParams<{
@@ -227,34 +228,32 @@ export default function ItemDetailScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <View style={styles.headerRightButtons}>
-          {isOwnItem && (
-            <TouchableOpacity
-              onPress={actions.toggleFavorite}
-              style={styles.headerButton}
-            >
-              <Ionicons
-                name={item?.is_favorite ? 'heart' : 'heart-outline'}
-                size={24}
+      <Header
+        style={styles.header}
+        leftContent={
+          <HeaderActionButton
+            label="Back"
+            onPress={() => router.back()}
+          />
+        }
+        rightContent={
+          <View style={styles.headerRightButtons}>
+            {isOwnItem && (
+              <HeaderIconButton
+                icon={item?.is_favorite ? 'heart' : 'heart-outline'}
                 color={item?.is_favorite ? '#ff0000' : '#000'}
+                onPress={actions.toggleFavorite}
+                accessibilityLabel="Toggle favorite"
               />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            onPress={() => setShowMenu(true)}
-            style={styles.headerButton}
-          >
-            <Ionicons name="ellipsis-vertical" size={24} color="#000" />
-          </TouchableOpacity>
-        </View>
-      </View>
+            )}
+            <HeaderIconButton
+              icon="ellipsis-vertical"
+              onPress={() => setShowMenu(true)}
+              accessibilityLabel="Open menu"
+            />
+          </View>
+        }
+      />
 
       <DropdownMenuModal
         visible={showMenu}
@@ -461,18 +460,6 @@ const styles = StyleSheet.create({
   headerRightButtons: {
     flexDirection: 'row',
     gap: 8,
-  },
-  backButton: {
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-  },
-  backButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  headerButton: {
-    padding: 8,
   },
   deleteButton: {
     // No special background, icon color indicates delete

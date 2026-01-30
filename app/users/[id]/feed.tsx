@@ -10,7 +10,7 @@ import {
   FlatList,
   RefreshControl,
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeed, useSocialEngagement } from '@/hooks/social';
 import { useSlideshow } from '@/hooks/lookbooks';
@@ -22,9 +22,11 @@ import {
 } from '@/components/social';
 import { SlideshowModal } from '@/components/lookbooks';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 export default function UserFeedScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const { id: userId } = useLocalSearchParams<{ id: string }>();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -147,6 +149,15 @@ export default function UserFeedScreen() {
 
   return (
     <View style={styles.container}>
+      <Header
+        title="User Feed"
+        leftContent={
+          <HeaderActionButton
+            label="Back"
+            onPress={() => router.back()}
+          />
+        }
+      />
       {feed.length === 0 ? (
         <EmptyState
           icon="images-outline"
