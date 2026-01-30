@@ -30,6 +30,7 @@ interface CalendarDayEntryFormProps {
   presets: any[];
   outfits: any[];
   outfitImages: Map<string, string | null>;
+  showOutfitPicker?: boolean;
   selectedPreset: string | null;
   selectedOutfit: string | null;
   entryStatus: 'planned' | 'worn' | 'skipped';
@@ -50,6 +51,7 @@ export function CalendarDayEntryForm({
   presets,
   outfits,
   outfitImages,
+  showOutfitPicker = true,
   selectedPreset,
   selectedOutfit,
   entryStatus,
@@ -89,12 +91,14 @@ export function CalendarDayEntryForm({
               onCreatePreset={onCreatePreset}
             />
 
-            <OutfitGridPicker
-              outfits={outfits}
-              outfitImages={outfitImages}
-              selectedOutfitId={selectedOutfit}
-              onSelectOutfit={onSelectOutfit}
-            />
+            {showOutfitPicker && (
+              <OutfitGridPicker
+                outfits={outfits}
+                outfitImages={outfitImages}
+                selectedOutfitId={selectedOutfit}
+                onSelectOutfit={onSelectOutfit}
+              />
+            )}
 
             <StatusSelector
               status={entryStatus}
