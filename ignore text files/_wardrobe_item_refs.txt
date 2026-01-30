@@ -1,0 +1,231 @@
+src/lib/bundles/core.ts:80:        wardrobe_item_id: string;
+src/lib/bundles/core.ts:129:          wardrobe_item_id: item.wardrobe_item_id,
+src/lib/bundles/groups.ts:14:  wardrobe_item_id: string;
+src/lib/bundles/groups.ts:27:      wardrobe_item_id: string;
+src/lib/bundles/groups.ts:53:        wardrobe_item_id: item.wardrobe_item_id,
+src/components/FindSimilarModal.tsx:23:  entityType: 'wardrobe_item' | 'outfit';
+src/components/shared/SearchFilterBar.tsx:25:    { type: 'wardrobe_item', label: 'Items', icon: 'pricetag-outline' },
+netlify/functions/ai-job-runner.js:238: *   wardrobe_item_id: string,
+netlify/functions/ai-job-runner.js:250:  const { imageId, tasks, wardrobe_item_id, image_ids } = input;
+netlify/functions/ai-job-runner.js:256:  if (!wardrobe_item_id) {
+netlify/functions/ai-job-runner.js:257:    throw new Error("Batch job requires wardrobe_item_id");
+netlify/functions/ai-job-runner.js:270:    wardrobe_item_id
+netlify/functions/ai-job-runner.js:274:    wardrobe_item_id,
+src/components/social/FeedItem.tsx:38:  onFindSimilar: (entityType: 'wardrobe_item' | 'outfit', entityId: string, categoryId?: string) => void;
+src/components/shared/SearchResultItem.tsx:25:      case 'wardrobe_item':
+src/components/shared/SearchResultItem.tsx:40:      case 'wardrobe_item':
+netlify/functions/processes/outfit_render.js.backup:115:    const wardrobeItemIds = selected.map((s) => s.wardrobe_item_id);
+netlify/functions/processes/outfit_render.js.backup:117:      .from("wardrobe_item_images")
+netlify/functions/processes/outfit_render.js.backup:118:      .select("wardrobe_item_id, type, sort_order, image_id")
+netlify/functions/processes/outfit_render.js.backup:119:      .in("wardrobe_item_id", wardrobeItemIds);
+netlify/functions/processes/outfit_render.js.backup:123:      if (!linksByItem.has(link.wardrobe_item_id)) {
+netlify/functions/processes/outfit_render.js.backup:124:        linksByItem.set(link.wardrobe_item_id, []);
+netlify/functions/processes/outfit_render.js.backup:126:      linksByItem.get(link.wardrobe_item_id).push(link);
+src/components/outfits/OutfitViewContent.tsx:240:                outfitItem.wardrobe_item_id
+src/lib/import/outfit-import.ts:22:        const outfitItems: Array<{ category_id: string; wardrobe_item_id: string }> = [];
+src/lib/import/outfit-import.ts:29:                .from('wardrobe_items')
+src/lib/import/outfit-import.ts:37:                  wardrobe_item_id: newItemId,
+netlify/functions/processes/outfit_render.js:158:      const item = row.wardrobe_item;
+netlify/functions/processes/outfit_render.js:272:    const wardrobeItemIds = selected.map((s) => s.wardrobe_item_id);
+netlify/functions/processes/outfit_render.js:274:      .from("wardrobe_item_images")
+netlify/functions/processes/outfit_render.js:275:      .select("wardrobe_item_id, type, sort_order, image_id")
+netlify/functions/processes/outfit_render.js:276:      .in("wardrobe_item_id", wardrobeItemIds);
+netlify/functions/processes/outfit_render.js:279:      if (!linksByItem.has(link.wardrobe_item_id)) {
+netlify/functions/processes/outfit_render.js:280:        linksByItem.set(link.wardrobe_item_id, []);
+netlify/functions/processes/outfit_render.js:282:      linksByItem.get(link.wardrobe_item_id).push(link);
+netlify/functions/processes/outfit_mannequin.js:34:  const wardrobeItemIds = selected.map((s) => s.wardrobe_item_id);
+netlify/functions/processes/outfit_mannequin.js:36:    .from("wardrobe_item_images")
+netlify/functions/processes/outfit_mannequin.js:37:    .select("wardrobe_item_id, type, sort_order, image_id")
+netlify/functions/processes/outfit_mannequin.js:38:    .in("wardrobe_item_id", wardrobeItemIds);
+netlify/functions/processes/outfit_mannequin.js:44:    if (!linksByItem.has(link.wardrobe_item_id)) linksByItem.set(link.wardrobe_item_id, []);
+netlify/functions/processes/outfit_mannequin.js:45:    linksByItem.get(link.wardrobe_item_id).push(link);
+src/lib/transactions.ts:62:      .select('*, listings(*, wardrobe_items(*))')
+src/lib/transactions.ts:86:      .select('*, listings(*, wardrobe_items(*))')
+src/lib/transactions.ts:110:      .select('*, listings(*, wardrobe_items(*))')
+app/(tabs)/wardrobe.tsx:184:        .from('wardrobe_items')
+app/(tabs)/wardrobe.tsx:255:          .from('wardrobe_items')
+netlify/functions/processes/auto_tag.js:18: * @param {object} input - Job input containing wardrobe_item_id and image_ids
+netlify/functions/processes/auto_tag.js:27:  const { wardrobe_item_id, image_ids } = input;
+netlify/functions/processes/auto_tag.js:28:  if (!wardrobe_item_id || !image_ids?.length) {
+netlify/functions/processes/auto_tag.js:98:          entity_type: "wardrobe_item",
+netlify/functions/processes/auto_tag.js:99:          entity_id: wardrobe_item_id,
+netlify/functions/processes/auto_tag.js:139:    await supabase.from("wardrobe_items").update(updates).eq("id", wardrobe_item_id);
+netlify/functions/processes/product_shot.js:20: * @param {object} input - Job input with image_id and wardrobe_item_id
+netlify/functions/processes/product_shot.js:30:  const { image_id, wardrobe_item_id } = input;
+netlify/functions/processes/product_shot.js:31:  if (!image_id || !wardrobe_item_id) {
+netlify/functions/processes/product_shot.js:32:    throw new Error("Missing ID or wardrobe_item_id");
+netlify/functions/processes/product_shot.js:70:    .from("wardrobe_item_images")
+netlify/functions/processes/product_shot.js:72:    .eq("wardrobe_item_id", wardrobe_item_id)
+netlify/functions/processes/product_shot.js:76:      .from("wardrobe_item_images")
+netlify/functions/processes/product_shot.js:81:  await supabase.from("wardrobe_item_images").insert({
+netlify/functions/processes/product_shot.js:82:    wardrobe_item_id,
+app/wardrobe/item/[id]/edit.tsx:76:    entityType: 'wardrobe_item',
+src/lib/outfits/items.ts:8:  wardrobe_item_id: string;
+src/lib/outfits/items.ts:24:  items: Array<{ category_id: string | null; wardrobe_item_id: string; position?: number }>
+src/lib/outfits/items.ts:78:      wardrobe_item_id: item.wardrobe_item_id,
+src/lib/outfits/items.ts:133:        wardrobe_item_id: wardrobeItemId,
+src/lib/similarity/sellable-search.ts:9: * Filters wardrobe_items with is_sellable=true
+src/lib/similarity/sellable-search.ts:12:  sourceEntityType: 'wardrobe_item' | 'outfit',
+src/lib/similarity/sellable-search.ts:37:      .from('wardrobe_items')
+src/lib/similarity/sellable-search.ts:59:      const { data: itemAttrs } = await getEntityAttributes('wardrobe_item', item.id);
+src/lib/similarity/sellable-search.ts:92:  sourceEntityType: 'wardrobe_item' | 'outfit',
+src/lib/attributes/definitions.ts:8:  scope: 'wardrobe_item' | 'outfit' | 'both';
+app/outfits/[id]/bundles.tsx:72:            itemIds: data.items.map((item: any) => item.wardrobe_item_id),
+app/outfits/[id]/bundles.tsx:99:            wardrobe_item_id: itemId,
+src/lib/similarity/wardrobe-search.ts:23:  sourceEntityType: 'wardrobe_item' | 'outfit',
+src/lib/similarity/wardrobe-search.ts:41:        .select('wardrobe_item_id')
+src/lib/similarity/wardrobe-search.ts:50:          const { data: itemAttrs } = await getEntityAttributes('wardrobe_item', item.wardrobe_item_id);
+src/lib/similarity/wardrobe-search.ts:75:      .from('wardrobe_items')
+src/lib/similarity/wardrobe-search.ts:80:    if (sourceEntityType === 'wardrobe_item') {
+src/lib/similarity/wardrobe-search.ts:102:      const { data: itemAttrs } = await getEntityAttributes('wardrobe_item', item.id);
+src/lib/attributes/entity-attributes.ts:8:  entity_type: 'wardrobe_item' | 'outfit';
+src/lib/attributes/entity-attributes.ts:22:  entityType: 'wardrobe_item' | 'outfit',
+src/lib/attributes/entity-attributes.ts:75:  entityType: 'wardrobe_item' | 'outfit',
+src/lib/attributes/entity-attributes.ts:160:  entityType: 'wardrobe_item' | 'outfit',
+src/lib/images.ts:41:      const { data: images } = await getWardrobeItemImages(firstItem.wardrobe_item_id);
+src/lib/listings/core.ts:7:  wardrobe_item_id: string;
+src/lib/listings/core.ts:34:  wardrobe_item?: {
+src/lib/listings/core.ts:61:        wardrobe_items(id, title, category_id)
+src/lib/listings/core.ts:91:        wardrobe_items(id, title, category_id)
+src/lib/listings/core.ts:144:        wardrobe_item_id: wardrobeItemId,
+src/lib/listings/core.ts:210:        existingListing.wardrobe_item_id,
+src/lib/listings/core.ts:312:        wardrobe_items(id, title, category_id),
+src/lib/listings/validation.ts:18:      .from('wardrobe_item_images')
+src/lib/listings/validation.ts:21:      .eq('wardrobe_item_id', wardrobeItemId);
+src/lib/listings/validation.ts:52:      .from('wardrobe_items')
+src/lib/listings/validation.ts:85:      .select('id, seller_user_id, wardrobe_item_id')
+src/lib/utils/validation.ts:12:      .from('wardrobe_items')
+src/lib/utils/validation.ts:87:      .from('wardrobe_item_images')
+src/lib/utils/validation.ts:90:      .eq('wardrobe_item_id', wardrobeItemId);
+src/lib/utils/validation.ts:119:  entityType: 'outfit' | 'lookbook' | 'wardrobe_item',
+src/lib/utils/validation.ts:125:      entityType === 'wardrobe_item'
+src/lib/utils/validation.ts:126:        ? 'wardrobe_items'
+src/lib/wardrobe/items-queries.ts:50:  let result = await fetchList<WardrobeItem>('wardrobe_items', '*', {
+src/lib/wardrobe/items-queries.ts:74:    'wardrobe_items',
+src/lib/wardrobe/items-queries.ts:94:  return fetchSingle<WardrobeItem>('wardrobe_items', '*', {
+src/lib/wardrobe/items-queries.ts:110:  return fetchList<WardrobeItem>('wardrobe_items', '*', {
+src/lib/wardrobe/items-queries.ts:151:      .from('saved_wardrobe_items')
+src/lib/wardrobe/items-queries.ts:154:      .eq('wardrobe_item_id', wardrobeItemId)
+src/lib/wardrobe/items-queries.ts:176:      .from('saved_wardrobe_items')
+src/lib/wardrobe/items-queries.ts:177:      .select('wardrobe_item_id')
+src/lib/wardrobe/items-queries.ts:184:    const itemIds = savedItems.map((item) => item.wardrobe_item_id);
+src/lib/wardrobe/items-queries.ts:196:    let result = await fetchList<WardrobeItem>('wardrobe_items', '*', {
+src/lib/wardrobe/diagnostics.ts:28:      .from('wardrobe_item_images')
+src/lib/wardrobe/diagnostics.ts:46:      .from('wardrobe_items')
+src/lib/wardrobe/diagnostics.ts:59:      .from('wardrobe_item_images')
+src/lib/wardrobe/diagnostics.ts:60:      .select('wardrobe_item_id')
+src/lib/wardrobe/diagnostics.ts:62:        'wardrobe_item_id',
+src/lib/wardrobe/diagnostics.ts:71:      (itemLinks || []).map((link) => link.wardrobe_item_id)
+src/lib/wardrobe/diagnostics.ts:156:          .from('wardrobe_item_images')
+src/lib/wardrobe/diagnostics.ts:158:          .eq('wardrobe_item_id', item.id);
+src/lib/wardrobe/diagnostics.ts:169:          wardrobe_item_id: item.id,
+src/lib/wardrobe/diagnostics.ts:176:          .from('wardrobe_item_images')
+src/lib/wardrobe/diagnostics.ts:185:              .from('wardrobe_item_images')
+src/lib/wardrobe/diagnostics.ts:187:              .eq('wardrobe_item_id', item.id);
+src/lib/wardrobe/diagnostics.ts:204:            .from('wardrobe_item_images')
+src/lib/wardrobe/diagnostics.ts:206:            .eq('wardrobe_item_id', item.id);
+src/lib/wardrobe/diagnostics.ts:235:    // Check if wardrobe_item_images records exist
+src/lib/wardrobe/diagnostics.ts:237:      .from('wardrobe_item_images')
+src/lib/wardrobe/diagnostics.ts:238:      .select('id, image_id, wardrobe_item_id, type, sort_order')
+src/lib/wardrobe/diagnostics.ts:239:      .eq('wardrobe_item_id', itemId);
+src/lib/wardrobe/diagnostics.ts:299:      .from('wardrobe_item_images')
+src/lib/ai-jobs/types.ts:17:    wardrobe_item_id: wardrobeItemId,
+src/lib/ai-jobs/types.ts:49:      'wardrobe_item',
+src/lib/ai-jobs/types.ts:69:        .from('wardrobe_items')
+src/lib/ai-jobs/types.ts:94:    wardrobe_item_id: wardrobeItemId,
+src/lib/ai-jobs/types.ts:108:      return input?.wardrobe_item_id === wardrobeItemId;
+src/lib/ai-jobs/types.ts:125:      return input?.wardrobe_item_id === wardrobeItemId;
+src/lib/ai-jobs/types.ts:215:    wardrobe_item_id: wardrobeItemId,
+src/lib/ai-jobs/types.ts:230:      return input?.wardrobe_item_id === wardrobeItemId;
+src/lib/ai-jobs/types.ts:247:      return input?.wardrobe_item_id === wardrobeItemId;
+src/lib/wardrobe/images.ts:18:    // Fetch wardrobe_item_images links first
+src/lib/wardrobe/images.ts:20:      .from('wardrobe_item_images')
+src/lib/wardrobe/images.ts:22:      .eq('wardrobe_item_id', itemId)
+src/lib/wardrobe/images.ts:80:      .from('wardrobe_item_images')
+src/lib/wardrobe/images.ts:82:      .in('wardrobe_item_id', itemIds)
+src/lib/wardrobe/images.ts:109:    // Group links by wardrobe_item_id and attach image data
+src/lib/wardrobe/images.ts:112:      const itemImages = itemImagesMap.get(link.wardrobe_item_id) || [];
+src/lib/wardrobe/images.ts:117:      itemImagesMap.set(link.wardrobe_item_id, itemImages);
+src/lib/wardrobe/images.ts:139:        .from('wardrobe_item_images')
+src/lib/wardrobe/images.ts:141:        .eq('wardrobe_item_id', itemId)
+src/lib/wardrobe/images.ts:149:    const { error } = await supabase.from('wardrobe_item_images').insert({
+src/lib/wardrobe/images.ts:150:      wardrobe_item_id: itemId,
+src/lib/wardrobe/images.ts:171:      .from('wardrobe_item_images')
+src/lib/wardrobe/images.ts:173:      .eq('wardrobe_item_id', itemId)
+src/lib/wardrobe/images.ts:193:        .from('wardrobe_item_images')
+src/lib/wardrobe/images.ts:195:        .eq('wardrobe_item_id', itemId)
+src/lib/wardrobe/images.ts:219:      .from('wardrobe_item_images')
+src/lib/wardrobe/images.ts:221:      .eq('wardrobe_item_id', itemId)
+src/lib/wardrobe/images.ts:255:      .from('wardrobe_item_images')
+src/lib/wardrobe/images.ts:257:      .eq('wardrobe_item_id', itemId)
+src/lib/wardrobe/items-mutations.ts:52:      .from('wardrobe_items')
+src/lib/wardrobe/items-mutations.ts:67:      wardrobe_item_id: item.id,
+src/lib/wardrobe/items-mutations.ts:74:      .from('wardrobe_item_images')
+src/lib/wardrobe/items-mutations.ts:83:        .from('wardrobe_item_images')
+src/lib/wardrobe/items-mutations.ts:85:        .eq('wardrobe_item_id', item.id)
+src/lib/wardrobe/items-mutations.ts:118:      .from('wardrobe_items')
+src/lib/wardrobe/items-mutations.ts:143:      .from('wardrobe_items')
+src/lib/wardrobe/items-mutations.ts:163:      .from('saved_wardrobe_items')
+src/lib/wardrobe/items-mutations.ts:166:        wardrobe_item_id: wardrobeItemId,
+src/lib/wardrobe/items-mutations.ts:191:      .from('saved_wardrobe_items')
+src/lib/wardrobe/items-mutations.ts:194:      .eq('wardrobe_item_id', wardrobeItemId);
+app/listings/index.tsx:95:            {item.wardrobe_item?.title || 'Item'}
+src/hooks/useFindSimilar.ts:21:  entityType: 'wardrobe_item' | 'outfit';
+app/search.tsx:41:      case 'wardrobe_item':
+src/hooks/social/useSocialModals.ts:29:  findSimilarEntityType: 'wardrobe_item' | 'outfit';
+src/hooks/social/useSocialModals.ts:33:  setFindSimilarEntityType: (type: 'wardrobe_item' | 'outfit') => void;
+src/hooks/social/useSocialModals.ts:37:    entityType: 'wardrobe_item' | 'outfit',
+src/hooks/social/useSocialModals.ts:79:    'wardrobe_item' | 'outfit'
+src/hooks/social/useSocialModals.ts:117:      entityType: 'wardrobe_item' | 'outfit',
+src/hooks/social/useTryOnOutfit.ts:61:        wardrobe_item_id: item.wardrobe_item_id,
+src/hooks/social/useTryOnOutfit.ts:81:      const wardrobeItemIds = outfitData.items.map(item => item.wardrobe_item_id);
+src/hooks/social/useTryOnOutfit.ts:108:        const wardrobeItem = wardrobeItemsMap.get(outfitItem.wardrobe_item_id);
+src/hooks/social/useTryOnOutfit.ts:112:          wardrobe_item_id: outfitItem.wardrobe_item_id,
+src/hooks/wardrobe/useWardrobeItemDetail.ts:304:                  return input?.wardrobe_item_id === itemId;
+app/marketplace.tsx:54:    const wardrobeItem = item.wardrobe_item;
+src/hooks/wardrobe/useWardrobeItemDetailActions.ts:85:        .from('wardrobe_items')
+src/hooks/wardrobe/useWardrobeItemDetailActions.ts:143:          .from('wardrobe_items')
+src/hooks/wardrobe/useItemAttributes.ts:20:  entityType: 'wardrobe_item';
+src/hooks/wardrobe/useWardrobeItemEdit.ts:98:          'wardrobe_item',
+src/hooks/wardrobe/useWardrobeItemEdit.ts:186:          'wardrobe_item',
+src/hooks/wardrobe/useWardrobeItemEdit.ts:254:        .from('wardrobe_items')
+src/hooks/wardrobe/useWardrobeItemData.ts:58:      'wardrobe_item',
+src/hooks/wardrobe/useWardrobeItemData.ts:79:      'wardrobe_item',
+src/hooks/wardrobe/useWardrobeItemData.ts:133:        'wardrobe_item',
+src/hooks/wardrobe/useWardrobeItemData.ts:143:        .eq('entity_type', 'wardrobe_item')
+src/hooks/useSearch.ts:12:export type SearchResultType = 'user' | 'outfit' | 'lookbook' | 'wardrobe_item';
+src/hooks/useSearch.ts:115:            type: 'wardrobe_item',
+src/hooks/outfits/useSocialEngagement.ts:22:type EntityType = 'outfit' | 'wardrobe_item' | 'post';
+src/hooks/outfits/useSocialEngagement.ts:45:  // Engagement lib supports 'outfit' | 'post' | 'lookbook' (and comments: 'feedback_thread'); skip API for wardrobe_item
+src/hooks/outfits/useSocialEngagement.ts:46:  const engagementEntityType = entityType === 'wardrobe_item' ? null : (entityType as 'outfit' | 'post' | 'lookbook');
+src/hooks/outfits/useOutfitGeneration.ts.backup:54:          wardrobe_item_id: item.id,
+src/hooks/outfits/useOutfitGeneration.ts.backup:98:          .from('wardrobe_item_images')
+src/hooks/outfits/useOutfitGeneration.ts.backup:101:            wardrobe_item_id,
+src/hooks/outfits/useOutfitGeneration.ts.backup:106:          .in('wardrobe_item_id', wardrobeItemIds);
+src/hooks/outfits/useOutfitGeneration.ts.backup:115:          wardrobe_item_id: link.wardrobe_item_id,
+src/hooks/outfits/useOutfitGeneration.ts.backup:124:          if (!imagesByItem.has(link.wardrobe_item_id)) {
+src/hooks/outfits/useOutfitGeneration.ts.backup:125:            imagesByItem.set(link.wardrobe_item_id, []);
+src/hooks/outfits/useOutfitGeneration.ts.backup:127:          imagesByItem.get(link.wardrobe_item_id)!.push(link);
+src/hooks/outfits/useOutfitGeneration.ts.backup:250:            wardrobe_item_id: item.id,
+src/hooks/outfits/useBackgroundGridGenerator.ts:57:          .from('wardrobe_item_images')
+src/hooks/outfits/useBackgroundGridGenerator.ts:61:            wardrobe_item_id,
+src/hooks/outfits/useBackgroundGridGenerator.ts:67:          .in('wardrobe_item_id', wardrobeItemIds);
+src/hooks/outfits/useBackgroundGridGenerator.ts:73:          wardrobe_item_id: link.wardrobe_item_id,
+src/hooks/outfits/useBackgroundGridGenerator.ts:81:          if (!imagesByItem.has(link.wardrobe_item_id)) {
+src/hooks/outfits/useBackgroundGridGenerator.ts:82:            imagesByItem.set(link.wardrobe_item_id, []);
+src/hooks/outfits/useBackgroundGridGenerator.ts:84:          imagesByItem.get(link.wardrobe_item_id)!.push(link);
+src/hooks/outfits/useOutfitEditor.ts:80:        wardrobe_item_id: item.id,
+src/hooks/outfits/useOutfitEditor.ts:122:      const wardrobeItemIds = data.items.map((oi) => oi.wardrobe_item_id);
+src/hooks/outfits/useOutfitEditor.ts:132:          const item = wardrobeItemsById.get(outfitItem.wardrobe_item_id);
+src/hooks/outfits/useOutfitGeneration.ts:217:          wardrobe_item_id: item.id,
+src/hooks/outfits/useOutfitGeneration.ts:291:            .from('wardrobe_item_images')
+src/hooks/outfits/useOutfitGeneration.ts:294:              wardrobe_item_id,
+src/hooks/outfits/useOutfitGeneration.ts:299:            .in('wardrobe_item_id', wardrobeItemIds);
+src/hooks/outfits/useOutfitGeneration.ts:308:            wardrobe_item_id: link.wardrobe_item_id,
+src/hooks/outfits/useOutfitGeneration.ts:317:            if (!imagesByItem.has(link.wardrobe_item_id)) {
+src/hooks/outfits/useOutfitGeneration.ts:318:              imagesByItem.set(link.wardrobe_item_id, []);
+src/hooks/outfits/useOutfitGeneration.ts:320:            imagesByItem.get(link.wardrobe_item_id)!.push(link);
+src/hooks/outfits/useOutfitGeneration.ts:452:            wardrobe_item_id: item.id,
+src/hooks/outfits/useOutfitView.ts:232:            (item) => item.wardrobe_item_id
+src/hooks/outfits/useOutfitView.ts:237:              .from('wardrobe_items')
+src/hooks/outfits/useOutfitEditorActions.ts:377:            wardrobe_item_id: item.id,

@@ -1,0 +1,300 @@
+139:app/wardrobe/item/[id].tsx:  ItemImageCarousel,
+140:app/wardrobe/item/[id].tsx:    displayImages,
+141:app/wardrobe/item/[id].tsx:        {/* Image Carousel */}
+142:app/wardrobe/item/[id].tsx:        <ItemImageCarousel
+143:app/wardrobe/item/[id].tsx:          images={displayImages}
+144:app/wardrobe/item/[id].tsx:          onImageIndexChange={actions.setCurrentImageIndex}
+145:app/wardrobe/item/[id].tsx:          currentImageIndex={actions.currentImageIndex}
+170:app/wardrobe/add.tsx:import ImageCropper from '@/components/wardrobe/ImageCropper';
+171:app/wardrobe/add.tsx:import { Image } from 'expo-image';
+172:app/wardrobe/add.tsx:    selectedImages,
+173:app/wardrobe/add.tsx:    removeImage,
+174:app/wardrobe/add.tsx:    cropperImageUri,
+175:app/wardrobe/add.tsx:        {selectedImages.length === 0 ? (
+176:app/wardrobe/add.tsx:              {selectedImages.map((image, index) => (
+177:app/wardrobe/add.tsx:                  <Image
+178:app/wardrobe/add.tsx:                    onPress={() => removeImage(index)}
+179:app/wardrobe/add.tsx:      <ImageCropper
+180:app/wardrobe/add.tsx:        imageUri={cropperImageUri || ''}
+198:app/social/following-wardrobes.tsx:import { Image as ExpoImage } from 'expo-image';
+199:app/social/following-wardrobes.tsx:import { getWardrobeItemImages } from '@/lib/wardrobe';
+200:app/social/following-wardrobes.tsx:  previewImage?: string | null;
+201:app/social/following-wardrobes.tsx:          let previewImage: string | null = null;
+202:app/social/following-wardrobes.tsx:              const { data: images } = await getWardrobeItemImages(items[0].id);
+203:app/social/following-wardrobes.tsx:                const firstImage = images[0].image;
+204:app/social/following-wardrobes.tsx:                if (firstImage) {
+205:app/social/following-wardrobes.tsx:                    .from(firstImage.storage_bucket || 'media')
+206:app/social/following-wardrobes.tsx:                    .getPublicUrl(firstImage.storage_key);
+207:app/social/following-wardrobes.tsx:                  previewImage = urlData.publicUrl;
+208:app/social/following-wardrobes.tsx:            previewImage,
+209:app/social/following-wardrobes.tsx:                  <ExpoImage
+210:app/social/following-wardrobes.tsx:              {item.previewImage && (
+211:app/social/following-wardrobes.tsx:                <ExpoImage
+212:app/social/following-wardrobes.tsx:                  source={{ uri: item.previewImage }}
+213:app/social/following-wardrobes.tsx:                  style={styles.previewImage}
+214:app/social/following-wardrobes.tsx:  previewImage: {
+364:src/lib/wardrobe/index.ts:  getWardrobeItemImages,
+365:src/lib/wardrobe/index.ts:  getWardrobeItemsImages,
+366:src/lib/wardrobe/index.ts:  addImageToWardrobeItem,
+367:src/lib/wardrobe/index.ts:  removeImageFromWardrobeItem,
+368:src/lib/wardrobe/index.ts:  updateImageSortOrder,
+369:src/lib/wardrobe/index.ts:  setPrimaryImage,
+370:src/lib/wardrobe/index.ts:  getPrimaryImage,
+371:src/lib/wardrobe/index.ts:  findOrphanedImages,
+372:src/lib/wardrobe/index.ts:  repairWardrobeItemImageLinks,
+373:src/lib/wardrobe/index.ts:  diagnoseWardrobeItemImages,
+374:src/lib/wardrobe/index.ts:  checkImagesRLSMigration,
+411:src/lib/wardrobe/diagnostics.ts:export async function findOrphanedImages(userId: string): Promise<{
+412:src/lib/wardrobe/diagnostics.ts:    orphanedImages: Array<{ id: string; storage_key: string; created_at: string }>;
+413:src/lib/wardrobe/diagnostics.ts:    itemsWithoutImages: Array<{ id: string; title: string; created_at: string }>;
+414:src/lib/wardrobe/diagnostics.ts:    const { data: allImages, error: imagesError } = await supabase
+415:src/lib/wardrobe/diagnostics.ts:    const imageIds = allImages?.map((img) => img.id) || [];
+416:src/lib/wardrobe/diagnostics.ts:    const linkedImageIds = new Set((allLinks || []).map((link) => link.image_id));
+417:src/lib/wardrobe/diagnostics.ts:    const orphanedImages = (allImages || []).filter(
+418:src/lib/wardrobe/diagnostics.ts:      (img) => !linkedImageIds.has(img.id)
+419:src/lib/wardrobe/diagnostics.ts:    const itemsWithoutImages = (allItems || []).filter(
+420:src/lib/wardrobe/diagnostics.ts:        orphanedImages: orphanedImages.map((img) => ({
+421:src/lib/wardrobe/diagnostics.ts:        itemsWithoutImages: itemsWithoutImages.map((item) => ({
+422:src/lib/wardrobe/diagnostics.ts:    console.error('[findOrphanedImages] Error:', error);
+423:src/lib/wardrobe/diagnostics.ts:export async function repairWardrobeItemImageLinks(
+424:src/lib/wardrobe/diagnostics.ts:      await findOrphanedImages(userId);
+425:src/lib/wardrobe/diagnostics.ts:    const { orphanedImages, itemsWithoutImages } = diagnostic;
+426:src/lib/wardrobe/diagnostics.ts:    if (orphanedImages.length === 0 || itemsWithoutImages.length === 0) {
+427:src/lib/wardrobe/diagnostics.ts:      ? itemsWithoutImages.filter((item) => item.id === itemId)
+428:src/lib/wardrobe/diagnostics.ts:      : itemsWithoutImages;
+429:src/lib/wardrobe/diagnostics.ts:    const linkedImageIds = new Set<string>();
+430:src/lib/wardrobe/diagnostics.ts:      const matchingImages = orphanedImages
+431:src/lib/wardrobe/diagnostics.ts:        .filter((img) => !linkedImageIds.has(img.id))
+432:src/lib/wardrobe/diagnostics.ts:      if (matchingImages.length > 0) {
+433:src/lib/wardrobe/diagnostics.ts:          existingLinks.forEach((link) => linkedImageIds.add(link.image_id));
+434:src/lib/wardrobe/diagnostics.ts:        const imagesToLink = matchingImages.slice(0, 3);
+435:src/lib/wardrobe/diagnostics.ts:            imagesToLink.forEach((img) => linkedImageIds.add(img.id));
+436:src/lib/wardrobe/diagnostics.ts:          linkedImageIds.add(img.id);
+437:src/lib/wardrobe/diagnostics.ts:export async function diagnoseWardrobeItemImages(itemId: string): Promise<{
+438:src/lib/wardrobe/diagnostics.ts:    accessibleImages: number;
+439:src/lib/wardrobe/diagnostics.ts:    blockedImages: number;
+440:src/lib/wardrobe/diagnostics.ts:          accessibleImages: 0,
+441:src/lib/wardrobe/diagnostics.ts:          blockedImages: 0,
+442:src/lib/wardrobe/diagnostics.ts:          accessibleImages: 0,
+443:src/lib/wardrobe/diagnostics.ts:          blockedImages: 0,
+444:src/lib/wardrobe/diagnostics.ts:        accessibleImages: accessibleCount,
+445:src/lib/wardrobe/diagnostics.ts:        blockedImages: blockedCount,
+446:src/lib/wardrobe/diagnostics.ts:export async function checkImagesRLSMigration(): Promise<{
+447:src/lib/wardrobe/diagnostics.ts:      console.warn('[checkImagesRLSMigration] Could not query:', testError);
+448:src/lib/wardrobe/diagnostics.ts:    console.error('[checkImagesRLSMigration] Error:', error);
+504:src/hooks/useFindSimilar.ts:import { getWardrobeItemImages } from '@/lib/wardrobe';
+529:src/hooks/wardrobe/useWardrobeItems.ts:  getWardrobeItemsImages,
+530:src/hooks/wardrobe/useWardrobeItems.ts:  const [imageCache, setImageCache] = useState<Map<string, string | null>>(new Map());
+531:src/hooks/wardrobe/useWardrobeItems.ts:        const { data: imagesMap } = await getWardrobeItemsImages(itemIds);
+532:src/hooks/wardrobe/useWardrobeItems.ts:        setImageCache(newCache);
+542:src/lib/wardrobe/images.ts:export async function getWardrobeItemImages(itemId: string): Promise<{
+543:src/lib/wardrobe/images.ts:    const linkImageIds = links.map((link) => link.image_id);
+544:src/lib/wardrobe/images.ts:      .in('id', linkImageIds);
+545:src/lib/wardrobe/images.ts:export async function getWardrobeItemsImages(itemIds: string[]): Promise<{
+546:src/lib/wardrobe/images.ts:    const itemImagesMap = new Map<string, Array<any>>();
+547:src/lib/wardrobe/images.ts:      const itemImages = itemImagesMap.get(link.wardrobe_item_id) || [];
+548:src/lib/wardrobe/images.ts:      itemImages.push({
+549:src/lib/wardrobe/images.ts:      itemImagesMap.set(link.wardrobe_item_id, itemImages);
+550:src/lib/wardrobe/images.ts:    return { data: itemImagesMap, error: null };
+551:src/lib/wardrobe/images.ts:export async function addImageToWardrobeItem(
+552:src/lib/wardrobe/images.ts:export async function removeImageFromWardrobeItem(
+553:src/lib/wardrobe/images.ts:export async function updateImageSortOrder(
+554:src/lib/wardrobe/images.ts:export async function setPrimaryImage(
+555:src/lib/wardrobe/images.ts:    return updateImageSortOrder(itemId, updates);
+556:src/lib/wardrobe/images.ts:export async function getPrimaryImage(itemId: string): Promise<{
+557:src/hooks/wardrobe/useWardrobeItemDetail.ts:import { getWardrobeItemImages } from '@/lib/wardrobe';
+558:src/hooks/wardrobe/useWardrobeItemDetail.ts:  allImages: Array<{ id: string; image_id: string; type: string; image: any }>;
+559:src/hooks/wardrobe/useWardrobeItemDetail.ts:  displayImages: Array<{ id: string; image_id: string; type: string; image: any }>;
+560:src/hooks/wardrobe/useWardrobeItemDetail.ts:  refreshImages: () => Promise<void>;
+561:src/hooks/wardrobe/useWardrobeItemDetail.ts:  const periodicImageRefreshRef = useRef<NodeJS.Timeout | null>(null);
+562:src/hooks/wardrobe/useWardrobeItemDetail.ts:  const periodicImageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+563:src/hooks/wardrobe/useWardrobeItemDetail.ts:  const startPeriodicImageRefresh = () => {
+564:src/hooks/wardrobe/useWardrobeItemDetail.ts:    if (periodicImageRefreshRef.current) {
+565:src/hooks/wardrobe/useWardrobeItemDetail.ts:      clearInterval(periodicImageRefreshRef.current);
+566:src/hooks/wardrobe/useWardrobeItemDetail.ts:    if (periodicImageTimeoutRef.current) {
+567:src/hooks/wardrobe/useWardrobeItemDetail.ts:      clearTimeout(periodicImageTimeoutRef.current);
+568:src/hooks/wardrobe/useWardrobeItemDetail.ts:    periodicImageRefreshRef.current = setInterval(async () => {
+569:src/hooks/wardrobe/useWardrobeItemDetail.ts:      await data.refreshImages();
+570:src/hooks/wardrobe/useWardrobeItemDetail.ts:    periodicImageTimeoutRef.current = setTimeout(() => {
+571:src/hooks/wardrobe/useWardrobeItemDetail.ts:      if (periodicImageRefreshRef.current) {
+572:src/hooks/wardrobe/useWardrobeItemDetail.ts:        clearInterval(periodicImageRefreshRef.current);
+573:src/hooks/wardrobe/useWardrobeItemDetail.ts:        periodicImageRefreshRef.current = null;
+574:src/hooks/wardrobe/useWardrobeItemDetail.ts:  const stopPeriodicImageRefresh = () => {
+575:src/hooks/wardrobe/useWardrobeItemDetail.ts:    if (periodicImageRefreshRef.current) {
+576:src/hooks/wardrobe/useWardrobeItemDetail.ts:      clearInterval(periodicImageRefreshRef.current);
+577:src/hooks/wardrobe/useWardrobeItemDetail.ts:      periodicImageRefreshRef.current = null;
+578:src/hooks/wardrobe/useWardrobeItemDetail.ts:    if (periodicImageTimeoutRef.current) {
+579:src/hooks/wardrobe/useWardrobeItemDetail.ts:      clearTimeout(periodicImageTimeoutRef.current);
+580:src/hooks/wardrobe/useWardrobeItemDetail.ts:      periodicImageTimeoutRef.current = null;
+581:src/hooks/wardrobe/useWardrobeItemDetail.ts:      await data.refreshImages();
+582:src/hooks/wardrobe/useWardrobeItemDetail.ts:      startPeriodicImageRefresh();
+583:src/hooks/wardrobe/useWardrobeItemDetail.ts:      startPeriodicImageRefresh();
+584:src/hooks/wardrobe/useWardrobeItemDetail.ts:      await data.refreshImages();
+585:src/hooks/wardrobe/useWardrobeItemDetail.ts:      startPeriodicImageRefresh();
+586:src/hooks/wardrobe/useWardrobeItemDetail.ts:      startPeriodicImageRefresh();
+587:src/hooks/wardrobe/useWardrobeItemDetail.ts:            await data.refreshImages();
+588:src/hooks/wardrobe/useWardrobeItemDetail.ts:            const itemImages = data.allImages;
+589:src/hooks/wardrobe/useWardrobeItemDetail.ts:            if (itemImages && itemImages.length > 0) {
+590:src/hooks/wardrobe/useWardrobeItemDetail.ts:              const hasProductShot = itemImages.some(
+591:src/hooks/wardrobe/useWardrobeItemDetail.ts:              const productShotCreatedAt = itemImages
+592:src/hooks/wardrobe/useWardrobeItemDetail.ts:                  await data.refreshImages();
+593:src/hooks/wardrobe/useWardrobeItemDetail.ts:                  startPeriodicImageRefresh();
+594:src/hooks/wardrobe/useWardrobeItemDetail.ts:      stopPeriodicImageRefresh();
+595:src/hooks/wardrobe/useWardrobeItemDetail.ts:    const hasProductShot = data.displayImages.some(
+596:src/hooks/wardrobe/useWardrobeItemDetail.ts:      stopPeriodicImageRefresh();
+597:src/hooks/wardrobe/useWardrobeItemDetail.ts:  }, [data.displayImages, isGeneratingProductShot]);
+598:src/hooks/wardrobe/useWardrobeItemDetail.ts:    allImages: data.allImages,
+599:src/hooks/wardrobe/useWardrobeItemDetail.ts:    displayImages: data.displayImages,
+600:src/hooks/wardrobe/useWardrobeItemDetail.ts:    refreshImages: data.refreshImages,
+601:src/lib/wardrobe/items-mutations.ts:import { batchUploadImages } from '../utils/image-helpers';
+602:src/lib/wardrobe/items-mutations.ts:    const { data: imageIds, errors: uploadErrors } = await batchUploadImages(
+603:src/lib/wardrobe/items-mutations.ts:    const { data: itemImages, error: linkError } = await supabase
+604:src/lib/wardrobe/items-mutations.ts:    return { data: { item, images: itemImages || [] }, error: null };
+647:src/lib/images.ts:import { getWardrobeItemImages } from './wardrobe';
+651:src/lib/images.ts:      const { data: images } = await getWardrobeItemImages(firstItem.wardrobe_item_id);
+664:src/hooks/wardrobe/useWardrobeItemNavigation.ts:import { getWardrobeItemsByIds, getWardrobeItemsImages } from '@/lib/wardrobe';
+665:src/hooks/wardrobe/useWardrobeItemNavigation.ts:      const { data: imagesMap } = await getWardrobeItemsImages(visibleItemIds);
+706:src/lib/listings/core.ts:      const { valid, error: imageError } = await verifyOriginalImages(wardrobeItemId, listingData.imageIds);
+724:src/hooks/wardrobe/useWardrobeItemData.ts:  getWardrobeItemImages,
+725:src/hooks/wardrobe/useWardrobeItemData.ts:  allImages: Array<{ id: string; image_id: string; type: string; image: any }>;
+726:src/hooks/wardrobe/useWardrobeItemData.ts:  displayImages: Array<{ id: string; image_id: string; type: string; image: any }>;
+727:src/hooks/wardrobe/useWardrobeItemData.ts:  setAllImages: (images: Array<{ id: string; image_id: string; type: string; image: any }>) => void;
+728:src/hooks/wardrobe/useWardrobeItemData.ts:  setDisplayImages: (images: Array<{ id: string; image_id: string; type: string; image: any }>) => void;
+729:src/hooks/wardrobe/useWardrobeItemData.ts:  refreshImages: () => Promise<void>;
+730:src/hooks/wardrobe/useWardrobeItemData.ts:  const [allImages, setAllImages] = useState<
+731:src/hooks/wardrobe/useWardrobeItemData.ts:  const [displayImages, setDisplayImages] = useState<
+732:src/hooks/wardrobe/useWardrobeItemData.ts:  const refreshImages = useCallback(async () => {
+733:src/hooks/wardrobe/useWardrobeItemData.ts:    const { data: refreshedImages } = await getWardrobeItemImages(itemId);
+734:src/hooks/wardrobe/useWardrobeItemData.ts:    if (refreshedImages) {
+735:src/hooks/wardrobe/useWardrobeItemData.ts:      setAllImages(refreshedImages);
+736:src/hooks/wardrobe/useWardrobeItemData.ts:      const filtered = refreshedImages.filter(
+737:src/hooks/wardrobe/useWardrobeItemData.ts:      setDisplayImages(filtered);
+738:src/hooks/wardrobe/useWardrobeItemData.ts:      const { data: itemImages } = await getWardrobeItemImages(itemId);
+739:src/hooks/wardrobe/useWardrobeItemData.ts:      if (itemImages) {
+740:src/hooks/wardrobe/useWardrobeItemData.ts:        setAllImages(itemImages);
+741:src/hooks/wardrobe/useWardrobeItemData.ts:        const filtered = itemImages.filter(
+742:src/hooks/wardrobe/useWardrobeItemData.ts:        setDisplayImages(filtered);
+743:src/hooks/wardrobe/useWardrobeItemData.ts:    allImages,
+744:src/hooks/wardrobe/useWardrobeItemData.ts:    displayImages,
+745:src/hooks/wardrobe/useWardrobeItemData.ts:    setAllImages,
+746:src/hooks/wardrobe/useWardrobeItemData.ts:    setDisplayImages,
+747:src/hooks/wardrobe/useWardrobeItemData.ts:    refreshImages,
+786:src/hooks/wardrobe/useWardrobeItemDetailActions.ts:  // Image carousel
+787:src/hooks/wardrobe/useWardrobeItemDetailActions.ts:  currentImageIndex: number;
+788:src/hooks/wardrobe/useWardrobeItemDetailActions.ts:  setCurrentImageIndex: (index: number) => void;
+789:src/hooks/wardrobe/useWardrobeItemDetailActions.ts:  // Image carousel state
+790:src/hooks/wardrobe/useWardrobeItemDetailActions.ts:  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+791:src/hooks/wardrobe/useWardrobeItemDetailActions.ts:    // Image carousel
+792:src/hooks/wardrobe/useWardrobeItemDetailActions.ts:    currentImageIndex,
+793:src/hooks/wardrobe/useWardrobeItemDetailActions.ts:    setCurrentImageIndex,
+796:src/components/wardrobe/NavigationSlider.tsx:import { Image } from 'expo-image';
+797:src/components/wardrobe/NavigationSlider.tsx:import { ImagePlaceholder } from '@/components/shared';
+798:src/components/wardrobe/NavigationSlider.tsx:                <Image
+799:src/components/wardrobe/NavigationSlider.tsx:                <ImagePlaceholder text="" iconSize={24} />
+818:src/hooks/wardrobe/useAddWardrobeItem.ts:import * as ImagePicker from 'expo-image-picker';
+819:src/hooks/wardrobe/useAddWardrobeItem.ts:interface SelectedImage {
+820:src/hooks/wardrobe/useAddWardrobeItem.ts:  // Images
+821:src/hooks/wardrobe/useAddWardrobeItem.ts:  selectedImages: SelectedImage[];
+822:src/hooks/wardrobe/useAddWardrobeItem.ts:  setSelectedImages: (images: SelectedImage[]) => void;
+823:src/hooks/wardrobe/useAddWardrobeItem.ts:  removeImage: (index: number) => void;
+824:src/hooks/wardrobe/useAddWardrobeItem.ts:  cropperImageUri: string | null;
+825:src/hooks/wardrobe/useAddWardrobeItem.ts:  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+826:src/hooks/wardrobe/useAddWardrobeItem.ts:  const [cropperImageUri, setCropperImageUri] = useState<string | null>(null);
+827:src/hooks/wardrobe/useAddWardrobeItem.ts:    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+828:src/hooks/wardrobe/useAddWardrobeItem.ts:    const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
+829:src/hooks/wardrobe/useAddWardrobeItem.ts:    const result = await ImagePicker.launchCameraAsync({
+830:src/hooks/wardrobe/useAddWardrobeItem.ts:        setCropperImageUri(result.assets[0].uri);
+831:src/hooks/wardrobe/useAddWardrobeItem.ts:        const newImage = {
+832:src/hooks/wardrobe/useAddWardrobeItem.ts:        setSelectedImages((prev) => [...prev, newImage]);
+833:src/hooks/wardrobe/useAddWardrobeItem.ts:    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+834:src/hooks/wardrobe/useAddWardrobeItem.ts:    const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
+835:src/hooks/wardrobe/useAddWardrobeItem.ts:    const result = await ImagePicker.launchImageLibraryAsync({
+836:src/hooks/wardrobe/useAddWardrobeItem.ts:        setCropperImageUri(result.assets[0].uri);
+837:src/hooks/wardrobe/useAddWardrobeItem.ts:        const newImages = result.assets.map((asset) => ({
+838:src/hooks/wardrobe/useAddWardrobeItem.ts:        setSelectedImages((prev) => [...prev, ...newImages]);
+839:src/hooks/wardrobe/useAddWardrobeItem.ts:  const removeImage = useCallback((index: number) => {
+840:src/hooks/wardrobe/useAddWardrobeItem.ts:    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+841:src/hooks/wardrobe/useAddWardrobeItem.ts:    setCropperImageUri(null);
+842:src/hooks/wardrobe/useAddWardrobeItem.ts:      const newImage: SelectedImage = {
+843:src/hooks/wardrobe/useAddWardrobeItem.ts:      setSelectedImages((prev) => [...prev, newImage]);
+844:src/hooks/wardrobe/useAddWardrobeItem.ts:        const newImage: SelectedImage = {
+845:src/hooks/wardrobe/useAddWardrobeItem.ts:        setSelectedImages((prev) => [...prev, newImage]);
+846:src/hooks/wardrobe/useAddWardrobeItem.ts:    setCropperImageUri(null);
+847:src/hooks/wardrobe/useAddWardrobeItem.ts:    if (selectedImages.length === 0) {
+848:src/hooks/wardrobe/useAddWardrobeItem.ts:        selectedImages
+849:src/hooks/wardrobe/useAddWardrobeItem.ts:  }, [user, wardrobeId, selectedImages, router]);
+850:src/hooks/wardrobe/useAddWardrobeItem.ts:    // Images
+851:src/hooks/wardrobe/useAddWardrobeItem.ts:    selectedImages,
+852:src/hooks/wardrobe/useAddWardrobeItem.ts:    setSelectedImages,
+853:src/hooks/wardrobe/useAddWardrobeItem.ts:    removeImage,
+854:src/hooks/wardrobe/useAddWardrobeItem.ts:    cropperImageUri,
+855:src/components/wardrobe/ItemNavigation.tsx:import { Image } from 'expo-image';
+856:src/components/wardrobe/ItemNavigation.tsx:                <Image
+868:src/hooks/outfits/useOutfitView.ts:import { getWardrobeItemImages } from '@/lib/wardrobe';
+913:src/components/wardrobe/ItemImageCarousel.tsx: * ItemImageCarousel Component
+914:src/components/wardrobe/ItemImageCarousel.tsx: * Image carousel with modal for wardrobe items
+915:src/components/wardrobe/ItemImageCarousel.tsx:import { Image } from 'expo-image';
+916:src/components/wardrobe/ItemImageCarousel.tsx:interface ItemImageCarouselProps {
+917:src/components/wardrobe/ItemImageCarousel.tsx:  onImageIndexChange: (index: number) => void;
+918:src/components/wardrobe/ItemImageCarousel.tsx:  currentImageIndex: number;
+919:src/components/wardrobe/ItemImageCarousel.tsx:export function ItemImageCarousel({
+920:src/components/wardrobe/ItemImageCarousel.tsx:  onImageIndexChange,
+921:src/components/wardrobe/ItemImageCarousel.tsx:  currentImageIndex,
+922:src/components/wardrobe/ItemImageCarousel.tsx:}: ItemImageCarouselProps) {
+923:src/components/wardrobe/ItemImageCarousel.tsx:  const [showImageModal, setShowImageModal] = useState(false);
+924:src/components/wardrobe/ItemImageCarousel.tsx:  const [modalImageIndex, setModalImageIndex] = useState(0);
+925:src/components/wardrobe/ItemImageCarousel.tsx:  const getImageUrl = (imageData: any): string | null => {
+926:src/components/wardrobe/ItemImageCarousel.tsx:  const openImageModal = (index: number) => {
+927:src/components/wardrobe/ItemImageCarousel.tsx:    setModalImageIndex(index);
+928:src/components/wardrobe/ItemImageCarousel.tsx:    setShowImageModal(true);
+929:src/components/wardrobe/ItemImageCarousel.tsx:      <View style={[styles.noImageContainer, { width: currentScreenWidth }]}>
+930:src/components/wardrobe/ItemImageCarousel.tsx:        <Text style={styles.noImageText}>No images available</Text>
+931:src/components/wardrobe/ItemImageCarousel.tsx:              calculatedIndex !== currentImageIndex &&
+932:src/components/wardrobe/ItemImageCarousel.tsx:              onImageIndexChange(calculatedIndex);
+933:src/components/wardrobe/ItemImageCarousel.tsx:          {images.map((itemImage, index) => {
+934:src/components/wardrobe/ItemImageCarousel.tsx:            const imageUrl = getImageUrl(itemImage.image);
+935:src/components/wardrobe/ItemImageCarousel.tsx:                key={itemImage.id}
+936:src/components/wardrobe/ItemImageCarousel.tsx:                onPress={() => openImageModal(index)}
+937:src/components/wardrobe/ItemImageCarousel.tsx:                  <Image
+938:src/components/wardrobe/ItemImageCarousel.tsx:                    <Text style={styles.imagePlaceholderText}>No Image</Text>
+939:src/components/wardrobe/ItemImageCarousel.tsx:              {currentImageIndex + 1} / {images.length}
+940:src/components/wardrobe/ItemImageCarousel.tsx:        visible={showImageModal}
+941:src/components/wardrobe/ItemImageCarousel.tsx:        onRequestClose={() => setShowImageModal(false)}
+942:src/components/wardrobe/ItemImageCarousel.tsx:            onPress={() => setShowImageModal(false)}
+943:src/components/wardrobe/ItemImageCarousel.tsx:              setModalImageIndex(index);
+944:src/components/wardrobe/ItemImageCarousel.tsx:            {images.map((itemImage) => {
+945:src/components/wardrobe/ItemImageCarousel.tsx:              const imageUrl = getImageUrl(itemImage.image);
+946:src/components/wardrobe/ItemImageCarousel.tsx:                  key={itemImage.id}
+947:src/components/wardrobe/ItemImageCarousel.tsx:                    styles.modalImageContainer,
+948:src/components/wardrobe/ItemImageCarousel.tsx:                    <Image
+949:src/components/wardrobe/ItemImageCarousel.tsx:                      style={styles.modalImage}
+950:src/components/wardrobe/ItemImageCarousel.tsx:                        No Image
+951:src/components/wardrobe/ItemImageCarousel.tsx:                {modalImageIndex + 1} / {images.length}
+952:src/components/wardrobe/ItemImageCarousel.tsx:  noImageContainer: {
+953:src/components/wardrobe/ItemImageCarousel.tsx:  noImageText: {
+954:src/components/wardrobe/ItemImageCarousel.tsx:  modalImageContainer: {
+955:src/components/wardrobe/ItemImageCarousel.tsx:  modalImage: {
+959:src/components/wardrobe/index.ts:export { ItemImageCarousel } from './ItemImageCarousel';
+960:src/components/wardrobe/ItemDetailModal.tsx:import { Image } from 'expo-image';
+961:src/components/wardrobe/ItemDetailModal.tsx:import { ImagePlaceholder, PrimaryButton } from '@/components/shared';
+962:src/components/wardrobe/ItemDetailModal.tsx:              <Image source={{ uri: imageUrl }} style={styles.image} contentFit="cover" />
+963:src/components/wardrobe/ItemDetailModal.tsx:              <ImagePlaceholder aspectRatio={1} />
+975:src/components/wardrobe/ImageCropper.tsx: * ImageCropper Component
+976:src/components/wardrobe/ImageCropper.tsx:import { compressImageFile } from '@/utils/image-compression';
+977:src/components/wardrobe/ImageCropper.tsx:interface ImageCropperProps {
+978:src/components/wardrobe/ImageCropper.tsx:export default function ImageCropper({
+979:src/components/wardrobe/ImageCropper.tsx:}: ImageCropperProps) {
+980:src/components/wardrobe/ImageCropper.tsx:      const compressedFile = await compressImageFile(file);
+1007:src/components/wardrobe/OutfitCreatorBar.tsx:import { Image } from 'expo-image';
+1008:src/components/wardrobe/OutfitCreatorBar.tsx:import { PrimaryButton, IconButton, ImagePlaceholder } from '@/components/shared';
+1009:src/components/wardrobe/OutfitCreatorBar.tsx:                <Image
+1010:src/components/wardrobe/OutfitCreatorBar.tsx:                  style={styles.itemImage}
+1011:src/components/wardrobe/OutfitCreatorBar.tsx:                <View style={styles.itemImagePlaceholder}>
+1012:src/components/wardrobe/OutfitCreatorBar.tsx:                  <ImagePlaceholder text="" iconSize={24} />
+1013:src/components/wardrobe/OutfitCreatorBar.tsx:  itemImage: {
+1014:src/components/wardrobe/OutfitCreatorBar.tsx:  itemImagePlaceholder: {
+1015:src/components/wardrobe/ItemCard.tsx:import { Image } from 'expo-image';
+1016:src/components/wardrobe/ItemCard.tsx:import ImagePlaceholder from '../shared/images/ImagePlaceholder';
+1017:src/components/wardrobe/ItemCard.tsx:          <Image
+1018:src/components/wardrobe/ItemCard.tsx:        <ImagePlaceholder aspectRatio={1} />
+1212:src/components/outfits/OutfitViewContent.tsx:                ? itemImageUrls.get(wardrobeItem.id)

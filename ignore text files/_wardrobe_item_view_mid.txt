@@ -1,0 +1,52 @@
+  backButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  headerButton: {
+    padding: 8,
+  },
+  deleteButton: {
+    // No special background, icon color indicates delete
+  },
+  scrollContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  scrollContent: {
+    paddingTop: 100,
+    paddingBottom: 100,
+  },
+  detailsContent: {
+    padding: 20,
+    backgroundColor: '#fff',
+  },
+  itemTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 8,
+  },
+  itemBrand: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 4,
+  },
+  itemCategory: {
+    fontSize: 14,
+    color: '#999',
+    marginBottom: 12,
+  },
+  itemDescription: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 20,
+    lineHeight: 24,
+  },
+  emptyText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 40,
+  },
+});

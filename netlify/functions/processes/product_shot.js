@@ -24,7 +24,7 @@ const {
  * @param {object} timingTracker - Optional timing tracker for detailed step-by-step timing
  * @param {object} preDownloadedImageData - Optional pre-downloaded image data { base64, mimeType } to avoid redundant downloads
  * @param {string} [jobId] - Optional job ID for logging
- * @returns {Promise<{image_id: number, storage_key: string}>} New image record details
+ * @returns {Promise<{image_id: number, storage_key: string, base64_result: string}>} New image record details with base64 for fast-path
  */
 async function processProductShot(input, supabase, userId, perfTracker = null, timingTracker = null, preDownloadedImageData = null, jobId = null) {
   const { image_id, wardrobe_item_id } = input;
@@ -84,7 +84,8 @@ async function processProductShot(input, supabase, userId, perfTracker = null, t
     type: "product_shot",
     sort_order: 0
   });
-  return { image_id: imageId, storage_key: storageKey };
+  // Return base64_result for fast-path rendering (raw base64 as produced, no optimization in this change)
+  return { image_id: imageId, storage_key: storageKey, base64_result: productShotB64 };
 }
 
 module.exports = { processProductShot };

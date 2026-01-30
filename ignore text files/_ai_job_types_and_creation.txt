@@ -1,0 +1,196 @@
+src/lib/ai-feedback.ts:34:      p_job_type: jobType,
+netlify/functions/ai-job-runner.js:82:      .from("ai_jobs")
+netlify/functions/ai-job-runner.js:102:    console.log("[AIJobRunner] HANDLER START", { job_id, job_type: job.job_type });
+netlify/functions/ai-job-runner.js:106:      .from("ai_jobs")
+netlify/functions/ai-job-runner.js:110:    console.log("[AIJobRunner] BEFORE await processJob", { job_id, job_type: job.job_type });
+netlify/functions/ai-job-runner.js:116:      console.error("[AIJobRunner] processJobAsync threw:", err);
+netlify/functions/ai-job-runner.js:120:    console.log("[AIJobRunner] AFTER await processJob", { job_id, job_type: job.job_type });
+netlify/functions/ai-job-runner.js:124:    console.log("[AIJobRunner] RETURNING", { job_id, status, duration_ms });
+netlify/functions/ai-job-runner.js:162:  console.log(`[AIJobRunner] Created performance tracker: ${perfTracker.requestId} for job ${job_id} (${job.job_type})`);
+netlify/functions/ai-job-runner.js:167:  console.log(`[AIJobRunner] Starting job ${job_id} (${job.job_type})`);
+netlify/functions/ai-job-runner.js:173:    switch (job.job_type) {
+netlify/functions/ai-job-runner.js:202:        throw new Error(`Unknown job type: ${job.job_type}`);
+netlify/functions/ai-job-runner.js:206:    console.error(`[AIJobRunner] Error processing ${job.job_type} job ${job_id}:`, err);
+netlify/functions/ai-job-runner.js:213:  timingTracker.logBreakdown(job.job_type);
+netlify/functions/ai-job-runner.js:225:  await supabaseAdmin.from("ai_jobs").update(updateData).eq("id", job_id);
+src/hooks/ai/index.ts:6:export { useAIJobPolling } from './useAIJobPolling';
+src/hooks/ai/useAIJobPolling.ts:2: * useAIJobPolling Hook
+src/hooks/ai/useAIJobPolling.ts:7:import { getAIJob, AIJob } from '@/lib/ai-jobs';
+src/hooks/ai/useAIJobPolling.ts:9:interface UseAIJobPollingOptions {
+src/hooks/ai/useAIJobPolling.ts:11:  onComplete?: (job: AIJob) => void;
+src/hooks/ai/useAIJobPolling.ts:18:export function useAIJobPolling({
+src/hooks/ai/useAIJobPolling.ts:25:}: UseAIJobPollingOptions) {
+src/hooks/ai/useAIJobPolling.ts:26:  const [job, setJob] = useState<AIJob | null>(null);
+src/hooks/ai/useAIJobPolling.ts:45:    console.log('[useAIJobPolling] startPolling called:', {
+src/hooks/ai/useAIJobPolling.ts:53:      console.log('[useAIJobPolling] startPolling aborted:', {
+src/hooks/ai/useAIJobPolling.ts:59:    console.log('[useAIJobPolling] Starting polling for job:', jobId);
+src/hooks/ai/useAIJobPolling.ts:66:        console.log('[useAIJobPolling] poll() called but no jobId');
+src/hooks/ai/useAIJobPolling.ts:74:        console.log(`[useAIJobPolling] Polling attempt ${attemptsRef.current} for job:`, jobId);
+src/hooks/ai/useAIJobPolling.ts:76:        const { data: jobData, error: jobError } = await getAIJob(jobId);
+src/hooks/ai/useAIJobPolling.ts:88:        console.log(`[useAIJobPolling] Job status update (attempt ${attemptsRef.current}):`, {
+src/hooks/ai/useAIJobPolling.ts:91:          jobType: jobData.job_type,
+src/hooks/ai/useAIJobPolling.ts:97:          console.log(`[useAIJobPolling] Job completed with status: ${jobData.status}`, {
+src/hooks/ai/useAIJobPolling.ts:99:            jobType: jobData.job_type,
+src/hooks/ai/useAIJobPolling.ts:106:            console.log('[useAIJobPolling] Calling onComplete callback');
+src/hooks/ai/useAIJobPolling.ts:111:            console.log('[useAIJobPolling] Calling onError callback');
+src/hooks/ai/useAIJobPolling.ts:140:    console.log('[useAIJobPolling] useEffect triggered:', {
+src/hooks/ai/useAIJobPolling.ts:148:      console.log('[useAIJobPolling] Starting watch for Job ID:', jobId);
+src/hooks/ai/useAIJobPolling.ts:151:      console.log('[useAIJobPolling] Not starting polling:', {
+src/hooks/ai/useAIJobPolling.ts:160:      console.log('[useAIJobPolling] Cleanup: stopping polling for jobId:', jobId);
+src/hooks/ai/useAIJobPolling.ts:188:export default useAIJobPolling;
+src/hooks/ai/useProductShot.ts:9:  triggerAIJobExecution,
+src/hooks/ai/useProductShot.ts:13:import { useAIJobPolling } from './useAIJobPolling';
+src/hooks/ai/useProductShot.ts:37:  const { job, isPolling } = useAIJobPolling({
+src/hooks/ai/useProductShot.ts:109:      const { error: execError } = await triggerAIJobExecution(productShotJob.id);
+src/hooks/profile/useNewBodyshot.ts:65:          .from('ai_jobs')
+src/hooks/profile/useNewBodyshot.ts:68:          .eq('job_type', 'headshot_generate')
+src/lib/ai-jobs/execution.ts:7:export async function triggerAIJobExecution(
+src/lib/ai-jobs/execution.ts:11:  console.info('[AIJobs] triggerAIJobExecution start', { jobId });
+src/lib/ai-jobs/execution.ts:13:  debugIngest({ location: 'execution.ts:10', message: 'triggerAIJobExecution entry', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:21:    debugIngest({ location: 'execution.ts:18', message: 'triggerAIJobExecution session check', data: { jobId, hasSession: !!session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:45:            '[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set, using window.location.origin as fallback:',
+src/lib/ai-jobs/execution.ts:53:            '[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set and window.location unavailable, using relative URL'
+src/lib/ai-jobs/execution.ts:63:    debugIngest({ location: 'execution.ts:55', message: 'triggerAIJobExecution before fetch', data: { jobId, functionUrl, baseUrl, hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:71:      console.error('[AIJobs] Invalid baseUrl format:', baseUrlNormalized);
+src/lib/ai-jobs/execution.ts:89:        debugIngest({ location: 'execution.ts:78', message: 'triggerAIJobExecution fetch response', data: { jobId, status: response.status, statusText: response.statusText, ok: response.ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:95:          console.warn('[AIJobs] Function trigger returned non-OK response', {
+src/lib/ai-jobs/execution.ts:100:          debugIngest({ location: 'execution.ts:84', message: 'triggerAIJobExecution non-OK response', data: { jobId, status: response.status, responseText: responseText.substring(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:121:          console.debug('[AIJobs] Trigger timed out (expected); job runs on server, poll for status.', { jobId });
+src/lib/ai-jobs/execution.ts:124:            message: 'triggerAIJobExecution fetch error',
+src/lib/ai-jobs/execution.ts:132:          console.error('[AIJobs] Failed to trigger job execution:', errorDetails);
+src/lib/ai-jobs/execution.ts:134:            console.error('[AIJobs] Network error - check EXPO_PUBLIC_NETLIFY_URL configuration');
+src/lib/ai-jobs/execution.ts:138:            message: 'triggerAIJobExecution fetch error',
+src/lib/ai-jobs/execution.ts:148:    debugIngest({ location: 'execution.ts:123', message: 'triggerAIJobExecution returning success', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:150:    console.info('[AIJobs] triggerAIJobExecution end', { jobId, elapsedMs });
+src/lib/ai-jobs/execution.ts:154:    console.info('[AIJobs] triggerAIJobExecution end (error)', { jobId, elapsedMs });
+src/lib/ai-jobs/execution.ts:174:    const { createAIJob } = await import('./core');
+src/lib/ai-jobs/execution.ts:176:    const { data: job, error } = await createAIJob(userId, jobType, input);
+src/lib/ai-jobs/execution.ts:183:    triggerAIJobExecution(job.id).then((result) => {
+src/lib/ai-jobs/execution.ts:185:        console.warn('[AIJobs] Trigger returned error (job still runs on server):', result.error?.message);
+src/lib/ai-jobs/execution.ts:188:      console.warn('[AIJobs] Trigger failed (job still runs on server):', err?.message ?? err);
+src/hooks/profile/useHeadshotDetailActions.ts:15:  triggerAIJobExecution,
+src/hooks/profile/useHeadshotDetailActions.ts:16:  waitForAIJobCompletion,
+src/hooks/profile/useHeadshotDetailActions.ts:135:      await triggerAIJobExecution(job.id);
+src/hooks/profile/useHeadshotDetailActions.ts:138:      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+src/lib/ai-jobs/index.ts:5: * import { createAIJob, pollAIJob, triggerAutoTag } from '@/lib/ai-jobs';
+src/lib/ai-jobs/index.ts:10:  type AIJob,
+src/lib/ai-jobs/index.ts:11:  createAIJob,
+src/lib/ai-jobs/index.ts:12:  getAIJob,
+src/lib/ai-jobs/index.ts:21:  pollAIJob,
+src/lib/ai-jobs/index.ts:22:  pollAIJobFixedInterval,
+src/lib/ai-jobs/index.ts:23:  pollAIJobWithFinalCheck,
+src/lib/ai-jobs/index.ts:24:  waitForAIJobCompletion,
+src/lib/ai-jobs/index.ts:31:  triggerAIJobExecution,
+src/hooks/outfits/useOutfitView.ts:14:  pollAIJobWithFinalCheck,
+src/hooks/outfits/useOutfitView.ts:92:      const { data: finalJob } = await pollAIJobWithFinalCheck(
+src/lib/ai-jobs/core.ts:5:export interface AIJob {
+src/lib/ai-jobs/core.ts:8:  job_type:
+src/lib/ai-jobs/core.ts:44:export async function createAIJob(
+src/lib/ai-jobs/core.ts:46:  jobType: AIJob['job_type'],
+src/lib/ai-jobs/core.ts:48:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/core.ts:51:      .from('ai_jobs')
+src/lib/ai-jobs/core.ts:54:        job_type: jobType,
+src/lib/ai-jobs/core.ts:70:export async function getAIJob(jobId: string): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/core.ts:73:      .from('ai_jobs')
+src/lib/ai-jobs/core.ts:98:  jobType: AIJob['job_type'],
+src/lib/ai-jobs/core.ts:99:  filterFn: (job: AIJob) => boolean
+src/lib/ai-jobs/core.ts:100:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/core.ts:103:      .from('ai_jobs')
+src/lib/ai-jobs/core.ts:105:      .eq('job_type', jobType)
+src/lib/ai-jobs/core.ts:133:  jobType: AIJob['job_type'],
+src/lib/ai-jobs/core.ts:134:  filterFn: (job: AIJob) => boolean
+src/lib/ai-jobs/core.ts:135:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/core.ts:140:      .from('ai_jobs')
+src/lib/ai-jobs/core.ts:142:      .eq('job_type', jobType)
+src/hooks/profile/useImageEdit.ts:74:        .from('ai_jobs')
+src/hooks/profile/useImageEdit.ts:77:        .eq('job_type', jobType)
+src/lib/ai-jobs/types.ts:2:import { createAIJob, getActiveJob, getRecentJob } from './core';
+src/lib/ai-jobs/types.ts:3:import type { AIJob } from './core';
+src/lib/ai-jobs/types.ts:15:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/types.ts:16:  return createAIJob(userId, 'auto_tag', {
+src/lib/ai-jobs/types.ts:91:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/types.ts:92:  return createAIJob(userId, 'product_shot', {
+src/lib/ai-jobs/types.ts:104:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/types.ts:121:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/types.ts:140:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/types.ts:141:  return createAIJob(userId, 'headshot_generate', {
+src/lib/ai-jobs/types.ts:156:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/types.ts:165:  return createAIJob(userId, 'body_shot_generate', input);
+src/lib/ai-jobs/types.ts:174:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/types.ts:191:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/types.ts:211:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/types.ts:212:  return createAIJob(userId, 'batch', {
+src/lib/ai-jobs/types.ts:226:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/types.ts:243:): Promise<QueryResult<AIJob>> {
+src/hooks/outfits/useOutfitEditorActions.ts:16:  createAIJob,
+src/hooks/outfits/useOutfitEditorActions.ts:17:  triggerAIJobExecution,
+src/hooks/outfits/useOutfitEditorActions.ts:18:  pollAIJobWithFinalCheck,
+src/hooks/outfits/useOutfitEditorActions.ts:408:      const { data: renderJob, error } = await createAIJob(
+src/hooks/outfits/useOutfitEditorActions.ts:430:      await triggerAIJobExecution(renderJob.id);
+src/hooks/outfits/useOutfitEditorActions.ts:443:      const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
+src/hooks/social/useTryOnOutfit.ts:10:import { createAIJob, triggerAIJobExecution, waitForAIJobCompletion, getOutfitRenderItemLimit } from '@/lib/ai-jobs';
+src/hooks/social/useTryOnOutfit.ts:121:        const { data: mannequinJob, error: mannequinError } = await createAIJob(userId, 'outfit_mannequin', {
+src/hooks/social/useTryOnOutfit.ts:131:        await triggerAIJobExecution(mannequinJob.id);
+src/hooks/social/useTryOnOutfit.ts:132:        const { data: mannequinResult, error: mannequinPollError } = await waitForAIJobCompletion(
+src/hooks/social/useTryOnOutfit.ts:146:      const { data: renderJob, error: jobError } = await createAIJob(userId, 'outfit_render', {
+src/hooks/social/useTryOnOutfit.ts:157:      const triggerResult = await triggerAIJobExecution(renderJob.id);
+src/hooks/social/useTryOnOutfit.ts:173:        const { data: finalJob, error: pollError } = await waitForAIJobCompletion(
+src/hooks/profile/useImageGeneration.ts:14:  triggerAIJobExecution,
+src/hooks/profile/useImageGeneration.ts:15:  waitForAIJobCompletion,
+src/hooks/profile/useImageGeneration.ts:173:      await triggerAIJobExecution(job.id);
+src/hooks/profile/useImageGeneration.ts:179:      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+src/hooks/profile/useImageGeneration.ts:278:      await triggerAIJobExecution(job.id);
+src/hooks/profile/useImageGeneration.ts:281:      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+src/lib/ai-jobs/polling.ts:2:import { getAIJob } from './core';
+src/lib/ai-jobs/polling.ts:3:import type { AIJob } from './core';
+src/lib/ai-jobs/polling.ts:15:export async function pollAIJob(
+src/lib/ai-jobs/polling.ts:19:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/polling.ts:21:    debugIngest({ location: 'polling.ts:19', message: 'pollAIJob already polling', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:27:    debugIngest({ location: 'polling.ts:24', message: 'pollAIJob circuit breaker open', data: { jobId, failureCount }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:41:      const { data, error } = await getAIJob(jobId);
+src/lib/ai-jobs/polling.ts:44:        debugIngest({ location: 'polling.ts:38', message: 'pollAIJob attempt', data: { jobId, attempt, maxAttempts, hasError: !!error, errorMessage: error?.message, hasData: !!data, status: data?.status }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:64:        debugIngest({ location: 'polling.ts:55', message: 'pollAIJob succeeded', data: { jobId, result: data.result }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:70:        debugIngest({ location: 'polling.ts:60', message: 'pollAIJob failed', data: { jobId, error: data.error }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:80:    debugIngest({ location: 'polling.ts:71', message: 'pollAIJob timeout', data: { jobId, maxAttempts }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:92:export async function pollAIJobFixedInterval(
+src/lib/ai-jobs/polling.ts:96:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/polling.ts:111:      const { data, error } = await getAIJob(jobId);
+src/lib/ai-jobs/polling.ts:141:export async function pollAIJobWithFinalCheck(
+src/lib/ai-jobs/polling.ts:147:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/polling.ts:148:  let completedJob: AIJob | null = null;
+src/lib/ai-jobs/polling.ts:154:    const result = await pollAIJobFixedInterval(jobId, maxMs, intervalMs);
+src/lib/ai-jobs/polling.ts:158:    const result = await pollAIJob(jobId, maxAttempts, initialIntervalMs);
+src/lib/ai-jobs/polling.ts:171:  const { data: finalCheck } = await getAIJob(jobId);
+src/lib/ai-jobs/polling.ts:186:export async function waitForAIJobCompletion(
+src/lib/ai-jobs/polling.ts:191:): Promise<QueryResult<AIJob>> {
+src/lib/ai-jobs/polling.ts:193:  console.info('[AIJobs] waitForAIJobCompletion start', { jobId, maxAttempts, initialIntervalMs });
+src/lib/ai-jobs/polling.ts:194:  debugIngest({ location: 'polling.ts:114', message: 'waitForAIJobCompletion entry', data: { jobId, maxAttempts, initialIntervalMs, logPrefix }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:201:    const { data: completedJob, error } = await pollAIJobFixedInterval(jobId, maxMs, intervalMs);
+src/lib/ai-jobs/polling.ts:202:    debugIngest({ location: 'polling.ts:121', message: 'waitForAIJobCompletion poll result', data: { jobId, hasJob: !!completedJob, jobStatus: completedJob?.status, hasError: !!error, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:206:      console.info('[AIJobs] waitForAIJobCompletion end', { jobId, status: completedJob.status, elapsedMs });
+src/lib/ai-jobs/polling.ts:214:      const { data: finalCheck } = await getAIJob(jobId);
+src/lib/ai-jobs/polling.ts:217:        console.info('[AIJobs] waitForAIJobCompletion end (final check)', { jobId, status: finalCheck.status, elapsedMs });
+src/lib/ai-jobs/polling.ts:223:    console.info('[AIJobs] waitForAIJobCompletion end (error)', { jobId, errorMessage: error?.message, elapsedMs });
+src/lib/ai-jobs/polling.ts:228:    const { data: completedJob, error } = await pollAIJobWithFinalCheck(
+src/lib/ai-jobs/polling.ts:235:    debugIngest({ location: 'polling.ts:121', message: 'waitForAIJobCompletion poll result', data: { jobId, hasJob: !!completedJob, jobStatus: completedJob?.status, hasError: !!error, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:239:      console.info('[AIJobs] waitForAIJobCompletion end', { jobId, status: completedJob.status, elapsedMs });
+src/lib/ai-jobs/polling.ts:247:      debugIngest({ location: 'polling.ts:132', message: 'waitForAIJobCompletion timeout, continuing', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:253:    console.info('[AIJobs] waitForAIJobCompletion end (error)', { jobId, errorMessage: error?.message, elapsedMs });
+src/lib/ai-jobs/polling.ts:254:    debugIngest({ location: 'polling.ts:139', message: 'waitForAIJobCompletion returning error', data: { jobId, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/hooks/outfits/useOutfitGeneration.ts.backup:8:import { createAndTriggerJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
+src/hooks/outfits/useOutfitGeneration.ts.backup:304:        const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
+src/hooks/outfits/useOutfitGeneration.ts:16:import { createAndTriggerJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
+src/hooks/outfits/useOutfitGeneration.ts:515:        const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
+src/hooks/wardrobe/useWardrobeItemDetail.ts:292:              .from('ai_jobs')
+src/hooks/wardrobe/useWardrobeItemDetail.ts:294:              .eq('job_type', 'auto_tag')
+src/hooks/wardrobe/useAddWardrobeItem.ts:12:import { useAIJobPolling } from '@/hooks/ai';
+src/hooks/wardrobe/useAddWardrobeItem.ts:14:import { triggerBatchJob, triggerAIJobExecution } from '@/lib/ai-jobs';
+src/hooks/wardrobe/useAddWardrobeItem.ts:66:  console.log('[useAddWardrobeItem] useAIJobPolling hook render:', {
+src/hooks/wardrobe/useAddWardrobeItem.ts:72:  const { job: aiJob } = useAIJobPolling({
+src/hooks/wardrobe/useAddWardrobeItem.ts:78:        jobType: job.job_type,
+src/hooks/wardrobe/useAddWardrobeItem.ts:84:        if (job.job_type === 'batch') {
+src/hooks/wardrobe/useAddWardrobeItem.ts:140:        if (job.job_type === 'batch' && job.result) {
+src/hooks/wardrobe/useAddWardrobeItem.ts:346:          jobType: batchJob.job_type,
+src/hooks/wardrobe/useAddWardrobeItem.ts:364:        const { error: execError } = await triggerAIJobExecution(batchJob.id);
+src/hooks/wardrobe/useWardrobeItemPolling.ts:7:import { getAIJob, AIJob } from '@/lib/ai-jobs';
+src/hooks/wardrobe/useWardrobeItemPolling.ts:50:        const { data: job, error } = await getAIJob(jobId);

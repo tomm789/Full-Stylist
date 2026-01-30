@@ -1,0 +1,27 @@
+      .single();
+
+    if (linkError || !link) {
+      return { data: null, error: linkError };
+    }
+
+    const { data: image, error: imageError } = await supabase
+      .from('images')
+      .select('*')
+      .eq('id', link.image_id)
+      .single();
+
+    if (imageError) {
+      return { data: null, error: imageError };
+    }
+
+    return {
+      data: {
+        ...link,
+        image,
+      },
+      error: null,
+    };
+  } catch (error: any) {
+    return { data: null, error };
+  }
+}

@@ -10,6 +10,7 @@ export {
   type AIJob,
   createAIJob,
   getAIJob,
+  getAIJobNoStore,
   isGeminiPolicyBlockError,
   getActiveJob,
   getRecentJob,
@@ -46,4 +47,8 @@ export {
   triggerBatchJob,
   getActiveBatchJob,
   getRecentBatchJob,
+  triggerWardrobeItemRender,
+  getActiveWardrobeItemRenderJob,
+  triggerWardrobeItemTag,
+  triggerWardrobeItemGenerate,
 } from './types';

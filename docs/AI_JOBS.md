@@ -5,7 +5,7 @@ Client only creates ai_jobs rows and polls status.
 
 ## Common fields
 ai_jobs:
-- job_type: auto_tag | product_shot | headshot_generate | body_shot_generate | outfit_suggest | reference_match | outfit_render | lookbook_generate
+- job_type: auto_tag | product_shot | headshot_generate | body_shot_generate | outfit_suggest | reference_match | outfit_render | lookbook_generate | batch | wardrobe_item_render | wardrobe_item_tag | wardrobe_item_generate
 - input: JSON payload
 - result: JSON payload
 - status: queued | running | succeeded | failed
@@ -68,6 +68,50 @@ ai_jobs:
   ],
   "suggested_title": "White linen shirt",
   "suggested_notes": "Lightweight, breathable, easy to dress up or down."
+}
+
+## 3b) wardrobe_item_render (critical path: image only)
+Used for add-item flow. Image first; tagging runs later as `wardrobe_item_tag`. Target ~15s so image is visible soon after job success.
+### input
+{
+  "item_id": "uuid",
+  "source_image_id": "uuid"
+}
+### result
+{
+  "item_id": "uuid",
+  "image_id": "uuid",
+  "storage_key": "user_id/ai/product_shots/timestamp.jpg",
+  "base64_result": "optional base64 for fast-path"
+}
+
+## 3c) wardrobe_item_tag (follow-up: title, description, attributes)
+Triggered after `wardrobe_item_render` succeeds. Not on critical path for image display.
+### input
+{
+  "item_id": "uuid",
+  "image_ids": ["uuid", "..."]
+}
+### result
+Same as auto_tag (attributes, suggested_title, suggested_notes, updates_applied).
+
+## 3d) wardrobe_item_generate (unified: image + text in parallel)
+**Replaces the two-job `wardrobe_item_render` + `wardrobe_item_tag` flow for add-item.** Single job produces both product shot image and text (title, description, attributes) in parallel. Target ~10-15s total time. Client polls once and receives combined result with both image and text fields.
+### input
+{
+  "item_id": "uuid",
+  "source_image_id": "uuid"
+}
+### result
+{
+  "item_id": "uuid",
+  "image_id": "uuid",
+  "storage_key": "user_id/ai/product_shots/timestamp.jpg",
+  "base64_result": "optional base64 for fast-path display",
+  "suggested_title": "string",
+  "suggested_notes": "string",
+  "attributes": [{"key": "color", "values": [{"value": "white", "confidence": 0.92}]}, ...],
+  "updates_applied": {"title": "...", "description": "...", ...}
 }
 
 ## 4) outfit_suggest (per category/subcategory)

@@ -250,3 +250,66 @@ export async function getRecentBatchJob(
     }
   });
 }
+
+/**
+ * Trigger wardrobe_item_render job (critical path: image only).
+ * Use this for add-item flow; trigger wardrobe_item_tag after render succeeds.
+ */
+export async function triggerWardrobeItemRender(
+  userId: string,
+  itemId: string,
+  sourceImageId: string
+): Promise<QueryResult<AIJob>> {
+  return createAIJob(userId, 'wardrobe_item_render', {
+    item_id: itemId,
+    source_image_id: sourceImageId,
+  });
+}
+
+/**
+ * Get active wardrobe_item_render job for an item
+ */
+export async function getActiveWardrobeItemRenderJob(
+  itemId: string,
+  userId: string
+): Promise<QueryResult<AIJob>> {
+  return getActiveJob(userId, 'wardrobe_item_render', (job) => {
+    try {
+      const input = job.input as any;
+      return input?.item_id === itemId;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * Trigger wardrobe_item_tag job (follow-up: title, description, attributes).
+ * Call after wardrobe_item_render succeeds; do not block UI on this.
+ */
+export async function triggerWardrobeItemTag(
+  userId: string,
+  itemId: string,
+  imageIds: string[]
+): Promise<QueryResult<AIJob>> {
+  return createAIJob(userId, 'wardrobe_item_tag', {
+    item_id: itemId,
+    image_ids: imageIds,
+  });
+}
+
+/**
+ * Trigger wardrobe_item_generate job (unified: image + text in parallel).
+ * Single job produces both product shot and text (title, description, attributes).
+ * Use this for add-item flow; replaces wardrobe_item_render + wardrobe_item_tag.
+ */
+export async function triggerWardrobeItemGenerate(
+  userId: string,
+  itemId: string,
+  sourceImageId: string
+): Promise<QueryResult<AIJob>> {
+  return createAIJob(userId, 'wardrobe_item_generate', {
+    item_id: itemId,
+    source_image_id: sourceImageId,
+  });
+}

@@ -5,6 +5,8 @@ export const SUPABASE_CONFIG = {
   ENABLED: process.env.EXPO_PUBLIC_ENABLE_SUPABASE !== 'false',
   REALTIME_ENABLED: process.env.EXPO_PUBLIC_ENABLE_REALTIME === 'true',
   POLLING_ENABLED: process.env.EXPO_PUBLIC_ENABLE_POLLING === 'true',
+  url: process.env.EXPO_PUBLIC_SUPABASE_URL || '',
+  anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
 };
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';

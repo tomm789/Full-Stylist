@@ -1,0 +1,80 @@
+src/hooks/ai/useProductShot.ts:9:  triggerAIJobExecution,
+src/hooks/ai/useProductShot.ts:109:      const { error: execError } = await triggerAIJobExecution(productShotJob.id);
+src/hooks/outfits/useOutfitEditorActions.ts:16:  createAIJob,
+src/hooks/outfits/useOutfitEditorActions.ts:17:  triggerAIJobExecution,
+src/hooks/outfits/useOutfitEditorActions.ts:408:      const { data: renderJob, error } = await createAIJob(
+src/hooks/outfits/useOutfitEditorActions.ts:430:      await triggerAIJobExecution(renderJob.id);
+src/hooks/outfits/useOutfitGeneration.ts:330:              if (a.type === 'product_shot' && b.type !== 'product_shot') return -1;
+src/hooks/outfits/useOutfitGeneration.ts:331:              if (b.type === 'product_shot' && a.type !== 'product_shot') return 1;
+src/hooks/outfits/useBackgroundGridGenerator.ts:92:            if (a.type === 'product_shot' && b.type !== 'product_shot') return -1;
+src/hooks/outfits/useBackgroundGridGenerator.ts:93:            if (b.type === 'product_shot' && a.type !== 'product_shot') return 1;
+src/hooks/wardrobe/useWardrobeItemDetail.ts:157:  // Batch job polling (handles both product_shot and auto_tag)
+src/hooks/wardrobe/useWardrobeItemDetail.ts:218:        // Check for batch job first (new approach - combines product_shot and auto_tag)
+src/hooks/wardrobe/useWardrobeItemDetail.ts:240:                (img) => img.type === 'product_shot'
+src/hooks/wardrobe/useWardrobeItemDetail.ts:244:                  (img) => img.type === 'product_shot' && img.image?.created_at
+src/hooks/wardrobe/useWardrobeItemDetail.ts:294:              .eq('job_type', 'auto_tag')
+src/hooks/wardrobe/useWardrobeItemDetail.ts:342:      (img) => img.type === 'product_shot'
+src/hooks/outfits/useOutfitGeneration.ts.backup:137:            if (a.type === 'product_shot' && b.type !== 'product_shot') return -1;
+src/hooks/outfits/useOutfitGeneration.ts.backup:138:            if (b.type === 'product_shot' && a.type !== 'product_shot') return 1;
+src/hooks/wardrobe/useWardrobeItemData.ts:65:        (img) => img.type === 'original' || img.type === 'product_shot'
+src/hooks/wardrobe/useWardrobeItemData.ts:127:          (img) => img.type === 'original' || img.type === 'product_shot'
+src/hooks/social/useTryOnOutfit.ts:10:import { createAIJob, triggerAIJobExecution, waitForAIJobCompletion, getOutfitRenderItemLimit } from '@/lib/ai-jobs';
+src/hooks/social/useTryOnOutfit.ts:121:        const { data: mannequinJob, error: mannequinError } = await createAIJob(userId, 'outfit_mannequin', {
+src/hooks/social/useTryOnOutfit.ts:131:        await triggerAIJobExecution(mannequinJob.id);
+src/hooks/social/useTryOnOutfit.ts:146:      const { data: renderJob, error: jobError } = await createAIJob(userId, 'outfit_render', {
+src/hooks/social/useTryOnOutfit.ts:157:      const triggerResult = await triggerAIJobExecution(renderJob.id);
+src/hooks/profile/useHeadshotDetailActions.ts:15:  triggerAIJobExecution,
+src/hooks/profile/useHeadshotDetailActions.ts:135:      await triggerAIJobExecution(job.id);
+src/hooks/wardrobe/useAddWardrobeItem.ts:14:import { triggerBatchJob, triggerAIJobExecution } from '@/lib/ai-jobs';
+src/hooks/wardrobe/useAddWardrobeItem.ts:85:          // Extract product_shot result from batch job
+src/hooks/wardrobe/useAddWardrobeItem.ts:87:          const productShotResult = batchResult?.product_shot;
+src/hooks/wardrobe/useAddWardrobeItem.ts:88:          const autoTagResult = batchResult?.auto_tag;
+src/hooks/wardrobe/useAddWardrobeItem.ts:99:          // Check if product_shot succeeded
+src/hooks/wardrobe/useAddWardrobeItem.ts:121:            console.warn('[BatchJob] No valid product_shot result found in batch job', {
+src/hooks/wardrobe/useAddWardrobeItem.ts:142:          const productShotResult = batchResult?.product_shot;
+src/hooks/wardrobe/useAddWardrobeItem.ts:144:          // Even if the overall job failed, check if product_shot succeeded
+src/hooks/wardrobe/useAddWardrobeItem.ts:146:            console.log('[BatchJob] Job marked as failed but product_shot succeeded');
+src/hooks/wardrobe/useAddWardrobeItem.ts:324:        // Trigger batch job (product_shot + auto_tag) - single request, shared image download
+src/hooks/wardrobe/useAddWardrobeItem.ts:364:        const { error: execError } = await triggerAIJobExecution(batchJob.id);
+src/hooks/profile/useImageGeneration.ts:14:  triggerAIJobExecution,
+src/hooks/profile/useImageGeneration.ts:173:      await triggerAIJobExecution(job.id);
+src/hooks/profile/useImageGeneration.ts:278:      await triggerAIJobExecution(job.id);
+src/lib/ai-jobs/execution.ts:7:export async function triggerAIJobExecution(
+src/lib/ai-jobs/execution.ts:11:  console.info('[AIJobs] triggerAIJobExecution start', { jobId });
+src/lib/ai-jobs/execution.ts:13:  debugIngest({ location: 'execution.ts:10', message: 'triggerAIJobExecution entry', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:21:    debugIngest({ location: 'execution.ts:18', message: 'triggerAIJobExecution session check', data: { jobId, hasSession: !!session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:61:    const functionUrl = `${baseUrlNormalized}/.netlify/functions/ai-job-runner`;
+src/lib/ai-jobs/execution.ts:63:    debugIngest({ location: 'execution.ts:55', message: 'triggerAIJobExecution before fetch', data: { jobId, functionUrl, baseUrl, hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:89:        debugIngest({ location: 'execution.ts:78', message: 'triggerAIJobExecution fetch response', data: { jobId, status: response.status, statusText: response.statusText, ok: response.ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:100:          debugIngest({ location: 'execution.ts:84', message: 'triggerAIJobExecution non-OK response', data: { jobId, status: response.status, responseText: responseText.substring(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:124:            message: 'triggerAIJobExecution fetch error',
+src/lib/ai-jobs/execution.ts:138:            message: 'triggerAIJobExecution fetch error',
+src/lib/ai-jobs/execution.ts:148:    debugIngest({ location: 'execution.ts:123', message: 'triggerAIJobExecution returning success', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:150:    console.info('[AIJobs] triggerAIJobExecution end', { jobId, elapsedMs });
+src/lib/ai-jobs/execution.ts:154:    console.info('[AIJobs] triggerAIJobExecution end (error)', { jobId, elapsedMs });
+src/lib/ai-jobs/execution.ts:174:    const { createAIJob } = await import('./core');
+src/lib/ai-jobs/execution.ts:176:    const { data: job, error } = await createAIJob(userId, jobType, input);
+src/lib/ai-jobs/execution.ts:183:    triggerAIJobExecution(job.id).then((result) => {
+src/lib/ai-jobs/types.ts:2:import { createAIJob, getActiveJob, getRecentJob } from './core';
+src/lib/ai-jobs/types.ts:7: * Trigger auto_tag job for wardrobe item
+src/lib/ai-jobs/types.ts:16:  return createAIJob(userId, 'auto_tag', {
+src/lib/ai-jobs/types.ts:25: * Apply auto_tag results to wardrobe item
+src/lib/ai-jobs/types.ts:85: * Trigger product_shot job for wardrobe item
+src/lib/ai-jobs/types.ts:92:  return createAIJob(userId, 'product_shot', {
+src/lib/ai-jobs/types.ts:99: * Get active product_shot job for a wardrobe item
+src/lib/ai-jobs/types.ts:105:  return getActiveJob(userId, 'product_shot', (job) => {
+src/lib/ai-jobs/types.ts:116: * Get recently completed product_shot job for a wardrobe item
+src/lib/ai-jobs/types.ts:122:  return getRecentJob(userId, 'product_shot', (job) => {
+src/lib/ai-jobs/types.ts:141:  return createAIJob(userId, 'headshot_generate', {
+src/lib/ai-jobs/types.ts:165:  return createAIJob(userId, 'body_shot_generate', input);
+src/lib/ai-jobs/types.ts:203: * Trigger batch job for wardrobe item (combines product_shot and auto_tag)
+src/lib/ai-jobs/types.ts:212:  return createAIJob(userId, 'batch', {
+src/lib/ai-jobs/types.ts:214:    tasks: ['product_shot', 'auto_tag'],
+src/lib/ai-jobs/index.ts:5: * import { createAIJob, pollAIJob, triggerAutoTag } from '@/lib/ai-jobs';
+src/lib/ai-jobs/index.ts:11:  createAIJob,
+src/lib/ai-jobs/index.ts:31:  triggerAIJobExecution,
+src/lib/wardrobe/images.ts:132:  type: 'original' | 'product_shot' = 'original',
+src/lib/ai-jobs/core.ts:9:    | 'auto_tag'
+src/lib/ai-jobs/core.ts:10:    | 'product_shot'
+src/lib/ai-jobs/core.ts:44:export async function createAIJob(
+src/lib/attributes/entity-attributes.ts:157: * Batch create entity attributes from AI auto_tag result

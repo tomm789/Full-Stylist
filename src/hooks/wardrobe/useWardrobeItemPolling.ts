@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { getAIJob, AIJob } from '@/lib/ai-jobs';
+import { getAIJobNoStore, AIJob } from '@/lib/ai-jobs';
 
 interface UseWardrobeItemPollingProps {
   jobId: string | null;
@@ -47,7 +47,7 @@ export const useWardrobeItemPolling = ({
     // Start polling
     pollingIntervalRef.current = setInterval(async () => {
       try {
-        const { data: job, error } = await getAIJob(jobId);
+        const { data: job, error } = await getAIJobNoStore(jobId);
 
         if (error) {
           console.error(`${logPrefix} Error fetching job:`, error);

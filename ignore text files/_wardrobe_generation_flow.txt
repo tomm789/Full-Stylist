@@ -1,0 +1,2 @@
+src/lib/import/wardrobe-import.ts:2:import { getDefaultWardrobeId, createWardrobeItem } from '../wardrobe';
+src/hooks/wardrobe/useAddWardrobeItem.ts:13:import { createWardrobeItem } from '@/lib/wardrobe';
