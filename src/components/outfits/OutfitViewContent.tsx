@@ -190,7 +190,7 @@ export function OutfitViewContent({
             <AIGenerationFeedback
               jobId={feedbackJobId}
               jobType={feedbackJobType}
-              onClose={() => onFeedbackSubmitted?.(feedbackJobId)}
+              onClose={(id) => id != null && onFeedbackSubmitted?.(id)}
               compact={feedbackCompact}
             />
           )}

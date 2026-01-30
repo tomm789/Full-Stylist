@@ -4,6 +4,56 @@ import type { AIJob } from './core';
 import type { QueryResult } from '../utils/supabase-helpers';
 
 /**
+ * Defensive: resolve wardrobe item id from job input (item_id or wardrobe_item_id).
+ * wardrobe_item_generate and wardrobe_item_render use item_id; product_shot/batch use wardrobe_item_id.
+ */
+function getWardrobeItemIdFromJobInput(job: AIJob): string | null {
+  try {
+    const input = job.input as Record<string, unknown> | undefined;
+    if (!input) return null;
+    const id = (input.item_id as string) ?? (input.wardrobe_item_id as string);
+    return typeof id === 'string' ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Defensive: resolve generated image id from job result (image_id, generated_image_id, output_image_id).
+ */
+function getResultImageIdFromJob(job: AIJob): string | null {
+  try {
+    const result = job.result as Record<string, unknown> | undefined;
+    if (!result) return null;
+    const id =
+      (result.image_id as string) ??
+      (result.generated_image_id as string) ??
+      (result.output_image_id as string);
+    return typeof id === 'string' ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Dev-only: log job input/result keys once when (globalThis as any).__FEEDBACK_OVERLAY_DEBUG__ is set.
+ * Use to verify payload shapes if matching breaks (e.g. new backend result keys).
+ */
+function logJobPayloadKeysIfDebug(job: AIJob): void {
+  if (typeof __DEV__ === 'undefined' || !__DEV__) return;
+  const flag = (globalThis as any).__FEEDBACK_OVERLAY_DEBUG__;
+  if (flag !== true) return;
+  const inputKeys = job.input && typeof job.input === 'object' ? Object.keys(job.input) : [];
+  const resultKeys = job.result && typeof job.result === 'object' ? Object.keys(job.result) : [];
+  console.debug('[feedback_overlay] job payload keys', {
+    job_type: job.job_type,
+    job_id: job.id,
+    input_keys: inputKeys,
+    result_keys: resultKeys,
+  });
+}
+
+/**
  * Trigger auto_tag job for wardrobe item
  */
 export async function triggerAutoTag(
@@ -273,14 +323,9 @@ export async function getActiveWardrobeItemRenderJob(
   itemId: string,
   userId: string
 ): Promise<QueryResult<AIJob>> {
-  return getActiveJob(userId, 'wardrobe_item_render', (job) => {
-    try {
-      const input = job.input as any;
-      return input?.item_id === itemId;
-    } catch {
-      return false;
-    }
-  });
+  return getActiveJob(userId, 'wardrobe_item_render', (job) =>
+    getWardrobeItemIdFromJobInput(job) === itemId
+  );
 }
 
 /**
@@ -290,14 +335,9 @@ export async function getActiveWardrobeItemGenerateJob(
   itemId: string,
   userId: string
 ): Promise<QueryResult<AIJob>> {
-  return getActiveJob(userId, 'wardrobe_item_generate', (job) => {
-    try {
-      const input = job.input as any;
-      return input?.item_id === itemId;
-    } catch {
-      return false;
-    }
-  });
+  return getActiveJob(userId, 'wardrobe_item_generate', (job) =>
+    getWardrobeItemIdFromJobInput(job) === itemId
+  );
 }
 
 /**
@@ -329,4 +369,177 @@ export async function triggerWardrobeItemGenerate(
     item_id: itemId,
     source_image_id: sourceImageId,
   });
+}
+
+/**
+ * Get recently completed wardrobe_item_generate job for an item.
+ * Uses 60-second window (getRecentJob); for feedback overlay on reload use getRecentWardrobeItemJobForFeedback (30 days).
+ */
+export async function getRecentWardrobeItemGenerateJob(
+  itemId: string,
+  userId: string
+): Promise<QueryResult<AIJob>> {
+  return getRecentJob(userId, 'wardrobe_item_generate', (job) =>
+    getWardrobeItemIdFromJobInput(job) === itemId
+  );
+}
+
+/**
+ * Get recently completed wardrobe_item_render job for an item.
+ * Uses 60-second window; for feedback overlay on reload use getRecentWardrobeItemJobForFeedback (30 days).
+ */
+export async function getRecentWardrobeItemRenderJob(
+  itemId: string,
+  userId: string
+): Promise<QueryResult<AIJob>> {
+  return getRecentJob(userId, 'wardrobe_item_render', (job) =>
+    getWardrobeItemIdFromJobInput(job) === itemId
+  );
+}
+
+/**
+ * Get active wardrobe item job (prefer wardrobe_item_generate, then wardrobe_item_render).
+ * Use for feedback overlay: when view shows generated image from either job type.
+ */
+export async function getActiveWardrobeItemJob(
+  wardrobeItemId: string,
+  userId: string
+): Promise<QueryResult<AIJob>> {
+  const { data: generateJob } = await getActiveWardrobeItemGenerateJob(wardrobeItemId, userId);
+  if (generateJob) return { data: generateJob, error: null };
+  return getActiveWardrobeItemRenderJob(wardrobeItemId, userId);
+}
+
+/** 30-day window for "recent succeeded job" when loading view (feedback overlay / feedback_at). */
+const RECENT_JOB_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Get the most recent succeeded wardrobe item job (generate or render) for this item.
+ * Uses 30-day window; this is the path for reload → compact (feedback overlay).
+ * Do not use the 60-second getRecentWardrobeItemGenerateJob/getRecentWardrobeItemRenderJob for feedback on reload.
+ */
+export async function getRecentWardrobeItemJobForFeedback(
+  itemId: string,
+  userId: string
+): Promise<QueryResult<AIJob>> {
+  try {
+    const since = new Date(Date.now() - RECENT_JOB_DAYS_MS).toISOString();
+    const { data: generateJobs, error: e1 } = await supabase
+      .from('ai_jobs')
+      .select('*')
+      .eq('job_type', 'wardrobe_item_generate')
+      .eq('owner_user_id', userId)
+      .eq('status', 'succeeded')
+      .gte('updated_at', since)
+      .order('updated_at', { ascending: false })
+      .limit(10);
+
+    if (e1) return { data: null, error: e1 };
+    const matchGenerate = (generateJobs || []).find(
+      (j: AIJob) => getWardrobeItemIdFromJobInput(j) === itemId
+    );
+    if (matchGenerate) {
+      logJobPayloadKeysIfDebug(matchGenerate);
+      return { data: matchGenerate, error: null };
+    }
+
+    const { data: renderJobs, error: e2 } = await supabase
+      .from('ai_jobs')
+      .select('*')
+      .eq('job_type', 'wardrobe_item_render')
+      .eq('owner_user_id', userId)
+      .eq('status', 'succeeded')
+      .gte('updated_at', since)
+      .order('updated_at', { ascending: false })
+      .limit(10);
+
+    if (e2) return { data: null, error: e2 };
+    const matchRender = (renderJobs || []).find(
+      (j: AIJob) => getWardrobeItemIdFromJobInput(j) === itemId
+    );
+    if (matchRender) logJobPayloadKeysIfDebug(matchRender);
+    return { data: matchRender || null, error: null };
+  } catch (err: any) {
+    return { data: null, error: err };
+  }
+}
+
+/**
+ * Get active headshot_generate job for the user.
+ * Internal: matches any active job for userId (already scoped by getActiveJob).
+ * Prefer resolving by image id via getRecentHeadshotJobForImage when you have the viewed image id.
+ */
+export async function getActiveHeadshotJob(userId: string): Promise<QueryResult<AIJob>> {
+  return getActiveJob(userId, 'headshot_generate', () => true);
+}
+
+/**
+ * Get recently completed headshot_generate job that produced this image.
+ * Used when loading headshot view to show feedback overlay (and feedback_at for compact).
+ */
+export async function getRecentHeadshotJobForImage(
+  userId: string,
+  imageId: string
+): Promise<QueryResult<AIJob>> {
+  try {
+    const since = new Date(Date.now() - RECENT_JOB_DAYS_MS).toISOString();
+    const { data, error } = await supabase
+      .from('ai_jobs')
+      .select('*')
+      .eq('job_type', 'headshot_generate')
+      .eq('owner_user_id', userId)
+      .eq('status', 'succeeded')
+      .gte('updated_at', since)
+      .order('updated_at', { ascending: false })
+      .limit(50);
+
+    if (error) return { data: null, error };
+    const job = (data || []).find(
+      (j: AIJob) => getResultImageIdFromJob(j) === imageId
+    );
+    if (job) logJobPayloadKeysIfDebug(job);
+    return { data: job || null, error: null };
+  } catch (err: any) {
+    return { data: null, error: err };
+  }
+}
+
+/**
+ * Get active body_shot_generate job for the user.
+ * Internal: matches any active job for userId (already scoped by getActiveJob).
+ * Prefer resolving by image id via getRecentBodyshotJobForImage when you have the viewed image id.
+ */
+export async function getActiveBodyshotJob(userId: string): Promise<QueryResult<AIJob>> {
+  return getActiveJob(userId, 'body_shot_generate', () => true);
+}
+
+/**
+ * Get recently completed body_shot_generate job that produced this image.
+ * Used when loading bodyshot view to show feedback overlay (and feedback_at for compact).
+ */
+export async function getRecentBodyshotJobForImage(
+  userId: string,
+  imageId: string
+): Promise<QueryResult<AIJob>> {
+  try {
+    const since = new Date(Date.now() - RECENT_JOB_DAYS_MS).toISOString();
+    const { data, error } = await supabase
+      .from('ai_jobs')
+      .select('*')
+      .eq('job_type', 'body_shot_generate')
+      .eq('owner_user_id', userId)
+      .eq('status', 'succeeded')
+      .gte('updated_at', since)
+      .order('updated_at', { ascending: false })
+      .limit(50);
+
+    if (error) return { data: null, error };
+    const job = (data || []).find(
+      (j: AIJob) => getResultImageIdFromJob(j) === imageId
+    );
+    if (job) logJobPayloadKeysIfDebug(job);
+    return { data: job || null, error: null };
+  } catch (err: any) {
+    return { data: null, error: err };
+  }
 }
