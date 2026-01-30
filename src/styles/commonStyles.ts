@@ -93,6 +93,17 @@ export const commonStyles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.6,
   },
+  buttonBase: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+  },
+  buttonPadding: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
   
   // Pills
   pill: {

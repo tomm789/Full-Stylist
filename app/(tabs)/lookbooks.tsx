@@ -81,7 +81,7 @@ export default function LookbooksScreen() {
 
   if (isLoading) {
     return (
-      <View style={commonStyles.container}>
+      <View style={commonStyles.loadingContainer}>
         <LoadingSpinner text="Loading lookbooks..." />
       </View>
     );

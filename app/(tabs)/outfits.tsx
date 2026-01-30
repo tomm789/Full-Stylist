@@ -81,7 +81,7 @@ export default function OutfitsScreen() {
   // Loading state
   if (loading && outfits.length === 0) {
     return (
-      <View style={commonStyles.container}>
+      <View style={commonStyles.loadingContainer}>
         <LoadingSpinner text="Loading outfits..." />
       </View>
     );

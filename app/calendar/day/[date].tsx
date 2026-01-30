@@ -3,7 +3,7 @@
  * View and manage calendar entries for a specific day
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -33,11 +33,16 @@ const { colors, spacing, borderRadius } = theme;
 
 export default function CalendarDayScreen() {
   const { date, autoAdd } = useLocalSearchParams<{
-    date: string;
-    autoAdd?: string;
+    date: string | string[];
+    autoAdd?: string | string[];
   }>();
+
   const router = useRouter();
   const { user } = useAuth();
+
+  const userId = user?.id;
+  const dateKey = Array.isArray(date) ? date[0] : date;
+  const autoAddKey = Array.isArray(autoAdd) ? autoAdd[0] : autoAdd;
 
   // Data hooks
   const {
@@ -48,10 +53,10 @@ export default function CalendarDayScreen() {
     updateEntry,
     deleteEntry,
     reorderEntries,
-  } = useDayEntries({ userId: user?.id, date });
+  } = useDayEntries({ userId, date: dateKey });
 
-  const { presets, createPreset } = useSlotPresets({ userId: user?.id });
-  const { outfits, outfitImages } = useUserOutfits({ userId: user?.id });
+  const { presets, createPreset } = useSlotPresets({ userId });
+  const { outfits, outfitImages } = useUserOutfits({ userId });
 
   // Form hook
   const form = useCalendarDayForm({
@@ -62,31 +67,34 @@ export default function CalendarDayScreen() {
     reorderEntries,
   });
 
+  const { showAddModal, setShowAddModal } = form;
+
   // Auto-open add modal if autoAdd parameter is present
   useEffect(() => {
-    if (autoAdd === 'true' && !loading) {
-      const t = setTimeout(() => {
-        form.setShowAddModal(true);
+    if (autoAddKey === 'true' && !loading && !showAddModal) {
+      const timeoutId = setTimeout(() => {
+        setShowAddModal(true);
       }, 100);
-  
-      return () => clearTimeout(t);
+
+      return () => clearTimeout(timeoutId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoAdd, loading]);
+
+    return undefined;
+  }, [autoAddKey, loading, showAddModal, setShowAddModal]);
 
   // Reload data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      if (user && date) {
+      if (userId && dateKey) {
         refresh();
       }
-    }, [user, date, refresh])
+    }, [userId, dateKey, refresh])
   );
 
   const navigateToAdjacentDay = (direction: 'prev' | 'next') => {
-    if (!date) return;
+    if (!dateKey) return;
 
-    const currentDate = new Date(date);
+    const currentDate = new Date(dateKey);
     const offset = direction === 'prev' ? -1 : 1;
     const newDate = new Date(currentDate);
     newDate.setDate(currentDate.getDate() + offset);
@@ -94,6 +102,14 @@ export default function CalendarDayScreen() {
     const newDateKey = newDate.toISOString().split('T')[0];
     router.replace(`/calendar/day/${newDateKey}`);
   };
+
+  if (!dateKey) {
+    return (
+      <View style={commonStyles.container}>
+        <Text style={{ color: colors.textSecondary }}>Invalid date.</Text>
+      </View>
+    );
+  }
 
   if (loading) {
     return (
@@ -107,15 +123,12 @@ export default function CalendarDayScreen() {
     <View style={styles.container}>
       {/* Header */}
       <CalendarDayHeader
-        date={date}
+        date={dateKey}
         onBack={() => router.back()}
         onNavigateDay={navigateToAdjacentDay}
       />
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-      >
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {entries.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No entries for this day</Text>
@@ -142,10 +155,7 @@ export default function CalendarDayScreen() {
           </View>
         )}
 
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => form.setShowAddModal(true)}
-        >
+        <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
           <Text style={styles.addButtonText}>+ Add Entry</Text>
         </TouchableOpacity>
       </ScrollView>

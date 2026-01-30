@@ -129,7 +129,7 @@ export default function CreateBundleScreen() {
 
   if (loading) {
     return (
-      <View style={commonStyles.container}>
+      <View style={commonStyles.loadingContainer}>
         <LoadingSpinner text="Loading outfit..." />
       </View>
     );

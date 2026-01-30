@@ -126,7 +126,7 @@ export default function OutfitViewScreen() {
 
   if (loading) {
     return (
-      <View style={commonStyles.container}>
+      <View style={commonStyles.loadingContainer}>
         <LoadingSpinner text="Loading outfit..." />
       </View>
     );

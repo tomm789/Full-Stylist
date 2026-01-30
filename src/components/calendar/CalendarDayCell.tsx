@@ -19,7 +19,6 @@ interface CalendarDayCellProps {
 }
 
 function getThemeSafe() {
-  // Fallbacks prevent hard crash if theme export is temporarily undefined
   const t: any = importedTheme ?? {};
   const colors = t.colors ?? {
     border: '#E5E7EB',
@@ -53,16 +52,19 @@ export default function CalendarDayCell({
     firstEntry?.outfit_id ? outfitImages?.get(firstEntry.outfit_id) ?? null : null;
 
   const styles = useMemo(() => {
+    const cellPad = spacing.xs / 2;
+
     return StyleSheet.create({
       dayCell: {
         width: `${100 / 7}%`,
         height: 120,
         borderWidth: 1,
         borderColor: colors.border,
-        padding: spacing.xs / 2,
+        padding: cellPad,
         justifyContent: 'flex-start',
         alignItems: 'flex-start',
         overflow: 'hidden',
+        position: 'relative', // IMPORTANT: lets us layer image + overlays
       },
       dayCellOtherMonth: {
         backgroundColor: colors.gray50,
@@ -72,6 +74,8 @@ export default function CalendarDayCell({
         borderColor: colors.primary,
         borderWidth: 2,
       },
+
+      // Date (keep original styling)
       dayNumber: {
         fontSize: 14,
         fontWeight: '500',
@@ -81,17 +85,30 @@ export default function CalendarDayCell({
         color: colors.textTertiary,
       },
       dayNumberToday: {
-        fontWeight: 'bold',
-        color: colors.primary,
+        fontWeight: '500',
+        color: colors.textPrimary,
       },
+
+      // Ensures date stays above any overlays and above the image
+      dayNumberLayer: {
+        position: 'absolute',
+        top: cellPad,
+        left: cellPad,
+        zIndex: 50,
+        elevation: 50, // Android
+      },
+
+      // Image container as a BACKGROUND layer (does not affect date position)
       outfitImagesContainer: {
-        flex: 1,
-        width: '100%',
-        marginTop: 2,
-        position: 'relative',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         borderRadius: spacing.xs / 2,
         overflow: 'hidden',
         backgroundColor: colors.gray100,
+        zIndex: 0,
       },
       outfitImage: {
         width: '100%',
@@ -102,6 +119,7 @@ export default function CalendarDayCell({
         height: '100%',
         backgroundColor: colors.gray200,
       },
+
       moreIndicator: {
         position: 'absolute',
         bottom: spacing.xs / 2,
@@ -112,6 +130,8 @@ export default function CalendarDayCell({
         paddingVertical: 2,
         minWidth: 20,
         alignItems: 'center',
+        zIndex: 60,
+        elevation: 60,
       },
       moreIndicatorText: {
         fontSize: 10,
@@ -131,17 +151,7 @@ export default function CalendarDayCell({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text
-        pointerEvents="none"
-        style={[
-          styles.dayNumber,
-          !inCurrentMonth && styles.dayNumberOtherMonth,
-          isToday && styles.dayNumberToday,
-        ]}
-      >
-        {date.getDate()}
-      </Text>
-
+      {/* Background image layer (only if there’s an outfit entry) */}
       {outfitEntries.length > 0 && (
         <View pointerEvents="none" style={styles.outfitImagesContainer}>
           {imageUrl ? (
@@ -164,6 +174,19 @@ export default function CalendarDayCell({
           )}
         </View>
       )}
+
+      {/* Date is always anchored to the same top-left position in the cell */}
+      <Text
+        pointerEvents="none"
+        style={[
+          styles.dayNumber,
+          styles.dayNumberLayer,
+          !inCurrentMonth && styles.dayNumberOtherMonth,
+          isToday && styles.dayNumberToday,
+        ]}
+      >
+        {date.getDate()}
+      </Text>
     </TouchableOpacity>
   );
 }

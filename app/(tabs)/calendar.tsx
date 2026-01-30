@@ -131,7 +131,7 @@ export default function CalendarScreen() {
 
   if (loading) {
     return (
-      <View style={commonStyles.container}>
+      <View style={commonStyles.loadingContainer}>
         <LoadingSpinner text="Loading calendar..." />
       </View>
     );

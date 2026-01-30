@@ -13,3 +13,4 @@ export { default as ItemPickerModal } from './ItemPickerModal';
 export { default as GenerationProgressModal } from './GenerationProgressModal';
 export { OutfitViewContent } from './OutfitViewContent';
 export { OutfitNavigation } from './OutfitNavigation';
+export { default as OutfitScheduleSection } from './OutfitScheduleSection';

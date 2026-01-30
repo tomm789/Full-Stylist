@@ -82,46 +82,49 @@ export function CalendarDayEntryForm({
           </View>
 
           <ScrollView style={styles.modalBody}>
-            <SlotPresetSelector
-              presets={presets}
-              selectedPresetId={selectedPreset}
-              onSelectPreset={onSelectPreset}
-              onCreatePreset={onCreatePreset}
-            />
+  <SlotPresetSelector
+    presets={presets}
+    selectedPresetId={selectedPreset}
+    onSelectPreset={onSelectPreset}
+    onCreatePreset={onCreatePreset}
+  />
 
-            <OutfitGridPicker
-              outfits={outfits}
-              outfitImages={outfitImages}
-              selectedOutfitId={selectedOutfit}
-              onSelectOutfit={onSelectOutfit}
-            />
+  <StatusSelector
+    status={entryStatus}
+    onStatusChange={onStatusChange}
+    disabled={saving}
+  />
 
-            <StatusSelector
-              status={entryStatus}
-              onStatusChange={onStatusChange}
-              disabled={saving}
-            />
+  <View style={styles.section}>
+    <Text style={styles.label}>Notes (optional)</Text>
+    <TextInput
+      style={[styles.input, styles.notesInput]}
+      placeholder="Add notes about this entry"
+      value={editNotes}
+      onChangeText={onNotesChange}
+      multiline
+      numberOfLines={3}
+      editable={!saving}
+    />
+  </View>
 
-            <View style={styles.section}>
-              <Text style={styles.label}>Notes (optional)</Text>
-              <TextInput
-                style={[styles.input, styles.notesInput]}
-                placeholder="Add notes about this entry"
-                value={editNotes}
-                onChangeText={onNotesChange}
-                multiline
-                numberOfLines={3}
-                editable={!saving}
-              />
-            </View>
+  <View style={styles.submitContainer}>
+  <PrimaryButton
+    title={editingEntry ? 'Update Entry' : 'Add Entry'}
+    onPress={onSubmit}
+    loading={saving}
+    disabled={saving}
+    fullWidth
+  />
+</View>
 
-            <PrimaryButton
-              title={editingEntry ? 'Update Entry' : 'Add Entry'}
-              onPress={onSubmit}
-              loading={saving}
-              disabled={saving}
-            />
-          </ScrollView>
+  <OutfitGridPicker
+    outfits={outfits}
+    outfitImages={outfitImages}
+    selectedOutfitId={selectedOutfit}
+    onSelectOutfit={onSelectOutfit}
+  />
+</ScrollView>
         </View>
       </View>
     </Modal>
@@ -134,52 +137,66 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
+
   modalContent: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
     maxHeight: '90%',
   },
+
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.textPrimary,
   },
+
   modalClose: {
     fontSize: 28,
     color: colors.textSecondary,
   },
+
   modalBody: {
     padding: spacing.lg,
   },
+
   section: {
     marginBottom: spacing.lg + spacing.md,
   },
+
   label: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: spacing.sm + spacing.xs / 2,
     color: colors.textPrimary,
   },
+
   input: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.md,
-    padding: spacing.sm + spacing.xs / 2,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + spacing.xs / 2,
     fontSize: 16,
     backgroundColor: colors.backgroundSecondary,
   },
+
   notesInput: {
     height: 80,
     textAlignVertical: 'top',
-    paddingTop: spacing.sm + spacing.xs / 2,
+    paddingTop: spacing.sm,
+  },
+
+  submitContainer: {
+    marginBottom: spacing.xl,
   },
 });

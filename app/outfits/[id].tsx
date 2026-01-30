@@ -18,6 +18,7 @@ import {
   CategorySlotSelector,
   ItemPickerModal,
   GenerationProgressModal,
+  OutfitScheduleSection,
 } from '@/components/outfits';
 import {
   Header,
@@ -77,7 +78,7 @@ export default function OutfitEditorScreen() {
 
   if (loading) {
     return (
-      <View style={commonStyles.container}>
+      <View style={commonStyles.loadingContainer}>
         <LoadingSpinner text="Loading..." />
       </View>
     );
@@ -146,6 +147,12 @@ export default function OutfitEditorScreen() {
           itemImageUrls={itemImageUrls}
           onAddItem={actions.openItemPicker}
           onRemoveItem={actions.removeItem}
+        />
+
+    <OutfitScheduleSection
+          outfitId={id}
+          isNew={isNew}
+          userId={user?.id}
         />
 
         <View style={styles.actions}>
