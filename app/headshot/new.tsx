@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useImageGeneration } from '@/hooks/profile';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import ErrorModal from '@/components/ErrorModal';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 export default function NewHeadshotScreen() {
   const { user } = useAuth();
@@ -73,13 +74,16 @@ export default function NewHeadshotScreen() {
   return (
     <>
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>New Headshot</Text>
-          <View style={styles.backButton} />
-        </View>
+        <Header
+          title="New Headshot"
+          leftContent={
+            <HeaderActionButton
+              label="Cancel"
+              onPress={() => router.back()}
+              variant="secondary"
+            />
+          }
+        />
 
         <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
           {!uploadedUri ? (
@@ -197,25 +201,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    padding: 8,
-    width: 40,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
   },
   scrollContainer: {
     flex: 1,

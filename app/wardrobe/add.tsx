@@ -18,6 +18,7 @@ import {
   Header,
   LoadingOverlay,
 } from '@/components/shared';
+import { HeaderActionButton } from '@/components/shared/layout';
 import ImageCropper from '@/components/wardrobe/ImageCropper';
 import { theme, commonStyles } from '@/styles';
 import { Image } from 'expo-image';
@@ -56,9 +57,11 @@ export default function AddItemScreen() {
       <Header
         title="Add Item"
         leftContent={
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
+          <HeaderActionButton
+            label="Cancel"
+            onPress={() => router.back()}
+            variant="secondary"
+          />
         }
       />
 

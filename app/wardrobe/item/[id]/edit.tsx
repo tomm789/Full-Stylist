@@ -9,7 +9,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -25,6 +24,7 @@ import {
   AttributeEditor,
   VisibilitySelector,
 } from '@/components/wardrobe';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -109,21 +109,22 @@ export default function EditItemScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.headerButton}
-        >
-          <Text style={styles.headerButtonText}>← Cancel</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Item</Text>
-        <TouchableOpacity
-          onPress={handleSave}
-          style={styles.headerButton}
-        >
-          <Text style={[styles.headerButtonText, styles.saveText]}>Save</Text>
-        </TouchableOpacity>
-      </View>
+      <Header
+        title="Edit Item"
+        leftContent={
+          <HeaderActionButton
+            label="Cancel"
+            onPress={() => router.back()}
+            variant="secondary"
+          />
+        }
+        rightContent={
+          <HeaderActionButton
+            label="Save"
+            onPress={handleSave}
+          />
+        }
+      />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         {/* AI Generation Status */}
@@ -212,31 +213,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerButton: {
-    padding: 8,
-  },
-  headerButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  saveText: {
-    fontWeight: '600',
   },
   scrollView: {
     flex: 1,

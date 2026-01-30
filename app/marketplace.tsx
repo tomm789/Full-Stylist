@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { getActiveListings, ListingWithImages } from '@/lib/listings';
 import { supabase } from '@/lib/supabase';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 export default function MarketplaceScreen() {
   const router = useRouter();
@@ -93,9 +94,15 @@ export default function MarketplaceScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Marketplace</Text>
-      </View>
+      <Header
+        title="Marketplace"
+        leftContent={
+          <HeaderActionButton
+            label="Back"
+            onPress={() => router.back()}
+          />
+        }
+      />
 
       {listings.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -120,16 +127,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  header: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#000',
   },
   listingsList: {
     padding: 8,

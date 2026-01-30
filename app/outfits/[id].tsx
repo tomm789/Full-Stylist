@@ -8,10 +8,8 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOutfitEditor, useOutfitEditorActions } from '@/hooks/outfits';
 import {
@@ -27,6 +25,7 @@ import {
   PrimaryButton,
   LoadingSpinner,
 } from '@/components/shared';
+import { HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 import { theme, commonStyles } from '@/styles';
 import { PERF_MODE } from '@/lib/perf/perfMode';
 
@@ -107,18 +106,21 @@ export default function OutfitEditorScreen() {
       <Header
         title={isNew ? 'New Outfit' : 'Edit Outfit'}
         leftContent={
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
+          <HeaderActionButton
+            label="Cancel"
+            onPress={() => router.back()}
+            variant="secondary"
+          />
         }
         rightContent={
           !isNew && (
-            <TouchableOpacity
+            <HeaderIconButton
+              icon="trash-outline"
+              color={colors.error}
               onPress={actions.handleDelete}
               disabled={actions.saving}
-            >
-              <Ionicons name="trash-outline" size={24} color={colors.error} />
-            </TouchableOpacity>
+              accessibilityLabel="Delete outfit"
+            />
           )
         }
       />

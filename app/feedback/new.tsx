@@ -13,12 +13,12 @@ import {
   TouchableOpacity,
   Alert,
   SafeAreaView,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 type Category = 'bug' | 'feature' | 'general' | 'other';
 
@@ -82,23 +82,24 @@ export default function NewFeedbackScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="close" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Feedback</Text>
-        <TouchableOpacity
-          onPress={handleSubmit}
-          disabled={submitting}
-          style={styles.submitButton}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#007AFF" size="small" />
-          ) : (
-            <Text style={styles.submitButtonText}>Submit</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      <Header
+        title="New Feedback"
+        leftContent={
+          <HeaderActionButton
+            label="Cancel"
+            onPress={() => router.back()}
+            variant="secondary"
+          />
+        }
+        rightContent={
+          <HeaderActionButton
+            label="Submit"
+            onPress={handleSubmit}
+            disabled={submitting}
+            loading={submitting}
+          />
+        }
+      />
 
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
         {/* Category Selection */}
@@ -189,34 +190,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  submitButton: {
-    padding: 8,
-    minWidth: 60,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#007AFF',
   },
   scrollContainer: {
     flex: 1,
