@@ -54,7 +54,7 @@ export default function OutfitEditorScreen() {
     setNotes,
     setOutfitItems,
     saveOutfit: saveOutfitAction,
-    getItemImageUrl,
+    ensureItemImageUrls,
   } = useOutfitEditor({
     outfitId: id,
     userId: user?.id,
@@ -72,7 +72,7 @@ export default function OutfitEditorScreen() {
     notes,
     saveOutfit: saveOutfitAction,
     setOutfitItems,
-    getItemImageUrl,
+    ensureItemImageUrls,
   });
 
   if (loading) {

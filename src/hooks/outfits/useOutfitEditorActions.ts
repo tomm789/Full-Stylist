@@ -41,7 +41,7 @@ interface UseOutfitEditorActionsProps {
   notes: string;
   saveOutfit: () => Promise<string | null>;
   setOutfitItems: React.Dispatch<React.SetStateAction<Map<string, WardrobeItem>>>;
-  getItemImageUrl: (itemId: string) => Promise<string | null>;
+  ensureItemImageUrls: (itemIds: string[]) => Promise<void>;
 }
 
 interface UseOutfitEditorActionsReturn {
@@ -76,7 +76,7 @@ export function useOutfitEditorActions({
   notes,
   saveOutfit,
   setOutfitItems,
-  getItemImageUrl,
+  ensureItemImageUrls,
 }: UseOutfitEditorActionsProps): UseOutfitEditorActionsReturn {
   const router = useRouter();
   const { user } = useAuth();
@@ -225,18 +225,12 @@ export function useOutfitEditorActions({
       setCategoryItems(items);
 
       if (items && items.length > 0) {
-        const imagePromises = items.map(async (item) => {
-          const url = await getItemImageUrl(item.id);
-          return { itemId: item.id, url };
-        });
-        const imageResults = await Promise.all(imagePromises);
-        // Note: itemImageUrls is managed by useOutfitEditor, so we don't update it here
-        // The hook should handle image URL caching
+        await ensureItemImageUrls(items.map((item) => item.id));
       }
 
       setShowItemPicker(true);
     },
-    [user, getItemImageUrl]
+    [user, ensureItemImageUrls]
   );
 
   const selectItem = useCallback(
@@ -249,10 +243,11 @@ export function useOutfitEditorActions({
         return updated;
       });
 
+      await ensureItemImageUrls([item.id]);
       setShowItemPicker(false);
       setSelectedCategory(null);
     },
-    [selectedCategory, setOutfitItems]
+    [selectedCategory, setOutfitItems, ensureItemImageUrls]
   );
 
   const removeItem = useCallback(

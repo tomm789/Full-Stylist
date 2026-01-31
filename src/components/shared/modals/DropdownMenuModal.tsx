@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { layout } from '@/styles/theme';
 
 type DropdownMenuModalProps = {
   visible: boolean;
@@ -20,20 +21,36 @@ type DropdownMenuModalProps = {
    * Optional extra style for the menu container
    */
   menuStyle?: ViewStyle;
+
+  /**
+   * Stretch menu to the full width of the screen.
+   */
+  fullWidth?: boolean;
 };
 
 export function DropdownMenuModal({
   visible,
   onClose,
   children,
-  topOffset = 100,
+  topOffset = layout.headerHeightWithPadding,
   align = 'center',
   menuStyle,
+  fullWidth = false,
 }: DropdownMenuModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={[styles.overlay, { paddingTop: topOffset }]} onPress={onClose}>
-        <View style={[styles.menuContainer, align === 'right' && styles.rightAlign, menuStyle]}>
+      <Pressable
+        style={[styles.overlay, fullWidth && styles.overlayFullWidth, { paddingTop: topOffset }]}
+        onPress={onClose}
+      >
+        <View
+          style={[
+            styles.menuContainer,
+            fullWidth && styles.menuFullWidth,
+            align === 'right' && !fullWidth && styles.rightAlign,
+            menuStyle,
+          ]}
+        >
           {children}
         </View>
       </Pressable>
@@ -48,6 +65,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'center',
   },
+  overlayFullWidth: {
+    alignItems: 'stretch',
+  },
 
   // matches your current dropdownMenu styling
   menuContainer: {
@@ -60,6 +80,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  menuFullWidth: {
+    width: '100%',
+    borderRadius: 0,
   },
 
   rightAlign: {

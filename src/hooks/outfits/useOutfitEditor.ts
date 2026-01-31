@@ -10,6 +10,7 @@ import {
   getWardrobeCategories,
   getWardrobeItemsByIds,
   getWardrobeItemImages,
+  getWardrobeItemsImages,
   WardrobeCategory,
   WardrobeItem,
 } from '@/lib/wardrobe';
@@ -37,6 +38,7 @@ interface UseOutfitEditorReturn {
   saveOutfit: () => Promise<string | null>;
   refreshOutfit: () => Promise<void>;
   getItemImageUrl: (itemId: string) => Promise<string | null>;
+  ensureItemImageUrls: (itemIds: string[]) => Promise<void>;
 }
 
 export function useOutfitEditor({
@@ -57,18 +59,43 @@ export function useOutfitEditor({
   );
   const [coverImage, setCoverImage] = useState<any | null>(null);
 
+  const getPublicImageUrl = (image: any): string | null => {
+    if (!image?.storage_key) return null;
+    const { data: urlData } = supabase.storage
+      .from(image.storage_bucket || 'media')
+      .getPublicUrl(image.storage_key);
+    return urlData?.publicUrl ?? null;
+  };
+
   const getItemImageUrl = async (itemId: string): Promise<string | null> => {
     const { data } = await getWardrobeItemImages(itemId);
     if (data && data.length > 0) {
       const imageData = data[0].image;
-      if (imageData) {
-        const { data: urlData } = supabase.storage
-          .from(imageData.storage_bucket || 'media')
-          .getPublicUrl(imageData.storage_key);
-        return urlData.publicUrl;
-      }
+      return getPublicImageUrl(imageData);
     }
     return null;
+  };
+
+  const ensureItemImageUrls = async (itemIds: string[]): Promise<void> => {
+    if (itemIds.length === 0) return;
+    const missingIds = itemIds.filter((itemId) => !itemImageUrls.has(itemId));
+    if (missingIds.length === 0) return;
+
+    const { data: imagesMap } = await getWardrobeItemsImages(missingIds);
+    if (!imagesMap || imagesMap.size === 0) return;
+
+    setItemImageUrls((prev) => {
+      const next = new Map(prev);
+      imagesMap.forEach((images, itemId) => {
+        if (next.has(itemId)) return;
+        const firstImage = images?.[0]?.image;
+        const imageUrl = getPublicImageUrl(firstImage);
+        if (imageUrl) {
+          next.set(itemId, imageUrl);
+        }
+      });
+      return next;
+    });
   };
 
   const saveOutfitAction = async (): Promise<string | null> => {
@@ -135,21 +162,7 @@ export function useOutfitEditor({
           }
         }
         setOutfitItems(itemsMap);
-
-        const imagePromises = Array.from(itemsMap.values()).map(
-          async (item) => {
-            const url = await getItemImageUrl(item.id);
-            return { itemId: item.id, url };
-          }
-        );
-        const imageResults = await Promise.all(imagePromises);
-        const newImageUrls = new Map<string, string>();
-        imageResults.forEach(({ itemId, url }) => {
-          if (url) {
-            newImageUrls.set(itemId, url);
-          }
-        });
-        setItemImageUrls(newImageUrls);
+        await ensureItemImageUrls(Array.from(itemsMap.values()).map((item) => item.id));
       }
     }
   };
@@ -176,20 +189,17 @@ export function useOutfitEditor({
 
         if (preselectedItems && preselectedItems.length > 0) {
           const itemsMap = new Map<string, WardrobeItem>();
-          const imageUrls = new Map<string, string>();
+          const itemIds: string[] = [];
 
           for (const item of preselectedItems) {
             if (item.category_id) {
               itemsMap.set(item.category_id, item);
             }
-            const url = await getItemImageUrl(item.id);
-            if (url) {
-              imageUrls.set(item.id, url);
-            }
+            itemIds.push(item.id);
           }
 
           setOutfitItems(itemsMap);
-          setItemImageUrls(imageUrls);
+          await ensureItemImageUrls(itemIds);
         }
       }
 
@@ -219,5 +229,6 @@ export function useOutfitEditor({
     saveOutfit: saveOutfitAction,
     refreshOutfit,
     getItemImageUrl,
+    ensureItemImageUrls,
   };
 }

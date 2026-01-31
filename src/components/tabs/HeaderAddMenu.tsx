@@ -54,8 +54,7 @@ export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
       <DropdownMenuModal
         visible={showAddMenu}
         onClose={() => setShowAddMenu(false)}
-        topOffset={100}
-        align="center"
+        fullWidth
       >
         <Text style={styles.menuTitle}>Add New</Text>
         <TouchableOpacity

@@ -89,6 +89,7 @@ export default function CalendarScreen() {
         entries={entries}
         outfitImages={outfitImages}
         onDayPress={handleDayPress}
+        onMonthSwipe={navigateMonth}
       />
 
       <CalendarDatePickerModal
