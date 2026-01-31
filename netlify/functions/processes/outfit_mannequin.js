@@ -89,8 +89,10 @@ async function processOutfitMannequin(input, supabase, userId, perfTracker = nul
   );
   console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
   // Upload the mannequin render
-  const timestamp = Date.now();
-  const storagePath = `${userId}/ai/outfits/${outfit_id}/mannequin/${timestamp}.jpg`;
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+const storagePath =
+  `${userId}/ai/outfits/${outfit_id}/mannequin/` +
+  `${jobId ? `mannequin-${jobId}` : `mannequin-${stamp}`}.jpg`;
   const { imageId, storageKey } = await uploadImageToStorage(
     supabase,
     userId,

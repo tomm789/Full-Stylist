@@ -63,8 +63,9 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
   console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
   console.log(`[processHeadshotGenerate] Gemini API returned, headshot base64 length: ${headshotB64?.length || 0}`);
   // Upload and store the headshot
-  const timestamp = Date.now();
-  const storagePath = `${userId}/ai/headshots/${timestamp}.jpg`;
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const headshotKey = jobId ? `headshot-${jobId}` : `headshot-${stamp}`;
+  const storagePath = `${userId}/ai/headshots/${headshotKey}.jpg`;
   const { imageId, storageKey } = await uploadImageToStorage(
     supabase,
     userId,

@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getUserOutfitsWithOptions, OutfitWithRating } from '@/lib/outfits';
-import { getOutfitCoverImageUrl } from '@/lib/images';
+import { getOutfitCoverImages } from '@/lib/images';
 
 interface UseOutfitsOptions {
   userId: string | null | undefined;
@@ -45,13 +45,8 @@ export function useOutfits({
 
       setOutfits(data || []);
 
-      // Load images in parallel
-      const imageMap = new Map<string, string | null>();
-      const loadPromises = (data || []).map(async (outfit) => {
-        const url = await getOutfitCoverImageUrl(outfit);
-        imageMap.set(outfit.id, url);
-      });
-      await Promise.all(loadPromises);
+      // Single batched fetch for all cover images (one request to images; no per-outfit queries)
+      const imageMap = await getOutfitCoverImages(data || []);
       setImageCache(imageMap);
     } catch (error) {
       console.error('Error loading outfits:', error);

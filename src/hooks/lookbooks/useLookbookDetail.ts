@@ -3,7 +3,7 @@
  * Load and manage single lookbook with outfits
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getLookbook, getSystemLookbookOutfits, Lookbook } from '@/lib/lookbooks';
 import { getUserOutfits } from '@/lib/outfits';
 
@@ -27,7 +27,7 @@ export function useLookbookDetail({
   const [outfits, setOutfits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadLookbook = async () => {
+  const loadLookbook = useCallback(async () => {
     if (!lookbookId || !userId) {
       setLoading(false);
       return;
@@ -58,7 +58,6 @@ export function useLookbookDetail({
           top: 'Top Rated',
         };
 
-        // Create virtual lookbook
         const virtualLookbook: Lookbook = {
           id: lookbookId,
           owner_user_id: 'system',
@@ -72,7 +71,6 @@ export function useLookbookDetail({
 
         setLookbook(virtualLookbook);
 
-        // Load system outfits
         const { data: systemOutfitsResult } = await getSystemLookbookOutfits(
           userId,
           systemTypeMap[systemType]
@@ -89,13 +87,11 @@ export function useLookbookDetail({
           }
         }
       } else {
-        // Regular database lookbook
         const { data, error } = await getLookbook(lookbookId);
 
         if (!error && data) {
           setLookbook(data.lookbook);
 
-          // Load outfits
           if (data.lookbook.type === 'custom_manual') {
             const { data: allOutfits } = await getUserOutfits(data.lookbook.owner_user_id);
 
@@ -117,15 +113,15 @@ export function useLookbookDetail({
     } finally {
       setLoading(false);
     }
-  };
+  }, [lookbookId, userId]);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     await loadLookbook();
-  };
+  }, [loadLookbook]);
 
   useEffect(() => {
     loadLookbook();
-  }, [lookbookId, userId]);
+  }, [loadLookbook]);
 
   return {
     lookbook,

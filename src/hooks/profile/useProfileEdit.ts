@@ -111,12 +111,12 @@ export function useProfileEdit({
       const response = await fetch(result.assets[0].uri);
       const blob = await response.blob();
 
-      const uploadResult = await uploadImageToStorage(
-        userId,
-        blob,
-        `avatar-${Date.now()}.jpg`
-      );
-      if (uploadResult.error) throw uploadResult.error;
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+const uploadResult = await uploadImageToStorage(
+  userId,
+  blob,
+  `avatar-${stamp}.jpg`
+);
 
       const { data: imageRecord, error: imageError } = await supabase
         .from('images')

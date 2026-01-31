@@ -118,17 +118,23 @@ export default function OutfitsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Outfits Grid */}
-      <FlatList
-        data={filteredOutfits}
-        renderItem={({ item }) => (
-          <OutfitCard
-            outfit={item}
-            imageUrl={imageCache.get(item.id) || null}
-            onPress={() => handleOutfitPress(item.id)}
-            showRating={filters.sortBy === 'rating'}
-          />
-        )}
+     {/* Outfits Grid */}
+<FlatList
+  data={filteredOutfits}
+  renderItem={({ item }) => {
+    const imageLoading = !imageCache.has(item.id);
+    const imageUrl = imageCache.get(item.id) ?? null;
+
+    return (
+      <OutfitCard
+        outfit={item}
+        imageUrl={imageUrl}
+        imageLoading={imageLoading}
+        onPress={() => handleOutfitPress(item.id)}
+        showRating={filters.sortBy === 'rating'}
+      />
+    );
+  }}
         keyExtractor={(item) => item.id}
         numColumns={2}
         contentContainerStyle={styles.listContent}

@@ -125,11 +125,12 @@ export function useImageGeneration(): UseImageGenerationReturn {
 
     try {
       console.log('-> Uploading...');
-      const uploadResult = await uploadImageToStorage(
-        userId,
-        uploadedBlob,
-        'selfie-' + Date.now() + '.jpg'
-      );
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+const uploadResult = await uploadImageToStorage(
+  userId,
+  uploadedBlob,
+  `selfie-${stamp}.jpg`
+);
       console.log('Upload done, error:', !!uploadResult.error);
       
       if (uploadResult.error) throw uploadResult.error;
@@ -240,10 +241,11 @@ export function useImageGeneration(): UseImageGenerationReturn {
     setLoadingMessage('Uploading photo...');
 
     try {
-      const uploadResult = await uploadImageToStorage(
-        userId,
-        uploadedBlob,
-        'body-' + Date.now() + '.jpg'
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+const uploadResult = await uploadImageToStorage(
+  userId,
+  uploadedBlob,
+  `body-${stamp}.jpg`
       );
       if (uploadResult.error) throw uploadResult.error;
 
