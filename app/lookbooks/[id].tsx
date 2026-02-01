@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useLookbookDetail,
@@ -30,6 +29,7 @@ import {
   SlideshowModal,
 } from '@/components/lookbooks';
 import { LoadingSpinner } from '@/components/shared';
+import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 import { isLookbookEditable } from '@/utils/lookbookHelpers';
 
 export default function LookbookDetailScreen() {
@@ -83,11 +83,14 @@ export default function LookbookDetailScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backButton}>← Back</Text>
-          </TouchableOpacity>
-        </View>
+        <Header
+          leftContent={
+            <HeaderActionButton
+              label="Back"
+              onPress={() => router.back()}
+            />
+          }
+        />
         <View style={styles.loadingContainer}>
           <LoadingSpinner size="large" />
         </View>
@@ -98,11 +101,14 @@ export default function LookbookDetailScreen() {
   if (!lookbook) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backButton}>← Back</Text>
-          </TouchableOpacity>
-        </View>
+        <Header
+          leftContent={
+            <HeaderActionButton
+              label="Back"
+              onPress={() => router.back()}
+            />
+          }
+        />
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Lookbook not found</Text>
         </View>
@@ -113,64 +119,56 @@ export default function LookbookDetailScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <View style={styles.headerActions}>
-          {outfitsState.length > 0 && (
-            <TouchableOpacity
-              onPress={actions.handleOpenSlideshow}
-              disabled={slideshow.loading}
-            >
-              <Text
-                style={[
-                  styles.playButton,
-                  slideshow.loading && styles.playButtonDisabled,
-                ]}
-              >
-                {slideshow.loading ? 'Loading...' : '▶ Play'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          {isEditable && (
-            <>
-              <TouchableOpacity
-                onPress={actions.handleEdit}
-                style={styles.headerIconButton}
-              >
-                <Ionicons name="pencil-outline" size={24} color="#007AFF" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={actions.handlePublish}
-                disabled={actions.publishing}
-                style={styles.headerIconButton}
-              >
+      <Header
+        leftContent={
+          <HeaderActionButton
+            label="Back"
+            onPress={() => router.back()}
+          />
+        }
+        rightContent={
+          <View style={styles.headerActions}>
+            {outfitsState.length > 0 && (
+              <HeaderActionButton
+                label={slideshow.loading ? 'Loading...' : 'Play'}
+                onPress={actions.handleOpenSlideshow}
+                disabled={slideshow.loading}
+                variant="muted"
+              />
+            )}
+            {isEditable && (
+              <>
+                <HeaderIconButton
+                  icon="pencil-outline"
+                  onPress={actions.handleEdit}
+                  accessibilityLabel="Edit lookbook"
+                />
                 {actions.publishing ? (
                   <ActivityIndicator size="small" color="#007AFF" />
                 ) : (
-                  <Ionicons
-                    name="paper-plane-outline"
-                    size={24}
-                    color="#007AFF"
+                  <HeaderIconButton
+                    icon="paper-plane-outline"
+                    onPress={actions.handlePublish}
+                    disabled={actions.publishing}
+                    accessibilityLabel="Publish lookbook"
                   />
                 )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={actions.handleDelete}
-                disabled={actions.deleting}
-                style={styles.headerIconButton}
-              >
                 {actions.deleting ? (
                   <ActivityIndicator size="small" color="#FF3B30" />
                 ) : (
-                  <Ionicons name="trash-outline" size={24} color="#FF3B30" />
+                  <HeaderIconButton
+                    icon="trash-outline"
+                    color="#FF3B30"
+                    onPress={actions.handleDelete}
+                    disabled={actions.deleting}
+                    accessibilityLabel="Delete lookbook"
+                  />
                 )}
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      </View>
+              </>
+            )}
+          </View>
+        }
+      />
 
       <ScrollView style={styles.content}>
         {/* Lookbook Header */}
@@ -257,35 +255,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
   headerActions: {
     flexDirection: 'row',
     gap: 12,
-  },
-  playButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  playButtonDisabled: {
-    opacity: 0.5,
-  },
-  headerIconButton: {
-    padding: 4,
   },
   loadingContainer: {
     flex: 1,

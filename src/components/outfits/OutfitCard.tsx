@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ViewStyle,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,65 +22,69 @@ const { colors, spacing, borderRadius, typography } = theme;
 interface OutfitCardProps {
   outfit: OutfitWithRating;
   imageUrl: string | null;
+  imageLoading: boolean;
   onPress: () => void;
   showRating?: boolean;
   style?: ViewStyle;
 }
 
-const OutfitCard = React.memo(({
-  outfit,
-  imageUrl,
-  onPress,
-  showRating = false,
-  style,
-}: OutfitCardProps) => {
-  return (
-    <TouchableOpacity style={[styles.card, style]} onPress={onPress}>
-      {imageUrl ? (
-        <Image
-          source={{ uri: imageUrl }}
-          style={styles.image}
-          contentFit="cover"
-        />
-      ) : (
-        <View style={styles.placeholder}>
-          <Text style={styles.placeholderText}>No Image</Text>
-        </View>
-      )}
-      
-      <View style={styles.info}>
-        <Text style={styles.title} numberOfLines={2}>
-          {outfit.title || 'Untitled Outfit'}
-        </Text>
-        
-        {outfit.notes && (
-          <Text style={styles.notes} numberOfLines={1}>
-            {outfit.notes}
-          </Text>
+const OutfitCard = React.memo(
+  ({
+    outfit,
+    imageUrl,
+    imageLoading,
+    onPress,
+    showRating = false,
+    style,
+  }: OutfitCardProps) => {
+    return (
+      <TouchableOpacity style={[styles.card, style]} onPress={onPress}>
+        {imageLoading ? (
+          <View style={styles.placeholder}>
+            <ActivityIndicator />
+          </View>
+        ) : imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.image} contentFit="cover" />
+        ) : (
+          <View style={styles.placeholder}>
+            <Text style={styles.placeholderText}>No Image</Text>
+          </View>
         )}
-        
-        <View style={styles.meta}>
-          {outfit.is_favorite && (
-            <Ionicons
-              name="heart"
-              size={14}
-              color={colors.error}
-              style={styles.metaIcon}
-            />
-          )}
-          
-          {showRating && outfit.rating !== undefined && (
-            <Text style={styles.rating}>⭐ {outfit.rating}</Text>
-          )}
-          
-          <Text style={styles.date}>
-            {new Date(outfit.created_at).toLocaleDateString()}
+
+        <View style={styles.info}>
+          <Text style={styles.title} numberOfLines={2}>
+            {outfit.title || 'Untitled Outfit'}
           </Text>
+
+          {outfit.notes ? (
+            <Text style={styles.notes} numberOfLines={1}>
+              {outfit.notes}
+            </Text>
+          ) : null}
+
+          <View style={styles.meta}>
+            {outfit.is_favorite ? (
+              <Ionicons
+                name="heart"
+                size={14}
+                color={colors.error}
+                style={styles.metaIcon}
+              />
+            ) : null}
+
+            {showRating && outfit.rating !== undefined ? (
+              <Text style={styles.rating}>⭐ {outfit.rating}</Text>
+            ) : null}
+
+            <Text style={styles.date}>
+              {new Date(outfit.created_at).toLocaleDateString()}
+            </Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
-});
+      </TouchableOpacity>
+    );
+  }
+);
 
 OutfitCard.displayName = 'OutfitCard';
 

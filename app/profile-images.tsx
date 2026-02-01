@@ -9,7 +9,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   Modal,
 } from 'react-native';
@@ -20,6 +19,7 @@ import {
   useProfileImageGeneration,
 } from '@/hooks/profile';
 import { HeadshotSection, BodyShotSection } from '@/components/profile';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 export default function ProfileImagesScreen() {
   const { user } = useAuth();
@@ -66,15 +66,15 @@ export default function ProfileImagesScreen() {
   return (
     <>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Profile Images</Text>
-        </View>
+        <Header
+          title="Profile Images"
+          leftContent={
+            <HeaderActionButton
+              label="Back"
+              onPress={() => router.back()}
+            />
+          }
+        />
 
         {/* Headshot Section */}
         <HeadshotSection
@@ -154,23 +154,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-  },
-  header: {
-    marginBottom: 24,
-    marginTop: 20,
-  },
-  backButton: {
-    marginBottom: 12,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#000',
   },
   loadingOverlay: {
     flex: 1,

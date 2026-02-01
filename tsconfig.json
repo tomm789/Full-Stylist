@@ -9,25 +9,45 @@
     "strict": false,
     "baseUrl": ".",
     "paths": {
-      "@/lib/*": ["./src/lib/*"],
-      "@/app/*": ["./app/*"],
-      "@/components/*": ["./src/components/*"],
-      "@/hooks/*": ["./src/hooks/*"],
-      "@/utils": ["./src/utils/index.ts"],
-      "@/utils/*": ["./src/utils/*"],
-      "@/contexts/*": ["./src/contexts/*"],
-      "@/hooks": ["./src/hooks/index.ts"],
-      "@/styles": ["./src/styles"]  // ← ADD THIS LINE
+      "@/lib/*": [
+        "./src/lib/*"
+      ],
+      "@/app/*": [
+        "./app/*"
+      ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
+      "@/hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@/utils": [
+        "./src/utils/index.ts"
+      ],
+      "@/utils/*": [
+        "./src/utils/*"
+      ],
+      "@/contexts/*": [
+        "./src/contexts/*"
+      ],
+      "@/hooks": [
+        "./src/hooks/index.ts"
+      ],
+      "@/styles": [
+        "./src/styles"
+      ]
     }
   },
-"include": [
-  "src/**/*.ts",
-  "src/**/*.tsx",
-  "netlify/functions/**/*.js"
-],
-"exclude": [
-  "archive/**",
-  "**/*.backup",
-  "**/*.instrumented*"
-]
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "netlify/functions/**/*.js"
+  ],
+  "exclude": [
+    "archive/**",
+    "**/*.backup",
+    "**/*.instrumented*"
+  ]
 }

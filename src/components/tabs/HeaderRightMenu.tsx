@@ -76,8 +76,7 @@ export function HeaderRightMenu() {
       <DropdownMenuModal
         visible={showMenu}
         onClose={() => setShowMenu(false)}
-        topOffset={100}
-        align="right"
+        fullWidth
       >
         <Text style={styles.menuTitle}>Menu</Text>
         <TouchableOpacity

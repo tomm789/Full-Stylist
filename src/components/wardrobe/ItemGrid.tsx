@@ -52,8 +52,10 @@ export default function ItemGrid({
   const renderItem = ({ item }: { item: WardrobeItem }) => {
     const isSelected = selectedItems.includes(item.id);
     const isDimmed = dimmedItems.includes(item.id);
-    const imageUrl = imageCache.get(item.id) || null;
+
+    // Missing key => loading; key present => resolved (string or null)
     const imageLoading = !imageCache.has(item.id);
+    const imageUrl = imageCache.get(item.id) ?? null;
 
     return (
       <ItemCard

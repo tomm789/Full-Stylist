@@ -379,8 +379,9 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
   console.log(`[OutfitRender] Image optimization complete`);
 
   // Upload the optimized final composite (with timing for latency debugging)
-  const timestamp = Date.now();
-  const storagePath = `${userId}/ai/outfits/${outfit_id}/${timestamp}.jpg`;
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const renderKey = jobId ? `render-${jobId}` : `render-${stamp}`;
+  const storagePath = `${userId}/ai/outfits/${outfit_id}/${renderKey}.jpg`;
   const uploadStart = Date.now();
   const { imageId, storageKey } = await uploadImageToStorage(
     supabase,

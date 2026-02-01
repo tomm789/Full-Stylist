@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCategories, useFilters } from '@/hooks/wardrobe';
+import { CategoryPills, FilterDrawer, SearchBar } from '@/components/wardrobe';
 import {
   getUserWardrobeItems,
   getWardrobeItemsImages,
@@ -24,17 +26,63 @@ import { supabase } from '@/lib/supabase';
 
 interface UserWardrobeScreenProps {
   userId: string;
+  showSearchControls?: boolean;
+  showAddButton?: boolean;
 }
 
-export default function UserWardrobeScreen({ userId }: UserWardrobeScreenProps) {
+export default function UserWardrobeScreen({
+  userId,
+  showSearchControls = true,
+  showAddButton = false,
+}: UserWardrobeScreenProps) {
   const { user } = useAuth();
   const router = useRouter();
+  const { categories } = useCategories();
   const [items, setItems] = useState<WardrobeItem[]>([]);
   const [itemImagesCache, setItemImagesCache] = useState<Map<string, string | null>>(new Map());
   const [savedItems, setSavedItems] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+
+  const categoryOptions = useMemo(() => {
+    if (!items.length) return [];
+    const usedCategoryIds = new Set(items.map((item) => item.category_id).filter(Boolean));
+    return categories.filter((category) => usedCategoryIds.has(category.id));
+  }, [categories, items]);
+
+  const baseItems = useMemo(() => {
+    let filtered = items;
+    if (selectedCategoryId) {
+      filtered = filtered.filter((item) => item.category_id === selectedCategoryId);
+    }
+
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+      filtered = filtered.filter((item) => {
+        const titleMatch = item.title?.toLowerCase().includes(query);
+        const descriptionMatch = item.description?.toLowerCase().includes(query);
+        return Boolean(titleMatch || descriptionMatch);
+      });
+    }
+
+    return filtered;
+  }, [items, searchQuery, selectedCategoryId]);
+
+  const {
+    filters,
+    filteredItems,
+    updateFilter,
+    clearFilters,
+    hasActiveFilters,
+    availableColors,
+    availableMaterials,
+    availableSizes,
+    availableSeasons,
+  } = useFilters(baseItems, user?.id ?? null);
 
   useEffect(() => {
     if (userId && typeof userId === 'string') {
@@ -180,21 +228,61 @@ export default function UserWardrobeScreen({ userId }: UserWardrobeScreenProps) 
     );
   }
 
+  const shouldShowEmptyState =
+    filteredItems.length === 0;
+  const emptyMessage =
+    searchQuery || selectedCategoryId || hasActiveFilters
+      ? 'No items found'
+      : 'No wardrobe items yet';
+
   return (
     <View style={styles.container}>
-      {items.length === 0 ? (
+      {showSearchControls && (
+        <>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onFilter={() => setShowFilterDrawer(true)}
+            onAdd={showAddButton ? () => router.push('/wardrobe/add') : undefined}
+            hasActiveFilters={hasActiveFilters}
+            showAdd={showAddButton}
+          />
+          <CategoryPills
+            categories={categoryOptions}
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={setSelectedCategoryId}
+            variant="category"
+          />
+        </>
+      )}
+
+      {shouldShowEmptyState ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="shirt-outline" size={48} color="#ccc" />
-          <Text style={styles.emptyText}>No wardrobe items yet</Text>
+          <Text style={styles.emptyText}>{emptyMessage}</Text>
         </View>
       ) : (
         <FlatList
-          data={items}
+          data={filteredItems}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           numColumns={2}
           contentContainerStyle={styles.itemsList}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        />
+      )}
+
+      {showSearchControls && (
+        <FilterDrawer
+          visible={showFilterDrawer}
+          onClose={() => setShowFilterDrawer(false)}
+          filters={filters}
+          onUpdateFilter={updateFilter}
+          onClearAll={clearFilters}
+          availableColors={availableColors}
+          availableMaterials={availableMaterials}
+          availableSizes={availableSizes}
+          availableSeasons={availableSeasons}
         />
       )}
     </View>

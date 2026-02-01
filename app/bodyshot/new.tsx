@@ -19,14 +19,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useNewBodyshot } from '@/hooks/profile';
-import { useImageGeneration } from '@/hooks/profile';
-import { useAuth } from '@/contexts/AuthContext';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 export default function NewBodyshotScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const imageGeneration = useImageGeneration();
   const {
     headshots,
     loadingHeadshots,
@@ -46,13 +43,16 @@ export default function NewBodyshotScreen() {
   return (
     <>
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>New Bodyshot</Text>
-          <View style={styles.backButton} />
-        </View>
+        <Header
+          title="New Bodyshot"
+          leftContent={
+            <HeaderActionButton
+              label="Cancel"
+              onPress={() => router.back()}
+              variant="secondary"
+            />
+          }
+        />
 
         <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
           {/* Step 1: Select Headshot */}
@@ -162,33 +162,7 @@ export default function NewBodyshotScreen() {
                       generating && styles.generateButtonDisabled,
                     ]}
                     onPress={async () => {
-                      // Performance tracking: Start time (button click)
-                      const startTime = performance.now();
-                      console.log('[PERF] Button clicked at:', startTime);
-
-                      if (!user || !selectedHeadshotId) return;
-
-                      const generatedImageId = await imageGeneration.generateBodyShot(
-                        user.id,
-                        selectedHeadshotId
-                      );
-                      
-                      // Performance tracking: API response time
-                      const apiResponseTime = performance.now();
-                      const backendProcessingTime = apiResponseTime - startTime;
-                      console.log('[PERF] API response received at:', apiResponseTime);
-                      console.log('[PERF] Backend processing duration:', backendProcessingTime.toFixed(2), 'ms');
-
-                      if (generatedImageId) {
-                        // Pass timing data via route params
-                        router.replace({
-                          pathname: `/bodyshot/${generatedImageId}` as any,
-                          params: {
-                            perfStartTime: startTime.toString(),
-                            perfApiResponseTime: apiResponseTime.toString(),
-                          },
-                        } as any);
-                      }
+                      await handleGenerate();
                     }}
                     disabled={generating}
                   >
@@ -227,25 +201,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    padding: 8,
-    width: 40,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
   },
   scrollContainer: {
     flex: 1,

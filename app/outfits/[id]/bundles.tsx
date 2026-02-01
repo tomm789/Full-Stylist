@@ -26,6 +26,7 @@ import {
   PrimaryButton,
   LoadingSpinner,
 } from '@/components/shared';
+import { HeaderActionButton } from '@/components/shared/layout';
 import { theme, commonStyles } from '@/styles';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -129,7 +130,7 @@ export default function CreateBundleScreen() {
 
   if (loading) {
     return (
-      <View style={commonStyles.container}>
+      <View style={commonStyles.loadingContainer}>
         <LoadingSpinner text="Loading outfit..." />
       </View>
     );
@@ -140,16 +141,18 @@ export default function CreateBundleScreen() {
       <Header
         title="Create Bundle"
         leftContent={
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.cancelButton}>Cancel</Text>
-          </TouchableOpacity>
+          <HeaderActionButton
+            label="Cancel"
+            onPress={() => router.back()}
+            variant="secondary"
+          />
         }
         rightContent={
-          <TouchableOpacity onPress={handleCreate} disabled={saving}>
-            <Text style={[styles.saveButton, saving && styles.saveButtonDisabled]}>
-              Create
-            </Text>
-          </TouchableOpacity>
+          <HeaderActionButton
+            label="Create"
+            onPress={handleCreate}
+            disabled={saving}
+          />
         }
       />
 
@@ -233,18 +236,6 @@ export default function CreateBundleScreen() {
 }
 
 const styles = StyleSheet.create({
-  cancelButton: {
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
-  saveButton: {
-    fontSize: 16,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
   content: {
     flex: 1,
   },

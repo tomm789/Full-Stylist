@@ -3,8 +3,8 @@
  * Monthly calendar grid with day cells
  */
 
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, PanResponder } from 'react-native';
 import CalendarDayCell from './CalendarDayCell';
 import { CalendarEntry } from '@/lib/calendar';
 import { theme } from '@/styles';
@@ -16,6 +16,7 @@ interface CalendarGridProps {
   entries: Map<string, CalendarEntry[]>;
   outfitImages: Map<string, string | null>;
   onDayPress: (date: Date) => void;
+  onMonthSwipe?: (direction: number) => void;
 }
 
 const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -25,9 +26,46 @@ export default function CalendarGrid({
   entries,
   outfitImages,
   onDayPress,
+  onMonthSwipe,
 }: CalendarGridProps) {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+  const swipeLocked = useRef(false);
+
+  const panResponder = useMemo(() => {
+    if (!onMonthSwipe) {
+      return null;
+    }
+
+    return PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const { dx, dy } = gestureState;
+        return Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 0.6;
+      },
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        const { dx, dy } = gestureState;
+        return Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 0.6;
+      },
+      onPanResponderGrant: () => {
+        swipeLocked.current = false;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (swipeLocked.current) {
+          return;
+        }
+
+        const { dx, dy } = gestureState;
+        if (Math.abs(dx) < 40 || Math.abs(dy) > 60) {
+          return;
+        }
+
+        const direction = dx < 0 ? 1 : -1;
+        swipeLocked.current = true;
+        onMonthSwipe(direction);
+      },
+      onPanResponderTerminationRequest: () => false,
+    });
+  }, [onMonthSwipe]);
 
   const getDaysInMonth = (): Date[] => {
     const firstDay = new Date(year, month, 1);
@@ -77,7 +115,7 @@ export default function CalendarGrid({
   const days = getDaysInMonth();
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...(panResponder?.panHandlers ?? {})}>
       {/* Week Days Header */}
       <View style={styles.weekDaysRow}>
         {weekDays.map((day) => (

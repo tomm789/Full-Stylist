@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearch } from '@/hooks';
 import { SearchResultItem, SearchFilterBar, LoadingSpinner } from '@/components/shared';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 export default function SearchScreen() {
   const { user } = useAuth();
@@ -47,13 +48,15 @@ export default function SearchScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Search</Text>
-        <View style={styles.backButton} />
-      </View>
+      <Header
+        title="Search"
+        leftContent={
+          <HeaderActionButton
+            label="Back"
+            onPress={() => router.back()}
+          />
+        }
+      />
 
       {/* Search Input */}
       <View style={styles.searchContainer}>
@@ -120,25 +123,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fafafa',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    padding: 8,
-    width: 40,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
   },
   searchContainer: {
     flexDirection: 'row',

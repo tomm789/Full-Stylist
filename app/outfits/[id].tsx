@@ -8,16 +8,15 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOutfitEditor, useOutfitEditorActions } from '@/hooks/outfits';
 import {
   CategorySlotSelector,
   ItemPickerModal,
   GenerationProgressModal,
+  OutfitScheduleSection,
 } from '@/components/outfits';
 import {
   Header,
@@ -26,6 +25,7 @@ import {
   PrimaryButton,
   LoadingSpinner,
 } from '@/components/shared';
+import { HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 import { theme, commonStyles } from '@/styles';
 import { PERF_MODE } from '@/lib/perf/perfMode';
 
@@ -54,7 +54,7 @@ export default function OutfitEditorScreen() {
     setNotes,
     setOutfitItems,
     saveOutfit: saveOutfitAction,
-    getItemImageUrl,
+    ensureItemImageUrls,
   } = useOutfitEditor({
     outfitId: id,
     userId: user?.id,
@@ -72,12 +72,12 @@ export default function OutfitEditorScreen() {
     notes,
     saveOutfit: saveOutfitAction,
     setOutfitItems,
-    getItemImageUrl,
+    ensureItemImageUrls,
   });
 
   if (loading) {
     return (
-      <View style={commonStyles.container}>
+      <View style={commonStyles.loadingContainer}>
         <LoadingSpinner text="Loading..." />
       </View>
     );
@@ -106,18 +106,21 @@ export default function OutfitEditorScreen() {
       <Header
         title={isNew ? 'New Outfit' : 'Edit Outfit'}
         leftContent={
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
+          <HeaderActionButton
+            label="Cancel"
+            onPress={() => router.back()}
+            variant="secondary"
+          />
         }
         rightContent={
           !isNew && (
-            <TouchableOpacity
+            <HeaderIconButton
+              icon="trash-outline"
+              color={colors.error}
               onPress={actions.handleDelete}
               disabled={actions.saving}
-            >
-              <Ionicons name="trash-outline" size={24} color={colors.error} />
-            </TouchableOpacity>
+              accessibilityLabel="Delete outfit"
+            />
           )
         }
       />
@@ -146,6 +149,12 @@ export default function OutfitEditorScreen() {
           itemImageUrls={itemImageUrls}
           onAddItem={actions.openItemPicker}
           onRemoveItem={actions.removeItem}
+        />
+
+    <OutfitScheduleSection
+          outfitId={id}
+          isNew={isNew}
+          userId={user?.id}
         />
 
         <View style={styles.actions}>

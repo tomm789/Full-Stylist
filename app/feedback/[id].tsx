@@ -8,17 +8,16 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeedbackThread } from '@/hooks/feedback';
 import { LoadingSpinner } from '@/components/shared';
 import { CommentInput, ThreadHeader, CommentsList } from '@/components/feedback';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 export default function FeedbackThreadDetailScreen() {
   const { user } = useAuth();
@@ -59,14 +58,14 @@ export default function FeedbackThreadDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <View style={styles.headerTitle}>
-          <View style={styles.backButton} />
-        </View>
-      </View>
+      <Header
+        leftContent={
+          <HeaderActionButton
+            label="Back"
+            onPress={() => router.back()}
+          />
+        }
+      />
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
@@ -98,23 +97,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    padding: 8,
-    width: 40,
-  },
-  headerTitle: {
-    flex: 1,
   },
   keyboardView: {
     flex: 1,

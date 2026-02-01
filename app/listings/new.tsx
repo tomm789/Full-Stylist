@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { useNewListing } from '@/hooks/listings';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 export default function NewListingScreen() {
   const router = useRouter();
@@ -91,17 +92,23 @@ export default function NewListingScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.cancelButton}>Cancel</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Listing</Text>
-        <TouchableOpacity onPress={handleCreate} disabled={saving}>
-          <Text style={[styles.saveButton, saving && styles.saveButtonDisabled]}>
-            Create
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <Header
+        title="New Listing"
+        leftContent={
+          <HeaderActionButton
+            label="Cancel"
+            onPress={() => router.back()}
+            variant="secondary"
+          />
+        }
+        rightContent={
+          <HeaderActionButton
+            label="Create"
+            onPress={handleCreate}
+            disabled={saving}
+          />
+        }
+      />
 
       <View style={styles.form}>
         <Text style={styles.label}>Select Wardrobe Item *</Text>
@@ -204,31 +211,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingBottom: 32,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  cancelButton: {
-    fontSize: 16,
-    color: '#666',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  saveButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
   },
   form: {
     padding: 16,

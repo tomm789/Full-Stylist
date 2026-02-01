@@ -57,8 +57,10 @@ async function processProductShot(input, supabase, userId, perfTracker = null, t
   );
   console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
   // Upload the generated image to storage
-  const timestamp = Date.now();
-  const storagePath = `${userId}/ai/product_shots/${timestamp}.jpg`;
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+const storagePath =
+  `${userId}/ai/product_shots/` +
+  `${jobId ? `product-${wardrobe_item_id}-${jobId}` : `product-${wardrobe_item_id}-${stamp}`}.jpg`;
   const { imageId, storageKey } = await uploadImageToStorage(
     supabase,
     userId,

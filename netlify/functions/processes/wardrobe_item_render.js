@@ -68,8 +68,11 @@ async function processWardrobeItemRender(input, supabase, userId, perfTracker = 
 
   // Upload to Supabase storage (same convention as product_shot)
   const uploadStart = Date.now();
-  const timestamp = Date.now();
-  const storagePath = `${userId}/ai/product_shots/${timestamp}.jpg`;
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+const shotKey = jobId
+  ? `product-${wardrobe_item_id}-${jobId}`
+  : `product-${wardrobe_item_id}-${stamp}`;
+const storagePath = `${userId}/ai/product_shots/${shotKey}.jpg`;
   const { imageId, storageKey } = await uploadImageToStorage(
     supabase,
     userId,

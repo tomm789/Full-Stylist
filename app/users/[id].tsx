@@ -18,9 +18,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile, useFollowStatus } from '@/hooks/social';
 import { ProfileHeader } from '@/components/profile';
+import UserWardrobeScreen from '@/components/UserWardrobeScreen';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
 
-type TabType = 'outfits' | 'lookbooks';
+type TabType = 'outfits' | 'lookbooks' | 'wardrobe';
 
 export default function UserProfileScreen() {
   const { user } = useAuth();
@@ -122,11 +123,30 @@ export default function UserProfileScreen() {
             Lookbooks ({lookbooks.length})
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'wardrobe' && styles.tabActive]}
+          onPress={() => setActiveTab('wardrobe')}
+        >
+          <Ionicons
+            name="grid-outline"
+            size={20}
+            color={activeTab === 'wardrobe' ? '#000' : '#999'}
+          />
+          <Text style={[styles.tabText, activeTab === 'wardrobe' && styles.tabTextActive]}>
+            Wardrobe
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Content */}
       <View style={styles.content}>
-        {activeTab === 'outfits' ? (
+        {activeTab === 'wardrobe' ? (
+          <UserWardrobeScreen
+            userId={typeof userId === 'string' ? userId : ''}
+            showSearchControls
+            showAddButton={isOwnProfile}
+          />
+        ) : activeTab === 'outfits' ? (
           outfits.length === 0 ? (
             <EmptyState
               icon="shirt-outline"
@@ -147,7 +167,7 @@ export default function UserProfileScreen() {
                   <TouchableOpacity
                     key={outfit.id}
                     style={styles.gridItem}
-                    onPress={() => router.push(`/outfits/${outfit.id}`)}
+                    onPress={() => router.push(`/users/${userId}/feed`)}
                   >
                     {imageUrl ? (
                       <ExpoImage

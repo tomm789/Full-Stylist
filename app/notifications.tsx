@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { LoadingSpinner } from '@/components/shared';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 import {
   Notification,
   markAsRead,
@@ -174,17 +175,24 @@ export default function NotificationsScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        {notifications.some(n => !n.is_read) && (
-          <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllButton}>
-            <Text style={styles.markAllButtonText}>Mark all read</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <Header
+        title="Notifications"
+        leftContent={
+          <HeaderActionButton
+            label="Back"
+            onPress={() => router.back()}
+          />
+        }
+        rightContent={
+          notifications.some((n) => !n.is_read) ? (
+            <HeaderActionButton
+              label="Mark all read"
+              onPress={handleMarkAllRead}
+              variant="muted"
+            />
+          ) : null
+        }
+      />
 
       <FlatList
         data={notifications}
@@ -216,36 +224,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingTop: 60,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 8,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000',
-    flex: 1,
-  },
-  markAllButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  markAllButtonText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
   },
   listContent: {
     paddingBottom: 20,

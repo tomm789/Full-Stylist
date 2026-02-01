@@ -3,7 +3,7 @@
  * Manages calendar entries for a specific day
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   getCalendarEntriesForDate,
   createCalendarEntry,
@@ -37,14 +37,11 @@ interface UseDayEntriesReturn {
   reorderEntries: (fromIndex: number, toIndex: number) => Promise<void>;
 }
 
-export function useDayEntries({
-  userId,
-  date,
-}: UseDayEntriesProps): UseDayEntriesReturn {
+export function useDayEntries({ userId, date }: UseDayEntriesProps): UseDayEntriesReturn {
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadEntries = async () => {
+  const loadEntries = useCallback(async () => {
     if (!userId || !date) {
       setLoading(false);
       return;
@@ -54,62 +51,46 @@ export function useDayEntries({
 
     try {
       const { data: dayEntries } = await getCalendarEntriesForDate(userId, date);
-      if (dayEntries) {
-        setEntries(dayEntries);
-      }
+      setEntries(dayEntries ?? []);
     } catch (error) {
       console.error('Error loading day entries:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, date]);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     await loadEntries();
-  };
+  }, [loadEntries]);
 
-  const addEntry = async (data: {
-    outfit_id?: string;
-    slot_preset_id?: string;
-    custom_label?: string;
-    status?: 'planned' | 'worn' | 'skipped';
-    notes?: string;
-    sort_order?: number;
-  }) => {
+  const addEntry: UseDayEntriesReturn['addEntry'] = async (data) => {
     if (!userId || !date) {
       return { data: null, error: { message: 'User or date not provided' } };
     }
 
     const result = await createCalendarEntry(userId, date, data);
-
-    if (!result.error) {
-      await refresh();
-    }
-
+    if (!result.error) await refresh();
     return result;
   };
 
-  const updateEntry = async (entryId: string, data: Partial<CalendarEntry>) => {
+  const updateEntry: UseDayEntriesReturn['updateEntry'] = async (entryId, data) => {
     const result = await updateCalendarEntry(entryId, data);
-
-    if (!result.error) {
-      await refresh();
-    }
-
-    return result;
+    if (!result.error) await refresh();
+    return { error: result.error };
   };
 
-  const deleteEntry = async (entryId: string) => {
+  const deleteEntry: UseDayEntriesReturn['deleteEntry'] = async (entryId) => {
     const result = await deleteCalendarEntry(entryId);
 
+    // Optimistically remove from local state
     if (!result.error) {
-      setEntries(entries.filter((e) => e.id !== entryId));
+      setEntries((prev) => prev.filter((e) => e.id !== entryId));
     }
 
-    return result;
+    return { error: result.error };
   };
 
-  const reorderEntries = async (fromIndex: number, toIndex: number) => {
+  const reorderEntries: UseDayEntriesReturn['reorderEntries'] = async (fromIndex, toIndex) => {
     if (fromIndex === toIndex) return;
 
     // Optimistic update
@@ -125,26 +106,22 @@ export function useDayEntries({
         sort_order: index,
       }));
 
-      const updatePromises = updates.map((update) =>
-        updateCalendarEntry(update.id, { sort_order: update.sort_order })
+      const results = await Promise.all(
+        updates.map((u) => updateCalendarEntry(u.id, { sort_order: u.sort_order }))
       );
 
-      const results = await Promise.all(updatePromises);
       const errors = results.filter((r) => r.error);
-
       if (errors.length > 0) {
-        // Rollback on error
-        await refresh();
+        await refresh(); // rollback
       }
-    } catch (error) {
-      // Rollback on error
-      await refresh();
+    } catch {
+      await refresh(); // rollback
     }
   };
 
   useEffect(() => {
     loadEntries();
-  }, [userId, date]);
+  }, [loadEntries]);
 
   return {
     entries,

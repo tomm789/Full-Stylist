@@ -1,0 +1,1064 @@
+app/account-settings.tsx:28:    handleUpdateSetting,
+app/account-settings.tsx:85:          onUpdateSetting={handleUpdateSetting}
+src/lib/posts.ts:219:      const aDate = a.type === 'post' ? a.post!.created_at : a.repost!.created_at;
+src/lib/posts.ts:220:      const bDate = b.type === 'post' ? b.post!.created_at : b.repost!.created_at;
+src/lib/posts.ts:221:      return new Date(bDate).getTime() - new Date(aDate).getTime();
+src/lib/transactions.ts:125: * Update transaction status (for future use with real checkout)
+src/lib/transactions.ts:127:export async function updateTransactionStatus(
+src/lib/transactions.ts:137:      .update({ status })
+src/lib/feedback.ts:12:  updated_at: string;
+src/lib/feedback.ts:178: * Update a feedback thread
+src/lib/feedback.ts:180:export async function updateFeedbackThread(
+src/lib/feedback.ts:183:  updates: {
+src/lib/feedback.ts:195:      .update(updates)
+src/lib/perf/wardrobeAddTiming.ts:3: * Logs Date.now() with labels for easy removal later.
+src/lib/perf/wardrobeAddTiming.ts:11:  const ts = Date.now();
+src/lib/user/index.ts:11:  updateUserProfile,
+src/lib/ai-jobs/execution.ts:10:  const triggerStartMs = Date.now();
+src/lib/ai-jobs/execution.ts:13:  debugIngest({ location: 'execution.ts:10', message: 'triggerAIJobExecution entry', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:21:    debugIngest({ location: 'execution.ts:18', message: 'triggerAIJobExecution session check', data: { jobId, hasSession: !!session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:63:    debugIngest({ location: 'execution.ts:55', message: 'triggerAIJobExecution before fetch', data: { jobId, functionUrl, baseUrl, hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:65:    // Validate URL format
+src/lib/ai-jobs/execution.ts:87:        const ts = Date.now();
+src/lib/ai-jobs/execution.ts:89:        debugIngest({ location: 'execution.ts:78', message: 'triggerAIJobExecution fetch response', data: { jobId, status: response.status, statusText: response.statusText, ok: response.ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:100:          debugIngest({ location: 'execution.ts:84', message: 'triggerAIJobExecution non-OK response', data: { jobId, status: response.status, responseText: responseText.substring(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:119:          const ts = Date.now();
+src/lib/ai-jobs/execution.ts:126:            timestamp: Date.now(),
+src/lib/ai-jobs/execution.ts:140:            timestamp: Date.now(),
+src/lib/ai-jobs/execution.ts:148:    debugIngest({ location: 'execution.ts:123', message: 'triggerAIJobExecution returning success', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+src/lib/ai-jobs/execution.ts:149:    const elapsedMs = Date.now() - triggerStartMs;
+src/lib/ai-jobs/execution.ts:153:    const elapsedMs = Date.now() - triggerStartMs;
+app/bodyshot/[id].tsx:60:                  setLastSucceededJobFeedbackAt(created_at ?? new Date().toISOString());
+src/lib/utils/image-helpers.ts:70:    const filePath = `${userId}/${Date.now()}.${fileExt}`;
+src/lib/utils/image-helpers.ts:289:          // Update blob to compressed version
+src/lib/utils/image-helpers.ts:292:          // Update file name to reflect WebP format after compression
+src/lib/perf/timeline.ts:37:  const startMs = Date.now();
+src/lib/perf/timeline.ts:47:      const msSinceStart = Date.now() - startMs;
+src/lib/perf/timeline.ts:51:      const msSinceStart = Date.now() - startMs;
+src/lib/perf/timeline.ts:62:  const startMs = Date.now();
+src/lib/perf/timeline.ts:70:      const msSinceStart = Date.now() - startMs;
+src/lib/perf/timeline.ts:74:      const msSinceStart = Date.now() - startMs;
+src/lib/bundles/index.ts:14:  updateOutfitBundle,
+src/lib/outfits/index.ts:27:  updateOutfitItemPosition,
+src/lib/bundles/core.ts:148:export async function updateOutfitBundle(
+src/lib/bundles/core.ts:161:      .update(bundleData)
+src/lib/user/profile.ts:20: * Update user profile (handle and/or display name)
+src/lib/user/profile.ts:22:export async function updateUserProfile(
+src/lib/user/profile.ts:24:  updates: { handle?: string; display_name?: string }
+src/lib/user/profile.ts:28:    .update({
+src/lib/user/profile.ts:29:      ...updates,
+src/lib/user/profile.ts:30:      updated_at: new Date().toISOString(),
+app/notifications.tsx:29:  const now = new Date();
+app/notifications.tsx:30:  const notifTime = new Date(timestamp);
+app/notifications.tsx:34:  const diffDays = Math.floor(diffMs / 86400000);
+app/notifications.tsx:39:  if (diffDays < 7) return `${diffDays}d ago`;
+app/notifications.tsx:41:  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+app/notifications.tsx:45:  return notifTime.toLocaleDateString('en-US', options);
+src/lib/utils/validation.ts:177: * Validate post visibility
+src/lib/utils/validation.ts:179:export async function validatePostVisibility(
+src/lib/utils/validation.ts:235:export function validateNotSelfAction(
+src/lib/utils/validation.ts:249: * Validate email format
+src/lib/utils/validation.ts:257: * Validate handle format (alphanumeric, underscore, hyphen)
+app/_layout.tsx:18:          // Check for updates periodically
+app/_layout.tsx:19:          registration.addEventListener('updatefound', () => {
+app/_layout.tsx:25:                  console.log('[PWA] New service worker available. Reload to update.');
+src/lib/ai-jobs/core.ts:27:  updated_at: string;
+src/lib/ai-jobs/core.ts:174:    const sixtySecondsAgo = new Date(Date.now() - 60 * 1000).toISOString();
+src/lib/ai-jobs/core.ts:182:      .gte('updated_at', sixtySecondsAgo)
+src/lib/ai-jobs/core.ts:183:      .order('updated_at', { ascending: false })
+src/lib/notifications/index.ts:31:  groupNotificationsByDate,
+src/lib/user/follows.ts:210:      .update({ status: 'accepted' })
+src/lib/outfits/core.ts:16:  updated_at: string;
+src/lib/outfits/core.ts:133:    sortBy?: 'date' | 'rating' | 'title';
+src/lib/outfits/core.ts:156:  if (options?.sortBy === 'date') {
+src/lib/outfits/core.ts:161:    // Default to date desc
+src/lib/outfits/core.ts:283:    .update({ archived_at: new Date().toISOString() })
+src/lib/ai-jobs/types.ts:108:    // Update wardrobe item with suggested fields if provided
+src/lib/ai-jobs/types.ts:109:    const updates: any = {};
+src/lib/ai-jobs/types.ts:111:      updates.title = result.suggested_title;
+src/lib/ai-jobs/types.ts:114:      updates.description = result.suggested_notes;
+src/lib/ai-jobs/types.ts:117:    if (Object.keys(updates).length > 0) {
+src/lib/ai-jobs/types.ts:118:      const { error: updateError } = await supabase
+src/lib/ai-jobs/types.ts:120:        .update(updates)
+src/lib/ai-jobs/types.ts:123:      if (updateError) {
+src/lib/ai-jobs/types.ts:124:        return { success: false, error: updateError };
+src/lib/ai-jobs/types.ts:376: * Uses 60-second window (getRecentJob); for feedback overlay on reload use getRecentWardrobeItemJobForFeedback (30 days).
+src/lib/ai-jobs/types.ts:389: * Uses 60-second window; for feedback overlay on reload use getRecentWardrobeItemJobForFeedback (30 days).
+src/lib/ai-jobs/types.ts:413:/** 30-day window for "recent succeeded job" when loading view (feedback overlay / feedback_at). */
+src/lib/ai-jobs/types.ts:418: * Uses 30-day window; this is the path for reload → compact (feedback overlay).
+src/lib/ai-jobs/types.ts:426:    const since = new Date(Date.now() - RECENT_JOB_DAYS_MS).toISOString();
+src/lib/ai-jobs/types.ts:433:      .gte('updated_at', since)
+src/lib/ai-jobs/types.ts:434:      .order('updated_at', { ascending: false })
+src/lib/ai-jobs/types.ts:452:      .gte('updated_at', since)
+src/lib/ai-jobs/types.ts:453:      .order('updated_at', { ascending: false })
+src/lib/ai-jobs/types.ts:485:    const since = new Date(Date.now() - RECENT_JOB_DAYS_MS).toISOString();
+src/lib/ai-jobs/types.ts:492:      .gte('updated_at', since)
+src/lib/ai-jobs/types.ts:493:      .order('updated_at', { ascending: false })
+src/lib/ai-jobs/types.ts:525:    const since = new Date(Date.now() - RECENT_JOB_DAYS_MS).toISOString();
+src/lib/ai-jobs/types.ts:532:      .gte('updated_at', since)
+src/lib/ai-jobs/types.ts:533:      .order('updated_at', { ascending: false })
+src/lib/notifications/realtime.ts:8: * Subscribe to real-time notification updates
+src/lib/notifications/realtime.ts:20:  const channelName = `notifications-${userId}-${Date.now()}`;
+src/lib/outfits/initialCoverCache.ts:20:  jobSucceededAt: number = Date.now(),
+app/outfits/[id]/bundles.tsx:124:  const updateGroupRequired = (index: number, isRequired: boolean) => {
+app/outfits/[id]/bundles.tsx:213:                  onValueChange={(value) => updateGroupRequired(index, value)}
+src/lib/listings/index.ts:16:  updateListing,
+app/calendar/day/[date].tsx:2: * Calendar Day Screen (Refactored)
+app/calendar/day/[date].tsx:3: * View and manage calendar entries for a specific day
+app/calendar/day/[date].tsx:18:  useDayEntries,
+app/calendar/day/[date].tsx:21:  useCalendarDayForm,
+app/calendar/day/[date].tsx:22:} from '@/hooks/calendar';
+app/calendar/day/[date].tsx:25:  CalendarDayHeader,
+app/calendar/day/[date].tsx:26:  CalendarDayEntryForm,
+app/calendar/day/[date].tsx:28:} from '@/components/calendar';
+app/calendar/day/[date].tsx:34:export default function CalendarDayScreen() {
+app/calendar/day/[date].tsx:35:  const { date, autoAdd } = useLocalSearchParams<{
+app/calendar/day/[date].tsx:36:    date: string;
+app/calendar/day/[date].tsx:48:    updateEntry,
+app/calendar/day/[date].tsx:51:  } = useDayEntries({ userId: user?.id, date });
+app/calendar/day/[date].tsx:57:  const form = useCalendarDayForm({
+app/calendar/day/[date].tsx:60:    updateEntry,
+app/calendar/day/[date].tsx:77:      if (user && date) {
+app/calendar/day/[date].tsx:80:    }, [user, date, refresh])
+app/calendar/day/[date].tsx:83:  const navigateToAdjacentDay = (direction: 'prev' | 'next') => {
+app/calendar/day/[date].tsx:84:    if (!date) return;
+app/calendar/day/[date].tsx:86:    const currentDate = new Date(date);
+app/calendar/day/[date].tsx:88:    const newDate = new Date(currentDate);
+app/calendar/day/[date].tsx:89:    newDate.setDate(currentDate.getDate() + offset);
+app/calendar/day/[date].tsx:91:    const newDateKey = newDate.toISOString().split('T')[0];
+app/calendar/day/[date].tsx:92:    router.replace(`/calendar/day/${newDateKey}`);
+app/calendar/day/[date].tsx:98:        <LoadingSpinner text="Loading day..." />
+app/calendar/day/[date].tsx:106:      <CalendarDayHeader
+app/calendar/day/[date].tsx:107:        date={date}
+app/calendar/day/[date].tsx:109:        onNavigateDay={navigateToAdjacentDay}
+app/calendar/day/[date].tsx:118:            <Text style={styles.emptyText}>No entries for this day</Text>
+app/calendar/day/[date].tsx:151:      <CalendarDayEntryForm
+app/calendar/day/[date].tsx:167:        onSubmit={form.editingEntry ? form.handleUpdateEntry : form.handleAddEntry}
+app/lookbooks/[id]/view.tsx:289:        onCommentsUpdate={setComments}
+app/lookbooks/[id]/view.tsx:290:        onCountUpdate={setCommentCount}
+src/lib/ai-jobs/polling.ts:21:    debugIngest({ location: 'polling.ts:19', message: 'pollAIJob already polling', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:27:    debugIngest({ location: 'polling.ts:24', message: 'pollAIJob circuit breaker open', data: { jobId, failureCount }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:44:        debugIngest({ location: 'polling.ts:38', message: 'pollAIJob attempt', data: { jobId, attempt, maxAttempts, hasError: !!error, errorMessage: error?.message, hasData: !!data, status: data?.status }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:64:        debugIngest({ location: 'polling.ts:55', message: 'pollAIJob succeeded', data: { jobId, result: data.result }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:70:        debugIngest({ location: 'polling.ts:60', message: 'pollAIJob failed', data: { jobId, error: data.error }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:80:    debugIngest({ location: 'polling.ts:71', message: 'pollAIJob timeout', data: { jobId, maxAttempts }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:108:  const startMs = Date.now();
+src/lib/ai-jobs/polling.ts:110:    while (Date.now() - startMs < maxMs) {
+src/lib/ai-jobs/polling.ts:192:  const waitStartMs = Date.now();
+src/lib/ai-jobs/polling.ts:194:  debugIngest({ location: 'polling.ts:114', message: 'waitForAIJobCompletion entry', data: { jobId, maxAttempts, initialIntervalMs, logPrefix }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:202:    debugIngest({ location: 'polling.ts:121', message: 'waitForAIJobCompletion poll result', data: { jobId, hasJob: !!completedJob, jobStatus: completedJob?.status, hasError: !!error, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:205:      const elapsedMs = Date.now() - waitStartMs;
+src/lib/ai-jobs/polling.ts:216:        const elapsedMs = Date.now() - waitStartMs;
+src/lib/ai-jobs/polling.ts:222:    const elapsedMs = Date.now() - waitStartMs;
+src/lib/ai-jobs/polling.ts:235:    debugIngest({ location: 'polling.ts:121', message: 'waitForAIJobCompletion poll result', data: { jobId, hasJob: !!completedJob, jobStatus: completedJob?.status, hasError: !!error, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:238:      const elapsedMs = Date.now() - waitStartMs;
+src/lib/ai-jobs/polling.ts:247:      debugIngest({ location: 'polling.ts:132', message: 'waitForAIJobCompletion timeout, continuing', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+src/lib/ai-jobs/polling.ts:252:    const elapsedMs = Date.now() - waitStartMs;
+src/lib/ai-jobs/polling.ts:254:    debugIngest({ location: 'polling.ts:139', message: 'waitForAIJobCompletion returning error', data: { jobId, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
+app/auth/signup.tsx:25:  const validateEmail = (email: string): boolean => {
+app/auth/signup.tsx:38:    if (!validateEmail(trimmedEmail)) {
+src/lib/outfits/items.ts:14: * Create or update outfit
+src/lib/outfits/items.ts:33:      // Update existing outfit
+src/lib/outfits/items.ts:34:      const { data: updatedOutfit, error: updateError } = await supabase
+src/lib/outfits/items.ts:36:        .update({
+src/lib/outfits/items.ts:38:          updated_at: new Date().toISOString(),
+src/lib/outfits/items.ts:45:      if (updateError) {
+src/lib/outfits/items.ts:46:        throw updateError;
+src/lib/outfits/items.ts:162: * Update outfit item position
+src/lib/outfits/items.ts:164:export async function updateOutfitItemPosition(
+src/lib/outfits/items.ts:170:    .update({ position })
+src/lib/outfits/items.ts:184:    // Update each item's position
+src/lib/outfits/items.ts:188:        .update({ position: item.position })
+src/lib/listings/core.ts:184: * Update listing
+src/lib/listings/core.ts:186:export async function updateListing(
+src/lib/listings/core.ts:218:    // Update listing
+src/lib/listings/core.ts:219:    const updateData: any = {};
+src/lib/listings/core.ts:220:    if (listingData.price !== undefined) updateData.price = listingData.price;
+src/lib/listings/core.ts:221:    if (listingData.currency !== undefined) updateData.currency = listingData.currency;
+src/lib/listings/core.ts:222:    if (listingData.condition !== undefined) updateData.condition = listingData.condition;
+src/lib/listings/core.ts:223:    if (listingData.status !== undefined) updateData.status = listingData.status;
+src/lib/listings/core.ts:227:      .update(updateData)
+src/lib/listings/core.ts:237:    // Update images if provided
+src/lib/notifications/core.ts:73:      .update({ is_read: true })
+src/lib/notifications/core.ts:94:      .update({ is_read: true })
+src/lib/calendar/index.ts:2: * Calendar module - exports all calendar-related functions
+src/lib/calendar/index.ts:5: * import { getSlotPresets, createCalendarEntry } from '@/lib/calendar';
+src/lib/calendar/index.ts:9:  type CalendarSlotPreset,
+src/lib/calendar/index.ts:15:  type CalendarDay,
+src/lib/calendar/index.ts:16:  getOrCreateCalendarDay,
+src/lib/calendar/index.ts:17:} from './days';
+src/lib/calendar/index.ts:20:  type CalendarEntry,
+src/lib/calendar/index.ts:21:  getCalendarEntries,
+src/lib/calendar/index.ts:22:  createCalendarEntry,
+src/lib/calendar/index.ts:23:  updateCalendarEntry,
+src/lib/calendar/index.ts:24:  deleteCalendarEntry,
+src/lib/calendar/index.ts:25:  getCalendarEntriesForDate,
+src/lib/calendar/index.ts:26:  getOutfitScheduledDates,
+src/lib/lookbooks/core.ts:14:  updated_at: string;
+src/lib/lookbooks/core.ts:123: * Create or update lookbook
+src/lib/lookbooks/core.ts:144:      // Update existing lookbook
+src/lib/lookbooks/core.ts:145:      const { data: updatedLookbook, error: updateError } = await supabase
+src/lib/lookbooks/core.ts:147:        .update({
+src/lib/lookbooks/core.ts:149:          updated_at: new Date().toISOString(),
+src/lib/lookbooks/core.ts:156:      if (updateError) {
+src/lib/lookbooks/core.ts:157:        throw updateError;
+src/lib/lookbooks/core.ts:160:      lookbook = updatedLookbook;
+src/lib/lookbooks/core.ts:162:      // Update outfits if custom_manual
+app/lookbooks/new.tsx:114:            <Text style={styles.typeOptionDescription}>Auto-update based on filters (coming soon)</Text>
+src/lib/calendar/days.ts:3:export interface CalendarDay {
+src/lib/calendar/days.ts:6:  date: string;
+src/lib/calendar/days.ts:8:  updated_at: string;
+src/lib/calendar/days.ts:12: * Get or create calendar day
+src/lib/calendar/days.ts:14:export async function getOrCreateCalendarDay(
+src/lib/calendar/days.ts:16:  date: string
+src/lib/calendar/days.ts:18:  data: CalendarDay | null;
+src/lib/calendar/days.ts:21:  // Try to get existing day
+src/lib/calendar/days.ts:23:    .from('calendar_days')
+src/lib/calendar/days.ts:26:    .eq('date', date)
+src/lib/calendar/days.ts:33:  // Create new day
+src/lib/calendar/days.ts:34:  const { data: newDay, error: createError } = await supabase
+src/lib/calendar/days.ts:35:    .from('calendar_days')
+src/lib/calendar/days.ts:38:      date,
+src/lib/calendar/days.ts:43:  return { data: newDay, error: createError };
+src/lib/settings.ts:15:  updated_at?: string;
+src/lib/settings.ts:35: * Update user settings
+src/lib/settings.ts:37:export async function updateUserSettings(
+src/lib/settings.ts:39:  updates: Partial<UserSettings>
+src/lib/settings.ts:45:      ...updates,
+src/lib/settings.ts:46:      updated_at: new Date().toISOString(),
+src/lib/settings.ts:53: * Validate password for advanced AI models via Netlify function
+src/lib/settings.ts:56:export async function validateModelPassword(
+src/lib/settings.ts:81:    const functionUrl = `${baseUrl}/.netlify/functions/validate-model-password`;
+src/lib/settings.ts:102:    console.error('[validateModelPassword] Error:', error);
+src/lib/settings.ts:105:      error: error.message || 'Failed to validate password' 
+src/lib/notifications/helpers.ts:89: * Group notifications by date
+src/lib/notifications/helpers.ts:91:export function groupNotificationsByDate(notifications: Notification[]): Map<string, Notification[]> {
+src/lib/notifications/helpers.ts:95:    const date = new Date(notification.created_at);
+src/lib/notifications/helpers.ts:96:    const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+src/lib/notifications/helpers.ts:98:    if (!groups.has(dateKey)) {
+src/lib/notifications/helpers.ts:99:      groups.set(dateKey, []);
+src/lib/notifications/helpers.ts:101:    groups.get(dateKey)!.push(notification);
+src/lib/notifications/helpers.ts:111:  const now = new Date();
+src/lib/notifications/helpers.ts:112:  const created = new Date(createdAt);
+src/lib/notifications/helpers.ts:117:  const diffDays = Math.floor(diffHours / 24);
+src/lib/notifications/helpers.ts:125:  } else if (diffDays < 7) {
+src/lib/notifications/helpers.ts:126:    return `${diffDays}d ago`;
+src/lib/notifications/helpers.ts:128:    return created.toLocaleDateString();
+app/headshot/[id].tsx:96:                  setLastSucceededJobFeedbackAt(created_at ?? new Date().toISOString());
+app/feedback/[id].tsx:35:    updateStatus,
+app/feedback/[id].tsx:80:            onStatusChange={updateStatus}
+src/lib/attributes/index.ts:26:  updateEntityAttribute,
+src/lib/calendar/presets.ts:3:export interface CalendarSlotPreset {
+src/lib/calendar/presets.ts:17:  data: CalendarSlotPreset[];
+src/lib/calendar/presets.ts:23:      .from('calendar_slot_presets')
+src/lib/calendar/presets.ts:28:      .from('calendar_slot_presets')
+src/lib/calendar/presets.ts:52:  data: CalendarSlotPreset | null;
+src/lib/calendar/presets.ts:56:    .from('calendar_slot_presets')
+app/wardrobe/item/[id]/edit.tsx:71:    updateAttribute,
+app/wardrobe/item/[id]/edit.tsx:196:            onUpdateAttribute={updateAttribute}
+app/(tabs)/calendar.tsx:2: * Calendar Screen (Refactored)
+app/(tabs)/calendar.tsx:3: * Monthly calendar view with outfit previews
+app/(tabs)/calendar.tsx:21:import { useCalendarEntries } from '@/hooks/calendar';
+app/(tabs)/calendar.tsx:22:import { MonthNavigator, CalendarGrid } from '@/components/calendar';
+app/(tabs)/calendar.tsx:28:const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+app/(tabs)/calendar.tsx:29:const monthNames = [
+app/(tabs)/calendar.tsx:44:export default function CalendarScreen() {
+app/(tabs)/calendar.tsx:49:  const [currentDate, setCurrentDate] = useState(new Date());
+app/(tabs)/calendar.tsx:50:  const [modalCurrentDate, setModalCurrentDate] = useState(new Date());
+app/(tabs)/calendar.tsx:51:  const [showDatePickerModal, setShowDatePickerModal] = useState(false);
+app/(tabs)/calendar.tsx:53:  const year = currentDate.getFullYear();
+app/(tabs)/calendar.tsx:54:  const month = currentDate.getMonth();
+app/(tabs)/calendar.tsx:55:  const modalYear = modalCurrentDate.getFullYear();
+app/(tabs)/calendar.tsx:56:  const modalMonth = modalCurrentDate.getMonth();
+app/(tabs)/calendar.tsx:58:  const startDate = new Date(year, month, 1).toISOString().split('T')[0];
+app/(tabs)/calendar.tsx:59:  const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+app/(tabs)/calendar.tsx:61:  const { entries, outfitImages, loading, refresh } = useCalendarEntries({
+app/(tabs)/calendar.tsx:63:    startDate,
+app/(tabs)/calendar.tsx:64:    endDate,
+app/(tabs)/calendar.tsx:70:      setModalCurrentDate(new Date());
+app/(tabs)/calendar.tsx:71:      setShowDatePickerModal(true);
+app/(tabs)/calendar.tsx:72:      router.replace('/(tabs)/calendar' as any);
+app/(tabs)/calendar.tsx:76:  const navigateMonth = (direction: number) => {
+app/(tabs)/calendar.tsx:77:    const newDate = new Date(year, month + direction, 1);
+app/(tabs)/calendar.tsx:78:    setCurrentDate(newDate);
+app/(tabs)/calendar.tsx:81:  const navigateModalMonth = (direction: number) => {
+app/(tabs)/calendar.tsx:82:    const newDate = new Date(modalYear, modalMonth + direction, 1);
+app/(tabs)/calendar.tsx:83:    setModalCurrentDate(newDate);
+app/(tabs)/calendar.tsx:86:  const handleDayPress = (date: Date) => {
+app/(tabs)/calendar.tsx:87:    const dateKey = date.toISOString().split('T')[0];
+app/(tabs)/calendar.tsx:88:    router.push(`/calendar/day/${dateKey}`);
+app/(tabs)/calendar.tsx:91:  const handleDateSelect = (date: Date) => {
+app/(tabs)/calendar.tsx:92:    setShowDatePickerModal(false);
+app/(tabs)/calendar.tsx:93:    const dateKey = date.toISOString().split('T')[0];
+app/(tabs)/calendar.tsx:94:    router.push(`/calendar/day/${dateKey}?autoAdd=true`);
+app/(tabs)/calendar.tsx:97:  const getModalDaysInMonth = (): Date[] => {
+app/(tabs)/calendar.tsx:98:    const firstDay = new Date(modalYear, modalMonth, 1);
+app/(tabs)/calendar.tsx:99:    const lastDay = new Date(modalYear, modalMonth + 1, 0);
+app/(tabs)/calendar.tsx:100:    const days: Date[] = [];
+app/(tabs)/calendar.tsx:102:    const startPadding = firstDay.getDay();
+app/(tabs)/calendar.tsx:104:      days.push(new Date(modalYear, modalMonth, -i));
+app/(tabs)/calendar.tsx:107:    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+app/(tabs)/calendar.tsx:108:      days.push(new Date(d));
+app/(tabs)/calendar.tsx:111:    const endPadding = 6 - lastDay.getDay();
+app/(tabs)/calendar.tsx:113:      days.push(new Date(modalYear, modalMonth + 1, i));
+app/(tabs)/calendar.tsx:116:    return days;
+app/(tabs)/calendar.tsx:119:  const isModalCurrentMonth = (date: Date): boolean => {
+app/(tabs)/calendar.tsx:120:    return date.getMonth() === modalMonth && date.getFullYear() === modalYear;
+app/(tabs)/calendar.tsx:123:  const isToday = (date: Date): boolean => {
+app/(tabs)/calendar.tsx:124:    const today = new Date();
+app/(tabs)/calendar.tsx:126:      date.getDate() === today.getDate() &&
+app/(tabs)/calendar.tsx:127:      date.getMonth() === today.getMonth() &&
+app/(tabs)/calendar.tsx:128:      date.getFullYear() === today.getFullYear()
+app/(tabs)/calendar.tsx:135:        <LoadingSpinner text="Loading calendar..." />
+app/(tabs)/calendar.tsx:146:      <MonthNavigator currentDate={currentDate} onNavigate={navigateMonth} />
+app/(tabs)/calendar.tsx:148:      <CalendarGrid
+app/(tabs)/calendar.tsx:149:        currentDate={currentDate}
+app/(tabs)/calendar.tsx:152:        onDayPress={handleDayPress}
+app/(tabs)/calendar.tsx:155:      {/* Date Picker Modal */}
+app/(tabs)/calendar.tsx:157:        visible={showDatePickerModal}
+app/(tabs)/calendar.tsx:160:        onRequestClose={() => setShowDatePickerModal(false)}
+app/(tabs)/calendar.tsx:165:              <Text style={styles.modalTitle}>Select Date</Text>
+app/(tabs)/calendar.tsx:166:              <TouchableOpacity onPress={() => setShowDatePickerModal(false)}>
+app/(tabs)/calendar.tsx:172:              {/* Month Navigation */}
+app/(tabs)/calendar.tsx:173:              <View style={styles.miniMonthNav}>
+app/(tabs)/calendar.tsx:175:                  onPress={() => navigateModalMonth(-1)}
+app/(tabs)/calendar.tsx:180:                <Text style={styles.miniMonthTitle}>
+app/(tabs)/calendar.tsx:181:                  {monthNames[modalMonth]} {modalYear}
+app/(tabs)/calendar.tsx:184:                  onPress={() => navigateModalMonth(1)}
+app/(tabs)/calendar.tsx:191:              {/* Week Days */}
+app/(tabs)/calendar.tsx:192:              <View style={styles.miniWeekDaysRow}>
+app/(tabs)/calendar.tsx:193:                {weekDays.map((day) => (
+app/(tabs)/calendar.tsx:194:                  <View key={day} style={styles.miniWeekDay}>
+app/(tabs)/calendar.tsx:195:                    <Text style={styles.miniWeekDayText}>{day.charAt(0)}</Text>
+app/(tabs)/calendar.tsx:200:              {/* Calendar Grid */}
+app/(tabs)/calendar.tsx:201:              <View style={styles.miniCalendarGrid}>
+app/(tabs)/calendar.tsx:202:                {getModalDaysInMonth().map((date, index) => {
+app/(tabs)/calendar.tsx:203:                  const inCurrentMonth = isModalCurrentMonth(date);
+app/(tabs)/calendar.tsx:204:                  const today = isToday(date);
+app/(tabs)/calendar.tsx:210:                        styles.miniDayCell,
+app/(tabs)/calendar.tsx:211:                        !inCurrentMonth && styles.miniDayCellOtherMonth,
+app/(tabs)/calendar.tsx:212:                        today && styles.miniDayCellToday,
+app/(tabs)/calendar.tsx:214:                      onPress={() => handleDateSelect(date)}
+app/(tabs)/calendar.tsx:218:                          styles.miniDayNumber,
+app/(tabs)/calendar.tsx:219:                          !inCurrentMonth && styles.miniDayNumberOtherMonth,
+app/(tabs)/calendar.tsx:220:                          today && styles.miniDayNumberToday,
+app/(tabs)/calendar.tsx:223:                        {date.getDate()}
+app/(tabs)/calendar.tsx:277:  miniMonthNav: {
+app/(tabs)/calendar.tsx:295:  miniMonthTitle: {
+app/(tabs)/calendar.tsx:300:  miniWeekDaysRow: {
+app/(tabs)/calendar.tsx:304:  miniWeekDay: {
+app/(tabs)/calendar.tsx:309:  miniWeekDayText: {
+app/(tabs)/calendar.tsx:314:  miniCalendarGrid: {
+app/(tabs)/calendar.tsx:318:  miniDayCell: {
+app/(tabs)/calendar.tsx:326:  miniDayCellOtherMonth: {
+app/(tabs)/calendar.tsx:329:  miniDayCellToday: {
+app/(tabs)/calendar.tsx:334:  miniDayNumber: {
+app/(tabs)/calendar.tsx:339:  miniDayNumberOtherMonth: {
+app/(tabs)/calendar.tsx:342:  miniDayNumberToday: {
+app/(tabs)/wardrobe.tsx:116:    updateFilter,
+app/(tabs)/wardrobe.tsx:185:        .update({ is_favorite: !currentFavoriteStatus })
+app/(tabs)/wardrobe.tsx:191:      // Optimistic update handled by re-fetch
+app/(tabs)/wardrobe.tsx:225:      const navigateAt = Date.now();
+app/(tabs)/wardrobe.tsx:256:          .update({ archived_at: new Date().toISOString() })
+app/(tabs)/wardrobe.tsx:388:        onUpdateFilter={updateFilter}
+app/wardrobe/item/[id].tsx:129:    const imageLoadStartAt = Date.now();
+app/wardrobe/item/[id].tsx:147:    const imageLoadEndAt = Date.now();
+app/(tabs)/outfits.tsx:42:    updateFilter,
+app/(tabs)/outfits.tsx:68:    if (filters.sortBy !== 'date' || filters.sortOrder !== 'desc') {
+app/(tabs)/outfits.tsx:95:        onChangeText={(text) => updateFilter('searchQuery', text)}
+app/(tabs)/outfits.tsx:108:            updateFilter('showFavoritesOnly', !filters.showFavoritesOnly)
+app/(tabs)/outfits.tsx:177:          updateFilter('sortBy', sortBy);
+app/(tabs)/outfits.tsx:181:          updateFilter('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')
+app/(tabs)/_layout.tsx:21:        name="calendar"
+app/(tabs)/_layout.tsx:23:          headerTitle: () => <HeaderAddMenu title="Calendar" />,
+app/(tabs)/_layout.tsx:24:          tabBarLabel: 'Calendar',
+app/(tabs)/_layout.tsx:26:            <Ionicons name="calendar-outline" size={size} color={color} />
+src/lib/attributes/entity-attributes.ts:92: * Update entity attribute value
+src/lib/attributes/entity-attributes.ts:94:export async function updateEntityAttribute(
+src/lib/attributes/entity-attributes.ts:124:  // Update the entity attribute
+src/lib/attributes/entity-attributes.ts:125:  const { data: updated, error: updateError } = await supabase
+src/lib/attributes/entity-attributes.ts:127:    .update({
+src/lib/attributes/entity-attributes.ts:137:  return { data: updated, error: updateError };
+src/lib/engagement/index.ts:35:  updateComment,
+src/lib/engagement/comments.ts:11:  updated_at: string;
+src/lib/engagement/comments.ts:126:      .update({ deleted_at: new Date().toISOString() })
+src/lib/engagement/comments.ts:141: * Update a comment
+src/lib/engagement/comments.ts:143:export async function updateComment(
+src/lib/engagement/comments.ts:154:      .update({
+src/lib/engagement/comments.ts:156:        updated_at: new Date().toISOString(),
+app/(tabs)/profile.tsx:54:  // Update form when profile loads
+src/lib/calendar/entries.ts:2:import { getOrCreateCalendarDay } from './days';
+src/lib/calendar/entries.ts:3:import type { CalendarSlotPreset } from './presets';
+src/lib/calendar/entries.ts:5:export interface CalendarEntry {
+src/lib/calendar/entries.ts:7:  calendar_day_id: string;
+src/lib/calendar/entries.ts:17:  updated_at: string;
+src/lib/calendar/entries.ts:21: * Get calendar entries for a date range
+src/lib/calendar/entries.ts:23:export async function getCalendarEntries(
+src/lib/calendar/entries.ts:25:  startDate: string,
+src/lib/calendar/entries.ts:26:  endDate: string
+src/lib/calendar/entries.ts:28:  data: Array<CalendarEntry & { calendar_day?: any; outfit?: any; slot_preset?: CalendarSlotPreset }>;
+src/lib/calendar/entries.ts:31:  const { data: days, error: daysError } = await supabase
+src/lib/calendar/entries.ts:32:    .from('calendar_days')
+src/lib/calendar/entries.ts:35:    .gte('date', startDate)
+src/lib/calendar/entries.ts:36:    .lte('date', endDate);
+src/lib/calendar/entries.ts:38:  if (daysError || !days) {
+src/lib/calendar/entries.ts:39:    return { data: [], error: daysError };
+src/lib/calendar/entries.ts:42:  const dayIds = days.map((d) => d.id);
+src/lib/calendar/entries.ts:44:  if (dayIds.length === 0) {
+src/lib/calendar/entries.ts:49:    .from('calendar_entries')
+src/lib/calendar/entries.ts:50:    .select('*, calendar_days(*), outfits(*), calendar_slot_presets(*)')
+src/lib/calendar/entries.ts:51:    .in('calendar_day_id', dayIds)
+src/lib/calendar/entries.ts:58: * Create calendar entry
+src/lib/calendar/entries.ts:60:export async function createCalendarEntry(
+src/lib/calendar/entries.ts:62:  date: string,
+src/lib/calendar/entries.ts:74:  data: CalendarEntry | null;
+src/lib/calendar/entries.ts:77:  const { data: calendarDay, error: dayError } = await getOrCreateCalendarDay(userId, date);
+src/lib/calendar/entries.ts:78:  if (dayError || !calendarDay) {
+src/lib/calendar/entries.ts:79:    return { data: null, error: dayError };
+src/lib/calendar/entries.ts:83:    .from('calendar_entries')
+src/lib/calendar/entries.ts:85:      calendar_day_id: calendarDay.id,
+src/lib/calendar/entries.ts:102: * Update calendar entry
+src/lib/calendar/entries.ts:104:export async function updateCalendarEntry(
+src/lib/calendar/entries.ts:106:  updates: Partial<Omit<CalendarEntry, 'id' | 'calendar_day_id' | 'created_at'>>
+src/lib/calendar/entries.ts:108:  data: CalendarEntry | null;
+src/lib/calendar/entries.ts:112:    .from('calendar_entries')
+src/lib/calendar/entries.ts:113:    .update({
+src/lib/calendar/entries.ts:114:      ...updates,
+src/lib/calendar/entries.ts:115:      updated_at: new Date().toISOString(),
+src/lib/calendar/entries.ts:125: * Delete calendar entry
+src/lib/calendar/entries.ts:127:export async function deleteCalendarEntry(entryId: string): Promise<{ error: any }> {
+src/lib/calendar/entries.ts:129:    .from('calendar_entries')
+src/lib/calendar/entries.ts:137: * Get entries for a specific date
+src/lib/calendar/entries.ts:139:export async function getCalendarEntriesForDate(
+src/lib/calendar/entries.ts:141:  date: string
+src/lib/calendar/entries.ts:143:  data: Array<CalendarEntry & { outfit?: any; slot_preset?: CalendarSlotPreset }>;
+src/lib/calendar/entries.ts:146:  const { data: day } = await getOrCreateCalendarDay(userId, date);
+src/lib/calendar/entries.ts:147:  if (!day) {
+src/lib/calendar/entries.ts:152:    .from('calendar_entries')
+src/lib/calendar/entries.ts:153:    .select('*, outfits(*), calendar_slot_presets(*)')
+src/lib/calendar/entries.ts:154:    .eq('calendar_day_id', day.id)
+src/lib/calendar/entries.ts:161: * Get all scheduled dates for a specific outfit
+src/lib/calendar/entries.ts:163:export async function getOutfitScheduledDates(
+src/lib/calendar/entries.ts:167:  data: Array<{ date: string; entry: CalendarEntry }>;
+src/lib/calendar/entries.ts:172:      .from('calendar_entries')
+src/lib/calendar/entries.ts:173:      .select('*, calendar_day:calendar_days!calendar_day_id(date, owner_user_id)')
+src/lib/calendar/entries.ts:180:    const scheduledDates = (entries || [])
+src/lib/calendar/entries.ts:181:      .filter((entry: any) => entry.calendar_day?.owner_user_id === userId)
+src/lib/calendar/entries.ts:183:        date: entry.calendar_day?.date,
+src/lib/calendar/entries.ts:186:      .filter((item: any) => item.date);
+src/lib/calendar/entries.ts:188:    return { data: scheduledDates, error: null };
+app/(tabs)/social.tsx:55:    updateCommentCount,
+app/(tabs)/social.tsx:219:        onCommentsUpdate={modals.setComments}
+app/(tabs)/social.tsx:220:        onCountUpdate={(count) => {
+app/(tabs)/social.tsx:226:            updateCommentCount(postId, count);
+src/lib/ai-feedback.ts:9: * Use when ai_jobs.feedback_at is missing/unupdated: query ai_generation_feedback
+app/index.tsx:89:            // Session will be updated via auth state change, navigation will happen in next effect
+src/contexts/AuthContext.tsx:46:      debugIngest({ location: 'AuthContext.tsx:44', message: 'onAuthStateChange fired', data: { event, hasSession: !!session, userId: session?.user?.id || 'null' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H2' });
+src/contexts/AuthContext.tsx:48:      debugIngest({ location: 'AuthContext.tsx:49', message: 'Before updating state from onAuthStateChange', data: { event, currentSession: session?.user?.id ?? 'null', currentStateSession: session?.user?.id ?? 'null' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H2' });
+src/contexts/AuthContext.tsx:52:      debugIngest({ location: 'AuthContext.tsx:54', message: 'State updated after auth change', data: { event, hasSession: !!session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H2' });
+src/contexts/AuthContext.tsx:63:      debugIngest({ location: 'AuthContext.tsx:signIn:entry', message: 'signIn called', data: { email, usePassword: !!password }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H3,H4,H5' });
+src/contexts/AuthContext.tsx:67:        debugIngest({ location: 'AuthContext.tsx:signIn:beforePassword', message: 'before signInWithPassword', data: { email }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H3,H4' });
+src/contexts/AuthContext.tsx:72:        debugIngest({ location: 'AuthContext.tsx:signIn:afterPassword', message: 'after signInWithPassword', data: { hasError: !!error, errorMessage: error?.message, errorStatus: (error as any)?.status, hasSession: !!data?.session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H3,H4' });
+src/contexts/AuthContext.tsx:131:    debugIngest({ location: 'AuthContext.tsx:138', message: 'signOut called', data: { sessionBefore: session?.user?.id ?? 'null', userBefore: user?.id ?? 'null', hasSession: !!session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
+src/contexts/AuthContext.tsx:134:      debugIngest({ location: 'AuthContext.tsx:143', message: 'Before signOut API call', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
+src/contexts/AuthContext.tsx:136:      debugIngest({ location: 'AuthContext.tsx:146', message: 'signOut API call completed', data: { error: error?.message ?? 'none', errorStatus: (error as any)?.status, hasError: !!error }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
+src/contexts/AuthContext.tsx:138:      debugIngest({ location: 'AuthContext.tsx:149', message: 'Session check after signOut API', data: { hasSession: !!sessionAfterApi.session, userId: sessionAfterApi.session?.user?.id ?? 'null' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H3' });
+src/contexts/AuthContext.tsx:141:        debugIngest({ location: 'AuthContext.tsx:152', message: 'Sign out error detected, clearing local state', data: { errorMessage: error.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1,H2' });
+src/contexts/AuthContext.tsx:145:        debugIngest({ location: 'AuthContext.tsx:156', message: 'Local state cleared after signOut error', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
+src/contexts/AuthContext.tsx:148:        debugIngest({ location: 'AuthContext.tsx:160', message: 'Sign out successful, waiting for onAuthStateChange', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H2' });
+src/contexts/AuthContext.tsx:152:      debugIngest({ location: 'AuthContext.tsx:164', message: 'signOut exception, clearing local state', data: { error: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
+src/contexts/AuthContext.tsx:156:      debugIngest({ location: 'AuthContext.tsx:169', message: 'Local state cleared after signOut exception', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
+src/hooks/useAddToHomeScreenDetection.ts:41:      const dismissedUntilDate = new Date(dismissedUntil);
+src/hooks/useAddToHomeScreenDetection.ts:42:      if (dismissedUntilDate > new Date()) {
+src/hooks/useAddToHomeScreenDetection.ts:81:    // Store dismissal with 30-day TTL
+src/hooks/useAddToHomeScreenDetection.ts:82:    const dismissedUntil = new Date();
+src/hooks/useAddToHomeScreenDetection.ts:83:    dismissedUntil.setDate(dismissedUntil.getDate() + DISMISSAL_TTL_DAYS);
+src/lib/wardrobe/index.ts:17:  updateWardrobeItem,
+src/lib/wardrobe/index.ts:32:  updateImageSortOrder,
+src/utils/formatUtils.ts:8: * @returns Formatted string like "Just now", "5m ago", "2h ago", "3d ago", or date
+src/utils/formatUtils.ts:11:  const now = new Date();
+src/utils/formatUtils.ts:12:  const posted = new Date(timestamp);
+src/utils/formatUtils.ts:16:  const diffDays = Math.floor(diffMs / 86400000);
+src/utils/formatUtils.ts:21:  if (diffDays < 7) return `${diffDays}d ago`;
+src/utils/formatUtils.ts:23:  // For posts older than 7 days, show the date
+src/utils/formatUtils.ts:24:  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+src/utils/formatUtils.ts:28:  return posted.toLocaleDateString('en-US', options);
+src/components/profile/PrivacySettingsSection.tsx:13:  onUpdateSetting: <K extends keyof UserSettings>(
+src/components/profile/PrivacySettingsSection.tsx:22:  onUpdateSetting,
+src/components/profile/PrivacySettingsSection.tsx:34:            onPress={() => onUpdateSetting('account_privacy', 'public')}
+src/components/profile/PrivacySettingsSection.tsx:51:            onPress={() => onUpdateSetting('account_privacy', 'private')}
+src/components/profile/PrivacySettingsSection.tsx:74:            onPress={() => onUpdateSetting('search_visibility', 'visible')}
+src/components/profile/PrivacySettingsSection.tsx:91:            onPress={() => onUpdateSetting('search_visibility', 'hidden')}
+src/components/profile/PrivacySettingsSection.tsx:116:              onPress={() => onUpdateSetting('default_visibility', visibility as any)}
+src/components/profile/PrivacySettingsSection.tsx:137:            onUpdateSetting('allow_external_sharing', !settings.allow_external_sharing)
+src/contexts/NotificationsContext.tsx:64:  // Subscribe to real-time updates
+src/utils/imageUtils.ts:74: * Validate image file type
+src/utils/imageUtils.ts:82: * Validate image file size (in bytes)
+src/lib/wardrobe/items-types.ts:25:  updated_at: string;
+src/hooks/useImageStacker.ts:63:      const timestamp = Date.now();
+src/lib/wardrobe/diagnostics.ts:142:      const itemCreatedAt = new Date(item.created_at).getTime();
+src/lib/wardrobe/diagnostics.ts:148:          const imageCreatedAt = new Date(img.created_at).getTime();
+src/lib/wardrobe/images.ts:183: * Update image sort order
+src/lib/wardrobe/images.ts:185:export async function updateImageSortOrder(
+src/lib/wardrobe/images.ts:187:  imageUpdates: Array<{ image_id: string; sort_order: number }>
+src/lib/wardrobe/images.ts:190:    // Update each image's sort order
+src/lib/wardrobe/images.ts:191:    for (const update of imageUpdates) {
+src/lib/wardrobe/images.ts:194:        .update({ sort_order: update.sort_order })
+src/lib/wardrobe/images.ts:196:        .eq('image_id', update.image_id);
+src/lib/wardrobe/images.ts:229:    const updates: Array<{ image_id: string; sort_order: number }> = [];
+src/lib/wardrobe/images.ts:234:        updates.push({ image_id: img.image_id, sort_order: 0 });
+src/lib/wardrobe/images.ts:236:        updates.push({ image_id: img.image_id, sort_order: nextOrder++ });
+src/lib/wardrobe/images.ts:240:    return updateImageSortOrder(itemId, updates);
+src/utils/wardrobeUtils.ts:86:          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+src/utils/wardrobeUtils.ts:91:          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+src/lib/wardrobe/initialItemCache.ts:27:  const now = Date.now();
+src/lib/wardrobe/initialItemCache.ts:39:  jobSucceededAt: number = Date.now(),
+src/lib/wardrobe/items-mutations.ts:3: * Create, update, delete, save, and unsave operations for wardrobe items
+src/lib/wardrobe/items-mutations.ts:109: * Update wardrobe item
+src/lib/wardrobe/items-mutations.ts:111:export async function updateWardrobeItem(
+src/lib/wardrobe/items-mutations.ts:114:  updates: Partial<Omit<WardrobeItem, 'id' | 'owner_user_id' | 'created_at'>>
+src/lib/wardrobe/items-mutations.ts:119:      .update({
+src/lib/wardrobe/items-mutations.ts:120:        ...updates,
+src/lib/wardrobe/items-mutations.ts:121:        updated_at: new Date().toISOString(),
+src/lib/wardrobe/items-mutations.ts:144:      .update({ archived_at: new Date().toISOString() })
+src/hooks/social/useUserProfile.ts:115:              .from('calendar_entries')
+src/hooks/social/useUserProfile.ts:116:              .select('outfit_id, calendar_day:calendar_day_id(owner_user_id)')
+src/hooks/social/useUserProfile.ts:137:          const ownerId = entry.calendar_day?.owner_user_id;
+src/hooks/social/useTryOnOutfit.ts:35:    const tryOnStartMs = Date.now();
+src/hooks/social/useTryOnOutfit.ts:87:          .update({ archived_at: new Date().toISOString() })
+src/hooks/social/useTryOnOutfit.ts:96:          .update({ archived_at: new Date().toISOString() })
+src/hooks/social/useTryOnOutfit.ts:163:            .update({ archived_at: new Date().toISOString() })
+src/hooks/social/useTryOnOutfit.ts:191:        const pollElapsedMs = Date.now() - tryOnStartMs;
+src/hooks/social/useTryOnOutfit.ts:198:          const navElapsedMs = Date.now() - tryOnStartMs;
+src/lib/wardrobe/items.ts:24:  updateWardrobeItem,
+src/components/wardrobe/ImageCropper.tsx:52:          const fileName = `image-${Date.now()}.webp`;
+src/components/wardrobe/ImageCropper.tsx:63:    // Always update croppedAreaPixels when crop changes
+src/components/wardrobe/ImageCropper.tsx:81:      const fileName = `cropped-${Date.now()}.webp`;
+src/hooks/social/useSocialModals.ts:201:            const updated = new Map(prev);
+src/hooks/social/useSocialModals.ts:202:            updated.set(userId, false);
+src/hooks/social/useSocialModals.ts:203:            return updated;
+src/components/outfits/SortModal.tsx:31:  { value: 'date', label: 'Date' },
+src/hooks/social/useEngagementActions.ts:120:  const updateCommentCount = (postId: string, count: number) => {
+src/hooks/social/useEngagementActions.ts:136:    updateCommentCount,
+src/components/tabs/HeaderAddMenu.tsx:32:      case 'calendar':
+src/components/tabs/HeaderAddMenu.tsx:33:        router.push('/(tabs)/calendar?openAddPicker=true' as any);
+src/components/tabs/HeaderAddMenu.tsx:70:          onPress={() => handleAddOption('calendar')}
+src/components/tabs/HeaderAddMenu.tsx:72:          <Ionicons name="calendar-outline" size={20} color="#000" />
+src/components/tabs/HeaderAddMenu.tsx:73:          <Text style={styles.menuItemText}>Calendar Entry</Text>
+src/hooks/feedback/useFeedbackThread.ts:10:  updateFeedbackThread,
+src/hooks/feedback/useFeedbackThread.ts:29:  updateStatus: (
+src/hooks/feedback/useFeedbackThread.ts:93:  const updateStatus = async (
+src/hooks/feedback/useFeedbackThread.ts:99:      const { data: updatedThread, error } = await updateFeedbackThread(
+src/hooks/feedback/useFeedbackThread.ts:107:      if (updatedThread) {
+src/hooks/feedback/useFeedbackThread.ts:108:        setThread(updatedThread);
+src/hooks/feedback/useFeedbackThread.ts:111:      Alert.alert('Error', `Failed to update status: ${error.message || error}`);
+src/hooks/feedback/useFeedbackThread.ts:128:    updateStatus,
+src/components/FilterDefinitionEditor.tsx:8:  date_from?: string;
+src/components/FilterDefinitionEditor.tsx:9:  date_to?: string;
+src/components/FilterDefinitionEditor.tsx:21:  const [dateFrom, setDateFrom] = useState<string>('');
+src/components/FilterDefinitionEditor.tsx:22:  const [dateTo, setDateTo] = useState<string>('');
+src/components/FilterDefinitionEditor.tsx:36:    if (dateFrom) {
+src/components/FilterDefinitionEditor.tsx:37:      filterDef.date_from = dateFrom;
+src/components/FilterDefinitionEditor.tsx:39:    if (dateTo) {
+src/components/FilterDefinitionEditor.tsx:40:      filterDef.date_to = dateTo;
+src/components/FilterDefinitionEditor.tsx:43:  }, [isFavorite, selectedCategories, dateFrom, dateTo]);
+src/components/FilterDefinitionEditor.tsx:104:      {/* Date Range Filter - Placeholder for future enhancement */}
+src/components/FilterDefinitionEditor.tsx:106:        <Text style={styles.filterSectionTitle}>Date Range (Coming Soon)</Text>
+src/components/FilterDefinitionEditor.tsx:108:          Date range filtering will be available in a future update.
+src/components/wardrobe/AttributeEditor.tsx:32:  onUpdateAttribute: (attributeId: string, value: string) => Promise<void>;
+src/components/wardrobe/AttributeEditor.tsx:40:  onUpdateAttribute,
+src/components/wardrobe/AttributeEditor.tsx:63:    onUpdateAttribute,
+src/components/wardrobe/FilterDrawer.tsx:21:  onUpdateFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
+src/components/wardrobe/FilterDrawer.tsx:35:  onUpdateFilter,
+src/components/wardrobe/FilterDrawer.tsx:90:              onUpdateFilter('favorites', value ? true : null)
+src/components/wardrobe/FilterDrawer.tsx:103:              onUpdateFilter('showSavedItemsOnly', value ? true : null)
+src/components/wardrobe/FilterDrawer.tsx:120:            onToggle={(id) => onUpdateFilter('subcategoryId', id as any)}
+src/components/wardrobe/FilterDrawer.tsx:137:              onUpdateFilter('color', filters.color === id ? null : (id as any))
+src/components/wardrobe/FilterDrawer.tsx:158:              onUpdateFilter('material', filters.material === id ? null : (id as any))
+src/components/wardrobe/FilterDrawer.tsx:176:              onUpdateFilter('size', filters.size === id ? null : (id as any))
+src/components/wardrobe/FilterDrawer.tsx:194:              onUpdateFilter('season', filters.season === id ? null : (id as any))
+src/components/wardrobe/FilterDrawer.tsx:211:            onToggle={(newTagIds) => onUpdateFilter('tagIds', newTagIds as any)}
+src/hooks/profile/useProfileImages.ts:8:import { getUserSettings, updateUserSettings } from '@/lib/settings';
+src/hooks/profile/useProfileImages.ts:147:      const { error } = await updateUserSettings(userId, {
+src/hooks/profile/useProfileImages.ts:164:      const { error } = await updateUserSettings(userId, {
+src/hooks/profile/useProfileEdit.ts:9:import { updateUserProfile } from '@/lib/user';
+src/hooks/profile/useProfileEdit.ts:10:import { updateUserSettings } from '@/lib/settings';
+src/hooks/profile/useProfileEdit.ts:33:  const validateHandle = (h: string): boolean => {
+src/hooks/profile/useProfileEdit.ts:46:    if (!validateHandle(handle.trim())) {
+src/hooks/profile/useProfileEdit.ts:62:      const { error } = await updateUserProfile(userId, {
+src/hooks/profile/useProfileEdit.ts:76:      Alert.alert('Success', 'Profile updated successfully');
+src/hooks/profile/useProfileEdit.ts:117:        `avatar-${Date.now()}.jpg`
+src/hooks/profile/useProfileEdit.ts:137:      const { error: updateError } = await updateUserSettings(userId, {
+src/hooks/profile/useProfileEdit.ts:141:      if (updateError) throw updateError;
+src/hooks/profile/useProfileEdit.ts:143:      Alert.alert('Success', 'Avatar updated successfully');
+src/components/calendar/EntryCard.tsx:3: * Calendar entry card with reorder buttons and quick actions
+src/components/calendar/EntryCard.tsx:9:import { CalendarEntry, CalendarSlotPreset } from '@/lib/calendar';
+src/components/calendar/EntryCard.tsx:15:  entry: CalendarEntry;
+src/components/calendar/EntryCard.tsx:16:  slotPresets: CalendarSlotPreset[];
+src/components/calendar/CalendarGrid.tsx:2: * CalendarGrid Component
+src/components/calendar/CalendarGrid.tsx:3: * Monthly calendar grid with day cells
+src/components/calendar/CalendarGrid.tsx:8:import CalendarDayCell from './CalendarDayCell';
+src/components/calendar/CalendarGrid.tsx:9:import { CalendarEntry } from '@/lib/calendar';
+src/components/calendar/CalendarGrid.tsx:14:interface CalendarGridProps {
+src/components/calendar/CalendarGrid.tsx:15:  currentDate: Date;
+src/components/calendar/CalendarGrid.tsx:16:  entries: Map<string, CalendarEntry[]>;
+src/components/calendar/CalendarGrid.tsx:18:  onDayPress: (date: Date) => void;
+src/components/calendar/CalendarGrid.tsx:21:const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+src/components/calendar/CalendarGrid.tsx:23:export default function CalendarGrid({
+src/components/calendar/CalendarGrid.tsx:24:  currentDate,
+src/components/calendar/CalendarGrid.tsx:27:  onDayPress,
+src/components/calendar/CalendarGrid.tsx:28:}: CalendarGridProps) {
+src/components/calendar/CalendarGrid.tsx:29:  const year = currentDate.getFullYear();
+src/components/calendar/CalendarGrid.tsx:30:  const month = currentDate.getMonth();
+src/components/calendar/CalendarGrid.tsx:32:  const getDaysInMonth = (): Date[] => {
+src/components/calendar/CalendarGrid.tsx:33:    const firstDay = new Date(year, month, 1);
+src/components/calendar/CalendarGrid.tsx:34:    const lastDay = new Date(year, month + 1, 0);
+src/components/calendar/CalendarGrid.tsx:35:    const days: Date[] = [];
+src/components/calendar/CalendarGrid.tsx:37:    // Add padding days from previous month
+src/components/calendar/CalendarGrid.tsx:38:    const startPadding = firstDay.getDay();
+src/components/calendar/CalendarGrid.tsx:40:      const date = new Date(year, month, -i);
+src/components/calendar/CalendarGrid.tsx:41:      days.push(date);
+src/components/calendar/CalendarGrid.tsx:44:    // Add days in current month
+src/components/calendar/CalendarGrid.tsx:45:    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+src/components/calendar/CalendarGrid.tsx:46:      days.push(new Date(d));
+src/components/calendar/CalendarGrid.tsx:49:    // Add padding days from next month to fill week
+src/components/calendar/CalendarGrid.tsx:50:    const endPadding = 6 - lastDay.getDay();
+src/components/calendar/CalendarGrid.tsx:52:      const date = new Date(year, month + 1, i);
+src/components/calendar/CalendarGrid.tsx:53:      days.push(date);
+src/components/calendar/CalendarGrid.tsx:56:    return days;
+src/components/calendar/CalendarGrid.tsx:59:  const isCurrentMonth = (date: Date): boolean => {
+src/components/calendar/CalendarGrid.tsx:60:    return date.getMonth() === month && date.getFullYear() === year;
+src/components/calendar/CalendarGrid.tsx:63:  const isToday = (date: Date): boolean => {
+src/components/calendar/CalendarGrid.tsx:64:    const today = new Date();
+src/components/calendar/CalendarGrid.tsx:66:      date.getDate() === today.getDate() &&
+src/components/calendar/CalendarGrid.tsx:67:      date.getMonth() === today.getMonth() &&
+src/components/calendar/CalendarGrid.tsx:68:      date.getFullYear() === today.getFullYear()
+src/components/calendar/CalendarGrid.tsx:72:  const getDayEntries = (date: Date): CalendarEntry[] => {
+src/components/calendar/CalendarGrid.tsx:73:    const dateKey = date.toISOString().split('T')[0];
+src/components/calendar/CalendarGrid.tsx:74:    return entries.get(dateKey) || [];
+src/components/calendar/CalendarGrid.tsx:77:  const days = getDaysInMonth();
+src/components/calendar/CalendarGrid.tsx:81:      {/* Week Days Header */}
+src/components/calendar/CalendarGrid.tsx:82:      <View style={styles.weekDaysRow}>
+src/components/calendar/CalendarGrid.tsx:83:        {weekDays.map((day) => (
+src/components/calendar/CalendarGrid.tsx:84:          <View key={day} style={styles.weekDay}>
+src/components/calendar/CalendarGrid.tsx:85:            <Text style={styles.weekDayText}>{day}</Text>
+src/components/calendar/CalendarGrid.tsx:90:      {/* Calendar Grid */}
+src/components/calendar/CalendarGrid.tsx:91:      <View style={styles.calendarGrid}>
+src/components/calendar/CalendarGrid.tsx:92:        {days.map((date, index) => (
+src/components/calendar/CalendarGrid.tsx:93:          <CalendarDayCell
+src/components/calendar/CalendarGrid.tsx:95:            date={date}
+src/components/calendar/CalendarGrid.tsx:96:            entries={getDayEntries(date)}
+src/components/calendar/CalendarGrid.tsx:98:            inCurrentMonth={isCurrentMonth(date)}
+src/components/calendar/CalendarGrid.tsx:99:            isToday={isToday(date)}
+src/components/calendar/CalendarGrid.tsx:100:            onPress={() => onDayPress(date)}
+src/components/calendar/CalendarGrid.tsx:112:  weekDaysRow: {
+src/components/calendar/CalendarGrid.tsx:116:  weekDay: {
+src/components/calendar/CalendarGrid.tsx:121:  weekDayText: {
+src/components/calendar/CalendarGrid.tsx:127:  calendarGrid: {
+src/components/calendar/SlotPresetSelector.tsx:8:import { CalendarSlotPreset } from '@/lib/calendar';
+src/components/calendar/SlotPresetSelector.tsx:14:  presets: CalendarSlotPreset[];
+src/components/outfits/CommentSection.tsx:79:          <Text style={styles.commentDate}>
+src/components/outfits/CommentSection.tsx:80:            {new Date(comment.created_at).toLocaleDateString()}
+src/components/outfits/CommentSection.tsx:142:  commentDate: {
+src/components/calendar/index.ts:2: * Calendar Components Index
+src/components/calendar/index.ts:3: * Export all calendar-specific components
+src/components/calendar/index.ts:6:export { default as MonthNavigator } from './MonthNavigator';
+src/components/calendar/index.ts:7:export { default as CalendarGrid } from './CalendarGrid';
+src/components/calendar/index.ts:8:export { default as CalendarDayCell } from './CalendarDayCell';
+src/components/calendar/index.ts:13:export { CalendarDayHeader } from './CalendarDayHeader';
+src/components/calendar/index.ts:14:export { CalendarDayEntryForm } from './CalendarDayEntryForm';
+src/components/calendar/CalendarDayHeader.tsx:2: * CalendarDayHeader Component
+src/components/calendar/CalendarDayHeader.tsx:3: * Header with navigation for calendar day screen
+src/components/calendar/CalendarDayHeader.tsx:12:interface CalendarDayHeaderProps {
+src/components/calendar/CalendarDayHeader.tsx:13:  date: string | undefined;
+src/components/calendar/CalendarDayHeader.tsx:15:  onNavigateDay: (direction: 'prev' | 'next') => void;
+src/components/calendar/CalendarDayHeader.tsx:18:export function CalendarDayHeader({
+src/components/calendar/CalendarDayHeader.tsx:19:  date,
+src/components/calendar/CalendarDayHeader.tsx:21:  onNavigateDay,
+src/components/calendar/CalendarDayHeader.tsx:22:}: CalendarDayHeaderProps) {
+src/components/calendar/CalendarDayHeader.tsx:23:  const formatDate = (dateStr: string): string => {
+src/components/calendar/CalendarDayHeader.tsx:24:    const date = new Date(dateStr);
+src/components/calendar/CalendarDayHeader.tsx:25:    return date.toLocaleDateString('en-US', {
+src/components/calendar/CalendarDayHeader.tsx:26:      weekday: 'long',
+src/components/calendar/CalendarDayHeader.tsx:28:      month: 'long',
+src/components/calendar/CalendarDayHeader.tsx:29:      day: 'numeric',
+src/components/calendar/CalendarDayHeader.tsx:40:        <View style={styles.dayNavigationButtons}>
+src/components/calendar/CalendarDayHeader.tsx:42:            style={styles.dayNavButton}
+src/components/calendar/CalendarDayHeader.tsx:43:            onPress={() => onNavigateDay('prev')}
+src/components/calendar/CalendarDayHeader.tsx:45:            <Text style={styles.dayNavButtonText}>‹</Text>
+src/components/calendar/CalendarDayHeader.tsx:48:            style={styles.dayNavButton}
+src/components/calendar/CalendarDayHeader.tsx:49:            onPress={() => onNavigateDay('next')}
+src/components/calendar/CalendarDayHeader.tsx:51:            <Text style={styles.dayNavButtonText}>›</Text>
+src/components/calendar/CalendarDayHeader.tsx:55:      {date && <Text style={styles.dateText}>{formatDate(date)}</Text>}
+src/components/calendar/CalendarDayHeader.tsx:83:  dayNavigationButtons: {
+src/components/calendar/CalendarDayHeader.tsx:88:  dayNavButton: {
+src/components/calendar/CalendarDayHeader.tsx:96:  dayNavButtonText: {
+src/components/calendar/CalendarDayHeader.tsx:101:  dateText: {
+src/hooks/profile/useImageEdit.ts:9:import { updateUserSettings } from '@/lib/settings';
+src/hooks/profile/useImageEdit.ts:133:      const timestamp = Date.now();
+src/hooks/profile/useImageEdit.ts:210:        await updateUserSettings(userId, {
+src/hooks/profile/useImageEdit.ts:231:      const { error } = await updateUserSettings(userId, {
+src/hooks/outfits/useOutfitView.ts:104:        const jobStatusSucceededAt = Date.now();
+src/hooks/outfits/useOutfitView.ts:120:          const coverSetAt = Date.now();
+src/hooks/outfits/useOutfitView.ts:174:        console.debug('[outfit_render_timing] perf_mode_enabled', { ts: Date.now(), outfitId, where: 'view', traceId: renderTraceIdParam ?? undefined });
+src/hooks/outfits/useOutfitView.ts:181:          const coverSetAt = Date.now();
+src/hooks/outfits/useOutfitView.ts:207:            ? new Date(data.coverImage.created_at).getTime()
+src/hooks/outfits/useOutfitView.ts:209:          const activeJobCreatedAt = new Date(activeJob.created_at).getTime();
+src/components/calendar/MonthNavigator.tsx:2: * MonthNavigator Component
+src/components/calendar/MonthNavigator.tsx:3: * Month navigation header with prev/next buttons
+src/components/calendar/MonthNavigator.tsx:12:interface MonthNavigatorProps {
+src/components/calendar/MonthNavigator.tsx:13:  currentDate: Date;
+src/components/calendar/MonthNavigator.tsx:17:const monthNames = [
+src/components/calendar/MonthNavigator.tsx:32:export default function MonthNavigator({ currentDate, onNavigate }: MonthNavigatorProps) {
+src/components/calendar/MonthNavigator.tsx:33:  const month = currentDate.getMonth();
+src/components/calendar/MonthNavigator.tsx:34:  const year = currentDate.getFullYear();
+src/components/calendar/MonthNavigator.tsx:41:      <Text style={styles.monthTitle}>
+src/components/calendar/MonthNavigator.tsx:42:        {monthNames[month]} {year}
+src/components/calendar/MonthNavigator.tsx:70:  monthTitle: {
+src/components/outfits/OutfitViewContent.tsx:116:    coverImageUrl = `${coverImageUrl}${sep}v=${renderTraceId}&t=${Date.now()}`;
+src/components/outfits/OutfitViewContent.tsx:128:    const ts = Date.now();
+src/components/outfits/OutfitViewContent.tsx:137:    const ts = Date.now();
+src/hooks/profile/useOnboarding.ts:43:  const validateHandle = (h: string): boolean => {
+src/hooks/profile/useOnboarding.ts:59:    if (!validateHandle(handle.trim())) {
+src/components/calendar/CreatePresetModal.tsx:49:              placeholder="e.g. Gym, Date Night, Casual"
+src/components/feedback/CommentsList.tsx:8:import { formatDistanceToNow } from 'date-fns';
+src/components/feedback/CommentsList.tsx:27:              {formatDistanceToNow(new Date(comment.created_at), {
+src/components/outfits/OutfitCard.tsx:75:          <Text style={styles.date}>
+src/components/outfits/OutfitCard.tsx:76:            {new Date(outfit.created_at).toLocaleDateString()}
+src/components/outfits/OutfitCard.tsx:135:  date: {
+src/hooks/profile/useImageGeneration.ts:131:        'selfie-' + Date.now() + '.jpg'
+src/hooks/profile/useImageGeneration.ts:246:        'body-' + Date.now() + '.jpg'
+src/hooks/outfits/useOutfitEditorActions.ts:127:    descriptionPollingStartedAtRef.current = Date.now();
+src/hooks/outfits/useOutfitEditorActions.ts:133:      const elapsed = started != null ? Date.now() - started : 0;
+src/hooks/outfits/useOutfitEditorActions.ts:233:        // Note: itemImageUrls is managed by useOutfitEditor, so we don't update it here
+src/hooks/outfits/useOutfitEditorActions.ts:247:        const updated = new Map(prev);
+src/hooks/outfits/useOutfitEditorActions.ts:248:        updated.set(selectedCategory, item);
+src/hooks/outfits/useOutfitEditorActions.ts:249:        return updated;
+src/hooks/outfits/useOutfitEditorActions.ts:261:        const updated = new Map(prev);
+src/hooks/outfits/useOutfitEditorActions.ts:262:        updated.delete(categoryId);
+src/hooks/outfits/useOutfitEditorActions.ts:263:        return updated;
+src/hooks/outfits/useOutfitEditorActions.ts:343:        const timestamp = Date.now();
+src/hooks/outfits/useOutfitEditorActions.ts:470:      const jobStatusSucceededAt = Date.now();
+src/hooks/outfits/useOutfitEditorActions.ts:489:          ts: Date.now(),
+src/hooks/outfits/useOutfitEditorActions.ts:501:        ts: Date.now(),
+src/hooks/outfits/useOutfitEditorActions.ts:538:              .update({ archived_at: new Date().toISOString() })
+src/components/calendar/CalendarDayCell.tsx:2: * CalendarDayCell Component
+src/components/calendar/CalendarDayCell.tsx:3: * Individual day cell with outfit preview
+src/components/calendar/CalendarDayCell.tsx:9:import { CalendarEntry } from '@/lib/calendar';
+src/components/calendar/CalendarDayCell.tsx:14:interface CalendarDayCellProps {
+src/components/calendar/CalendarDayCell.tsx:15:  date: Date;
+src/components/calendar/CalendarDayCell.tsx:16:  entries: CalendarEntry[];
+src/components/calendar/CalendarDayCell.tsx:18:  inCurrentMonth: boolean;
+src/components/calendar/CalendarDayCell.tsx:19:  isToday: boolean;
+src/components/calendar/CalendarDayCell.tsx:23:export default function CalendarDayCell({
+src/components/calendar/CalendarDayCell.tsx:24:  date,
+src/components/calendar/CalendarDayCell.tsx:27:  inCurrentMonth,
+src/components/calendar/CalendarDayCell.tsx:28:  isToday,
+src/components/calendar/CalendarDayCell.tsx:30:}: CalendarDayCellProps) {
+src/components/calendar/CalendarDayCell.tsx:38:        styles.dayCell,
+src/components/calendar/CalendarDayCell.tsx:39:        !inCurrentMonth && styles.dayCellOtherMonth,
+src/components/calendar/CalendarDayCell.tsx:40:        isToday && styles.dayCellToday,
+src/components/calendar/CalendarDayCell.tsx:46:          styles.dayNumber,
+src/components/calendar/CalendarDayCell.tsx:47:          !inCurrentMonth && styles.dayNumberOtherMonth,
+src/components/calendar/CalendarDayCell.tsx:48:          isToday && styles.dayNumberToday,
+src/components/calendar/CalendarDayCell.tsx:51:        {date.getDate()}
+src/components/calendar/CalendarDayCell.tsx:74:  dayCell: {
+src/components/calendar/CalendarDayCell.tsx:84:  dayCellOtherMonth: {
+src/components/calendar/CalendarDayCell.tsx:87:  dayCellToday: {
+src/components/calendar/CalendarDayCell.tsx:92:  dayNumber: {
+src/components/calendar/CalendarDayCell.tsx:97:  dayNumberOtherMonth: {
+src/components/calendar/CalendarDayCell.tsx:100:  dayNumberToday: {
+src/hooks/profile/useAccountSettings.ts:10:import { getUserSettings, updateUserSettings, validateModelPassword, UserSettings } from '@/lib/settings';
+src/hooks/profile/useAccountSettings.ts:19:  handleUpdateSetting: <K extends keyof UserSettings>(
+src/hooks/profile/useAccountSettings.ts:64:  const handleUpdateSetting = useCallback(
+src/hooks/profile/useAccountSettings.ts:71:        const { error } = await updateUserSettings(user.id, { [key]: value });
+src/hooks/profile/useAccountSettings.ts:74:          Alert.alert('Error', 'Failed to update setting');
+src/hooks/profile/useAccountSettings.ts:91:      // If selecting Pro model, validate password via Netlify function
+src/hooks/profile/useAccountSettings.ts:100:          const { valid, error } = await validateModelPassword(password, user.id);
+src/hooks/profile/useAccountSettings.ts:108:          Alert.alert('Error', error.message || 'Failed to validate password');
+src/hooks/profile/useAccountSettings.ts:117:        const { error: updateError } = await updateUserSettings(user.id, {
+src/hooks/profile/useAccountSettings.ts:121:        if (updateError) {
+src/hooks/profile/useAccountSettings.ts:122:          Alert.alert('Error', 'Failed to update model preference');
+src/hooks/profile/useAccountSettings.ts:141:      // Validate password via Netlify function (same as model selection)
+src/hooks/profile/useAccountSettings.ts:144:        const { valid, error } = await validateModelPassword(password, user.id);
+src/hooks/profile/useAccountSettings.ts:152:        Alert.alert('Error', error.message || 'Failed to validate password');
+src/hooks/profile/useAccountSettings.ts:158:        const { error: updateError } = await updateUserSettings(user.id, {
+src/hooks/profile/useAccountSettings.ts:162:        if (updateError) {
+src/hooks/profile/useAccountSettings.ts:163:          Alert.alert('Error', 'Failed to update headshot setting');
+src/hooks/profile/useAccountSettings.ts:221:    handleUpdateSetting,
+src/components/social/CommentsModal.tsx:24:  onCommentsUpdate: (comments: Comment[]) => void;
+src/components/social/CommentsModal.tsx:25:  onCountUpdate: (count: number) => void;
+src/components/social/CommentsModal.tsx:34:  onCommentsUpdate,
+src/components/social/CommentsModal.tsx:35:  onCountUpdate,
+src/components/social/CommentsModal.tsx:46:      const { data: updatedComments } = await getComments('post', postId);
+src/components/social/CommentsModal.tsx:47:      if (updatedComments) {
+src/components/social/CommentsModal.tsx:48:        onCommentsUpdate(updatedComments);
+src/components/social/CommentsModal.tsx:52:      onCountUpdate(count);
+src/components/calendar/CalendarDayEntryForm.tsx:2: * CalendarDayEntryForm Component
+src/components/calendar/CalendarDayEntryForm.tsx:3: * Modal form for adding/editing calendar entries
+src/components/calendar/CalendarDayEntryForm.tsx:20:} from '@/components/calendar';
+src/components/calendar/CalendarDayEntryForm.tsx:23:import { CalendarEntry } from '@/lib/calendar';
+src/components/calendar/CalendarDayEntryForm.tsx:27:interface CalendarDayEntryFormProps {
+src/components/calendar/CalendarDayEntryForm.tsx:29:  editingEntry: CalendarEntry | null;
+src/components/calendar/CalendarDayEntryForm.tsx:47:export function CalendarDayEntryForm({
+src/components/calendar/CalendarDayEntryForm.tsx:65:}: CalendarDayEntryFormProps) {
+src/components/calendar/CalendarDayEntryForm.tsx:77:              {editingEntry ? 'Edit Calendar Entry' : 'Add Calendar Entry'}
+src/components/calendar/CalendarDayEntryForm.tsx:119:              title={editingEntry ? 'Update Entry' : 'Add Entry'}
+src/hooks/lookbooks/useLookbookOutfits.ts:39:      const updatedOutfitIds = [...outfits.map((o) => o.id), ...outfitIds];
+src/hooks/lookbooks/useLookbookOutfits.ts:51:        updatedOutfitIds
+src/hooks/lookbooks/useLookbookOutfits.ts:70:      const updatedOutfitIds = outfits.filter((o) => o.id !== outfitId).map((o) => o.id);
+src/hooks/lookbooks/useLookbookOutfits.ts:82:        updatedOutfitIds
+src/hooks/outfits/useOutfitFilters.ts:9:export type SortOption = 'date' | 'rating' | 'title';
+src/hooks/outfits/useOutfitFilters.ts:23:    sortBy: 'date',
+src/hooks/outfits/useOutfitFilters.ts:50:        case 'date':
+src/hooks/outfits/useOutfitFilters.ts:51:          comparison = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+src/hooks/outfits/useOutfitFilters.ts:67:  const updateFilter = <K extends keyof FilterState>(
+src/hooks/outfits/useOutfitFilters.ts:78:      sortBy: 'date',
+src/hooks/outfits/useOutfitFilters.ts:87:      filters.sortBy !== 'date' ||
+src/hooks/outfits/useOutfitFilters.ts:94:      date: 'Date',
+src/hooks/outfits/useOutfitFilters.ts:104:    updateFilter,
+src/hooks/calendar/useUserOutfits.ts:3: * Manages user outfits with cover images for calendar entries
+src/components/feedback/FeedbackCard.tsx:62:  const now = new Date();
+src/components/feedback/FeedbackCard.tsx:63:  const posted = new Date(timestamp);
+src/components/feedback/FeedbackCard.tsx:67:  const diffDays = Math.floor(diffMs / 86400000);
+src/components/feedback/FeedbackCard.tsx:72:  if (diffDays < 7) return `${diffDays}d ago`;
+src/components/feedback/FeedbackCard.tsx:74:  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+src/components/feedback/FeedbackCard.tsx:78:  return posted.toLocaleDateString('en-US', options);
+src/hooks/lookbooks/useLookbookDetailActions.ts:147:          Alert.alert('Error', 'Failed to update lookbook');
+src/hooks/lookbooks/useLookbookDetailActions.ts:153:        Alert.alert('Error', error.message || 'Failed to update lookbook');
+src/hooks/lookbooks/useLookbookDetailActions.ts:305:          .update({ is_favorite: !currentFavoriteStatus })
+src/hooks/lookbooks/useLookbookDetail.ts:69:          created_at: new Date().toISOString(),
+src/hooks/lookbooks/useLookbookDetail.ts:70:          updated_at: new Date().toISOString(),
+src/hooks/calendar/useCalendarDayForm.ts:2: * useCalendarDayForm Hook
+src/hooks/calendar/useCalendarDayForm.ts:3: * Form state and handlers for calendar day entry form
+src/hooks/calendar/useCalendarDayForm.ts:8:import { CalendarEntry } from '@/lib/calendar';
+src/hooks/calendar/useCalendarDayForm.ts:10:interface UseCalendarDayFormProps {
+src/hooks/calendar/useCalendarDayForm.ts:11:  entries: CalendarEntry[];
+src/hooks/calendar/useCalendarDayForm.ts:19:  updateEntry: (
+src/hooks/calendar/useCalendarDayForm.ts:21:    updates: Partial<{
+src/hooks/calendar/useCalendarDayForm.ts:32:interface UseCalendarDayFormReturn {
+src/hooks/calendar/useCalendarDayForm.ts:35:  editingEntry: CalendarEntry | null;
+src/hooks/calendar/useCalendarDayForm.ts:61:  handleEditEntry: (entry: CalendarEntry) => void;
+src/hooks/calendar/useCalendarDayForm.ts:62:  handleUpdateEntry: () => Promise<void>;
+src/hooks/calendar/useCalendarDayForm.ts:75:export function useCalendarDayForm({
+src/hooks/calendar/useCalendarDayForm.ts:78:  updateEntry,
+src/hooks/calendar/useCalendarDayForm.ts:81:}: UseCalendarDayFormProps): UseCalendarDayFormReturn {
+src/hooks/calendar/useCalendarDayForm.ts:84:  const [editingEntry, setEditingEntry] = useState<CalendarEntry | null>(null);
+src/hooks/calendar/useCalendarDayForm.ts:139:    (entry: CalendarEntry) => {
+src/hooks/calendar/useCalendarDayForm.ts:150:  const handleUpdateEntry = useCallback(async () => {
+src/hooks/calendar/useCalendarDayForm.ts:155:    const { error } = await updateEntry(editingEntry.id, {
+src/hooks/calendar/useCalendarDayForm.ts:163:      Alert.alert('Error', 'Failed to update entry');
+src/hooks/calendar/useCalendarDayForm.ts:170:  }, [editingEntry, selectedOutfit, selectedPreset, entryStatus, editNotes, updateEntry, resetForm]);
+src/hooks/calendar/useCalendarDayForm.ts:205:      await updateEntry(entryId, { status });
+src/hooks/calendar/useCalendarDayForm.ts:207:    [updateEntry]
+src/hooks/calendar/useCalendarDayForm.ts:259:    handleUpdateEntry,
+src/hooks/outfits/useOutfitViewActions.ts:181:        .update({ is_favorite: newFavoriteStatus })
+src/hooks/outfits/useOutfitViewActions.ts:187:      Alert.alert('Error', 'Failed to update favorite status');
+src/components/feedback/ThreadHeader.tsx:8:import { formatDistanceToNow } from 'date-fns';
+src/components/feedback/ThreadHeader.tsx:71:          {formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}
+src/hooks/outfits/useOutfitGeneration.ts:139:    descriptionPollingStartedAtRef.current = Date.now();
+src/hooks/outfits/useOutfitGeneration.ts:145:      const elapsed = started != null ? Date.now() - started : 0;
+src/hooks/outfits/useOutfitGeneration.ts:239:          console.debug('[outfit_render_timing] perf_mode_enabled', { ts: Date.now(), traceId: timeline.traceId, outfitId, where: 'generation' });
+src/hooks/outfits/useOutfitGeneration.ts:403:          const timestamp = Date.now();
+src/hooks/outfits/useOutfitGeneration.ts:545:        const jobStatusSucceededAt = Date.now();
+src/hooks/outfits/useOutfitGeneration.ts:554:          const coverSetAt = Date.now();
+src/hooks/outfits/useBackgroundGridGenerator.ts:118:        const timestamp = Date.now();
+src/hooks/calendar/index.ts:2: * Calendar Hooks Index
+src/hooks/calendar/index.ts:3: * Export all calendar hooks with types
+src/hooks/calendar/index.ts:6:export { useCalendarEntries } from './useCalendarEntries';
+src/hooks/calendar/index.ts:7:export { useDayEntries } from './useDayEntries';
+src/hooks/calendar/index.ts:10:export { useCalendarDayForm } from './useCalendarDayForm';
+src/components/social/FeedCard.tsx:27:  const now = new Date();
+src/components/social/FeedCard.tsx:28:  const posted = new Date(timestamp);
+src/components/social/FeedCard.tsx:32:  const diffDays = Math.floor(diffMs / 86400000);
+src/components/social/FeedCard.tsx:37:  if (diffDays < 7) return `${diffDays}d ago`;
+src/components/social/FeedCard.tsx:39:  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+src/components/social/FeedCard.tsx:43:  return posted.toLocaleDateString('en-US', options);
+src/hooks/outfits/useOutfits.ts:14:  sortBy?: 'date' | 'rating' | 'title';
+src/hooks/outfits/useOutfits.ts:22:  sortBy = 'date',
+src/hooks/calendar/useDayEntries.ts:2: * useDayEntries Hook
+src/hooks/calendar/useDayEntries.ts:3: * Manages calendar entries for a specific day
+src/hooks/calendar/useDayEntries.ts:8:  getCalendarEntriesForDate,
+src/hooks/calendar/useDayEntries.ts:9:  createCalendarEntry,
+src/hooks/calendar/useDayEntries.ts:10:  updateCalendarEntry,
+src/hooks/calendar/useDayEntries.ts:11:  deleteCalendarEntry,
+src/hooks/calendar/useDayEntries.ts:12:  CalendarEntry,
+src/hooks/calendar/useDayEntries.ts:13:} from '@/lib/calendar';
+src/hooks/calendar/useDayEntries.ts:15:interface UseDayEntriesProps {
+src/hooks/calendar/useDayEntries.ts:17:  date: string | undefined;
+src/hooks/calendar/useDayEntries.ts:20:interface UseDayEntriesReturn {
+src/hooks/calendar/useDayEntries.ts:21:  entries: CalendarEntry[];
+src/hooks/calendar/useDayEntries.ts:32:  updateEntry: (
+src/hooks/calendar/useDayEntries.ts:34:    data: Partial<CalendarEntry>
+src/hooks/calendar/useDayEntries.ts:40:export function useDayEntries({
+src/hooks/calendar/useDayEntries.ts:42:  date,
+src/hooks/calendar/useDayEntries.ts:43:}: UseDayEntriesProps): UseDayEntriesReturn {
+src/hooks/calendar/useDayEntries.ts:44:  const [entries, setEntries] = useState<CalendarEntry[]>([]);
+src/hooks/calendar/useDayEntries.ts:48:    if (!userId || !date) {
+src/hooks/calendar/useDayEntries.ts:56:      const { data: dayEntries } = await getCalendarEntriesForDate(userId, date);
+src/hooks/calendar/useDayEntries.ts:57:      if (dayEntries) {
+src/hooks/calendar/useDayEntries.ts:58:        setEntries(dayEntries);
+src/hooks/calendar/useDayEntries.ts:61:      console.error('Error loading day entries:', error);
+src/hooks/calendar/useDayEntries.ts:79:    if (!userId || !date) {
+src/hooks/calendar/useDayEntries.ts:80:      return { data: null, error: { message: 'User or date not provided' } };
+src/hooks/calendar/useDayEntries.ts:83:    const result = await createCalendarEntry(userId, date, data);
+src/hooks/calendar/useDayEntries.ts:92:  const updateEntry = async (entryId: string, data: Partial<CalendarEntry>) => {
+src/hooks/calendar/useDayEntries.ts:93:    const result = await updateCalendarEntry(entryId, data);
+src/hooks/calendar/useDayEntries.ts:103:    const result = await deleteCalendarEntry(entryId);
+src/hooks/calendar/useDayEntries.ts:115:    // Optimistic update
+src/hooks/calendar/useDayEntries.ts:122:      // Update sort_order for all affected entries
+src/hooks/calendar/useDayEntries.ts:123:      const updates = newEntries.map((entry, index) => ({
+src/hooks/calendar/useDayEntries.ts:128:      const updatePromises = updates.map((update) =>
+src/hooks/calendar/useDayEntries.ts:129:        updateCalendarEntry(update.id, { sort_order: update.sort_order })
+src/hooks/calendar/useDayEntries.ts:132:      const results = await Promise.all(updatePromises);
+src/hooks/calendar/useDayEntries.ts:147:  }, [userId, date]);
+src/hooks/calendar/useDayEntries.ts:154:    updateEntry,
+src/hooks/calendar/useSlotPresets.ts:3: * Manages slot presets for calendar entries
+src/hooks/calendar/useSlotPresets.ts:7:import { getSlotPresets, createSlotPreset, CalendarSlotPreset } from '@/lib/calendar';
+src/hooks/calendar/useSlotPresets.ts:14:  presets: CalendarSlotPreset[];
+src/hooks/calendar/useSlotPresets.ts:21:  const [presets, setPresets] = useState<CalendarSlotPreset[]>([]);
+src/hooks/wardrobe/useAttributeEditor.ts:23:  onUpdateAttribute: (attributeId: string, value: string) => Promise<void>;
+src/hooks/wardrobe/useAttributeEditor.ts:62:  onUpdateAttribute,
+src/hooks/wardrobe/useAttributeEditor.ts:113:      const updates = Object.entries(editingAttributeValues).map(async ([attrId, value]) => {
+src/hooks/wardrobe/useAttributeEditor.ts:117:          return onUpdateAttribute(attrId, value.trim());
+src/hooks/wardrobe/useAttributeEditor.ts:121:      await Promise.all(updates);
+src/hooks/wardrobe/useAttributeEditor.ts:125:      Alert.alert('Error', error.message || 'Failed to update attributes');
+src/hooks/wardrobe/useAttributeEditor.ts:127:  }, [editingAttributeTypeKey, editingAttributeValues, onUpdateAttribute, onDeleteAttribute]);
+src/hooks/calendar/useCalendarEntries.ts:2: * useCalendarEntries Hook
+src/hooks/calendar/useCalendarEntries.ts:3: * Manages calendar entries and outfit images for a date range
+src/hooks/calendar/useCalendarEntries.ts:7:import { getCalendarEntries, CalendarEntry } from '@/lib/calendar';
+src/hooks/calendar/useCalendarEntries.ts:10:interface UseCalendarEntriesProps {
+src/hooks/calendar/useCalendarEntries.ts:12:  startDate: string;
+src/hooks/calendar/useCalendarEntries.ts:13:  endDate: string;
+src/hooks/calendar/useCalendarEntries.ts:16:interface UseCalendarEntriesReturn {
+src/hooks/calendar/useCalendarEntries.ts:17:  entries: Map<string, CalendarEntry[]>;
+src/hooks/calendar/useCalendarEntries.ts:23:export function useCalendarEntries({
+src/hooks/calendar/useCalendarEntries.ts:25:  startDate,
+src/hooks/calendar/useCalendarEntries.ts:26:  endDate,
+src/hooks/calendar/useCalendarEntries.ts:27:}: UseCalendarEntriesProps): UseCalendarEntriesReturn {
+src/hooks/calendar/useCalendarEntries.ts:28:  const [entries, setEntries] = useState<Map<string, CalendarEntry[]>>(new Map());
+src/hooks/calendar/useCalendarEntries.ts:41:      // Load all entries for the date range
+src/hooks/calendar/useCalendarEntries.ts:42:      const { data: monthEntries } = await getCalendarEntries(userId, startDate, endDate);
+src/hooks/calendar/useCalendarEntries.ts:44:      // Group entries by date
+src/hooks/calendar/useCalendarEntries.ts:45:      const entriesMap = new Map<string, CalendarEntry[]>();
+src/hooks/calendar/useCalendarEntries.ts:46:      if (monthEntries) {
+src/hooks/calendar/useCalendarEntries.ts:47:        monthEntries.forEach((entry) => {
+src/hooks/calendar/useCalendarEntries.ts:48:          const date = entry.calendar_day?.date || (entry as any).calendar_days?.date;
+src/hooks/calendar/useCalendarEntries.ts:49:          if (date) {
+src/hooks/calendar/useCalendarEntries.ts:50:            const existing = entriesMap.get(date) || [];
+src/hooks/calendar/useCalendarEntries.ts:52:            entriesMap.set(date, existing);
+src/hooks/calendar/useCalendarEntries.ts:60:      if (monthEntries) {
+src/hooks/calendar/useCalendarEntries.ts:61:        await loadOutfitImages(monthEntries);
+src/hooks/calendar/useCalendarEntries.ts:64:      console.error('Error loading calendar entries:', error);
+src/hooks/calendar/useCalendarEntries.ts:70:  const loadOutfitImages = async (entries: CalendarEntry[]) => {
+src/hooks/calendar/useCalendarEntries.ts:112:  }, [userId, startDate, endDate]);
+src/components/shared/layout/ScheduleCalendar.tsx:2: * ScheduleCalendar Component
+src/components/shared/layout/ScheduleCalendar.tsx:3: * Calendar view for scheduling outfits
+src/components/shared/layout/ScheduleCalendar.tsx:17:interface ScheduleCalendarProps {
+src/components/shared/layout/ScheduleCalendar.tsx:18:  selectedDate: Date | null;
+src/components/shared/layout/ScheduleCalendar.tsx:19:  onSelectDate: (date: Date) => void;
+src/components/shared/layout/ScheduleCalendar.tsx:20:  scheduledDates?: Date[];
+src/components/shared/layout/ScheduleCalendar.tsx:23:export default function ScheduleCalendar({
+src/components/shared/layout/ScheduleCalendar.tsx:24:  selectedDate,
+src/components/shared/layout/ScheduleCalendar.tsx:25:  onSelectDate,
+src/components/shared/layout/ScheduleCalendar.tsx:26:  scheduledDates = [],
+src/components/shared/layout/ScheduleCalendar.tsx:27:}: ScheduleCalendarProps) {
+src/components/shared/layout/ScheduleCalendar.tsx:28:  const today = new Date();
+src/components/shared/layout/ScheduleCalendar.tsx:29:  const currentMonth = today.getMonth();
+src/components/shared/layout/ScheduleCalendar.tsx:30:  const currentYear = today.getFullYear();
+src/components/shared/layout/ScheduleCalendar.tsx:32:  // Generate calendar days for current month
+src/components/shared/layout/ScheduleCalendar.tsx:33:  const firstDay = new Date(currentYear, currentMonth, 1);
+src/components/shared/layout/ScheduleCalendar.tsx:34:  const lastDay = new Date(currentYear, currentMonth + 1, 0);
+src/components/shared/layout/ScheduleCalendar.tsx:35:  const daysInMonth = lastDay.getDate();
+src/components/shared/layout/ScheduleCalendar.tsx:36:  const startingDayOfWeek = firstDay.getDay();
+src/components/shared/layout/ScheduleCalendar.tsx:38:  const days: (Date | null)[] = [];
+src/components/shared/layout/ScheduleCalendar.tsx:40:  // Add empty slots for days before month starts
+src/components/shared/layout/ScheduleCalendar.tsx:41:  for (let i = 0; i < startingDayOfWeek; i++) {
+src/components/shared/layout/ScheduleCalendar.tsx:42:    days.push(null);
+src/components/shared/layout/ScheduleCalendar.tsx:45:  // Add actual days
+src/components/shared/layout/ScheduleCalendar.tsx:46:  for (let day = 1; day <= daysInMonth; day++) {
+src/components/shared/layout/ScheduleCalendar.tsx:47:    days.push(new Date(currentYear, currentMonth, day));
+src/components/shared/layout/ScheduleCalendar.tsx:50:  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+src/components/shared/layout/ScheduleCalendar.tsx:52:  const isDateScheduled = (date: Date) => {
+src/components/shared/layout/ScheduleCalendar.tsx:53:    return scheduledDates.some(
+src/components/shared/layout/ScheduleCalendar.tsx:54:      (scheduledDate) =>
+src/components/shared/layout/ScheduleCalendar.tsx:55:        scheduledDate.toDateString() === date.toDateString()
+src/components/shared/layout/ScheduleCalendar.tsx:59:  const isToday = (date: Date) => {
+src/components/shared/layout/ScheduleCalendar.tsx:60:    return date.toDateString() === today.toDateString();
+src/components/shared/layout/ScheduleCalendar.tsx:63:  const isSelected = (date: Date) => {
+src/components/shared/layout/ScheduleCalendar.tsx:64:    return selectedDate && date.toDateString() === selectedDate.toDateString();
+src/components/shared/layout/ScheduleCalendar.tsx:69:      <Text style={styles.monthTitle}>
+src/components/shared/layout/ScheduleCalendar.tsx:70:        {firstDay.toLocaleString('default', { month: 'long', year: 'numeric' })}
+src/components/shared/layout/ScheduleCalendar.tsx:73:      <View style={styles.weekDaysRow}>
+src/components/shared/layout/ScheduleCalendar.tsx:74:        {weekDays.map((day) => (
+src/components/shared/layout/ScheduleCalendar.tsx:75:          <View key={day} style={styles.weekDayCell}>
+src/components/shared/layout/ScheduleCalendar.tsx:76:            <Text style={styles.weekDayText}>{day}</Text>
+src/components/shared/layout/ScheduleCalendar.tsx:81:      <View style={styles.daysGrid}>
+src/components/shared/layout/ScheduleCalendar.tsx:82:        {days.map((date, index) => {
+src/components/shared/layout/ScheduleCalendar.tsx:83:          if (!date) {
+src/components/shared/layout/ScheduleCalendar.tsx:84:            return <View key={`empty-${index}`} style={styles.dayCell} />;
+src/components/shared/layout/ScheduleCalendar.tsx:87:          const scheduled = isDateScheduled(date);
+src/components/shared/layout/ScheduleCalendar.tsx:88:          const today = isToday(date);
+src/components/shared/layout/ScheduleCalendar.tsx:89:          const selected = isSelected(date);
+src/components/shared/layout/ScheduleCalendar.tsx:90:          const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+src/components/shared/layout/ScheduleCalendar.tsx:94:              key={date.toISOString()}
+src/components/shared/layout/ScheduleCalendar.tsx:96:                styles.dayCell,
+src/components/shared/layout/ScheduleCalendar.tsx:97:                today && styles.todayCell,
+src/components/shared/layout/ScheduleCalendar.tsx:101:              onPress={() => !isPast && onSelectDate(date)}
+src/components/shared/layout/ScheduleCalendar.tsx:106:                  styles.dayText,
+src/components/shared/layout/ScheduleCalendar.tsx:107:                  today && styles.todayText,
+src/components/shared/layout/ScheduleCalendar.tsx:112:                {date.getDate()}
+src/components/shared/layout/ScheduleCalendar.tsx:129:  monthTitle: {
+src/components/shared/layout/ScheduleCalendar.tsx:136:  weekDaysRow: {
+src/components/shared/layout/ScheduleCalendar.tsx:140:  weekDayCell: {
+src/components/shared/layout/ScheduleCalendar.tsx:145:  weekDayText: {
+src/components/shared/layout/ScheduleCalendar.tsx:150:  daysGrid: {
+src/components/shared/layout/ScheduleCalendar.tsx:154:  dayCell: {
+src/components/shared/layout/ScheduleCalendar.tsx:162:  todayCell: {
+src/components/shared/layout/ScheduleCalendar.tsx:173:  dayText: {
+src/components/shared/layout/ScheduleCalendar.tsx:177:  todayText: {
+src/hooks/wardrobe/useWardrobeItemDetailActions.ts:86:        .update({ is_favorite: newFavoriteStatus })
+src/hooks/wardrobe/useWardrobeItemDetailActions.ts:93:      Alert.alert('Error', 'Failed to update favorite status');
+src/hooks/wardrobe/useWardrobeItemDetailActions.ts:144:          .update({ archived_at: new Date().toISOString() })
+src/hooks/wardrobe/useItemAttributes.ts:11:  updateEntityAttribute,
+src/hooks/wardrobe/useItemAttributes.ts:33:  updateAttribute: (
+src/hooks/wardrobe/useItemAttributes.ts:77:  const updateAttribute = async (attributeId: string, value: string) => {
+src/hooks/wardrobe/useItemAttributes.ts:81:      const { error } = await updateEntityAttribute(attributeId, value);
+src/hooks/wardrobe/useItemAttributes.ts:85:      Alert.alert('Error', error.message || 'Failed to update attribute');
+src/hooks/wardrobe/useItemAttributes.ts:148:    updateAttribute,
+src/hooks/wardrobe/useWardrobeItemEdit.ts:230:      const updateData: any = {
+src/hooks/wardrobe/useWardrobeItemEdit.ts:238:        updateData.category_id = selectedCategoryId;
+src/hooks/wardrobe/useWardrobeItemEdit.ts:240:        updateData.category_id = null;
+src/hooks/wardrobe/useWardrobeItemEdit.ts:244:        updateData.subcategory_id = selectedSubcategoryId;
+src/hooks/wardrobe/useWardrobeItemEdit.ts:246:        updateData.subcategory_id = null;
+src/hooks/wardrobe/useWardrobeItemEdit.ts:250:        updateData.size = size.trim();
+src/hooks/wardrobe/useWardrobeItemEdit.ts:255:        .update(updateData)
+src/hooks/wardrobe/useWardrobeItemEdit.ts:261:      Alert.alert('Success', 'Item updated successfully');
+src/hooks/wardrobe/useWardrobeItemDetail.ts:21:import { getWardrobeItemImages, updateWardrobeItem } from '@/lib/wardrobe';
+src/hooks/wardrobe/useWardrobeItemDetail.ts:259:    onJobUpdate: (job) => {
+src/hooks/wardrobe/useWardrobeItemDetail.ts:266:        setJobSucceededAt(Date.now());
+src/hooks/wardrobe/useWardrobeItemDetail.ts:293:          Date.now(),
+src/hooks/wardrobe/useWardrobeItemDetail.ts:300:        const { error: updateError } = await updateWardrobeItem(itemId, userId, { title, description });
+src/hooks/wardrobe/useWardrobeItemDetail.ts:301:        if (updateError) {
+src/hooks/wardrobe/useWardrobeItemDetail.ts:302:          console.error('[WardrobeItemGenerate] updateWardrobeItem failed', updateError);
+src/hooks/wardrobe/useWardrobeItemDetail.ts:304:          console.log('[WardrobeItemGenerate] item updated', { itemId, jobId: job.id });
+src/hooks/wardrobe/useWardrobeItemDetail.ts:443:                    setLastSucceededJobFeedbackAt(created_at ?? new Date().toISOString());
+src/hooks/wardrobe/useWardrobeItemDetail.ts:495:                  .map((img) => new Date(img.image.created_at).getTime())
+src/hooks/wardrobe/useWardrobeItemDetail.ts:499:                  const activeJobCreatedAt = new Date(activeJob.created_at).getTime();
+src/hooks/wardrobe/useWardrobeItemDetail.ts:537:                      setLastSucceededJobFeedbackAt(created_at ?? new Date().toISOString());
+src/components/shared/layout/index.ts:10:export { default as ScheduleCalendar } from './ScheduleCalendar';
+src/hooks/wardrobe/useWardrobeItemPolling.ts:14:  onJobUpdate?: (job: AIJob) => void;
+src/hooks/wardrobe/useWardrobeItemPolling.ts:26:  onJobUpdate,
+src/hooks/wardrobe/useWardrobeItemPolling.ts:89:          onJobUpdate?.(job);
+src/hooks/wardrobe/useFilters.ts:168:  // Update a single filter
+src/hooks/wardrobe/useFilters.ts:169:  const updateFilter = <K extends keyof FilterState>(
+src/hooks/wardrobe/useFilters.ts:180:    updateFilter,
+src/hooks/wardrobe/useAddWardrobeItem.ts:80:        const jobStatusSucceededAt = Date.now();
+src/hooks/wardrobe/useAddWardrobeItem.ts:90:        // Primary path: wardrobe_item_generate (navigation already done; cache update for back-navigation)
+src/hooks/wardrobe/useAddWardrobeItem.ts:149:              const cacheSetAt = Date.now();
+src/hooks/wardrobe/useAddWardrobeItem.ts:174:            // Product shot succeeded - update UI immediately
+src/hooks/wardrobe/useAddWardrobeItem.ts:181:              router.replace(`/wardrobe/item/${pendingItemId}?refresh=${Date.now()}`);
+src/hooks/wardrobe/useAddWardrobeItem.ts:240:  // Update analysis step based on AI job progress
+src/hooks/wardrobe/useAddWardrobeItem.ts:276:          name: result.assets[0].fileName || `photo-${Date.now()}.jpg`,
+src/hooks/wardrobe/useAddWardrobeItem.ts:309:          name: asset.fileName || `image-${Date.now()}.jpg`,
+src/hooks/wardrobe/useAddWardrobeItem.ts:444:        router.replace(`/wardrobe/item/${itemId}?refresh=${Date.now()}`);

@@ -1,6 +1,6 @@
 /**
  * PrimaryButton Component
- * Reusable primary button with consistent styling
+ * Reusable button with consistent styling (variants, sizes, loading, optional icon)
  */
 
 import React from 'react';
@@ -12,22 +12,40 @@ import {
   TouchableOpacityProps,
   ViewStyle,
   TextStyle,
+  StyleProp,
 } from 'react-native';
 import { theme, commonStyles } from '@/styles';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { colors, spacing, typography } = theme;
+
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'outline';
+type ButtonSize = 'small' | 'medium' | 'large';
 
 interface PrimaryButtonProps extends TouchableOpacityProps {
   title: string;
   onPress: () => void;
   loading?: boolean;
-  variant?: 'primary' | 'secondary' | 'danger' | 'outline';
-  size?: 'small' | 'medium' | 'large';
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   fullWidth?: boolean;
   icon?: React.ReactNode;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
 }
+
+const VARIANT_STYLE_MAP: Record<ButtonVariant, any> = {
+  primary: commonStyles.buttonPrimary,
+  secondary: commonStyles.buttonSecondary,
+  danger: commonStyles.buttonDanger,
+  outline: commonStyles.buttonOutline,
+};
+
+const VARIANT_TEXT_STYLE_MAP: Record<ButtonVariant, any> = {
+  primary: commonStyles.buttonTextPrimary,
+  secondary: commonStyles.buttonTextSecondary,
+  danger: commonStyles.buttonTextPrimary,
+  outline: commonStyles.buttonTextSecondary,
+};
 
 export default function PrimaryButton({
   title,
@@ -42,39 +60,41 @@ export default function PrimaryButton({
   textStyle,
   ...props
 }: PrimaryButtonProps) {
+  const isDisabled = !!disabled || loading;
+
   const buttonStyle = [
-    styles.button,
+    styles.buttonBase,
     styles[size],
-    styles[variant],
+    VARIANT_STYLE_MAP[variant],
     fullWidth && styles.fullWidth,
-    disabled && commonStyles.buttonDisabled,
+    isDisabled && commonStyles.buttonDisabled,
     style,
   ];
 
-  const buttonTextStyle = [
-    styles.buttonText,
-    styles[`${variant}Text`],
-    styles[`${size}Text`],
+  const labelStyle = [
+    commonStyles.buttonText,
+    styles[`${size}Text` as const],
+    VARIANT_TEXT_STYLE_MAP[variant],
     textStyle,
   ];
+
+  const loaderColor =
+    variant === 'primary' || variant === 'danger' ? colors.textLight : colors.primary;
 
   return (
     <TouchableOpacity
       style={buttonStyle}
       onPress={onPress}
-      disabled={disabled || loading}
+      disabled={isDisabled}
       activeOpacity={0.7}
       {...props}
     >
       {loading ? (
-        <ActivityIndicator
-          color={variant === 'primary' || variant === 'danger' ? colors.white : colors.primary}
-          size="small"
-        />
+        <ActivityIndicator color={loaderColor} size="small" />
       ) : (
         <>
           {icon}
-          <Text style={buttonTextStyle}>{title}</Text>
+          <Text style={labelStyle}>{title}</Text>
         </>
       )}
     </TouchableOpacity>
@@ -82,15 +102,15 @@ export default function PrimaryButton({
 }
 
 const styles = StyleSheet.create({
-  button: {
+  buttonBase: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.md,
+    borderRadius: theme.borderRadius.md,
     gap: spacing.sm,
   },
-  
-  // Sizes
+
+  // Sizes (padding)
   small: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -103,32 +123,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
   },
-  
-  // Variants
-  primary: {
-    backgroundColor: colors.primary,
-  },
-  secondary: {
-    backgroundColor: colors.gray100,
-  },
-  danger: {
-    backgroundColor: colors.error,
-  },
-  outline: {
-    backgroundColor: colors.transparent,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  
-  // Full width
-  fullWidth: {
-    width: '100%',
-  },
-  
-  // Text styles
-  buttonText: {
-    fontWeight: typography.fontWeight.semibold,
-  },
+
+  // Text sizes
   smallText: {
     fontSize: typography.fontSize.sm,
   },
@@ -138,16 +134,9 @@ const styles = StyleSheet.create({
   largeText: {
     fontSize: typography.fontSize.lg,
   },
-  primaryText: {
-    color: colors.white,
-  },
-  secondaryText: {
-    color: colors.textPrimary,
-  },
-  dangerText: {
-    color: colors.white,
-  },
-  outlineText: {
-    color: colors.textPrimary,
+
+  // Layout
+  fullWidth: {
+    width: '100%',
   },
 });

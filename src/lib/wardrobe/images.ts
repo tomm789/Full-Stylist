@@ -1,5 +1,4 @@
 import { supabase } from '../supabase';
-import { QueryListResult } from '../utils/supabase-helpers';
 
 /**
  * Get images for a wardrobe item
@@ -121,6 +120,48 @@ export async function getWardrobeItemsImages(itemIds: string[]): Promise<{
   } catch (error: any) {
     return { data: new Map(), error };
   }
+}
+
+export function buildWardrobeItemsImageUrlCache(
+  itemIds: string[],
+  imagesMap: Map<
+    string,
+    Array<{
+      id: string;
+      image_id: string;
+      type: string;
+      sort_order: number;
+      image: any;
+    }>
+  >
+): Map<string, string | null> {
+  const urlCache = new Map<string, string | null>();
+  const imageUrlCache = new Map<string, string | null>();
+
+  for (const itemId of itemIds) {
+    const images = imagesMap.get(itemId);
+    const primaryImage = images?.[0]?.image;
+    const storageKey = primaryImage?.storage_key;
+
+    if (!storageKey) {
+      urlCache.set(itemId, null);
+      continue;
+    }
+
+    const storageBucket = primaryImage?.storage_bucket || 'media';
+    const cacheKey = `${storageBucket}:${storageKey}`;
+
+    if (!imageUrlCache.has(cacheKey)) {
+      const { data: urlData } = supabase.storage
+        .from(storageBucket)
+        .getPublicUrl(storageKey);
+      imageUrlCache.set(cacheKey, urlData?.publicUrl || null);
+    }
+
+    urlCache.set(itemId, imageUrlCache.get(cacheKey) ?? null);
+  }
+
+  return urlCache;
 }
 
 /**

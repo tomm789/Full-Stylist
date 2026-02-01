@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getUserListings, ListingWithImages, deleteListing } from '@/lib/listings';
 import { supabase } from '@/lib/supabase';
 import { Alert } from 'react-native';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 export default function MyListingsScreen() {
   const router = useRouter();
@@ -127,12 +128,21 @@ export default function MyListingsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Listings</Text>
-        <TouchableOpacity onPress={() => router.push('/listings/new')}>
-          <Text style={styles.newButton}>+ New</Text>
-        </TouchableOpacity>
-      </View>
+      <Header
+        title="My Listings"
+        leftContent={
+          <HeaderActionButton
+            label="Back"
+            onPress={() => router.back()}
+          />
+        }
+        rightContent={
+          <HeaderActionButton
+            label="+ New"
+            onPress={() => router.push('/listings/new')}
+          />
+        }
+      />
 
       {listings.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -161,24 +171,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  newButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
   },
   listingsList: {
     padding: 16,

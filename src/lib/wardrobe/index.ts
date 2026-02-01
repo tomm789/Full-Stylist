@@ -27,6 +27,7 @@ export {
 export {
   getWardrobeItemImages,
   getWardrobeItemsImages,
+  buildWardrobeItemsImageUrlCache,
   addImageToWardrobeItem,
   removeImageFromWardrobeItem,
   updateImageSortOrder,

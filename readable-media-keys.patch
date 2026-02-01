@@ -1,0 +1,185 @@
+diff --git a/netlify/functions/processes/outfit_render.js b/netlify/functions/processes/outfit_render.js
+index 1111111..2222222 100644
+--- a/netlify/functions/processes/outfit_render.js
++++ b/netlify/functions/processes/outfit_render.js
+@@ -379,10 +379,11 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null,
+ 
+   // Upload the optimized final composite (with timing for latency debugging)
+-  const timestamp = Date.now();
+-  const storagePath = `${userId}/ai/outfits/${outfit_id}/${timestamp}.jpg`;
++  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
++  const renderKey = jobId ? `render-${jobId}` : `render-${stamp}`;
++  const storagePath = `${userId}/ai/outfits/${outfit_id}/${renderKey}.jpg`;
+   const uploadStart = Date.now();
+   const { imageId, storageKey } = await uploadImageToStorage(
+     supabase,
+diff --git a/netlify/functions/processes/headshot_generate.js b/netlify/functions/processes/headshot_generate.js
+index 1111111..2222222 100644
+--- a/netlify/functions/processes/headshot_generate.js
++++ b/netlify/functions/processes/headshot_generate.js
+@@ -63,8 +63,9 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nul
+   console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
+   console.log(`[processHeadshotGenerate] Gemini API returned, headshot base64 length: ${headshotB64?.length || 0}`);
+   // Upload and store the headshot
+-  const timestamp = Date.now();
+-  const storagePath = `${userId}/ai/headshots/${timestamp}.jpg`;
++  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
++  const storagePath = `${userId}/ai/headshots/${jobId ? `headshot-${jobId}` : `headshot-${stamp}`}.jpg`;
+   const { imageId, storageKey } = await uploadImageToStorage(
+     supabase,
+     userId,
+diff --git a/netlify/functions/processes/body_shot_generate.js b/netlify/functions/processes/body_shot_generate.js
+index 1111111..2222222 100644
+--- a/netlify/functions/processes/body_shot_generate.js
++++ b/netlify/functions/processes/body_shot_generate.js
+@@ -61,8 +61,9 @@ async function processBodyShotGenerate(input, supabase, userId, perfTracker = nul
+   );
+   console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
+   // Upload the new body shot image
+-  const timestamp = Date.now();
+-  const storagePath = `${userId}/ai/body_shots/${timestamp}.jpg`;
++  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
++  const storagePath = `${userId}/ai/body_shots/${jobId ? `bodyshot-${jobId}` : `bodyshot-${stamp}`}.jpg`;
+   const { imageId, storageKey } = await uploadImageToStorage(
+     supabase,
+     userId,
+diff --git a/netlify/functions/processes/wardrobe_item_generate.js b/netlify/functions/processes/wardrobe_item_generate.js
+index 1111111..2222222 100644
+--- a/netlify/functions/processes/wardrobe_item_generate.js
++++ b/netlify/functions/processes/wardrobe_item_generate.js
+@@ -78,9 +78,10 @@ async function processWardrobeItemGenerate(input, supabase, userId, perfTracker =
+ 
+     // Upload to Supabase storage
+     const uploadStart = Date.now();
+-    const timestamp = Date.now();
+-    const storagePath = `${userId}/ai/product_shots/${timestamp}.jpg`;
++    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
++    const shotKey = jobId ? `product-${wardrobe_item_id}-${jobId}` : `product-${wardrobe_item_id}-${stamp}`;
++    const storagePath = `${userId}/ai/product_shots/${shotKey}.jpg`;
+     const { imageId, storageKey } = await uploadImageToStorage(
+       supabase,
+       userId,
+diff --git a/netlify/functions/processes/wardrobe_item_render.js b/netlify/functions/processes/wardrobe_item_render.js
+index 1111111..2222222 100644
+--- a/netlify/functions/processes/wardrobe_item_render.js
++++ b/netlify/functions/processes/wardrobe_item_render.js
+@@ -68,9 +68,10 @@ async function processWardrobeItemRender(input, supabase, userId, perfTracker = n
+ 
+   // Upload to Supabase storage (same convention as product_shot)
+   const uploadStart = Date.now();
+-  const timestamp = Date.now();
+-  const storagePath = `${userId}/ai/product_shots/${timestamp}.jpg`;
++  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
++  const shotKey = jobId ? `product-${wardrobe_item_id}-${jobId}` : `product-${wardrobe_item_id}-${stamp}`;
++  const storagePath = `${userId}/ai/product_shots/${shotKey}.jpg`;
+   const { imageId, storageKey } = await uploadImageToStorage(
+     supabase,
+     userId,
+diff --git a/netlify/functions/processes/outfit_mannequin.js b/netlify/functions/processes/outfit_mannequin.js
+index 1111111..2222222 100644
+--- a/netlify/functions/processes/outfit_mannequin.js
++++ b/netlify/functions/processes/outfit_mannequin.js
+@@ -88,8 +88,9 @@ async function processOutfitMannequin(input, supabase, userId, perfTracker = null
+   );
+   console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
+   // Upload the mannequin render
+-  const timestamp = Date.now();
+-  const storagePath = `${userId}/ai/outfits/${outfit_id}/mannequin/${timestamp}.jpg`;
++  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
++  const storagePath = `${userId}/ai/outfits/${outfit_id}/mannequin/${jobId ? `mannequin-${jobId}` : `mannequin-${stamp}`}.jpg`;
+   const { imageId, storageKey } = await uploadImageToStorage(
+     supabase,
+     userId,
+diff --git a/netlify/functions/processes/product_shot.js b/netlify/functions/processes/product_shot.js
+index 1111111..2222222 100644
+--- a/netlify/functions/processes/product_shot.js
++++ b/netlify/functions/processes/product_shot.js
+@@ -57,8 +57,9 @@ async function processProductShot(input, supabase, userId, perfTracker = null, ti
+   );
+   console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
+   // Upload the generated image to storage
+-  const timestamp = Date.now();
+-  const storagePath = `${userId}/ai/product_shots/${timestamp}.jpg`;
++  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
++  const storagePath = `${userId}/ai/product_shots/${jobId ? `product-${wardrobe_item_id}-${jobId}` : `product-${wardrobe_item_id}-${stamp}`}.jpg`;
+   const { imageId, storageKey } = await uploadImageToStorage(
+     supabase,
+     userId,
+diff --git a/src/hooks/profile/useProfileEdit.ts b/src/hooks/profile/useProfileEdit.ts
+index 1111111..2222222 100644
+--- a/src/hooks/profile/useProfileEdit.ts
++++ b/src/hooks/profile/useProfileEdit.ts
+@@ -111,11 +111,12 @@ export function useProfileEdit(userId: string) {
+       const response = await fetch(result.assets[0].uri);
+       const blob = await response.blob();
+ 
++      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+       const uploadResult = await uploadImageToStorage(
+         userId,
+         blob,
+-        `avatar-${Date.now()}.jpg`
++        `avatar-${stamp}.jpg`
+       );
+       if (uploadResult.error) throw uploadResult.error;
+ 
+diff --git a/src/hooks/profile/useImageGeneration.ts b/src/hooks/profile/useImageGeneration.ts
+index 1111111..2222222 100644
+--- a/src/hooks/profile/useImageGeneration.ts
++++ b/src/hooks/profile/useImageGeneration.ts
+@@ -125,11 +125,12 @@ export function useImageGeneration(userId: string) {
+     try {
+       console.log('-> Uploading...');
++      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+       const uploadResult = await uploadImageToStorage(
+         userId,
+         uploadedBlob,
+-        'selfie-' + Date.now() + '.jpg'
++        `selfie-${stamp}.jpg`
+       );
+       console.log('Upload done, error:', !!uploadResult.error);
+       
+@@ -240,11 +241,12 @@ export function useImageGeneration(userId: string) {
+ 
+     try {
++      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+       const uploadResult = await uploadImageToStorage(
+         userId,
+         uploadedBlob,
+-        'body-' + Date.now() + '.jpg'
++        `body-${stamp}.jpg`
+       );
+       if (uploadResult.error) throw uploadResult.error;
+ 
+diff --git a/src/lib/utils/image-helpers.ts b/src/lib/utils/image-helpers.ts
+index 1111111..2222222 100644
+--- a/src/lib/utils/image-helpers.ts
++++ b/src/lib/utils/image-helpers.ts
+@@ -286,17 +286,27 @@ export async function batchUploadImages(
+ }> {
+   const imageIds: string[] = [];
+   const errors: any[] = [];
+ 
+-  for (const file of files) {
++  for (let i = 0; i < files.length; i++) {
++    const file = files[i];
+     try {
+       const blob = await uriToBlob(file.uri, file.type);
+-      const result = await uploadAndCreateImage(userId, blob, file.name, source);
++      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
++      const rawExt = (file.name || "").split(".").pop()?.toLowerCase() || "";
++      const safeExt = ["jpg", "jpeg", "png", "webp"].includes(rawExt) ? rawExt : "jpg";
++      const fileName = `upload-${stamp}-${String(i + 1).padStart(2, "0")}.${safeExt}`;
++      const result = await uploadAndCreateImage(userId, blob, fileName, source);
+       
+       if (result.error || !result.data) {
+-        errors.push({ file: file.name, error: result.error });
++        errors.push({ file: file.name || fileName, error: result.error });
+       } else {
+         imageIds.push(result.data.imageId);
+       }
+     } catch (error: any) {
+-      errors.push({ file: file.name, error });
++      errors.push({ file: file.name, error });
+     }
+   }
+ 

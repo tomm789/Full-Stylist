@@ -4,11 +4,9 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useAccountSettings } from '@/hooks/profile';
 import {
   AIModelSection,
@@ -16,6 +14,7 @@ import {
   PrivacySettingsSection,
 } from '@/components/profile';
 import { LoadingSpinner } from '@/components/shared';
+import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 export default function AccountSettingsScreen() {
   const router = useRouter();
@@ -34,13 +33,15 @@ export default function AccountSettingsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Account Settings</Text>
-          <View style={styles.backButton} />
-        </View>
+        <Header
+          title="Account Settings"
+          leftContent={
+            <HeaderActionButton
+              label="Back"
+              onPress={() => router.back()}
+            />
+          }
+        />
         <View style={styles.loadingContainer}>
           <LoadingSpinner size="large" />
         </View>
@@ -52,13 +53,15 @@ export default function AccountSettingsScreen() {
   if (!settings) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Account Settings</Text>
-          <View style={styles.backButton} />
-        </View>
+        <Header
+          title="Account Settings"
+          leftContent={
+            <HeaderActionButton
+              label="Back"
+              onPress={() => router.back()}
+            />
+          }
+        />
         <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
           <Text style={styles.warningText}>
             Complete your profile to access account settings
@@ -70,13 +73,15 @@ export default function AccountSettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Account Settings</Text>
-        <View style={styles.backButton} />
-      </View>
+      <Header
+        title="Account Settings"
+        leftContent={
+          <HeaderActionButton
+            label="Back"
+            onPress={() => router.back()}
+          />
+        }
+      />
 
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
         <PrivacySettingsSection
@@ -103,25 +108,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    padding: 8,
-    width: 40,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
   },
   scrollContainer: {
     flex: 1,
