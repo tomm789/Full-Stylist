@@ -86,7 +86,7 @@ export default function OutfitViewScreen() {
     outfitId: id,
     userId: user?.id,
     renderJobIdParam: renderJobIdParam as string | undefined,
-    renderTraceIdParam: renderTraceIdParam as string | undefined,
+    renderTraceId: renderTraceIdParam as string | undefined,
   });
 
   // Social engagement (defer fetch until after cover load in PERF_MODE)

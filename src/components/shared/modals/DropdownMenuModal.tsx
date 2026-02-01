@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
-import { layout } from '@/styles/theme';
+import { layout, colors, spacing, borderRadius, shadows } from '@/styles';
 
 type DropdownMenuModalProps = {
   visible: boolean;
@@ -69,13 +69,12 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
 
-  // matches your current dropdownMenu styling
   menuContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 8,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    padding: spacing.sm,
     minWidth: 200,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -88,6 +87,6 @@ const styles = StyleSheet.create({
 
   rightAlign: {
     alignSelf: 'flex-end',
-    marginRight: 16,
+    marginRight: spacing.lg,
   },
 });

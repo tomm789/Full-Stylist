@@ -21,6 +21,9 @@ import { Image as ExpoImage } from 'expo-image';
 import { useNewBodyshot } from '@/hooks/profile';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { theme } from '@/styles';
+
+const { colors, spacing, borderRadius, typography } = theme;
 
 export default function NewBodyshotScreen() {
   const router = useRouter();
@@ -66,7 +69,7 @@ export default function NewBodyshotScreen() {
               <ActivityIndicator style={styles.loader} />
             ) : headshots.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="image-outline" size={48} color="#ccc" />
+                <Ionicons name="image-outline" size={48} color={colors.gray400} />
                 <Text style={styles.emptyStateText}>No headshots available</Text>
                 <TouchableOpacity
                   style={styles.createHeadshotButton}
@@ -96,7 +99,7 @@ export default function NewBodyshotScreen() {
                     />
                     {selectedHeadshotId === item.id && (
                       <View style={styles.selectedBadge}>
-                        <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
+                        <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -121,24 +124,24 @@ export default function NewBodyshotScreen() {
                     style={styles.optionButton}
                     onPress={() => pickImage(true)}
                   >
-                    <Ionicons name="camera-outline" size={32} color="#007AFF" />
+                    <Ionicons name="camera-outline" size={32} color={colors.primary} />
                     <View style={styles.optionTextContainer}>
                       <Text style={styles.optionTitle}>Take Photo</Text>
                       <Text style={styles.optionSubtext}>Use your camera</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={24} color="#ccc" />
+                    <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={styles.optionButton}
                     onPress={() => pickImage(false)}
                   >
-                    <Ionicons name="images-outline" size={32} color="#007AFF" />
+                    <Ionicons name="images-outline" size={32} color={colors.primary} />
                     <View style={styles.optionTextContainer}>
                       <Text style={styles.optionTitle}>Upload Photo</Text>
                       <Text style={styles.optionSubtext}>Choose from library</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={24} color="#ccc" />
+                    <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
                   </TouchableOpacity>
                 </>
               ) : (
@@ -152,7 +155,7 @@ export default function NewBodyshotScreen() {
                   </View>
 
                   <TouchableOpacity style={styles.retakeButton} onPress={clearImage}>
-                    <Ionicons name="camera-reverse-outline" size={20} color="#007AFF" />
+                    <Ionicons name="camera-reverse-outline" size={20} color={colors.primary} />
                     <Text style={styles.retakeButtonText}>Retake Photo</Text>
                   </TouchableOpacity>
 
@@ -166,7 +169,7 @@ export default function NewBodyshotScreen() {
                     }}
                     disabled={generating}
                   >
-                    <Ionicons name="sparkles-outline" size={20} color="#fff" />
+                    <Ionicons name="sparkles-outline" size={20} color={colors.textLight} />
                     <Text style={styles.generateButtonText}>Generate Bodyshot</Text>
                   </TouchableOpacity>
                 </>
@@ -180,7 +183,7 @@ export default function NewBodyshotScreen() {
       <Modal visible={generating} transparent animationType="fade">
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingTitle}>Generating Bodyshot</Text>
             <Text style={styles.loadingMessage}>{loadingMessage}</Text>
           </View>
@@ -200,110 +203,110 @@ export default function NewBodyshotScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   scrollContainer: {
     flex: 1,
   },
   content: {
-    padding: 20,
+    padding: spacing.xl,
   },
   section: {
-    marginBottom: 32,
+    marginBottom: spacing.xxxl,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#000',
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.semibold,
+    marginBottom: spacing.sm,
+    color: colors.textPrimary,
   },
   hint: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
   },
   loader: {
-    marginVertical: 20,
+    marginVertical: spacing.xl,
   },
   emptyState: {
     alignItems: 'center',
-    padding: 40,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
+    padding: spacing.huge,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.lg,
   },
   emptyStateText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 12,
-    marginBottom: 16,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
   },
   createHeadshotButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
   },
   createHeadshotButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.textLight,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
   },
   headshotList: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   headshotOption: {
-    marginRight: 12,
-    borderRadius: 12,
+    marginRight: spacing.md,
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
     borderWidth: 3,
-    borderColor: 'transparent',
+    borderColor: colors.transparent,
   },
   headshotOptionSelected: {
-    borderColor: '#007AFF',
+    borderColor: colors.primary,
   },
   headshotImage: {
     width: 120,
     height: 160,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.backgroundTertiary,
   },
   selectedBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    top: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
   },
   optionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
+    padding: spacing.xl,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    gap: 16,
-    marginBottom: 12,
+    borderColor: colors.borderLight,
+    gap: spacing.lg,
+    marginBottom: spacing.md,
   },
   optionTextContainer: {
     flex: 1,
   },
   optionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   optionSubtext: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
   },
   imagePreviewContainer: {
     width: '100%',
     aspectRatio: 3 / 4,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
-    marginBottom: 16,
+    backgroundColor: colors.backgroundTertiary,
+    marginBottom: spacing.lg,
   },
   imagePreview: {
     width: '100%',
@@ -313,58 +316,58 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
-    gap: 8,
-    marginBottom: 16,
+    padding: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   retakeButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.primary,
   },
   generateButton: {
     flexDirection: 'row',
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   generateButtonDisabled: {
     opacity: 0.6,
   },
   generateButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.textLight,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
   },
   loadingOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: colors.overlayDark,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 32,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xxxl,
     alignItems: 'center',
     minWidth: 280,
     maxWidth: '80%',
   },
   loadingTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   loadingMessage: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: typography.lineHeight.normal,
   },
 });
