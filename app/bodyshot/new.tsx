@@ -19,15 +19,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useNewBodyshot } from '@/hooks/profile';
-import { useImageGeneration } from '@/hooks/profile';
-import { useAuth } from '@/contexts/AuthContext';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import { Header, HeaderActionButton } from '@/components/shared/layout';
 
 export default function NewBodyshotScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const imageGeneration = useImageGeneration();
   const {
     headshots,
     loadingHeadshots,
@@ -166,33 +162,7 @@ export default function NewBodyshotScreen() {
                       generating && styles.generateButtonDisabled,
                     ]}
                     onPress={async () => {
-                      // Performance tracking: Start time (button click)
-                      const startTime = performance.now();
-                      console.log('[PERF] Button clicked at:', startTime);
-
-                      if (!user || !selectedHeadshotId) return;
-
-                      const generatedImageId = await imageGeneration.generateBodyShot(
-                        user.id,
-                        selectedHeadshotId
-                      );
-                      
-                      // Performance tracking: API response time
-                      const apiResponseTime = performance.now();
-                      const backendProcessingTime = apiResponseTime - startTime;
-                      console.log('[PERF] API response received at:', apiResponseTime);
-                      console.log('[PERF] Backend processing duration:', backendProcessingTime.toFixed(2), 'ms');
-
-                      if (generatedImageId) {
-                        // Pass timing data via route params
-                        router.replace({
-                          pathname: `/bodyshot/${generatedImageId}` as any,
-                          params: {
-                            perfStartTime: startTime.toString(),
-                            perfApiResponseTime: apiResponseTime.toString(),
-                          },
-                        } as any);
-                      }
+                      await handleGenerate();
                     }}
                     disabled={generating}
                   >

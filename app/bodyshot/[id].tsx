@@ -68,10 +68,6 @@ export default function BodyshotDetailScreen() {
     });
   }, [user?.id, bodyshotId]);
 
-  const showFeedbackOverlay = !!(bodyshot && lastSucceededJobId);
-  const feedbackGiven =
-    !!lastSucceededJobFeedbackAt || feedbackSubmittedForJobId === lastSucceededJobId;
-
   // Use the image edit hook for bodyshots
   const {
     image: bodyshot,
@@ -86,6 +82,10 @@ export default function BodyshotDetailScreen() {
     userId: user?.id,
     imageType: 'bodyshot',
   });
+
+  const showFeedbackOverlay = !!(bodyshot && lastSucceededJobId);
+  const feedbackGiven =
+    !!lastSucceededJobFeedbackAt || feedbackSubmittedForJobId === lastSucceededJobId;
 
   const handleDuplicate = async () => {
     const newId = await duplicate();

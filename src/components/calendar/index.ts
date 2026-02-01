@@ -14,3 +14,4 @@ export { CalendarDayHeader } from './CalendarDayHeader';
 export { CalendarDayEntryForm } from './CalendarDayEntryForm';
 export { CreatePresetModal } from './CreatePresetModal';
 export { default as CalendarDatePickerModal } from './CalendarDatePickerModal';
+export { useMonthCarousel } from './useMonthCarousel';

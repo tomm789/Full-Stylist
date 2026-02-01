@@ -100,12 +100,30 @@ export function useNewBodyshot(): UseNewBodyshotReturn {
   const handleGenerate = useCallback(async () => {
     if (!user || !selectedHeadshotId) return;
 
+    const startTime = performance.now();
+    console.log('[PERF] Bodyshot generate clicked at:', startTime);
+
     const generatedImageId = await imageGeneration.generateBodyShot(
       user.id,
       selectedHeadshotId
     );
     if (generatedImageId) {
-      router.replace(`/bodyshot/${generatedImageId}` as any);
+      const apiResponseTime = performance.now();
+      const backendProcessingTime = apiResponseTime - startTime;
+      console.log('[PERF] Bodyshot API response at:', apiResponseTime);
+      console.log(
+        '[PERF] Bodyshot backend processing duration:',
+        backendProcessingTime.toFixed(2),
+        'ms'
+      );
+
+      router.replace({
+        pathname: `/bodyshot/${generatedImageId}` as any,
+        params: {
+          perfStartTime: startTime.toString(),
+          perfApiResponseTime: apiResponseTime.toString(),
+        },
+      } as any);
     }
   }, [user, selectedHeadshotId, imageGeneration, router]);
 
