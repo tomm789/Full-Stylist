@@ -40,7 +40,11 @@ export default function CalendarGrid({
     return PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
         const { dx, dy } = gestureState;
-        return Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy);
+        return Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 0.6;
+      },
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        const { dx, dy } = gestureState;
+        return Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 0.6;
       },
       onPanResponderGrant: () => {
         swipeLocked.current = false;
@@ -59,6 +63,7 @@ export default function CalendarGrid({
         swipeLocked.current = true;
         onMonthSwipe(direction);
       },
+      onPanResponderTerminationRequest: () => false,
     });
   }, [onMonthSwipe]);
 

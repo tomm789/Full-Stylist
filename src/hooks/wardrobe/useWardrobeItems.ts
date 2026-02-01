@@ -8,9 +8,9 @@ import {
   getWardrobeItems,
   getSavedWardrobeItems,
   getWardrobeItemsImages,
+  buildWardrobeItemsImageUrlCache,
   WardrobeItem,
 } from '@/lib/wardrobe';
-import { supabase } from '@/lib/supabase';
 
 interface UseWardrobeItemsOptions {
   wardrobeId: string | null;
@@ -50,17 +50,19 @@ export function useWardrobeItems({
     setError(null);
 
     try {
-      // Load owned items
-      const { data: ownedItems, error: ownedError } = await getWardrobeItems(wardrobeId, {
-        category_id: categoryId,
-        search: searchQuery,
-      });
-
-      // Load saved items from other users
-      const { data: savedItems, error: savedError } = await getSavedWardrobeItems(userId, {
-        category_id: categoryId,
-        search: searchQuery,
-      });
+      const [
+        { data: ownedItems, error: ownedError },
+        { data: savedItems, error: savedError },
+      ] = await Promise.all([
+        getWardrobeItems(wardrobeId, {
+          category_id: categoryId,
+          search: searchQuery,
+        }),
+        getSavedWardrobeItems(userId, {
+          category_id: categoryId,
+          search: searchQuery,
+        }),
+      ]);
 
       if (ownedError || savedError) {
         throw ownedError || savedError;
@@ -79,20 +81,7 @@ export function useWardrobeItems({
         const itemIds = combinedItems.map(item => item.id);
         const { data: imagesMap } = await getWardrobeItemsImages(itemIds);
 
-        // Build URL cache
-        const newCache = new Map<string, string | null>();
-        for (const itemId of itemIds) {
-          const images = imagesMap.get(itemId);
-          if (images && images.length > 0 && images[0].image?.storage_key) {
-            const storageBucket = images[0].image.storage_bucket || 'media';
-            const { data: urlData } = supabase.storage
-              .from(storageBucket)
-              .getPublicUrl(images[0].image.storage_key);
-            newCache.set(itemId, urlData?.publicUrl || null);
-          } else {
-            newCache.set(itemId, null);
-          }
-        }
+        const newCache = buildWardrobeItemsImageUrlCache(itemIds, imagesMap);
         setImageCache(newCache);
       }
     } catch (err) {
