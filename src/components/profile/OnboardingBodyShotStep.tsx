@@ -1,6 +1,6 @@
 /**
- * OnboardingBodyShotStep Component
- * Body shot generation step in onboarding
+ * OnboardingBodyShotStep Component (Improved)
+ * Body shot generation step in onboarding - matches styling of bodyshot/new.tsx
  */
 
 import React from 'react';
@@ -8,11 +8,16 @@ import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  SafeAreaView,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { theme } from '@/styles';
+
+const { colors, spacing, borderRadius, typography } = theme;
 
 interface OnboardingBodyShotStepProps {
   onComplete: () => void;
@@ -25,7 +30,6 @@ interface OnboardingBodyShotStepProps {
 }
 
 export function OnboardingBodyShotStep({
-  onComplete,
   onSkip,
   generating,
   loadingMessage,
@@ -33,149 +37,212 @@ export function OnboardingBodyShotStep({
   onPickImage,
   onGenerate,
 }: OnboardingBodyShotStepProps) {
-  const handleGenerate = () => {
-    onGenerate();
-  };
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create Your Studio Model</Text>
-      <Text style={styles.subtitle}>
-        Upload a body photo to combine with your headshot
-      </Text>
-
-      <View style={styles.imageSection}>
-        {uploadedUri ? (
-          <ExpoImage
-            source={{ uri: uploadedUri }}
-            style={styles.image}
-            contentFit="cover"
-          />
-        ) : (
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={onPickImage}
-          >
-            <Ionicons name="camera-outline" size={48} color="#666" />
-            <Text style={styles.uploadText}>Upload Body Photo</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={handleGenerate}
-          disabled={!uploadedUri || generating}
-        >
-          {generating ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Generate Studio Model</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={onSkip}
-        >
-          <Text style={styles.secondaryButtonText}>Skip for Now</Text>
-        </TouchableOpacity>
-      </View>
-
-      {generating && loadingMessage && (
-        <View style={styles.loadingOverlay}>
-          <Text style={styles.loadingText}>{loadingMessage}</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <Text style={styles.stepIndicator}>Step 2 of 2</Text>
+          <Text style={styles.title}>Create Your Studio Model</Text>
+          <Text style={styles.subtitle}>
+            Upload a full-body photo to combine with your headshot and create studio-quality model photos
+          </Text>
         </View>
-      )}
-    </View>
+
+        {/* Upload Body Photo Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Upload Body Photo</Text>
+          <Text style={styles.hint}>
+            Upload a full-body photo to combine with your headshot
+          </Text>
+
+          {!uploadedUri ? (
+            <>
+              <TouchableOpacity
+                style={styles.optionButton}
+                onPress={onPickImage}
+                disabled={generating}
+              >
+                <Ionicons name="camera-outline" size={32} color={colors.primary} />
+                <View style={styles.optionTextContainer}>
+                  <Text style={styles.optionTitle}>Take Photo</Text>
+                  <Text style={styles.optionSubtext}>Use your camera</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.optionButton}
+                onPress={onPickImage}
+                disabled={generating}
+              >
+                <Ionicons name="images-outline" size={32} color={colors.primary} />
+                <View style={styles.optionTextContainer}>
+                  <Text style={styles.optionTitle}>Upload Photo</Text>
+                  <Text style={styles.optionSubtext}>Choose from library</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={styles.imagePreviewContainer}>
+                <ExpoImage
+                  source={{ uri: uploadedUri }}
+                  style={styles.imagePreview}
+                  contentFit="cover"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.generateButton,
+                  generating && styles.generateButtonDisabled,
+                ]}
+                onPress={onGenerate}
+                disabled={generating}
+              >
+                <Ionicons name="sparkles-outline" size={20} color={colors.textLight} />
+                <Text style={styles.generateButtonText}>
+                  {generating ? loadingMessage : 'Generate Studio Model'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+
+        {/* Footer Actions */}
+        <View style={styles.footerSection}>
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={onSkip}
+            disabled={generating}
+          >
+            <Text style={styles.skipButtonText}>Skip for Now</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
+    backgroundColor: colors.background,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  content: {
+    padding: spacing.xl,
+  },
+  headerSection: {
+    marginBottom: spacing.xxxl,
+  },
+  stepIndicator: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.primary,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#000',
-    marginBottom: 8,
+    fontSize: typography.fontSize.xxxl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    lineHeight: 22,
   },
-  imageSection: {
-    flex: 1,
-    justifyContent: 'center',
+  section: {
+    marginBottom: spacing.xxxl,
+  },
+  sectionTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.semibold,
+    marginBottom: spacing.sm,
+    color: colors.textPrimary,
+  },
+  hint: {
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+  },
+  optionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 32,
-  },
-  image: {
-    width: 300,
-    height: 400,
-    borderRadius: 12,
-    backgroundColor: '#f0f0f0',
-  },
-  uploadButton: {
-    width: 300,
-    height: 400,
-    borderRadius: 12,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e0e0e0',
-    borderStyle: 'dashed',
-  },
-  uploadText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
-  },
-  actions: {
-    gap: 12,
-  },
-  button: {
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  primaryButton: {
-    backgroundColor: '#000',
-  },
-  secondaryButton: {
-    backgroundColor: '#fff',
+    padding: spacing.xl,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.borderLight,
+    gap: spacing.lg,
+    marginBottom: spacing.md,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  optionTextContainer: {
+    flex: 1,
   },
-  secondaryButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
+  optionTitle: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  optionSubtext: {
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+  },
+  imagePreviewContainer: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: colors.backgroundTertiary,
+    marginBottom: spacing.lg,
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  generateButton: {
+    flexDirection: 'row',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  generateButtonDisabled: {
+    opacity: 0.6,
+  },
+  generateButtonText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  footerSection: {
+    marginTop: spacing.xxl,
+    paddingTop: spacing.xxl,
+    borderTopWidth: 1,
+    borderTopColor: colors.backgroundTertiary,
+  },
+  skipButton: {
+    padding: spacing.lg,
     alignItems: 'center',
   },
-  loadingText: {
-    color: '#fff',
-    fontSize: 16,
-    marginTop: 16,
-    textAlign: 'center',
+  skipButtonText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textSecondary,
   },
 });

@@ -1,19 +1,23 @@
 /**
- * OnboardingHeadshotStep Component
- * Headshot generation step in onboarding
+ * OnboardingHeadshotStep Component (Improved)
+ * Headshot generation step in onboarding - matches styling of headshot/new.tsx
  */
 
 import React from 'react';
 import {
   View,
   Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
   TextInput,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { theme } from '@/styles';
+
+const { colors, spacing, borderRadius, typography } = theme;
 
 interface OnboardingHeadshotStepProps {
   onComplete: () => void;
@@ -30,7 +34,6 @@ interface OnboardingHeadshotStepProps {
 }
 
 export function OnboardingHeadshotStep({
-  onComplete,
   onSkip,
   generating,
   loadingMessage,
@@ -42,211 +45,281 @@ export function OnboardingHeadshotStep({
   onHairStyleChange,
   onMakeupStyleChange,
 }: OnboardingHeadshotStepProps) {
-  const handleGenerate = () => {
-    onGenerate();
-  };
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create Your Headshot</Text>
-      <Text style={styles.subtitle}>
-        Upload a selfie to generate your professional headshot
-      </Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <Text style={styles.stepIndicator}>Step 1 of 2</Text>
+          <Text style={styles.title}>Create Your Headshot</Text>
+          <Text style={styles.subtitle}>
+            Upload a selfie to generate your professional headshot
+          </Text>
+        </View>
 
-      <View style={styles.imageSection}>
-        {uploadedUri ? (
-          <ExpoImage
-            source={{ uri: uploadedUri }}
-            style={styles.image}
-            contentFit="cover"
-          />
+        {!uploadedUri ? (
+          <View style={styles.uploadSection}>
+            <Text style={styles.sectionTitle}>Take or Upload a Photo</Text>
+            <Text style={styles.hint}>
+              Take a selfie or upload a photo to generate a professional headshot
+            </Text>
+
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={onPickImage}
+              disabled={generating}
+            >
+              <Ionicons name="camera-outline" size={32} color={colors.primary} />
+              <View style={styles.optionTextContainer}>
+                <Text style={styles.optionTitle}>Take Photo</Text>
+                <Text style={styles.optionSubtext}>Use your camera</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={onPickImage}
+              disabled={generating}
+            >
+              <Ionicons name="images-outline" size={32} color={colors.primary} />
+              <View style={styles.optionTextContainer}>
+                <Text style={styles.optionTitle}>Upload Photo</Text>
+                <Text style={styles.optionSubtext}>Choose from library</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
+            </TouchableOpacity>
+          </View>
         ) : (
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={onPickImage}
-          >
-            <Ionicons name="camera-outline" size={48} color="#666" />
-            <Text style={styles.uploadText}>Upload Selfie</Text>
-          </TouchableOpacity>
+          <View style={styles.previewSection}>
+            <Text style={styles.sectionTitle}>Your Photo</Text>
+
+            <View style={styles.imagePreviewContainer}>
+              <ExpoImage
+                source={{ uri: uploadedUri }}
+                style={styles.imagePreview}
+                contentFit="cover"
+              />
+            </View>
+
+            <View style={styles.refineSection}>
+              <Text style={styles.sectionTitle}>Refine Your Headshot</Text>
+              <Text style={styles.hint}>
+                Customize your hairstyle and makeup (optional)
+              </Text>
+
+              {onHairStyleChange && (
+                <>
+                  <Text style={styles.label}>Hairstyle</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., Shoulder-length wavy hair, Short pixie cut"
+                    value={hairStyle}
+                    onChangeText={onHairStyleChange}
+                    editable={!generating}
+                    multiline
+                  />
+                  <Text style={styles.inputHint}>
+                    Describe your desired hairstyle or leave blank to keep original
+                  </Text>
+                </>
+              )}
+
+              {onMakeupStyleChange && (
+                <>
+                  <Text style={styles.label}>Makeup Style</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., Natural look, Bold red lips, Smokey eye"
+                    value={makeupStyle}
+                    onChangeText={onMakeupStyleChange}
+                    editable={!generating}
+                    multiline
+                  />
+                  <Text style={styles.inputHint}>
+                    Describe your desired makeup or leave blank for natural look
+                  </Text>
+                </>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.generateButton,
+                generating && styles.generateButtonDisabled,
+              ]}
+              onPress={onGenerate}
+              disabled={generating}
+            >
+              <Ionicons name="sparkles-outline" size={20} color={colors.textLight} />
+              <Text style={styles.generateButtonText}>
+                {generating ? loadingMessage : 'Generate Headshot'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
-      </View>
 
-      {uploadedUri && (
-        <View style={styles.optionsSection}>
-          {onHairStyleChange && (
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Hairstyle (optional)</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="e.g., Shoulder-length wavy hair"
-                value={hairStyle}
-                onChangeText={onHairStyleChange}
-                editable={!generating}
-              />
-              <Text style={styles.fieldHint}>
-                Describe your desired hairstyle or leave blank to keep original
-              </Text>
-            </View>
-          )}
-
-          {onMakeupStyleChange && (
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Makeup Style (optional)</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="e.g., Natural look, Bold red lips"
-                value={makeupStyle}
-                onChangeText={onMakeupStyleChange}
-                editable={!generating}
-              />
-              <Text style={styles.fieldHint}>
-                Describe your desired makeup or leave blank for natural look
-              </Text>
-            </View>
-          )}
+        {/* Footer Actions */}
+        <View style={styles.footerSection}>
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={onSkip}
+            disabled={generating}
+          >
+            <Text style={styles.skipButtonText}>Skip for Now</Text>
+          </TouchableOpacity>
         </View>
-      )}
-
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={handleGenerate}
-          disabled={!uploadedUri || generating}
-        >
-          {generating ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Generate Headshot</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={onSkip}
-        >
-          <Text style={styles.secondaryButtonText}>Skip for Now</Text>
-        </TouchableOpacity>
-      </View>
-
-      {generating && loadingMessage && (
-        <View style={styles.loadingOverlay}>
-          <Text style={styles.loadingText}>{loadingMessage}</Text>
-        </View>
-      )}
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
+    backgroundColor: colors.background,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  content: {
+    padding: spacing.xl,
+  },
+  headerSection: {
+    marginBottom: spacing.xxxl,
+  },
+  stepIndicator: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.primary,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#000',
-    marginBottom: 8,
+    fontSize: typography.fontSize.xxxl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    lineHeight: 22,
   },
-  imageSection: {
+  uploadSection: {
+    gap: spacing.lg,
+    marginBottom: spacing.xxxl,
+  },
+  sectionTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.semibold,
+    marginBottom: spacing.sm,
+    color: colors.textPrimary,
+  },
+  hint: {
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+  },
+  optionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.xl,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    gap: spacing.lg,
+  },
+  optionTextContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 32,
   },
-  image: {
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: '#f0f0f0',
+  optionTitle: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
-  uploadButton: {
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e0e0e0',
-    borderStyle: 'dashed',
+  optionSubtext: {
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
   },
-  uploadText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+  previewSection: {
+    gap: spacing.lg,
+    marginBottom: spacing.xxxl,
   },
-  actions: {
-    gap: 12,
-  },
-  button: {
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  primaryButton: {
-    backgroundColor: '#000',
-  },
-  secondaryButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#fff',
-    fontSize: 16,
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  optionsSection: {
+  imagePreviewContainer: {
     width: '100%',
-    marginBottom: 24,
-    gap: 16,
+    aspectRatio: 3 / 4,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: colors.backgroundTertiary,
   },
-  field: {
-    gap: 8,
+  imagePreview: {
+    width: '100%',
+    height: '100%',
   },
-  fieldLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+  refineSection: {
+    marginTop: spacing.sm,
   },
-  fieldInput: {
+  label: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
+    color: colors.textPrimary,
+  },
+  input: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#000',
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: typography.fontSize.base,
+    backgroundColor: colors.backgroundSecondary,
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
-  fieldHint: {
-    fontSize: 12,
-    color: '#999',
+  inputHint: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textTertiary,
+    marginTop: spacing.xs,
+  },
+  generateButton: {
+    flexDirection: 'row',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xxl,
+    gap: spacing.sm,
+  },
+  generateButtonDisabled: {
+    opacity: 0.6,
+  },
+  generateButtonText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  footerSection: {
+    marginTop: spacing.xxl,
+    paddingTop: spacing.xxl,
+    borderTopWidth: 1,
+    borderTopColor: colors.backgroundTertiary,
+  },
+  skipButton: {
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  skipButtonText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textSecondary,
   },
 });

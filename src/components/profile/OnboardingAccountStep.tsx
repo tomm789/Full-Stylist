@@ -1,6 +1,6 @@
 /**
- * OnboardingAccountStep Component
- * Account setup step in onboarding
+ * OnboardingAccountStep Component (Improved)
+ * Account setup step in onboarding - matches overall onboarding styling
  */
 
 import React from 'react';
@@ -11,7 +11,13 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
+  SafeAreaView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { theme } from '@/styles';
+
+const { colors, spacing, borderRadius, typography } = theme;
 
 interface OnboardingAccountStepProps {
   handle: string;
@@ -39,209 +45,326 @@ export function OnboardingAccountStep({
   onComplete,
 }: OnboardingAccountStepProps) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create Your Account</Text>
-      <Text style={styles.subtitle}>
-        Set up your profile to get started
-      </Text>
-
-      <View style={styles.form}>
-        <View style={styles.field}>
-          <Text style={styles.label}>Handle *</Text>
-          <TextInput
-            style={styles.input}
-            value={handle}
-            onChangeText={onHandleChange}
-            placeholder="@username"
-            placeholderTextColor="#999"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <Text style={styles.hint}>
-            3-20 characters, letters, numbers, and underscores only
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <Text style={styles.stepIndicator}>Welcome</Text>
+          <Text style={styles.title}>Create Your Account</Text>
+          <Text style={styles.subtitle}>
+            Set up your profile to get started with Full-Stylist
           </Text>
         </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Display Name *</Text>
-          <TextInput
-            style={styles.input}
-            value={displayName}
-            onChangeText={onDisplayNameChange}
-            placeholder="Your name"
-            placeholderTextColor="#999"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Account Privacy</Text>
-          <View style={styles.options}>
-            <TouchableOpacity
-              style={[
-                styles.option,
-                accountPrivacy === 'public' && styles.optionSelected,
-              ]}
-              onPress={() => onAccountPrivacyChange('public')}
-            >
-              <Text
-                style={[
-                  styles.optionText,
-                  accountPrivacy === 'public' && styles.optionTextSelected,
-                ]}
-              >
-                Public
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.option,
-                accountPrivacy === 'private' && styles.optionSelected,
-              ]}
-              onPress={() => onAccountPrivacyChange('private')}
-            >
-              <Text
-                style={[
-                  styles.optionText,
-                  accountPrivacy === 'private' && styles.optionTextSelected,
-                ]}
-              >
-                Private
-              </Text>
-            </TouchableOpacity>
+        {/* Form Section */}
+        <View style={styles.formSection}>
+          {/* Handle Field */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Handle *</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons
+                name="at"
+                size={20}
+                color={colors.textTertiary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                value={handle}
+                onChangeText={onHandleChange}
+                placeholder="username"
+                placeholderTextColor={colors.textPlaceholder}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!loading}
+              />
+            </View>
+            <Text style={styles.hint}>
+              3-20 characters, letters, numbers, and underscores only
+            </Text>
           </View>
-        </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Search Visibility</Text>
-          <View style={styles.options}>
-            <TouchableOpacity
-              style={[
-                styles.option,
-                searchVisibility === 'visible' && styles.optionSelected,
-              ]}
-              onPress={() => onSearchVisibilityChange('visible')}
-            >
-              <Text
-                style={[
-                  styles.optionText,
-                  searchVisibility === 'visible' && styles.optionTextSelected,
-                ]}
-              >
-                Visible
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.option,
-                searchVisibility === 'hidden' && styles.optionSelected,
-              ]}
-              onPress={() => onSearchVisibilityChange('hidden')}
-            >
-              <Text
-                style={[
-                  styles.optionText,
-                  searchVisibility === 'hidden' && styles.optionTextSelected,
-                ]}
-              >
-                Hidden
-              </Text>
-            </TouchableOpacity>
+          {/* Display Name Field */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Display Name *</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color={colors.textTertiary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                value={displayName}
+                onChangeText={onDisplayNameChange}
+                placeholder="Your name"
+                placeholderTextColor={colors.textPlaceholder}
+                editable={!loading}
+              />
+            </View>
           </View>
-        </View>
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={onComplete}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Continue</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
+          {/* Account Privacy */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Account Privacy</Text>
+            <View style={styles.segmentedControl}>
+              <TouchableOpacity
+                style={[
+                  styles.segment,
+                  styles.segmentLeft,
+                  accountPrivacy === 'public' && styles.segmentSelected,
+                ]}
+                onPress={() => onAccountPrivacyChange('public')}
+                disabled={loading}
+              >
+                <Ionicons
+                  name="globe-outline"
+                  size={18}
+                  color={accountPrivacy === 'public' ? colors.textLight : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.segmentText,
+                    accountPrivacy === 'public' && styles.segmentTextSelected,
+                  ]}
+                >
+                  Public
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.segment,
+                  styles.segmentRight,
+                  accountPrivacy === 'private' && styles.segmentSelected,
+                ]}
+                onPress={() => onAccountPrivacyChange('private')}
+                disabled={loading}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color={accountPrivacy === 'private' ? colors.textLight : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.segmentText,
+                    accountPrivacy === 'private' && styles.segmentTextSelected,
+                  ]}
+                >
+                  Private
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.hint}>
+              {accountPrivacy === 'public'
+                ? 'Anyone can view your wardrobe and outfits'
+                : 'Only approved followers can view your content'}
+            </Text>
+          </View>
+
+          {/* Search Visibility */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Search Visibility</Text>
+            <View style={styles.segmentedControl}>
+              <TouchableOpacity
+                style={[
+                  styles.segment,
+                  styles.segmentLeft,
+                  searchVisibility === 'visible' && styles.segmentSelected,
+                ]}
+                onPress={() => onSearchVisibilityChange('visible')}
+                disabled={loading}
+              >
+                <Ionicons
+                  name="search-outline"
+                  size={18}
+                  color={searchVisibility === 'visible' ? colors.textLight : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.segmentText,
+                    searchVisibility === 'visible' && styles.segmentTextSelected,
+                  ]}
+                >
+                  Visible
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.segment,
+                  styles.segmentRight,
+                  searchVisibility === 'hidden' && styles.segmentSelected,
+                ]}
+                onPress={() => onSearchVisibilityChange('hidden')}
+                disabled={loading}
+              >
+                <Ionicons
+                  name="eye-off-outline"
+                  size={18}
+                  color={searchVisibility === 'hidden' ? colors.textLight : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.segmentText,
+                    searchVisibility === 'hidden' && styles.segmentTextSelected,
+                  ]}
+                >
+                  Hidden
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.hint}>
+              {searchVisibility === 'visible'
+                ? 'Your profile will appear in search results'
+                : 'Others can only find you via direct link'}
+            </Text>
+          </View>
+
+          {/* Continue Button */}
+          <TouchableOpacity
+            style={[styles.continueButton, loading && styles.continueButtonDisabled]}
+            onPress={onComplete}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.textLight} />
+            ) : (
+              <>
+                <Text style={styles.continueButtonText}>Continue</Text>
+                <Ionicons name="arrow-forward" size={20} color={colors.textLight} />
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
+    backgroundColor: colors.background,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  content: {
+    padding: spacing.xl,
+  },
+  headerSection: {
+    marginBottom: spacing.xxxl,
+  },
+  stepIndicator: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.primary,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#000',
-    marginBottom: 8,
+    fontSize: typography.fontSize.xxxl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    lineHeight: 22,
   },
-  form: {
-    gap: 24,
+  formSection: {
+    gap: spacing.xxl,
   },
   field: {
-    gap: 8,
+    gap: spacing.sm,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.backgroundSecondary,
+    paddingHorizontal: spacing.lg,
+  },
+  inputIcon: {
+    marginRight: spacing.md,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#000',
-    backgroundColor: '#fff',
+    flex: 1,
+    padding: spacing.md,
+    fontSize: typography.fontSize.base,
+    color: colors.textPrimary,
   },
   hint: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: typography.fontSize.xs,
+    color: colors.textTertiary,
+    marginTop: spacing.xs,
   },
-  options: {
+  segmentedControl: {
     flexDirection: 'row',
-    gap: 12,
-  },
-  option: {
-    flex: 1,
-    padding: 12,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
+    borderColor: colors.borderLight,
+  },
+  segment: {
+    flex: 1,
+    flexDirection: 'row',
+    padding: spacing.md,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.backgroundSecondary,
   },
-  optionSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#f0f8ff',
+  segmentLeft: {
+    borderRightWidth: 0.5,
+    borderRightColor: colors.borderLight,
   },
-  optionText: {
-    fontSize: 16,
-    color: '#666',
+  segmentRight: {
+    borderLeftWidth: 0.5,
+    borderLeftColor: colors.borderLight,
   },
-  optionTextSelected: {
-    color: '#007AFF',
-    fontWeight: '600',
+  segmentSelected: {
+    backgroundColor: colors.primary,
   },
-  button: {
-    backgroundColor: '#000',
-    borderRadius: 8,
-    padding: 16,
+  segmentText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textSecondary,
+  },
+  segmentTextSelected: {
+    color: colors.textLight,
+  },
+  continueButton: {
+    flexDirection: 'row',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
     alignItems: 'center',
-    marginTop: 8,
+    justifyContent: 'center',
+    marginTop: spacing.lg,
+    gap: spacing.sm,
   },
-  buttonDisabled: {
-    opacity: 0.5,
+  continueButtonDisabled: {
+    opacity: 0.6,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  continueButtonText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
   },
 });
