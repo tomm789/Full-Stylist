@@ -15,6 +15,8 @@ interface HeaderProps {
   title?: string;
   showBack?: boolean;
   onBack?: () => void;
+  /** Fallback route when there's no navigation history (e.g. after page refresh) */
+  backFallback?: string;
   leftContent?: React.ReactNode;
   rightContent?: React.ReactNode;
   style?: ViewStyle;
@@ -24,6 +26,7 @@ export default function Header({
   title,
   showBack = false,
   onBack,
+  backFallback = '/(tabs)/social',
   leftContent,
   rightContent,
   style,
@@ -33,8 +36,10 @@ export default function Header({
   const handleBack = () => {
     if (onBack) {
       onBack();
-    } else {
+    } else if (router.canGoBack()) {
       router.back();
+    } else {
+      router.replace(backFallback as any);
     }
   };
 
