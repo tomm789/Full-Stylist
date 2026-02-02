@@ -3,13 +3,14 @@
   "version": "3.1.0",
   "description": "AI styling app for creating virtual headshots and outfits",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "dev": "netlify dev",
-    "typecheck": "tsc --noEmit"
-  },
+  "start": "expo start",
+  "android": "expo start --android",
+  "ios": "expo start --ios",
+  "web": "expo start --web",
+  "build:web": "expo export -p web",
+  "dev": "netlify dev",
+  "typecheck": "tsc --noEmit"
+},
   "keywords": [
     "ai",
     "styling",

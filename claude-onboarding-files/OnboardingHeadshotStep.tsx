@@ -11,13 +11,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '@/styles';
-
-const { colors, spacing, borderRadius, typography } = theme;
 
 interface OnboardingHeadshotStepProps {
   onComplete: () => void;
@@ -34,6 +32,7 @@ interface OnboardingHeadshotStepProps {
 }
 
 export function OnboardingHeadshotStep({
+  onComplete,
   onSkip,
   generating,
   loadingMessage,
@@ -47,8 +46,8 @@ export function OnboardingHeadshotStep({
 }: OnboardingHeadshotStepProps) {
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollContainer}
+      <ScrollView 
+        style={styles.scrollContainer} 
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -73,12 +72,12 @@ export function OnboardingHeadshotStep({
               onPress={onPickImage}
               disabled={generating}
             >
-              <Ionicons name="camera-outline" size={32} color={colors.primary} />
+              <Ionicons name="camera-outline" size={32} color="#007AFF" />
               <View style={styles.optionTextContainer}>
                 <Text style={styles.optionTitle}>Take Photo</Text>
                 <Text style={styles.optionSubtext}>Use your camera</Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
+              <Ionicons name="chevron-forward" size={24} color="#ccc" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -86,12 +85,12 @@ export function OnboardingHeadshotStep({
               onPress={onPickImage}
               disabled={generating}
             >
-              <Ionicons name="images-outline" size={32} color={colors.primary} />
+              <Ionicons name="images-outline" size={32} color="#007AFF" />
               <View style={styles.optionTextContainer}>
                 <Text style={styles.optionTitle}>Upload Photo</Text>
                 <Text style={styles.optionSubtext}>Choose from library</Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
+              <Ionicons name="chevron-forward" size={24} color="#ccc" />
             </TouchableOpacity>
           </View>
         ) : (
@@ -155,7 +154,7 @@ export function OnboardingHeadshotStep({
               onPress={onGenerate}
               disabled={generating}
             >
-              <Ionicons name="sparkles-outline" size={20} color={colors.textLight} />
+              <Ionicons name="sparkles-outline" size={20} color="#fff" />
               <Text style={styles.generateButtonText}>
                 {generating ? loadingMessage : 'Generate Headshot'}
               </Text>
@@ -181,145 +180,157 @@ export function OnboardingHeadshotStep({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#fff',
   },
   scrollContainer: {
     flex: 1,
   },
   content: {
-    padding: spacing.xl,
+    padding: 20,
   },
   headerSection: {
-    marginBottom: spacing.xxxl,
+    marginBottom: 32,
   },
   stepIndicator: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.primary,
-    marginBottom: spacing.sm,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   title: {
-    fontSize: typography.fontSize.xxxl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: typography.fontSize.base,
-    color: colors.textSecondary,
+    fontSize: 16,
+    color: '#666',
     lineHeight: 22,
   },
   uploadSection: {
-    gap: spacing.lg,
-    marginBottom: spacing.xxxl,
+    gap: 16,
+    marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    marginBottom: spacing.sm,
-    color: colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#000',
   },
   hint: {
-    fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
   },
   optionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.xl,
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: borderRadius.lg,
+    padding: 20,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    gap: spacing.lg,
+    borderColor: '#e0e0e0',
+    gap: 16,
   },
   optionTextContainer: {
     flex: 1,
   },
   optionTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
   },
   optionSubtext: {
-    fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
+    fontSize: 14,
+    color: '#666',
   },
   previewSection: {
-    gap: spacing.lg,
-    marginBottom: spacing.xxxl,
+    gap: 16,
+    marginBottom: 32,
   },
   imagePreviewContainer: {
     width: '100%',
     aspectRatio: 3 / 4,
-    borderRadius: borderRadius.lg,
+    borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: colors.backgroundTertiary,
+    backgroundColor: '#f0f0f0',
   },
   imagePreview: {
     width: '100%',
     height: '100%',
   },
+  retakeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    gap: 8,
+  },
+  retakeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
   refineSection: {
-    marginTop: spacing.sm,
+    marginTop: 8,
   },
   label: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    marginBottom: spacing.sm,
-    marginTop: spacing.lg,
-    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 16,
+    color: '#000',
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    fontSize: typography.fontSize.base,
-    backgroundColor: colors.backgroundSecondary,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
     minHeight: 80,
     textAlignVertical: 'top',
   },
   inputHint: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textTertiary,
-    marginTop: spacing.xs,
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
   },
   generateButton: {
     flexDirection: 'row',
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.xxl,
-    gap: spacing.sm,
+    marginTop: 24,
+    gap: 8,
   },
   generateButtonDisabled: {
     opacity: 0.6,
   },
   generateButtonText: {
-    color: colors.textLight,
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   footerSection: {
-    marginTop: spacing.xxl,
-    paddingTop: spacing.xxl,
+    marginTop: 24,
+    paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: colors.backgroundTertiary,
+    borderTopColor: '#f0f0f0',
   },
   skipButton: {
-    padding: spacing.lg,
+    padding: 16,
     alignItems: 'center',
   },
   skipButtonText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
   },
 });

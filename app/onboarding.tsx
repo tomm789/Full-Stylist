@@ -22,6 +22,9 @@ import {
 } from '@/components/profile';
 import { useImageGeneration } from '@/hooks/profile';
 import { supabase } from '@/lib/supabase';
+import { theme } from '@/styles';
+
+const { colors, spacing, borderRadius, typography } = theme;
 
 export default function OnboardingScreen() {
   const { user } = useAuth();
@@ -203,7 +206,7 @@ export default function OnboardingScreen() {
       >
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingTitle}>
               {headshotGeneration.generating
                 ? 'Generating Headshot'
@@ -222,30 +225,30 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   loadingOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: colors.overlayDark,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 32,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xxxl,
     alignItems: 'center',
     minWidth: 280,
     maxWidth: '80%',
   },
   loadingTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   loadingMessage: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: typography.lineHeight.normal,
   },
 });

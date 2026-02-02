@@ -15,9 +15,6 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '@/styles';
-
-const { colors, spacing, borderRadius, typography } = theme;
 
 interface OnboardingAccountStepProps {
   handle: string;
@@ -46,8 +43,8 @@ export function OnboardingAccountStep({
 }: OnboardingAccountStepProps) {
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollContainer}
+      <ScrollView 
+        style={styles.scrollContainer} 
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -66,18 +63,18 @@ export function OnboardingAccountStep({
           <View style={styles.field}>
             <Text style={styles.label}>Handle *</Text>
             <View style={styles.inputWrapper}>
-              <Ionicons
-                name="at"
-                size={20}
-                color={colors.textTertiary}
-                style={styles.inputIcon}
+              <Ionicons 
+                name="at" 
+                size={20} 
+                color="#999" 
+                style={styles.inputIcon} 
               />
               <TextInput
                 style={styles.input}
                 value={handle}
                 onChangeText={onHandleChange}
                 placeholder="username"
-                placeholderTextColor={colors.textPlaceholder}
+                placeholderTextColor="#999"
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!loading}
@@ -92,18 +89,18 @@ export function OnboardingAccountStep({
           <View style={styles.field}>
             <Text style={styles.label}>Display Name *</Text>
             <View style={styles.inputWrapper}>
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color={colors.textTertiary}
-                style={styles.inputIcon}
+              <Ionicons 
+                name="person-outline" 
+                size={20} 
+                color="#999" 
+                style={styles.inputIcon} 
               />
               <TextInput
                 style={styles.input}
                 value={displayName}
                 onChangeText={onDisplayNameChange}
                 placeholder="Your name"
-                placeholderTextColor={colors.textPlaceholder}
+                placeholderTextColor="#999"
                 editable={!loading}
               />
             </View>
@@ -122,10 +119,10 @@ export function OnboardingAccountStep({
                 onPress={() => onAccountPrivacyChange('public')}
                 disabled={loading}
               >
-                <Ionicons
-                  name="globe-outline"
-                  size={18}
-                  color={accountPrivacy === 'public' ? colors.textLight : colors.textSecondary}
+                <Ionicons 
+                  name="globe-outline" 
+                  size={18} 
+                  color={accountPrivacy === 'public' ? '#fff' : '#666'} 
                 />
                 <Text
                   style={[
@@ -145,10 +142,10 @@ export function OnboardingAccountStep({
                 onPress={() => onAccountPrivacyChange('private')}
                 disabled={loading}
               >
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={18}
-                  color={accountPrivacy === 'private' ? colors.textLight : colors.textSecondary}
+                <Ionicons 
+                  name="lock-closed-outline" 
+                  size={18} 
+                  color={accountPrivacy === 'private' ? '#fff' : '#666'} 
                 />
                 <Text
                   style={[
@@ -161,8 +158,8 @@ export function OnboardingAccountStep({
               </TouchableOpacity>
             </View>
             <Text style={styles.hint}>
-              {accountPrivacy === 'public'
-                ? 'Anyone can view your wardrobe and outfits'
+              {accountPrivacy === 'public' 
+                ? 'Anyone can view your wardrobe and outfits' 
                 : 'Only approved followers can view your content'}
             </Text>
           </View>
@@ -180,10 +177,10 @@ export function OnboardingAccountStep({
                 onPress={() => onSearchVisibilityChange('visible')}
                 disabled={loading}
               >
-                <Ionicons
-                  name="search-outline"
-                  size={18}
-                  color={searchVisibility === 'visible' ? colors.textLight : colors.textSecondary}
+                <Ionicons 
+                  name="search-outline" 
+                  size={18} 
+                  color={searchVisibility === 'visible' ? '#fff' : '#666'} 
                 />
                 <Text
                   style={[
@@ -203,10 +200,10 @@ export function OnboardingAccountStep({
                 onPress={() => onSearchVisibilityChange('hidden')}
                 disabled={loading}
               >
-                <Ionicons
-                  name="eye-off-outline"
-                  size={18}
-                  color={searchVisibility === 'hidden' ? colors.textLight : colors.textSecondary}
+                <Ionicons 
+                  name="eye-off-outline" 
+                  size={18} 
+                  color={searchVisibility === 'hidden' ? '#fff' : '#666'} 
                 />
                 <Text
                   style={[
@@ -219,8 +216,8 @@ export function OnboardingAccountStep({
               </TouchableOpacity>
             </View>
             <Text style={styles.hint}>
-              {searchVisibility === 'visible'
-                ? 'Your profile will appear in search results'
+              {searchVisibility === 'visible' 
+                ? 'Your profile will appear in search results' 
                 : 'Others can only find you via direct link'}
             </Text>
           </View>
@@ -232,11 +229,11 @@ export function OnboardingAccountStep({
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={colors.textLight} />
+              <ActivityIndicator color="#fff" />
             ) : (
               <>
                 <Text style={styles.continueButtonText}>Continue</Text>
-                <Ionicons name="arrow-forward" size={20} color={colors.textLight} />
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
               </>
             )}
           </TouchableOpacity>
@@ -249,122 +246,122 @@ export function OnboardingAccountStep({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#fff',
   },
   scrollContainer: {
     flex: 1,
   },
   content: {
-    padding: spacing.xl,
+    padding: 20,
   },
   headerSection: {
-    marginBottom: spacing.xxxl,
+    marginBottom: 32,
   },
   stepIndicator: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.primary,
-    marginBottom: spacing.sm,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   title: {
-    fontSize: typography.fontSize.xxxl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: typography.fontSize.base,
-    color: colors.textSecondary,
+    fontSize: 16,
+    color: '#666',
     lineHeight: 22,
   },
   formSection: {
-    gap: spacing.xxl,
+    gap: 24,
   },
   field: {
-    gap: spacing.sm,
+    gap: 8,
   },
   label: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.backgroundSecondary,
-    paddingHorizontal: spacing.lg,
+    borderColor: '#e0e0e0',
+    borderRadius: 12,
+    backgroundColor: '#f9f9f9',
+    paddingHorizontal: 16,
   },
   inputIcon: {
-    marginRight: spacing.md,
+    marginRight: 12,
   },
   input: {
     flex: 1,
-    padding: spacing.md,
-    fontSize: typography.fontSize.base,
-    color: colors.textPrimary,
+    padding: 12,
+    fontSize: 16,
+    color: '#000',
   },
   hint: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textTertiary,
-    marginTop: spacing.xs,
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
   },
   segmentedControl: {
     flexDirection: 'row',
-    borderRadius: borderRadius.lg,
+    borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: '#e0e0e0',
   },
   segment: {
     flex: 1,
     flexDirection: 'row',
-    padding: spacing.md,
+    padding: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.backgroundSecondary,
+    gap: 8,
+    backgroundColor: '#f9f9f9',
   },
   segmentLeft: {
     borderRightWidth: 0.5,
-    borderRightColor: colors.borderLight,
+    borderRightColor: '#e0e0e0',
   },
   segmentRight: {
     borderLeftWidth: 0.5,
-    borderLeftColor: colors.borderLight,
+    borderLeftColor: '#e0e0e0',
   },
   segmentSelected: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#007AFF',
   },
   segmentText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#666',
   },
   segmentTextSelected: {
-    color: colors.textLight,
+    color: '#fff',
   },
   continueButton: {
     flexDirection: 'row',
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.lg,
-    gap: spacing.sm,
+    marginTop: 16,
+    gap: 8,
   },
   continueButtonDisabled: {
     opacity: 0.6,
   },
   continueButtonText: {
-    color: colors.textLight,
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
