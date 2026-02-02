@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedItem } from '@/lib/posts';
@@ -199,11 +200,15 @@ const styles = StyleSheet.create({
   dropdown: {
     backgroundColor: '#fff',
     borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 10,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.25)' }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 4,
+          elevation: 10,
+        }),
     minWidth: 160,
     borderWidth: 1,
     borderColor: '#e0e0e0',

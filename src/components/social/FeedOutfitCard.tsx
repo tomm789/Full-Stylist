@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { theme } from '@/styles';
 
@@ -85,11 +85,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.black,
-    shadowOpacity: 0.12,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 3,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.12)' }
+      : {
+          shadowColor: colors.black,
+          shadowOpacity: 0.12,
+          shadowOffset: { width: 0, height: 2 },
+          shadowRadius: 6,
+          elevation: 3,
+        }),
   },
   tryOnAvatar: {
     width: 32,

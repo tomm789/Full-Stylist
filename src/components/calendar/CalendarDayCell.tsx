@@ -119,6 +119,9 @@ export default function CalendarDayCell({
         height: '100%',
         backgroundColor: colors.gray200,
       },
+      pointerEventsNone: {
+        pointerEvents: 'none',
+      },
 
       moreIndicator: {
         position: 'absolute',
@@ -153,21 +156,20 @@ export default function CalendarDayCell({
     >
       {/* Background image layer (only if there’s an outfit entry) */}
       {outfitEntries.length > 0 && (
-        <View pointerEvents="none" style={styles.outfitImagesContainer}>
+        <View style={[styles.outfitImagesContainer, styles.pointerentsNone]}>
           {imageUrl ? (
             <Image
-              pointerEvents="none"
               source={{ uri: imageUrl }}
-              style={styles.outfitImage}
+              style={[styles.outfitImage, styles.pointerEventsNone]}
               contentFit="cover"
             />
           ) : (
-            <View pointerEvents="none" style={styles.outfitImagePlaceholder} />
+            <View style={[styles.outfitImagePlaceholder, styles.pointerEventsNone]} />
           )}
 
           {outfitEntries.length > 1 && (
-            <View pointerEvents="none" style={styles.moreIndicator}>
-              <Text pointerEvents="none" style={styles.moreIndicatorText}>
+            <View style={[styles.moreIndicator, styles.pointerEventsNone]}>
+              <Text style={[styles.moreIndicatorText, styles.pointerEventsNone]}>
                 +{outfitEntries.length - 1}
               </Text>
             </View>
@@ -177,12 +179,12 @@ export default function CalendarDayCell({
 
       {/* Date is always anchored to the same top-left position in the cell */}
       <Text
-        pointerEvents="none"
         style={[
           styles.dayNumber,
           styles.dayNumberLayer,
           !inCurrentMonth && styles.dayNumberOtherMonth,
           isToday && styles.dayNumberToday,
+          styles.pointerEventsNone,
         ]}
       >
         {date.getDate()}

@@ -13,11 +13,9 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
-import {
-  SlotPresetSelector,
-  OutfitGridPicker,
-  StatusSelector,
-} from '@/components/calendar';
+import SlotPresetSelector from './SlotPresetSelector';
+import OutfitGridPicker from './OutfitGridPicker';
+import StatusSelector from './StatusSelector';
 import { PrimaryButton } from '@/components/shared';
 import { theme } from '@/styles';
 import { CalendarEntry } from '@/lib/calendar';

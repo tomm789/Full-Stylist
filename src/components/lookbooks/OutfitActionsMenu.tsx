@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -68,11 +69,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     minWidth: 200,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 3.84px rgba(0, 0, 0, 0.25)' }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+          elevation: 5,
+        }),
   },
   item: {
     flexDirection: 'row',

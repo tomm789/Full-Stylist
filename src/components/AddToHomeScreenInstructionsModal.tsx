@@ -42,10 +42,7 @@ export function AddToHomeScreenInstructionsModal({
           borderTopRightRadius: '20px',
           maxHeight: '80vh',
           paddingBottom: `calc(20px + env(safe-area-inset-bottom))`,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 10,
+          boxShadow: '0px -2px 10px rgba(0, 0, 0, 0.25)',
         },
         modalTitle: {
           fontSize: '22px',

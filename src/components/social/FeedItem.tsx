@@ -7,10 +7,8 @@ import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  FeedOutfitCard,
-  FeedLookbookCarousel,
-} from '@/components/social';
+import FeedOutfitCard from '@/components/social/FeedOutfitCard';
+import FeedLookbookCarousel from '@/components/social/FeedLookbookCarousel';
 import { FeedItem } from '@/lib/posts';
 import { formatTimestamp } from '@/utils/formatUtils';
 

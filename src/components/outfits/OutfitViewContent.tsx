@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { SocialActionBar, CommentSection } from '@/components/outfits';
+import SocialActionBar from '@/components/outfits/SocialActionBar';
+import CommentSection from '@/components/outfits/CommentSection';
 import { AIGenerationFeedback } from '@/components/ai';
 import { supabase } from '@/lib/supabase';
 import { continueTimeline } from '@/lib/perf/timeline';
