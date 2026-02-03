@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
-import { layout } from '@/styles/theme';
+import { layout, colors, spacing, borderRadius } from '@/styles/theme';
 
 type DropdownMenuModalProps = {
   visible: boolean;

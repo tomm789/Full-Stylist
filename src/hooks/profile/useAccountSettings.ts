@@ -1,6 +1,6 @@
 /**
  * useAccountSettings Hook
- * Load and manage account settings
+ * Load and manage account settings, including account deactivation and deletion
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -8,6 +8,7 @@ import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserSettings, updateUserSettings, validateModelPassword, UserSettings } from '@/lib/settings';
+import { deactivateAccount, deleteAccountPermanently } from '@/lib/user';
 
 interface UseAccountSettingsReturn {
   settings: UserSettings | null;
@@ -23,6 +24,8 @@ interface UseAccountSettingsReturn {
   handleModelSelection: (model: string, password?: string) => Promise<void>;
   handleHeadshotToggle: (enabled: boolean, password: string) => Promise<void>;
   handleSignOut: () => Promise<void>;
+  handleDeactivateAccount: () => Promise<void>;
+  handleDeleteAccount: () => Promise<void>;
 }
 
 export function useAccountSettings(): UseAccountSettingsReturn {
@@ -98,7 +101,7 @@ export function useAccountSettings(): UseAccountSettingsReturn {
         setSaving(true);
         try {
           const { valid, error } = await validateModelPassword(password, user.id);
-          
+
           if (!valid) {
             Alert.alert('Error', error || 'Incorrect password');
             setSaving(false);
@@ -142,7 +145,7 @@ export function useAccountSettings(): UseAccountSettingsReturn {
       setSaving(true);
       try {
         const { valid, error } = await validateModelPassword(password, user.id);
-        
+
         if (!valid) {
           Alert.alert('Error', error || 'Incorrect password');
           setSaving(false);
@@ -211,6 +214,44 @@ export function useAccountSettings(): UseAccountSettingsReturn {
     }
   }, [signOut, router]);
 
+  const handleDeactivateAccount = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const { success, error } = await deactivateAccount(user.id);
+
+      if (!success) {
+        Alert.alert('Error', error || 'Failed to deactivate account');
+        return;
+      }
+
+      // Sign out after deactivation
+      await signOut();
+      router.replace('/');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to deactivate account');
+    }
+  }, [user, signOut, router]);
+
+  const handleDeleteAccount = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const { success, error } = await deleteAccountPermanently(user.id);
+
+      if (!success) {
+        Alert.alert('Error', error || 'Failed to delete account');
+        return;
+      }
+
+      // Sign out after deletion
+      await signOut();
+      router.replace('/');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to delete account');
+    }
+  }, [user, signOut, router]);
+
   return {
     settings,
     loading,
@@ -222,5 +263,7 @@ export function useAccountSettings(): UseAccountSettingsReturn {
     handleModelSelection,
     handleHeadshotToggle,
     handleSignOut,
+    handleDeactivateAccount,
+    handleDeleteAccount,
   };
 }

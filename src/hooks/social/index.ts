@@ -5,6 +5,7 @@
 
 export { useFeed } from './useFeed';
 export type { EngagementCounts } from './useFeed';
+export { useDiscoverFeed } from './useDiscoverFeed';
 export { useSocialEngagement } from './useSocialEngagement';
 export { useUserProfile } from './useUserProfile';
 export { useFollowStatus } from './useFollowStatus';

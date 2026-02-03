@@ -156,11 +156,11 @@ export default function CalendarDayCell({
     >
       {/* Background image layer (only if there’s an outfit entry) */}
       {outfitEntries.length > 0 && (
-        <View style={[styles.outfitImagesContainer, styles.pointerentsNone]}>
+        <View style={[styles.outfitImagesContainer, styles.pointerEventsNone]}>
           {imageUrl ? (
             <Image
               source={{ uri: imageUrl }}
-              style={[styles.outfitImage, styles.pointerEventsNone]}
+              style={styles.outfitImage}
               contentFit="cover"
             />
           ) : (

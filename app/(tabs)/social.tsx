@@ -1,6 +1,6 @@
 /**
- * Social Feed Screen (Refactored)
- * Main social feed with posts, engagement, and interactions
+ * Social Feed Screen
+ * Main social feed with Following + Discover tabs
  */
 
 import React, { useState, useRef } from 'react';
@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Modal,
+  TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,20 +23,26 @@ import {
   GeneratingOutfitModal,
   PostMenuModal,
   FeedItemComponent,
+  DiscoverGrid,
 } from '@/components/social';
 import {
   useFeed,
+  useDiscoverFeed,
   useEngagementActions,
   useFeedSlideshow,
   useTryOnOutfit,
   useSocialModals,
 } from '@/hooks/social';
+import { colors, spacing, borderRadius, typography, layout } from '@/styles';
+
+type SocialTab = 'following' | 'discover';
 
 export default function SocialScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<SocialTab>('following');
 
-  // Feed data and engagement
+  // Feed data and engagement (Following tab)
   const {
     feed,
     outfitImages,
@@ -45,6 +52,16 @@ export default function SocialScreen() {
     loading,
     refresh: refreshFeed,
   } = useFeed({ userId: user?.id });
+
+  // Discover feed (Discover tab)
+  const {
+    discoverFeed,
+    discoverImages,
+    loading: discoverLoading,
+    refresh: refreshDiscover,
+    loadMore: loadMoreDiscover,
+    hasMore: discoverHasMore,
+  } = useDiscoverFeed({ userId: user?.id });
 
   const {
     engagementCounts,
@@ -88,12 +105,19 @@ export default function SocialScreen() {
 
   // Local state
   const [refreshing, setRefreshing] = useState(false);
+  const [discoverRefreshing, setDiscoverRefreshing] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await refreshFeed();
     setRefreshing(false);
+  };
+
+  const onDiscoverRefresh = async () => {
+    setDiscoverRefreshing(true);
+    await refreshDiscover();
+    setDiscoverRefreshing(false);
   };
 
   const handleRepostWithRefresh = async (postId: string) => {
@@ -127,35 +151,79 @@ export default function SocialScreen() {
     );
   };
 
-  if (loading && feed.length === 0) {
+  // Tab bar component
+  const renderTabBar = () => (
+    <View style={styles.tabBar}>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === 'following' && styles.tabActive]}
+        onPress={() => setActiveTab('following')}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.tabText, activeTab === 'following' && styles.tabTextActive]}>
+          Following
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === 'discover' && styles.tabActive]}
+        onPress={() => setActiveTab('discover')}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.tabText, activeTab === 'discover' && styles.tabTextActive]}>
+          Discover
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Loading state (only for Following tab initial load)
+  if (loading && feed.length === 0 && activeTab === 'following') {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View style={styles.container}>
+        {renderTabBar()}
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <FlatList
-        ref={flatListRef}
-        data={feed}
-        renderItem={renderFeedItem}
-        keyExtractor={(item) => item.id}
-        style={styles.feedListWrapper}
-        contentContainerStyle={styles.feedList}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No posts yet</Text>
-            <Text style={styles.emptySubtext}>
-              Be the first to share an outfit or lookbook!
-            </Text>
-          </View>
-        }
-      />
+      {renderTabBar()}
+
+      {activeTab === 'following' ? (
+        // Following tab - original feed list
+        <FlatList
+          ref={flatListRef}
+          data={feed}
+          renderItem={renderFeedItem}
+          keyExtractor={(item) => item.id}
+          style={styles.feedListWrapper}
+          contentContainerStyle={styles.feedList}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No posts yet</Text>
+              <Text style={styles.emptySubtext}>
+                Follow people to see their posts, or check out Discover!
+              </Text>
+            </View>
+          }
+        />
+      ) : (
+        // Discover tab - 3-column grid
+        <DiscoverGrid
+          feed={discoverFeed}
+          images={discoverImages}
+          loading={discoverLoading}
+          refreshing={discoverRefreshing}
+          onRefresh={onDiscoverRefresh}
+          onLoadMore={loadMoreDiscover}
+          hasMore={discoverHasMore}
+        />
+      )}
 
       {/* Post Menu Modal */}
       <PostMenuModal
@@ -241,7 +309,7 @@ export default function SocialScreen() {
       <Modal visible={slideshowLoading} transparent animationType="fade">
         <View style={styles.loadingModalContainer}>
           <View style={styles.loadingModalContent}>
-            <ActivityIndicator size="large" color="#fff" />
+            <ActivityIndicator size="large" color={colors.textLight} />
             <Text style={styles.loadingModalText}>Loading slideshow...</Text>
           </View>
         </View>
@@ -276,18 +344,43 @@ export default function SocialScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafafa',
+    backgroundColor: colors.backgroundSecondary,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.transparent,
+  },
+  tabActive: {
+    borderBottomColor: colors.textPrimary,
+  },
+  tabText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.textTertiary,
+  },
+  tabTextActive: {
+    color: colors.textPrimary,
+    fontWeight: typography.fontWeight.semibold,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#fafafa',
     justifyContent: 'center',
     alignItems: 'center',
   },
   feedListWrapper: {
     width: '100%',
     alignSelf: 'center',
-    maxWidth: 630,
+    maxWidth: layout.containerMaxWidth,
   },
   feedList: {
     paddingHorizontal: 0,
@@ -299,14 +392,16 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.gray800,
+    marginBottom: spacing.sm,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xxxl,
   },
   loadingModalContainer: {
     flex: 1,
@@ -315,14 +410,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingModalContent: {
-    padding: 32,
-    borderRadius: 12,
+    padding: spacing.xxxl,
+    borderRadius: borderRadius.lg,
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
     alignItems: 'center',
   },
   loadingModalText: {
-    color: '#fff',
-    fontSize: 16,
-    marginTop: 16,
+    color: colors.textLight,
+    fontSize: typography.fontSize.base,
+    marginTop: spacing.lg,
   },
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,12 @@ import {
   AIModelSection,
   AccountDangerZone,
   PrivacySettingsSection,
+  DeactivateAccountModal,
+  DeleteAccountModal,
 } from '@/components/profile';
 import { LoadingSpinner } from '@/components/shared';
 import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { colors, spacing, borderRadius, typography } from '@/styles';
 
 export default function AccountSettingsScreen() {
   const router = useRouter();
@@ -28,7 +31,12 @@ export default function AccountSettingsScreen() {
     handleModelSelection,
     handleHeadshotToggle,
     handleSignOut,
+    handleDeactivateAccount,
+    handleDeleteAccount,
   } = useAccountSettings();
+
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   if (loading) {
     return (
@@ -98,8 +106,26 @@ export default function AccountSettingsScreen() {
           onHeadshotToggle={handleHeadshotToggle}
         />
 
-        <AccountDangerZone onSignOut={handleSignOut} />
+        <AccountDangerZone
+          onSignOut={handleSignOut}
+          onDeactivate={() => setShowDeactivateModal(true)}
+          onDelete={() => setShowDeleteModal(true)}
+        />
       </ScrollView>
+
+      {/* Deactivate Account Modal */}
+      <DeactivateAccountModal
+        visible={showDeactivateModal}
+        onClose={() => setShowDeactivateModal(false)}
+        onConfirm={handleDeactivateAccount}
+      />
+
+      {/* Delete Account Modal */}
+      <DeleteAccountModal
+        visible={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
+      />
     </SafeAreaView>
   );
 }
@@ -107,7 +133,7 @@ export default function AccountSettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   scrollContainer: {
     flex: 1,
@@ -118,15 +144,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   content: {
-    padding: 20,
+    padding: spacing.xl,
   },
   warningText: {
-    fontSize: 14,
-    color: '#ff9500',
-    marginBottom: 16,
+    fontSize: typography.fontSize.md,
+    color: colors.warning,
+    marginBottom: spacing.lg,
     textAlign: 'center',
-    padding: 12,
+    padding: spacing.md,
     backgroundColor: '#fff3e0',
-    borderRadius: 8,
+    borderRadius: borderRadius.md,
   },
 });
