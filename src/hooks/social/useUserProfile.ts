@@ -22,7 +22,10 @@ interface UseUserProfileReturn {
   lookbookImages: Map<string, string | null>;
   outfitWearCounts: Map<string, number>;
   loading: boolean;
+  refreshingContent: boolean;
   refresh: () => Promise<void>;
+  /** Refresh only tab content (outfits/lookbooks/wardrobe) without full page reload */
+  refreshContent: () => Promise<void>;
   isOwnProfile: boolean;
 }
 
@@ -78,6 +81,7 @@ export function useUserProfile({
   const [lookbookImages, setLookbookImages] = useState<Map<string, string | null>>(new Map());
   const [outfitWearCounts, setOutfitWearCounts] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [refreshingContent, setRefreshingContent] = useState(false);
 
   const isOwnProfile = currentUserId === userId;
 
@@ -186,6 +190,87 @@ export function useUserProfile({
     }
   };
 
+  /** Refresh only outfits/lookbooks/images without triggering full loading state */
+  const refreshContent = async () => {
+    if (!userId) return;
+
+    setRefreshingContent(true);
+    try {
+      const [
+        { data: outfitsData },
+        { data: lookbooksData },
+      ] = await Promise.all([
+        getUserOutfits(userId),
+        getUserLookbooks(userId),
+      ]);
+
+      setOutfits(outfitsData || []);
+      setLookbooks(lookbooksData || []);
+
+      const outfitIds = (outfitsData || []).map(outfit => outfit.id);
+
+      const [wearCountsData, lookbookOutfitsData] = await Promise.all([
+        outfitIds.length > 0
+          ? supabase
+              .from('calendar_entries')
+              .select('outfit_id, calendar_day:calendar_day_id(owner_user_id)')
+              .in('outfit_id', outfitIds)
+              .eq('status', 'worn')
+          : Promise.resolve({ data: null }),
+        lookbooksData && lookbooksData.length > 0
+          ? supabase
+              .from('lookbook_outfits')
+              .select('lookbook_id, outfit_id, position')
+              .in('lookbook_id', lookbooksData.map(lb => lb.id))
+              .order('position', { ascending: true })
+          : Promise.resolve({ data: null }),
+      ]);
+
+      if (outfitIds.length > 0) {
+        const wearCounts = new Map<string, number>();
+        outfitIds.forEach(id => wearCounts.set(id, 0));
+        (wearCountsData.data || []).forEach((entry: any) => {
+          const ownerId = entry.calendar_day?.owner_user_id;
+          if (!entry.outfit_id || !ownerId || ownerId === userId) return;
+          wearCounts.set(entry.outfit_id, (wearCounts.get(entry.outfit_id) || 0) + 1);
+        });
+        setOutfitWearCounts(wearCounts);
+      }
+
+      if (outfitsData && outfitsData.length > 0) {
+        const outfitImageCache = await batchGetOutfitCoverImages(outfitsData);
+        setOutfitImages(outfitImageCache);
+      }
+
+      if (lookbooksData && lookbooksData.length > 0 && outfitsData) {
+        const lookbookImageCache = new Map<string, string | null>();
+        const firstOutfitsByLookbook = new Map<string, string>();
+        (lookbookOutfitsData.data || []).forEach((lo: any) => {
+          if (!firstOutfitsByLookbook.has(lo.lookbook_id)) {
+            firstOutfitsByLookbook.set(lo.lookbook_id, lo.outfit_id);
+          }
+        });
+        const firstOutfits = Array.from(firstOutfitsByLookbook.values())
+          .map(outfitId => outfitsData.find(o => o.id === outfitId))
+          .filter(Boolean);
+        const firstOutfitImages = await batchGetOutfitCoverImages(firstOutfits);
+        lookbooksData.forEach(lookbook => {
+          const firstOutfitId = firstOutfitsByLookbook.get(lookbook.id);
+          if (firstOutfitId) {
+            lookbookImageCache.set(lookbook.id, firstOutfitImages.get(firstOutfitId) || null);
+          } else {
+            lookbookImageCache.set(lookbook.id, null);
+          }
+        });
+        setLookbookImages(lookbookImageCache);
+      }
+    } catch (error) {
+      console.error('Error refreshing content:', error);
+    } finally {
+      setRefreshingContent(false);
+    }
+  };
+
   const refresh = async () => {
     await loadProfile();
   };
@@ -202,7 +287,9 @@ export function useUserProfile({
     lookbookImages,
     outfitWearCounts,
     loading,
+    refreshingContent,
     refresh,
+    refreshContent,
     isOwnProfile,
   };
 }
