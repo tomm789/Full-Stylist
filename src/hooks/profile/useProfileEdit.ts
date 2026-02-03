@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { updateUserProfile } from '@/lib/user';
 import { updateUserSettings } from '@/lib/settings';
@@ -108,15 +108,20 @@ export function useProfileEdit({
 
     setUploadingAvatar(true);
     try {
-      const response = await fetch(result.assets[0].uri);
-      const blob = await response.blob();
+      const uploadSource =
+        Platform.OS === 'web'
+          ? await (async () => {
+              const response = await fetch(result.assets[0].uri);
+              return response.blob();
+            })()
+          : { uri: result.assets[0].uri, mimeType: 'image/jpeg' };
 
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-const uploadResult = await uploadImageToStorage(
-  userId,
-  blob,
-  `avatar-${stamp}.jpg`
-);
+      const uploadResult = await uploadImageToStorage(
+        userId,
+        uploadSource,
+        `avatar-${stamp}.jpg`
+      );
 
       const { data: imageRecord, error: imageError } = await supabase
         .from('images')

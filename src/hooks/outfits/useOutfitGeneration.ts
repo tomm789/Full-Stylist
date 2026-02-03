@@ -17,6 +17,7 @@ import { createAndTriggerJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
 import { getUserSettings } from '@/lib/settings';
 import { WardrobeItem, WardrobeCategory } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
+import { uploadBase64ImageToStorage } from '@/lib/utils/image-helpers';
 import { generateClothingGrid } from '@/utils/clothing-grid';
 import { startTimeline } from '@/lib/perf/timeline';
 import { PERF_MODE } from '@/lib/perf/perfMode';
@@ -390,31 +391,18 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
             throw new Error('User not authenticated or session mismatch');
           }
 
-          // Convert base64 to Blob
-          const byteCharacters = atob(gridBase64);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-          const gridBlob = new Blob([byteArray], { type: 'image/jpeg' });
-
           // Upload to Supabase storage
           const timestamp = Date.now();
           const fileName = `grid-${timestamp}.jpg`;
           const storagePath = `${userId}/ai/stacked/${fileName}`;
 
-          const arrayBuffer = await gridBlob.arrayBuffer();
-          const uploadData = new Uint8Array(arrayBuffer);
-
           timeline.mark('upload_start');
-          const { data: uploadDataResult, error: uploadError } = await supabase.storage
-            .from('media')
-            .upload(storagePath, uploadData, {
-              cacheControl: '3600',
-              upsert: false,
-              contentType: 'image/jpeg',
-            });
+          const { data: uploadDataResult, error: uploadError } = await uploadBase64ImageToStorage(
+            'media',
+            storagePath,
+            gridBase64,
+            'image/jpeg'
+          );
 
           if (uploadError || !uploadDataResult) {
             throw new Error(`Failed to upload grid image: ${uploadError?.message || 'Unknown error'}`);

@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImageToStorage, uriToBlob } from '@/lib/utils/image-helpers';
 import { supabase } from '@/lib/supabase';
@@ -91,12 +91,15 @@ export function useImageGeneration(): UseImageGenerationReturn {
       return;
     }
 
-    console.log('[pickImage] Converting to blob...');
-    const blob = await uriToBlob(result.assets[0].uri, 'image/jpeg');
-    console.log('[pickImage] Blob created, size:', blob.size);
-
     setUploadedUri(result.assets[0].uri);
-    setUploadedBlob(blob);
+    if (Platform.OS === 'web') {
+      console.log('[pickImage] Converting to blob...');
+      const blob = await uriToBlob(result.assets[0].uri, 'image/jpeg');
+      console.log('[pickImage] Blob created, size:', blob.size);
+      setUploadedBlob(blob);
+    } else {
+      setUploadedBlob(null);
+    }
     console.log('[pickImage] Done!');
   };
 
@@ -114,7 +117,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     console.log('userId:', userId);
     console.log('uploadedBlob exists:', !!uploadedBlob);
 
-    if (!uploadedBlob) {
+    if (!uploadedBlob && !uploadedUri) {
       console.log('ERROR: No blob');
       Alert.alert('Error', 'Please take or upload a photo first');
       return null;
@@ -126,11 +129,15 @@ export function useImageGeneration(): UseImageGenerationReturn {
     try {
       console.log('-> Uploading...');
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-const uploadResult = await uploadImageToStorage(
-  userId,
-  uploadedBlob,
-  `selfie-${stamp}.jpg`
-);
+      const uploadSource =
+        Platform.OS === 'web'
+          ? uploadedBlob
+          : { uri: uploadedUri as string, mimeType: 'image/jpeg' };
+      const uploadResult = await uploadImageToStorage(
+        userId,
+        uploadSource,
+        `selfie-${stamp}.jpg`
+      );
       console.log('Upload done, error:', !!uploadResult.error);
       
       if (uploadResult.error) throw uploadResult.error;
@@ -232,7 +239,7 @@ const uploadResult = await uploadImageToStorage(
     userId: string,
     headshotId: string
   ): Promise<string | null> => {
-    if (!uploadedBlob) {
+    if (!uploadedBlob && !uploadedUri) {
       Alert.alert('Error', 'Please take or upload a photo first');
       return null;
     }
@@ -242,10 +249,14 @@ const uploadResult = await uploadImageToStorage(
 
     try {
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-const uploadResult = await uploadImageToStorage(
-  userId,
-  uploadedBlob,
-  `body-${stamp}.jpg`
+      const uploadSource =
+        Platform.OS === 'web'
+          ? uploadedBlob
+          : { uri: uploadedUri as string, mimeType: 'image/jpeg' };
+      const uploadResult = await uploadImageToStorage(
+        userId,
+        uploadSource,
+        `body-${stamp}.jpg`
       );
       if (uploadResult.error) throw uploadResult.error;
 

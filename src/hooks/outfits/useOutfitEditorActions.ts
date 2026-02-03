@@ -27,6 +27,7 @@ import {
 import { getUserSettings } from '@/lib/settings';
 import { generateClothingGrid } from '@/utils/clothing-grid';
 import { supabase } from '@/lib/supabase';
+import { uploadBase64ImageToStorage } from '@/lib/utils/image-helpers';
 import { startTimeline } from '@/lib/perf/timeline';
 
 const DESCRIPTION_POLL_MAX_MS = 30_000;
@@ -326,29 +327,16 @@ export function useOutfitEditorActions({
         console.log(`[OutfitEditor] Grid generated successfully, base64 length: ${gridBase64.length}`);
 
         // Convert base64 to Blob and upload to storage
-        const byteCharacters = atob(gridBase64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const gridBlob = new Blob([byteArray], { type: 'image/jpeg' });
-
         // Upload to Supabase storage
         const timestamp = Date.now();
         const fileName = `grid-${timestamp}.jpg`;
         const storagePath = `${user.id}/ai/stacked/${fileName}`;
-
-        const arrayBuffer = await gridBlob.arrayBuffer();
-        const uploadData = new Uint8Array(arrayBuffer);
-
-        const { data: uploadDataResult, error: uploadError } = await supabase.storage
-          .from('media')
-          .upload(storagePath, uploadData, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: 'image/jpeg',
-          });
+        const { data: uploadDataResult, error: uploadError } = await uploadBase64ImageToStorage(
+          'media',
+          storagePath,
+          gridBase64,
+          'image/jpeg'
+        );
 
         if (uploadError || !uploadDataResult) {
           throw new Error(`Failed to upload grid image: ${uploadError?.message || 'Unknown error'}`);

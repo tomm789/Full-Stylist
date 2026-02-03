@@ -9,6 +9,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { uploadBase64ImageToStorage } from '@/lib/utils/image-helpers';
 import { generateClothingGrid } from '@/utils/clothing-grid';
 import type { WardrobeItem } from '@/lib/wardrobe';
 
@@ -107,28 +108,15 @@ export function useBackgroundGridGenerator(
 
         const gridBase64 = await generateClothingGrid(imageUrls);
 
-        const byteCharacters = atob(gridBase64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const gridBlob = new Blob([byteArray], { type: 'image/jpeg' });
-
         const timestamp = Date.now();
         const fileName = `${STORAGE_PREFIX}-${timestamp}.jpg`;
         const storagePath = `${userId}/ai/stacked/${fileName}`;
-
-        const arrayBuffer = await gridBlob.arrayBuffer();
-        const uploadData = new Uint8Array(arrayBuffer);
-
-        const { data: uploadDataResult, error: uploadError } = await supabase.storage
-          .from('media')
-          .upload(storagePath, uploadData, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: 'image/jpeg',
-          });
+        const { data: uploadDataResult, error: uploadError } = await uploadBase64ImageToStorage(
+          'media',
+          storagePath,
+          gridBase64,
+          'image/jpeg'
+        );
 
         if (uploadError || !uploadDataResult) {
           console.warn('[BackgroundGrid] Upload failed:', uploadError?.message);
