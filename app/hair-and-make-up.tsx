@@ -14,7 +14,6 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
-  FlatList,
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +23,7 @@ import { PillButton } from '@/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { useProfileImages } from '@/hooks/profile';
+import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import { theme } from '@/styles';
 import { hairPresets } from '@/lib/headshot/hairPresets';
 import { makeupPresets } from '@/lib/headshot/makeupPresets';
@@ -352,12 +352,16 @@ export default function HairAndMakeUpScreen() {
 
   const renderHeadshotGridItem = ({ item }: { item: { id: string; url: string | null } }) => (
     <TouchableOpacity
-      style={styles.headshotGridItem}
+      style={postGridStyles.gridItem}
       onPress={() => handleOpenHeadshotDetail(item.id, item.url)}
       activeOpacity={0.85}
     >
       {item.url ? (
-        <ExpoImage source={{ uri: item.url }} style={styles.headshotGridImage} contentFit="cover" />
+        <ExpoImage
+          source={{ uri: item.url }}
+          style={postGridStyles.gridImage}
+          contentFit="cover"
+        />
       ) : (
         <View style={styles.headshotGridPlaceholder}>
           <Ionicons name="image-outline" size={24} color={colors.textTertiary} />
@@ -379,12 +383,9 @@ export default function HairAndMakeUpScreen() {
             <Text style={styles.newHeadshotButtonText}>Create New Headshot</Text>
           </TouchableOpacity>
 
-          <FlatList
+          <PostGrid
             data={allHeadshots}
             keyExtractor={(item) => item.id}
-            numColumns={3}
-            columnWrapperStyle={styles.headshotGridRow}
-            contentContainerStyle={styles.headshotGrid}
             renderItem={renderHeadshotGridItem}
           />
         </View>
@@ -867,26 +868,6 @@ const styles = StyleSheet.create({
     color: colors.textLight,
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semibold,
-  },
-  headshotGrid: {
-    gap: spacing.sm,
-    paddingBottom: spacing.xxxl,
-  },
-  headshotGridRow: {
-    justifyContent: 'space-between',
-  },
-  headshotGridItem: {
-    width: '32%',
-    aspectRatio: 3 / 4,
-    borderRadius: borderRadius.md,
-    overflow: 'hidden',
-    backgroundColor: colors.gray100,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  headshotGridImage: {
-    width: '100%',
-    height: '100%',
   },
   headshotGridPlaceholder: {
     flex: 1,

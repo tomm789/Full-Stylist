@@ -9,8 +9,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { OutfitWithRating } from '@/lib/outfits';
 import { ScheduleInfo } from '@/types/outfits';
+import { postGridStyles } from '@/components/social/PostGrid';
 import MyOutfitFeedCard from './MyOutfitFeedCard';
-import { colors, typography, spacing, borderRadius } from '@/styles';
+import { colors, typography, spacing } from '@/styles';
 
 type GridItemProps = {
   item: OutfitWithRating;
@@ -64,36 +65,36 @@ export function MyOutfitGridItem({
 
   return (
     <TouchableOpacity
-      style={styles.gridItem}
+      style={postGridStyles.gridItem}
       onPress={handlePress}
       onLongPress={handleLongPress}
       delayLongPress={500}
       activeOpacity={0.8}
     >
       {imageLoading ? (
-        <View style={styles.gridImagePlaceholder}>
+        <View style={[postGridStyles.gridImagePlaceholder, styles.gridImagePlaceholder]}>
           <ActivityIndicator size="small" color={colors.primary} />
         </View>
       ) : imageUrl ? (
         <ExpoImage
           source={{ uri: imageUrl }}
-          style={styles.gridImage}
+          style={[postGridStyles.gridImage, styles.gridImage]}
           contentFit="cover"
           cachePolicy="memory-disk"
         />
       ) : (
-        <View style={styles.gridImagePlaceholder}>
+        <View style={[postGridStyles.gridImagePlaceholder, styles.gridImagePlaceholder]}>
           <Ionicons name="shirt-outline" size={28} color={colors.textTertiary} />
         </View>
       )}
-      <View style={styles.scheduleOverlay}>
+      <View style={postGridStyles.infoOverlay}>
         <Text style={styles.scheduleOverlayText} numberOfLines={1}>
           {scheduleInfo.overlayLabel}
         </Text>
       </View>
       {isSelected && (
-        <View style={styles.gridSelectedBadge}>
-          <Text style={styles.gridSelectedBadgeText}>✓</Text>
+        <View style={postGridStyles.selectionBadge}>
+          <Text style={postGridStyles.selectionBadgeText}>✓</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -127,53 +128,13 @@ export function MyOutfitFeedItem({
 }
 
 const styles = StyleSheet.create({
-  gridItem: {
-    width: '33.333%',
-    aspectRatio: 3 / 4,
-    padding: spacing.xs,
-  },
   gridImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: borderRadius.md,
   },
   gridImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.backgroundTertiary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scheduleOverlay: {
-    position: 'absolute',
-    left: spacing.xs,
-    right: spacing.xs,
-    bottom: spacing.xs,
-    paddingVertical: spacing.xs / 2,
-    paddingHorizontal: spacing.xs,
-    borderRadius: borderRadius.sm,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   scheduleOverlayText: {
     color: colors.textLight,
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.medium,
-  },
-  gridSelectedBadge: {
-    position: 'absolute',
-    top: spacing.xs,
-    right: spacing.xs,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  gridSelectedBadgeText: {
-    color: colors.textLight,
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.bold,
   },
 });
