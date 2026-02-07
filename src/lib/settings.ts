@@ -9,6 +9,8 @@ export interface UserSettings {
   allow_external_sharing: boolean;
   headshot_image_id?: string | null;
   body_shot_image_id?: string | null;
+  selfie_image_id?: string | null;
+  mirror_selfie_image_id?: string | null;
   ai_model_preference?: string;
   ai_model_password?: string | null;
   ai_model_outfit_render?: string | null;
@@ -57,15 +59,35 @@ export async function updateUserSettings(
   userId: string,
   updates: Partial<UserSettings>
 ): Promise<{ error: any }> {
-  const { error } = await supabase
+  const updatePayload = {
+    ...updates,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error: updateError } = await supabase
     .from('user_settings')
-    .upsert({
+    .update(updatePayload)
+    .eq('user_id', userId)
+    .select('user_id')
+    .maybeSingle();
+
+  if (updateError) {
+    return { error: updateError };
+  }
+
+  if (data) {
+    return { error: null };
+  }
+
+  const { error: insertError } = await supabase
+    .from('user_settings')
+    .insert({
       user_id: userId,
       ...updates,
-      updated_at: new Date().toISOString(),
+      updated_at: updatePayload.updated_at,
     });
 
-  return { error };
+  return { error: insertError };
 }
 
 /**

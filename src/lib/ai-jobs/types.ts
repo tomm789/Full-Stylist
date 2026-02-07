@@ -237,6 +237,20 @@ export async function triggerBodyShotGenerate(
 }
 
 /**
+ * Trigger body_shot_generate job using raw selfie + mirror selfie uploads
+ */
+export async function triggerBodyShotGenerateFromSelfies(
+  userId: string,
+  selfieImageId: string,
+  mirrorSelfieImageId: string
+): Promise<QueryResult<AIJob>> {
+  return createAIJob(userId, 'body_shot_generate', {
+    selfie_image_id: selfieImageId,
+    mirror_selfie_image_id: mirrorSelfieImageId,
+  });
+}
+
+/**
  * Get active outfit_render job for an outfit
  */
 export async function getActiveOutfitRenderJob(

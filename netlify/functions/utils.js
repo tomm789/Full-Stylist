@@ -133,6 +133,17 @@ function resolveModelFromSettings(settings, field, fallback = DEFAULT_IMAGE_MODE
   return fallback;
 }
 
+function getGeminiApiVersion(model) {
+  if (!model || typeof model !== "string") {
+    return "v1beta";
+  }
+  const normalized = model.toLowerCase();
+  if (normalized.startsWith("gemini-3")) {
+    return "v1";
+  }
+  return "v1beta";
+}
+
 /**
  * Creates a performance tracker for comparing text vs image generation.
  * Generates a unique request ID and tracks timing for each generation type.
@@ -452,14 +463,12 @@ async function callGeminiAPI(prompt, images, model = "gemini-2.5-flash-image", r
     throw new Error("GEMINI_API_KEY missing");
   }
 
-  if (typeof model === "string") {
-    const normalizedModel = model.toLowerCase();
-    if (normalizedModel.startsWith("imagen-") || normalizedModel.startsWith("veo-")) {
-      throw new Error(
-        `Model ${model} requires a different API endpoint (not supported by Gemini generateContent in this integration yet).`
-      );
-    }
+  let modelId = model;
+  if (typeof modelId === "string" && modelId.startsWith("models/")) {
+    modelId = modelId.slice("models/".length);
   }
+
+  const apiVersion = getGeminiApiVersion(modelId);
   
   // Record start time for performance tracking
   const imageCount = Array.isArray(images) ? images.length : (images ? 1 : 0);
@@ -470,7 +479,6 @@ async function callGeminiAPI(prompt, images, model = "gemini-2.5-flash-image", r
       perfTracker.startImageGen(imageCount);
     }
   }
-  
   // Track external API call time (separate from perfTracker)
   const apiCallStart = performance.now();
   
@@ -506,7 +514,7 @@ async function callGeminiAPI(prompt, images, model = "gemini-2.5-flash-image", r
   const generationConfig = {
     temperature: responseType === "TEXT" ? 0.3 : 0.4
   };
-  if (responseType === "IMAGE") {
+  if (responseType === "IMAGE" && apiVersion !== "v1") {
     generationConfig.response_modalities = ["IMAGE"];
   }
   
@@ -516,7 +524,7 @@ async function callGeminiAPI(prompt, images, model = "gemini-2.5-flash-image", r
   const fetchFn = await getFetch();
   
   const response = await fetchFn(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelId}:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -545,10 +553,11 @@ async function callGeminiAPI(prompt, images, model = "gemini-2.5-flash-image", r
       firstImagePreview = firstImage.base64.substring(0, 100);
     }
     console.error("[GeminiAPI] Request details:", {
-      model,
+      model: modelId,
+      apiVersion,
       responseType,
       promptLength: prompt.length,
-      imageCount: images.length,
+      imageCount,
       firstImageLength,
       firstImagePreview
     });
@@ -822,6 +831,7 @@ module.exports = {
   createPerformanceTracker,
   createTimingTracker,
   resolveModelFromSettings,
+  getGeminiApiVersion,
   DEFAULT_IMAGE_MODEL,
   DEFAULT_BODY_MODEL
 };

@@ -1,8 +1,9 @@
 "use strict";
 
 // Module for generating a full body studio portrait. This function
-// composites the user's headshot onto a full-body reference image using
-// Gemini, ensuring realistic proportions and proper studio lighting.
+// composites the user's head reference (headshot or selfie) onto a full-body
+// reference image using Gemini, ensuring realistic proportions and proper
+// studio lighting.
 
 const { PROMPTS } = require("../prompts");
 const {
@@ -10,14 +11,16 @@ const {
   uploadImageToStorage,
   callGeminiAPI,
   resolveModelFromSettings,
+  getGeminiApiVersion,
   DEFAULT_BODY_MODEL
 } = require("../utils");
 
 /**
- * Generates a body shot by blending an existing headshot onto a body
- * reference image. If no headshot is provided, it falls back to the
- * user's stored headshot. The resulting image is uploaded and the
- * user's settings are updated accordingly.
+ * Generates a body shot by blending a head reference onto a body
+ * reference image. Supports either a selfie + mirror selfie pair
+ * or a headshot + body photo flow. If no head reference is provided,
+ * it falls back to the user's stored headshot. The resulting image is
+ * uploaded and the user's settings are updated accordingly.
  *
  * @param {object} input - Job input including body_photo_image_id and optionally headshot_image_id
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase - Supabase client
@@ -28,13 +31,23 @@ const {
  * @returns {Promise<{image_id: number, storage_key: string}>} New body shot info
  */
 async function processBodyShotGenerate(input, supabase, userId, perfTracker = null, timingTracker = null, jobId = null) {
-  const { body_photo_image_id, headshot_image_id } = input;
-  if (!body_photo_image_id) {
-    throw new Error("Missing body_photo_image_id");
+  const {
+    body_photo_image_id,
+    headshot_image_id,
+    selfie_image_id,
+    mirror_selfie_image_id
+  } = input;
+
+  const useSelfiePair = !!(selfie_image_id && mirror_selfie_image_id);
+  const bodyId = useSelfiePair ? mirror_selfie_image_id : body_photo_image_id;
+
+  if (!bodyId) {
+    throw new Error("Missing body reference image");
   }
-  // Determine the headshot to use: explicit override or user settings
-  let headId = headshot_image_id;
-  if (!headId) {
+
+  // Determine the head reference: selfie override or stored headshot
+  let headId = useSelfiePair ? selfie_image_id : headshot_image_id;
+  if (!headId && !useSelfiePair) {
     const { data: settings } = await supabase
       .from("user_settings")
       .select("headshot_image_id")
@@ -43,12 +56,12 @@ async function processBodyShotGenerate(input, supabase, userId, perfTracker = nu
     headId = settings?.headshot_image_id;
   }
   if (!headId) {
-    throw new Error("No headshot available");
+    throw new Error("Missing head reference image");
   }
   // Download head and body images concurrently
   const [headResult, bodyResult] = await Promise.all([
     downloadImageFromStorage(supabase, headId, timingTracker),
-    downloadImageFromStorage(supabase, body_photo_image_id, timingTracker)
+    downloadImageFromStorage(supabase, bodyId, timingTracker)
   ]);
   const { data: userSettings } = await supabase
     .from("user_settings")
@@ -61,7 +74,8 @@ async function processBodyShotGenerate(input, supabase, userId, perfTracker = nu
     "ai_model_body_shot_generate",
     DEFAULT_BODY_MODEL
   );
-  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
+  const apiVersion = getGeminiApiVersion(model);
+  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, apiVersion });
   const studioModelB64 = await callGeminiAPI(
     PROMPTS.BODY_COMPOSITE,
     [headResult, bodyResult],
