@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { Comment, createComment, getComments, getCommentCount } from '@/lib/engagement';
 
 interface CommentsModalProps {
@@ -74,10 +75,24 @@ export const CommentsModal = ({
           ) : (
             comments.map((comment) => (
               <View key={comment.id} style={styles.commentItem}>
-                <Text style={styles.commentAuthor}>
-                  {comment.user?.display_name || comment.user?.handle || 'User'}
-                </Text>
-                <Text style={styles.commentBody}>{comment.body}</Text>
+                <View style={styles.commentHeader}>
+                  {comment.user?.avatar_url ? (
+                    <ExpoImage
+                      source={{ uri: comment.user.avatar_url }}
+                      style={styles.commentAvatar}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+                  ) : (
+                    <View style={styles.commentAvatarFallback} />
+                  )}
+                  <View style={styles.commentContent}>
+                    <Text style={styles.commentAuthor}>
+                      {comment.user?.display_name || comment.user?.handle || 'User'}
+                    </Text>
+                    <Text style={styles.commentBody}>{comment.body}</Text>
+                  </View>
+                </View>
               </View>
             ))
           )}
@@ -132,6 +147,26 @@ const styles = StyleSheet.create({
   },
   commentItem: {
     marginBottom: 16,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  commentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+  },
+  commentAvatarFallback: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e0e0e0',
+  },
+  commentContent: {
+    flex: 1,
   },
   commentAuthor: {
     fontSize: 14,

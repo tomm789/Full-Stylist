@@ -1,24 +1,25 @@
 /**
  * ProfileTabs Component
- * Tab navigation for posts, headshots, bodyshots
+ * Tab navigation for headshots and bodyshots
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  FlatList,
+} from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { FeedItem } from '@/lib/posts';
-
-type TabType = 'posts' | 'headshots' | 'bodyshots';
+type TabType = 'headshots' | 'bodyshots';
 
 interface ProfileTabsProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
-  posts: FeedItem[];
-  postImages: Map<string, string | null>;
   headshotImages: Array<{ id: string; url: string }>;
   bodyShotImages: Array<{ id: string; url: string }>;
-  onPostPress: (postId: string) => void;
   onHeadshotPress: (id: string) => void;
   onBodyShotPress: (id: string) => void;
   onNewHeadshot: () => void;
@@ -28,11 +29,8 @@ interface ProfileTabsProps {
 export function ProfileTabs({
   activeTab,
   onTabChange,
-  posts,
-  postImages,
   headshotImages,
   bodyShotImages,
-  onPostPress,
   onHeadshotPress,
   onBodyShotPress,
   onNewHeadshot,
@@ -40,19 +38,6 @@ export function ProfileTabs({
 }: ProfileTabsProps) {
   const renderTabBar = () => (
     <View style={styles.tabsContainer}>
-      <TouchableOpacity
-        style={[styles.tab, activeTab === 'posts' && styles.tabActive]}
-        onPress={() => onTabChange('posts')}
-      >
-        <Ionicons
-          name="grid-outline"
-          size={24}
-          color={activeTab === 'posts' ? '#000' : '#999'}
-        />
-        <Text style={[styles.tabText, activeTab === 'posts' && styles.tabTextActive]}>
-          Posts
-        </Text>
-      </TouchableOpacity>
       <TouchableOpacity
         style={[styles.tab, activeTab === 'headshots' && styles.tabActive]}
         onPress={() => onTabChange('headshots')}
@@ -84,92 +69,90 @@ export function ProfileTabs({
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'posts':
-        return (
-          <View style={styles.postsGrid}>
-            {posts.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="images-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>No posts yet</Text>
-              </View>
-            ) : (
-              posts.map((item) => {
-                const entity = item.entity?.outfit || item.entity?.lookbook;
-                if (!entity) return null;
-
-                const imageUrl = postImages.get(entity.id);
-
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.postGridItem}
-                    onPress={() => onPostPress(item.id)}
-                  >
-                    {imageUrl ? (
-                      <ExpoImage
-                        source={{ uri: imageUrl }}
-                        style={styles.postImage}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                      />
-                    ) : (
-                      <View style={styles.postImagePlaceholder}>
-                        <Ionicons name="shirt-outline" size={32} color="#999" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </View>
-        );
-
       case 'headshots':
         return (
-          <View style={styles.imagesGrid}>
-            <TouchableOpacity style={styles.uploadCard} onPress={onNewHeadshot}>
-              <Ionicons name="add-circle-outline" size={48} color="#007AFF" />
-              <Text style={styles.uploadCardText}>New Headshot</Text>
-            </TouchableOpacity>
-            {headshotImages.map((img) => (
-              <TouchableOpacity
-                key={img.id}
-                style={styles.imageGridItem}
-                onPress={() => onHeadshotPress(img.id)}
-              >
-                <ExpoImage
-                  source={{ uri: img.url }}
-                  style={styles.gridImage}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
+          <FlatList
+            data={[{ id: 'new' }, ...headshotImages]}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
+            style={styles.gridList}
+            contentContainerStyle={styles.gridContent}
+            columnWrapperStyle={styles.gridRow}
+            scrollEnabled={false}
+            renderItem={({ item }) => {
+              if (item.id === 'new') {
+                return (
+                  <TouchableOpacity
+                    style={[styles.gridItem, styles.uploadCard]}
+                    onPress={onNewHeadshot}
+                  >
+                    <View style={styles.uploadCardContent}>
+                      <Ionicons name="add-circle-outline" size={48} color="#007AFF" />
+                      <Text style={styles.uploadCardText}>New Headshot</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }
+
+              const img = item as { id: string; url: string };
+              return (
+                <TouchableOpacity
+                  style={styles.gridItem}
+                  onPress={() => onHeadshotPress(img.id)}
+                >
+                  <ExpoImage
+                    source={{ uri: img.url }}
+                    style={styles.gridImage}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                </TouchableOpacity>
+              );
+            }}
+          />
         );
 
       case 'bodyshots':
         return (
-          <View style={styles.imagesGrid}>
-            <TouchableOpacity style={styles.uploadCard} onPress={onNewBodyShot}>
-              <Ionicons name="add-circle-outline" size={48} color="#007AFF" />
-              <Text style={styles.uploadCardText}>New Body Shot</Text>
-            </TouchableOpacity>
-            {bodyShotImages.map((img) => (
-              <TouchableOpacity
-                key={img.id}
-                style={styles.imageGridItem}
-                onPress={() => onBodyShotPress(img.id)}
-              >
-                <ExpoImage
-                  source={{ uri: img.url }}
-                  style={styles.gridImage}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
+          <FlatList
+            data={[{ id: 'new' }, ...bodyShotImages]}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
+            style={styles.gridList}
+            contentContainerStyle={styles.gridContent}
+            columnWrapperStyle={styles.gridRow}
+            scrollEnabled={false}
+            renderItem={({ item }) => {
+              if (item.id === 'new') {
+                return (
+                  <TouchableOpacity
+                    style={[styles.gridItem, styles.uploadCard]}
+                    onPress={onNewBodyShot}
+                  >
+                    <View style={styles.uploadCardContent}>
+                      <Ionicons name="add-circle-outline" size={48} color="#007AFF" />
+                      <Text style={styles.uploadCardText}>New Body Shot</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }
+
+              const img = item as { id: string; url: string };
+              return (
+                <TouchableOpacity
+                  style={styles.gridItem}
+                  onPress={() => onBodyShotPress(img.id)}
+                >
+                  <ExpoImage
+                    source={{ uri: img.url }}
+                    style={styles.gridImage}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                </TouchableOpacity>
+              );
+            }}
+          />
         );
     }
   };
@@ -215,43 +198,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     minHeight: 400,
   },
-  postsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  gridList: {
+    flex: 1,
+    width: '100%',
   },
-  postGridItem: {
-    width: '33.33%',
+  gridContent: {
+    paddingBottom: 16,
+  },
+  gridRow: {
+    gap: 1,
+  },
+  gridItem: {
+    flex: 1,
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: '33.333333%',
+    maxWidth: '33.333333%',
     aspectRatio: 3 / 4,
-    padding: 1,
-  },
-  postImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#f0f0f0',
-  },
-  postImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 12,
-    gap: 8,
+    margin: 0.5,
+    position: 'relative',
   },
   uploadCard: {
-    width: '31%',
-    aspectRatio: 3 / 4,
     backgroundColor: '#f9f9f9',
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    borderStyle: 'dashed',
-    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  uploadCardContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 8,
   },
   uploadCardText: {
@@ -260,12 +234,6 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     marginTop: 8,
     textAlign: 'center',
-  },
-  imageGridItem: {
-    width: '31%',
-    aspectRatio: 3 / 4,
-    borderRadius: 8,
-    overflow: 'hidden',
   },
   gridImage: {
     width: '100%',

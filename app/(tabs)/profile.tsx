@@ -10,7 +10,8 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfileData, useProfileEdit } from '@/hooks/profile';
 import {
@@ -20,21 +21,22 @@ import {
 } from '@/components/profile';
 import { LoadingSpinner } from '@/components/shared';
 
-type TabType = 'posts' | 'headshots' | 'bodyshots';
+type TabType = 'headshots' | 'bodyshots';
 
 export default function ProfileScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabType>('posts');
+  const { tab } = useLocalSearchParams<{ tab?: string | string[] }>();
+  const navigation = useNavigation();
+  const [activeTab, setActiveTab] = useState<TabType>('headshots');
   const [showEditModal, setShowEditModal] = useState(false);
   const [handle, setHandle] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [selectedAvatarUrl, setSelectedAvatarUrl] = useState<string | null>(null);
 
   // Load profile data
   const {
     profile,
-    posts,
-    postImages,
     headshotImages,
     bodyShotImages,
     loading,
@@ -42,8 +44,7 @@ export default function ProfileScreen() {
   } = useProfileData({ userId: user?.id });
 
   // Profile editing
-  const { savingProfile, uploadingAvatar, saveProfile, uploadAvatar } =
-    useProfileEdit({
+  const { savingProfile, saveProfile } = useProfileEdit({
       userId: user?.id,
       onSuccess: async () => {
         setShowEditModal(false);
@@ -56,14 +57,30 @@ export default function ProfileScreen() {
     if (profile) {
       setHandle(profile.handle || '');
       setDisplayName(profile.display_name || '');
+      setSelectedAvatarUrl(profile.avatar_url || profile.headshot_image_url || null);
     }
   }, [profile]);
+
+  useEffect(() => {
+    const headerTitle = profile?.handle || 'Profile';
+    navigation.setOptions({ headerTitle });
+  }, [navigation, profile?.handle]);
+
+  useEffect(() => {
+    const resolvedTab = Array.isArray(tab) ? tab[0] : tab;
+    if (
+      resolvedTab === 'headshots' ||
+      resolvedTab === 'bodyshots'
+    ) {
+      setActiveTab(resolvedTab);
+    }
+  }, [tab]);
 
   // Note: Data loads automatically via useProfileData's useEffect
   // Removed useFocusEffect to prevent infinite refresh loop
 
   const handleSave = async () => {
-    const success = await saveProfile(handle, displayName);
+    const success = await saveProfile(handle, displayName, selectedAvatarUrl);
     if (success) {
       // Modal closes automatically via onSuccess callback
     }
@@ -96,7 +113,16 @@ export default function ProfileScreen() {
           profile={profile}
           primaryStat={{ label: 'Posts', value: profile.stats?.posts || 0 }}
           isOwnProfile
-          onEditPress={() => setShowEditModal(true)}
+          onFollowersPress={
+            user?.id ? () => router.push(`/users/${user.id}/followers`) : undefined
+          }
+          onFollowingPress={
+            user?.id ? () => router.push(`/users/${user.id}/following`) : undefined
+          }
+          onEditPress={() => {
+            setSelectedAvatarUrl(profile.avatar_url || profile.headshot_image_url || null);
+            setShowEditModal(true);
+          }}
         />
       </View>
 
@@ -104,13 +130,8 @@ export default function ProfileScreen() {
       <ProfileTabs
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        posts={posts}
-        postImages={postImages}
         headshotImages={headshotImages}
         bodyShotImages={bodyShotImages}
-        onPostPress={(postId) =>
-          router.push(`/users/${user?.id}/feed?postId=${postId}`)
-        }
         onHeadshotPress={(id) => router.push(`/headshot/${id}` as any)}
         onBodyShotPress={(id) => router.push(`/bodyshot/${id}` as any)}
         onNewHeadshot={() => router.push('/headshot/new' as any)}
@@ -124,12 +145,15 @@ export default function ProfileScreen() {
         handle={handle}
         displayName={displayName}
         headshotUrl={profile.headshot_image_url}
+        headshotOptions={headshotImages}
+        selectedAvatarUrl={selectedAvatarUrl}
         onHandleChange={setHandle}
         onDisplayNameChange={setDisplayName}
+        onSelectAvatar={setSelectedAvatarUrl}
+        onClearAvatar={() => setSelectedAvatarUrl(null)}
+        onCreateHeadshot={() => router.push('/headshot/new' as any)}
         onSave={handleSave}
-        onUploadAvatar={uploadAvatar}
         saving={savingProfile}
-        uploadingAvatar={uploadingAvatar}
       />
     </ScrollView>
   );

@@ -117,9 +117,30 @@ export function useAccountSettings(): UseAccountSettingsReturn {
       }
 
       try {
-        const { error: updateError } = await updateUserSettings(user.id, {
+        const modelUpdates: Record<string, string> = {
           ai_model_preference: model,
-        } as any);
+        };
+
+        const modelKeyPairs: Array<{ key: string; lock: string }> = [
+          { key: 'ai_model_outfit_render', lock: 'ai_model_lock_outfit_render' },
+          { key: 'ai_model_outfit_mannequin', lock: 'ai_model_lock_outfit_mannequin' },
+          { key: 'ai_model_wardrobe_item_generate', lock: 'ai_model_lock_wardrobe_item_generate' },
+          { key: 'ai_model_wardrobe_item_render', lock: 'ai_model_lock_wardrobe_item_render' },
+          { key: 'ai_model_product_shot', lock: 'ai_model_lock_product_shot' },
+          { key: 'ai_model_headshot_generate', lock: 'ai_model_lock_headshot_generate' },
+          { key: 'ai_model_body_shot_generate', lock: 'ai_model_lock_body_shot_generate' },
+          { key: 'ai_model_auto_tag', lock: 'ai_model_lock_auto_tag' },
+          { key: 'ai_model_style_advice', lock: 'ai_model_lock_style_advice' },
+        ];
+
+        modelKeyPairs.forEach(({ key, lock }) => {
+          const isLocked = (settings as any)?.[lock] === true;
+          if (!isLocked) {
+            modelUpdates[key] = model;
+          }
+        });
+
+        const { error: updateError } = await updateUserSettings(user.id, modelUpdates as any);
 
         if (updateError) {
           Alert.alert('Error', 'Failed to update model preference');

@@ -16,7 +16,7 @@ import {
   DeleteAccountModal,
 } from '@/components/profile';
 import { LoadingSpinner } from '@/components/shared';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { Header, HeaderIconButton } from '@/components/shared/layout';
 import { colors, spacing, borderRadius, typography } from '@/styles';
 
 export default function AccountSettingsScreen() {
@@ -43,12 +43,7 @@ export default function AccountSettingsScreen() {
       <SafeAreaView style={styles.container}>
         <Header
           title="Account Settings"
-          leftContent={
-            <HeaderActionButton
-              label="Back"
-              onPress={() => router.back()}
-            />
-          }
+          leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         />
         <View style={styles.loadingContainer}>
           <LoadingSpinner size="large" />
@@ -63,12 +58,7 @@ export default function AccountSettingsScreen() {
       <SafeAreaView style={styles.container}>
         <Header
           title="Account Settings"
-          leftContent={
-            <HeaderActionButton
-              label="Back"
-              onPress={() => router.back()}
-            />
-          }
+          leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         />
         <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
           <Text style={styles.warningText}>
@@ -83,12 +73,7 @@ export default function AccountSettingsScreen() {
     <SafeAreaView style={styles.container}>
       <Header
         title="Account Settings"
-        leftContent={
-          <HeaderActionButton
-            label="Back"
-            onPress={() => router.back()}
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
       />
 
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
@@ -104,6 +89,7 @@ export default function AccountSettingsScreen() {
           onModelSelection={handleModelSelection}
           includeHeadshot={includeHeadshotInGeneration}
           onHeadshotToggle={handleHeadshotToggle}
+          onOpenAISettings={() => router.push('/ai-settings' as any)}
         />
 
         <AccountDangerZone

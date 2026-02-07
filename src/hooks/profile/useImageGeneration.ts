@@ -8,6 +8,7 @@ import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImageToStorage, uriToBlob } from '@/lib/utils/image-helpers';
 import { supabase } from '@/lib/supabase';
+import { updateUserProfile } from '@/lib/user';
 import {
   triggerHeadshotGenerate,
   triggerBodyShotGenerate,
@@ -215,6 +216,37 @@ export function useImageGeneration(): UseImageGenerationReturn {
         completedJob.result?.image_id || completedJob.result?.generated_image_id;
 
       console.log('=== SUCCESS! Image ID:', generatedImageId);
+
+      if (generatedImageId) {
+        try {
+          const { data: userProfile } = await supabase
+            .from('users')
+            .select('avatar_url')
+            .eq('id', userId)
+            .single();
+
+          if (!userProfile?.avatar_url) {
+            const { data: imageData } = await supabase
+              .from('images')
+              .select('storage_bucket, storage_key')
+              .eq('id', generatedImageId)
+              .single();
+
+            if (imageData?.storage_key) {
+              const { data: urlData } = supabase.storage
+                .from(imageData.storage_bucket || 'media')
+                .getPublicUrl(imageData.storage_key);
+
+              if (urlData?.publicUrl) {
+                await updateUserProfile(userId, { avatar_url: urlData.publicUrl });
+              }
+            }
+          }
+        } catch (avatarError) {
+          console.warn('[Headshot] Failed to auto-set avatar:', avatarError);
+        }
+      }
+
       return generatedImageId || null;
     } catch (error: any) {
       console.error('=== ERROR:', error.message);

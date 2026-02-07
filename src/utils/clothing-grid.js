@@ -56,6 +56,10 @@ function calculateGridLayout(itemCount) {
  * @returns {Promise<string>} Base64 encoded JPEG string (quality 0.8)
  */
 export async function generateClothingGrid(imageUrls) {
+  if (typeof document === 'undefined' || typeof Image === 'undefined') {
+    throw new Error('generateClothingGrid requires DOM canvas APIs (web only)');
+  }
+
   if (!imageUrls || imageUrls.length === 0) {
     throw new Error('No image URLs provided for grid generation');
   }

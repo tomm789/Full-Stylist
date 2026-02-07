@@ -41,6 +41,7 @@ export function useWardrobeItems({
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   // Load items from API
   const loadItems = useCallback(async () => {
@@ -89,6 +90,7 @@ export function useWardrobeItems({
       console.error('Failed to load wardrobe items:', err);
     } finally {
       setLoading(false);
+      setHasLoaded(true);
     }
   }, [wardrobeId, userId, categoryId, searchQuery]);
 
@@ -112,6 +114,7 @@ export function useWardrobeItems({
     loading,
     refreshing,
     error,
+    hasLoaded,
     loadItems,
     refresh,
   };

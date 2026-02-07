@@ -12,7 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { useNewListing } from '@/hooks/listings';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 
 export default function NewListingScreen() {
   const router = useRouter();
@@ -33,6 +33,12 @@ export default function NewListingScreen() {
     selectItem,
     getImageUrl,
   } = useNewListing();
+
+  const isDirty =
+    !!selectedItem ||
+    selectedImageIds.size > 0 ||
+    price.trim().length > 0 ||
+    condition !== 'good';
 
   const renderItem = ({ item }: { item: typeof items[0] }) => {
     const isSelected = selectedItem?.id === item.id;
@@ -94,19 +100,15 @@ export default function NewListingScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <Header
         title="New Listing"
-        leftContent={
-          <HeaderActionButton
-            label="Cancel"
-            onPress={() => router.back()}
-            variant="secondary"
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         rightContent={
-          <HeaderActionButton
-            label="Create"
-            onPress={handleCreate}
-            disabled={saving}
-          />
+          isDirty ? (
+            <HeaderActionButton
+              label="Create"
+              onPress={handleCreate}
+              disabled={saving}
+            />
+          ) : null
         }
       />
 

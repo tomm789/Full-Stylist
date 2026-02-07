@@ -29,6 +29,7 @@ interface PostMenuModalProps {
   unfollowingUserId: string | null;
   onClose: () => void;
   onEditOutfit: (outfitId: string) => void;
+  onArchiveOutfit?: (outfitId: string) => void;
   onDeletePost: (postId: string) => void;
   onTryOnOutfit: (outfitId: string, imageUrl: string | null) => void;
   onUnfollow: (userId: string) => void;
@@ -45,6 +46,7 @@ export const PostMenuModal = ({
   unfollowingUserId,
   onClose,
   onEditOutfit,
+  onArchiveOutfit,
   onDeletePost,
   onTryOnOutfit,
   onUnfollow,
@@ -64,7 +66,7 @@ export const PostMenuModal = ({
 
     const menuItemHeight = 50;
     let itemCount = isOwnPost 
-      ? (isOutfit && entity ? 2 : 1)
+      ? (isOutfit && entity ? 3 : 1)
       : (isOutfit && entity ? 1 : 0);
     
     // Add unfollow option if following the owner
@@ -137,6 +139,15 @@ export const PostMenuModal = ({
                 >
                   <Ionicons name="pencil-outline" size={18} color="#000" />
                   <Text style={styles.menuItemText}>Edit Outfit</Text>
+                </TouchableOpacity>
+              )}
+              {isOutfit && entity && (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => onArchiveOutfit?.(entity.id)}
+                >
+                  <Ionicons name="archive-outline" size={18} color="#000" />
+                  <Text style={styles.menuItemText}>Archive Outfit</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity

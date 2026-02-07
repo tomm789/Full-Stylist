@@ -5,6 +5,7 @@
 
 export { useWardrobe } from './useWardrobe';
 export { useWardrobeItems } from './useWardrobeItems';
+export { useArchivedWardrobeItems } from './useArchivedWardrobeItems';
 export { useCategories } from './useCategories';
 export { useFilters } from './useFilters';
 export { useWardrobeItemPolling } from './useWardrobeItemPolling';

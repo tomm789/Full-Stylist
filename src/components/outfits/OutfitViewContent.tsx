@@ -62,6 +62,8 @@ interface OutfitViewContentProps {
   feedbackJobType?: string;
   /** Called when user submits feedback (parent can switch to compact state). */
   onFeedbackSubmitted?: (jobId: string) => void;
+  /** When true, generation is in progress (for showing description placeholder). */
+  isGenerating?: boolean;
 }
 
 export function OutfitViewContent({
@@ -94,6 +96,7 @@ export function OutfitViewContent({
   feedbackJobId,
   feedbackJobType = 'outfit_render',
   onFeedbackSubmitted,
+  isGenerating,
 }: OutfitViewContentProps) {
   const router = useRouter();
   const [imageRetryKey, setImageRetryKey] = useState(0);
@@ -223,12 +226,38 @@ export function OutfitViewContent({
           {outfit.title || 'Untitled Outfit'}
         </Text>
 
-        {outfit.notes && (
-          <View style={styles.notesSection}>
-            <Text style={styles.sectionLabel}>Notes</Text>
-            <Text style={styles.notesText}>{outfit.notes}</Text>
-          </View>
-        )}
+        <View style={styles.aiSection}>
+          {outfit?.description ? (
+            <View style={styles.aiContent}>
+              <Text style={styles.aiLabel}>Description</Text>
+              <Text style={styles.aiText}>{outfit.description}</Text>
+              {!!outfit?.occasions?.length && (
+                <View style={styles.aiRow}>
+                  <Text style={styles.aiLabel}>Occasions</Text>
+                  <Text style={styles.aiText}>{outfit.occasions.join(', ')}</Text>
+                </View>
+              )}
+              {!!outfit?.style_tags?.length && (
+                <View style={styles.aiRow}>
+                  <Text style={styles.aiLabel}>Style Tags</Text>
+                  <Text style={styles.aiText}>{outfit.style_tags.join(', ')}</Text>
+                </View>
+              )}
+              {!!outfit?.season && outfit.season !== 'all-season' && (
+                <View style={styles.aiRow}>
+                  <Text style={styles.aiLabel}>Season</Text>
+                  <Text style={styles.aiText}>{outfit.season}</Text>
+                </View>
+              )}
+            </View>
+          ) : (
+            <Text style={styles.aiEmptyText}>
+              {isGenerating
+                ? 'Generating description...'
+                : 'No AI description yet.'}
+            </Text>
+          )}
+        </View>
 
         {/* Items */}
         {outfitItems.length > 0 && (
@@ -278,6 +307,13 @@ export function OutfitViewContent({
                 </TouchableOpacity>
               );
             })}
+          </View>
+        )}
+
+        {outfit.notes && (
+          <View style={styles.notesSection}>
+            <Text style={styles.sectionLabel}>Notes</Text>
+            <Text style={styles.notesText}>{outfit.notes}</Text>
           </View>
         )}
       </View>
@@ -400,6 +436,33 @@ const styles = StyleSheet.create({
   itemDescription: {
     fontSize: 14,
     color: '#666',
+  },
+  aiSection: {
+    marginBottom: 24,
+  },
+  aiContent: {
+    marginTop: 6,
+    gap: 10,
+  },
+  aiRow: {
+    marginTop: 6,
+  },
+  aiLabel: {
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  aiText: {
+    fontSize: 15,
+    color: '#111827',
+    lineHeight: 22,
+  },
+  aiEmptyText: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
   },
   modalContainer: {
     flex: 1,

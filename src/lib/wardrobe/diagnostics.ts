@@ -47,6 +47,7 @@ export async function findOrphanedImages(userId: string): Promise<{
       .select('id, title, created_at, owner_user_id')
       .eq('owner_user_id', userId)
       .is('archived_at', null)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (itemsError) {

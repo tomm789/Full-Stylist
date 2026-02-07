@@ -3,7 +3,7 @@
  * Manages calendar entries and outfit images for a date range
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getCalendarEntries, CalendarEntry } from '@/lib/calendar';
 import { supabase } from '@/lib/supabase';
 
@@ -28,6 +28,7 @@ export function useCalendarEntries({
   const [entries, setEntries] = useState<Map<string, CalendarEntry[]>>(new Map());
   const [outfitImages, setOutfitImages] = useState<Map<string, string | null>>(new Map());
   const [loading, setLoading] = useState(true);
+  const hasLoadedOnceRef = useRef(false);
 
   const loadEntries = async () => {
     if (!userId) {
@@ -35,7 +36,10 @@ export function useCalendarEntries({
       return;
     }
 
-    setLoading(true);
+    const shouldShowLoading = !hasLoadedOnceRef.current;
+    if (shouldShowLoading) {
+      setLoading(true);
+    }
 
     try {
       // Load all entries for the date range
@@ -55,15 +59,22 @@ export function useCalendarEntries({
       }
 
       setEntries(entriesMap);
+      if (shouldShowLoading) {
+        setLoading(false);
+      }
+      hasLoadedOnceRef.current = true;
 
-      // Load outfit images
+      // Load outfit images without blocking scroll/navigation
       if (monthEntries) {
-        await loadOutfitImages(monthEntries);
+        loadOutfitImages(monthEntries);
       }
     } catch (error) {
       console.error('Error loading calendar entries:', error);
     } finally {
-      setLoading(false);
+      if (shouldShowLoading) {
+        setLoading(false);
+      }
+      hasLoadedOnceRef.current = true;
     }
   };
 
@@ -100,7 +111,13 @@ export function useCalendarEntries({
       }
     }
 
-    setOutfitImages(imagesMap);
+    setOutfitImages((prev) => {
+      const next = new Map(prev);
+      imagesMap.forEach((value, key) => {
+        next.set(key, value);
+      });
+      return next;
+    });
   };
 
   const refresh = async () => {

@@ -20,6 +20,7 @@ interface HeaderProps {
   leftContent?: React.ReactNode;
   rightContent?: React.ReactNode;
   style?: ViewStyle;
+  variant?: 'default' | 'overlay';
 }
 
 export default function Header({
@@ -30,6 +31,7 @@ export default function Header({
   leftContent,
   rightContent,
   style,
+  variant = 'default',
 }: HeaderProps) {
   const router = useRouter();
 
@@ -43,13 +45,22 @@ export default function Header({
     }
   };
 
+  const headerStyles = [
+    commonStyles.header,
+    variant === 'overlay' && commonStyles.headerOverlay,
+    style,
+  ];
+
   return (
-    <View style={[commonStyles.header, style]}>
+    <View style={headerStyles}>
       <View style={styles.left}>
         {showBack && (
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color={colors.primary} />
-            <Text style={styles.backText}>Back</Text>
+          <TouchableOpacity
+            onPress={handleBack}
+            style={styles.backButton}
+            accessibilityLabel="Back"
+          >
+            <Ionicons name="chevron-back" size={24} color={colors.primary} />
           </TouchableOpacity>
         )}
         {leftContent}
@@ -78,13 +89,6 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
-  },
-  backText: {
-    fontSize: typography.fontSize.base,
-    color: colors.primary,
-    fontWeight: typography.fontWeight.semibold,
-    marginLeft: spacing.xs / 2,
+    padding: spacing.xs,
   },
 });

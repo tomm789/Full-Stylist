@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Switch } from 'react-native';
+import PrimaryButton from '@/components/shared/buttons/PrimaryButton';
 
 interface AIModelSectionProps {
   aiModelPreference: string;
@@ -12,6 +13,7 @@ interface AIModelSectionProps {
   onModelSelection: (model: string, password?: string) => Promise<void>;
   includeHeadshot: boolean;
   onHeadshotToggle: (enabled: boolean, password: string) => Promise<void>;
+  onOpenAISettings?: () => void;
 }
 
 export function AIModelSection({
@@ -20,6 +22,7 @@ export function AIModelSection({
   onModelSelection,
   includeHeadshot,
   onHeadshotToggle,
+  onOpenAISettings,
 }: AIModelSectionProps) {
   const [showPasswordInput, setShowPasswordInput] = useState(false);
   const [password, setPassword] = useState('');
@@ -215,6 +218,18 @@ export function AIModelSection({
           </View>
         )}
       </View>
+
+      {onOpenAISettings && (
+        <View style={styles.advancedSettings}>
+          <PrimaryButton
+            title="AI Settings"
+            variant="outline"
+            size="small"
+            onPress={onOpenAISettings}
+            disabled={saving}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -347,5 +362,9 @@ const styles = StyleSheet.create({
   },
   passwordButtonConfirmText: {
     color: '#fff',
+  },
+  advancedSettings: {
+    marginTop: 16,
+    alignItems: 'flex-start',
   },
 });

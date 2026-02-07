@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getUserListings, ListingWithImages, deleteListing } from '@/lib/listings';
 import { supabase } from '@/lib/supabase';
 import { Alert } from 'react-native';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 
 export default function MyListingsScreen() {
   const router = useRouter();
@@ -130,12 +130,7 @@ export default function MyListingsScreen() {
     <View style={styles.container}>
       <Header
         title="My Listings"
-        leftContent={
-          <HeaderActionButton
-            label="Back"
-            onPress={() => router.back()}
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         rightContent={
           <HeaderActionButton
             label="+ New"

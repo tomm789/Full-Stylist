@@ -3,7 +3,7 @@
  * View a specific user's posts
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -22,13 +22,18 @@ import {
 } from '@/components/social';
 import { SlideshowModal } from '@/components/lookbooks';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { commonStyles, theme } from '@/styles';
+import { Header, HeaderIconButton } from '@/components/shared/layout';
 
 export default function UserFeedScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const { id: userId } = useLocalSearchParams<{ id: string }>();
+  const { id: userId, postId } = useLocalSearchParams<{ id: string; postId?: string }>();
   const [refreshing, setRefreshing] = useState(false);
+  const feedRef = useRef<FlatList>(null);
+  const lastScrolledPostId = useRef<string | null>(null);
+  const scrollAttemptRef = useRef(0);
+  const MAX_SCROLL_ATTEMPTS = 6;
 
   // Load feed filtered by user
   const { feed, outfitImages, lookbookImages, engagementCounts, setEngagementCounts, loading, refresh } =
@@ -77,10 +82,7 @@ export default function UserFeedScreen() {
       return (
         <FeedCard
           item={item}
-          counts={engagement}
-          currentUserId={user?.id}
-          onUserPress={() => {}}
-          onMenuPress={() => {}}
+          onUserPress={(targetUserId) => router.push(`/users/${targetUserId}`)}
           caption={post.caption}
           actions={
             <SocialActionBar
@@ -112,10 +114,7 @@ export default function UserFeedScreen() {
       return (
         <FeedCard
           item={item}
-          counts={engagement}
-          currentUserId={user?.id}
-          onUserPress={() => {}}
-          onMenuPress={() => {}}
+          onUserPress={(targetUserId) => router.push(`/users/${targetUserId}`)}
           caption={post.caption}
           actions={
             <SocialActionBar
@@ -143,20 +142,85 @@ export default function UserFeedScreen() {
     return null;
   };
 
+  const getPostId = (item: any) => {
+    const post = item.type === 'post' ? item.post : item.repost?.original_post;
+    return post?.id ?? null;
+  };
+
+  const handleScrollToIndexFailed = (info: {
+    index: number;
+    averageItemLength: number;
+  }) => {
+    const offset = Math.max(0, info.averageItemLength * info.index);
+    feedRef.current?.scrollToOffset({ offset, animated: false });
+  };
+
+  const handleFeedLayout = () => {
+    if (!postId) return;
+    if (feed.length === 0) return;
+    if (!feedRef.current) return;
+
+    const index = feed.findIndex((item) => getPostId(item) === postId);
+    if (index < 0) return;
+
+    feedRef.current?.scrollToIndex({
+      index,
+      viewPosition: 0,
+      animated: false,
+    });
+  };
+
+  useEffect(() => {
+    if (!postId) return;
+    if (feed.length === 0) return;
+    if (lastScrolledPostId.current === postId) return;
+
+    const index = feed.findIndex((item) => getPostId(item) === postId);
+    if (index < 0) {
+      if (scrollAttemptRef.current < MAX_SCROLL_ATTEMPTS) {
+        scrollAttemptRef.current += 1;
+        setTimeout(() => {
+          lastScrolledPostId.current = null;
+        }, 80);
+      }
+      return;
+    }
+
+    if (!feedRef.current) {
+      if (scrollAttemptRef.current < MAX_SCROLL_ATTEMPTS) {
+        scrollAttemptRef.current += 1;
+        setTimeout(() => {
+          lastScrolledPostId.current = null;
+        }, 80);
+      }
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      feedRef.current?.scrollToIndex({
+        index,
+        viewPosition: 0,
+        animated: false,
+      });
+    });
+
+    lastScrolledPostId.current = postId;
+    scrollAttemptRef.current = 0;
+  }, [postId, feed]);
+
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <View style={commonStyles.loadingContainer}>
+        <LoadingSpinner />
+      </View>
+    );
   }
 
   return (
     <View style={styles.container}>
       <Header
         title="User Feed"
-        leftContent={
-          <HeaderActionButton
-            label="Back"
-            onPress={() => router.back()}
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
       />
       {feed.length === 0 ? (
         <EmptyState
@@ -166,10 +230,13 @@ export default function UserFeedScreen() {
         />
       ) : (
         <FlatList
+          ref={feedRef}
           data={feed}
           renderItem={renderFeedItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.feed}
+          onLayout={handleFeedLayout}
+          onScrollToIndexFailed={handleScrollToIndexFailed}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -195,9 +262,9 @@ export default function UserFeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   feed: {
-    paddingVertical: 8,
+    paddingVertical: theme.spacing.sm,
   },
 });

@@ -89,18 +89,22 @@ export function FeedbackCard({ thread, onPress }: FeedbackCardProps) {
           <Text style={styles.title} numberOfLines={2}>
             {thread.title}
           </Text>
-          <View
-            style={[styles.categoryBadge, { backgroundColor: categoryColor + '20' }]}
-          >
-            <Text style={[styles.categoryText, { color: categoryColor }]}>
-              {thread.category.charAt(0).toUpperCase() + thread.category.slice(1)}
-            </Text>
+          <View style={styles.badges}>
+            <View
+              style={[styles.categoryBadge, { backgroundColor: categoryColor + '20' }]}
+            >
+              <Text style={[styles.categoryText, { color: categoryColor }]}>
+                {thread.category.charAt(0).toUpperCase() + thread.category.slice(1)}
+              </Text>
+            </View>
+            <View
+              style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}
+            >
+              <Text style={[styles.statusText, { color: statusColor }]}>
+                {getStatusLabel(thread.status)}
+              </Text>
+            </View>
           </View>
-        </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-          <Text style={[styles.statusText, { color: statusColor }]}>
-            {getStatusLabel(thread.status)}
-          </Text>
         </View>
       </View>
 
@@ -141,6 +145,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 8,
+  },
+  badges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   title: {
     flex: 1,

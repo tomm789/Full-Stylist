@@ -35,7 +35,9 @@ import {
   DropdownMenuItem,
   dropdownMenuStyles,
 } from '@/components/shared/modals';
-import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
+import { Header, HeaderIconButton } from '@/components/shared/layout';
+import { LoadingSpinner } from '@/components/shared';
+import { commonStyles } from '@/styles';
 
 export default function ItemDetailScreen() {
   const { id, itemIds, readOnly, traceId: traceIdParam } = useLocalSearchParams<{
@@ -211,8 +213,8 @@ export default function ItemDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#fff" />
+      <View style={commonStyles.loadingContainer}>
+        <LoadingSpinner size="large" text="Loading item..." />
       </View>
     );
   }
@@ -229,13 +231,8 @@ export default function ItemDetailScreen() {
     <View style={styles.container}>
       {/* Header */}
       <Header
-        style={styles.header}
-        leftContent={
-          <HeaderActionButton
-            label="Back"
-            onPress={() => router.back()}
-          />
-        }
+        variant="overlay"
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         rightContent={
           <View style={styles.headerRightButtons}>
             {isOwnItem && (
@@ -272,15 +269,26 @@ export default function ItemDetailScreen() {
               }}
             />
             <View style={dropdownMenuStyles.menuDivider} />
-            <DropdownMenuItem
-              label="Delete"
-              icon="trash-outline"
-              onPress={() => {
-                closeMenu();
-                actions.handleDelete();
-              }}
-              danger
-            />
+            {item?.archived_at ? (
+              <DropdownMenuItem
+                label="Restore"
+                icon="refresh-outline"
+                onPress={() => {
+                  closeMenu();
+                  setTimeout(() => actions.handleRestore(), 50);
+                }}
+              />
+            ) : (
+              <DropdownMenuItem
+                label="Archive"
+                icon="archive-outline"
+                onPress={() => {
+                  closeMenu();
+                  setTimeout(() => actions.handleDelete(), 50);
+                }}
+                danger
+              />
+            )}
             <View style={dropdownMenuStyles.menuDivider} />
           </>
         )}
@@ -434,28 +442,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   headerRightButtons: {
     flexDirection: 'row',

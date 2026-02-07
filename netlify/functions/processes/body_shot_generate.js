@@ -8,7 +8,9 @@ const { PROMPTS } = require("../prompts");
 const {
   downloadImageFromStorage,
   uploadImageToStorage,
-  callGeminiAPI
+  callGeminiAPI,
+  resolveModelFromSettings,
+  DEFAULT_BODY_MODEL
 } = require("../utils");
 
 /**
@@ -48,8 +50,17 @@ async function processBodyShotGenerate(input, supabase, userId, perfTracker = nu
     downloadImageFromStorage(supabase, headId, timingTracker),
     downloadImageFromStorage(supabase, body_photo_image_id, timingTracker)
   ]);
+  const { data: userSettings } = await supabase
+    .from("user_settings")
+    .select("ai_model_preference, ai_model_body_shot_generate")
+    .eq("user_id", userId)
+    .single();
   // Generate the composite body shot - pass full result objects to include mime-types
-  const model = "gemini-3-pro-image-preview";
+  const model = resolveModelFromSettings(
+    userSettings,
+    "ai_model_body_shot_generate",
+    DEFAULT_BODY_MODEL
+  );
   console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
   const studioModelB64 = await callGeminiAPI(
     PROMPTS.BODY_COMPOSITE,

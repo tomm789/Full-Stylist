@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getLookbook, getSystemLookbookOutfits, Lookbook } from '@/lib/lookbooks';
-import { getUserOutfits } from '@/lib/outfits';
+import { getOutfitsByIds, getUserOutfits } from '@/lib/outfits';
 
 interface UseLookbookDetailProps {
   lookbookId: string | undefined;
@@ -93,16 +93,14 @@ export function useLookbookDetail({
           setLookbook(data.lookbook);
 
           if (data.lookbook.type === 'custom_manual') {
-            const { data: allOutfits } = await getUserOutfits(data.lookbook.owner_user_id);
+            const outfitIds = data.outfits.map((lo: any) => lo.outfit_id);
+            const { data: lookbookOutfitsData } = await getOutfitsByIds(outfitIds);
+            const outfitMap = new Map((lookbookOutfitsData || []).map((o: any) => [o.id, o]));
+            const lookbookOutfits = data.outfits
+              .map((lo: any) => outfitMap.get(lo.outfit_id))
+              .filter(Boolean);
 
-            if (allOutfits) {
-              const outfitMap = new Map(allOutfits.map((o: any) => [o.id, o]));
-              const lookbookOutfits = data.outfits
-                .map((lo: any) => outfitMap.get(lo.outfit_id))
-                .filter(Boolean);
-
-              setOutfits(lookbookOutfits);
-            }
+            setOutfits(lookbookOutfits);
           } else {
             setOutfits([]);
           }

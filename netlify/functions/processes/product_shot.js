@@ -9,7 +9,9 @@ const { PROMPTS } = require("../prompts");
 const {
   downloadImageFromStorage,
   uploadImageToStorage,
-  callGeminiAPI
+  callGeminiAPI,
+  resolveModelFromSettings,
+  DEFAULT_IMAGE_MODEL
 } = require("../utils");
 
 /**
@@ -44,8 +46,17 @@ async function processProductShot(input, supabase, userId, perfTracker = null, t
     imageResult = await downloadImageFromStorage(supabase, image_id, timingTracker);
   }
   
+  const { data: userSettings } = await supabase
+    .from("user_settings")
+    .select("ai_model_preference, ai_model_product_shot")
+    .eq("user_id", userId)
+    .single();
   // Generate a product shot using Gemini - pass full result object to include mime-type
-  const model = "gemini-2.5-flash-image";
+  const model = resolveModelFromSettings(
+    userSettings,
+    "ai_model_product_shot",
+    DEFAULT_IMAGE_MODEL
+  );
   console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
   const productShotB64 = await callGeminiAPI(
     PROMPTS.PRODUCT_SHOT,

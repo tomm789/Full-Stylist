@@ -10,7 +10,6 @@ import {
   Text,
   TouchableOpacity,
   Pressable,
-  ScrollView,
   StyleSheet,
   ModalProps,
   ViewStyle,
@@ -69,12 +68,7 @@ export default function BottomSheet({
             </View>
           )}
 
-          <ScrollView
-            style={styles.content}
-            showsVerticalScrollIndicator={false}
-          >
-            {children}
-          </ScrollView>
+          <View style={styles.content}>{children}</View>
 
           {footerContent && <View style={styles.footer}>{footerContent}</View>}
         </Pressable>

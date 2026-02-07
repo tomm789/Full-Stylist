@@ -141,7 +141,47 @@ export async function deleteWardrobeItem(
   try {
     const { error } = await supabase
       .from('wardrobe_items')
-      .update({ archived_at: new Date().toISOString() })
+      .update({ deleted_at: new Date().toISOString(), archived_at: null })
+      .eq('id', itemId)
+      .eq('owner_user_id', userId);
+
+    return { error };
+  } catch (error: any) {
+    return { error };
+  }
+}
+
+/**
+ * Archive wardrobe item
+ */
+export async function archiveWardrobeItem(
+  itemId: string,
+  userId: string
+): Promise<{ error: any }> {
+  try {
+    const { error } = await supabase
+      .from('wardrobe_items')
+      .update({ archived_at: new Date().toISOString(), deleted_at: null })
+      .eq('id', itemId)
+      .eq('owner_user_id', userId);
+
+    return { error };
+  } catch (error: any) {
+    return { error };
+  }
+}
+
+/**
+ * Restore wardrobe item from archive
+ */
+export async function restoreWardrobeItem(
+  itemId: string,
+  userId: string
+): Promise<{ error: any }> {
+  try {
+    const { error } = await supabase
+      .from('wardrobe_items')
+      .update({ archived_at: null })
       .eq('id', itemId)
       .eq('owner_user_id', userId);
 

@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { SearchResult } from '@/hooks/useSearch';
 
@@ -47,7 +48,16 @@ export function SearchResultItem({ result, onPress }: SearchResultItemProps) {
   return (
     <TouchableOpacity style={styles.resultItem} onPress={() => onPress(result)}>
       <View style={styles.resultIcon}>
-        <Ionicons name={getResultIcon(result.type)} size={48} color="#999" />
+        {result.type === 'user' && result.avatarUrl ? (
+          <ExpoImage
+            source={{ uri: result.avatarUrl }}
+            style={styles.avatar}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <Ionicons name={getResultIcon(result.type)} size={48} color="#999" />
+        )}
       </View>
       <View style={styles.resultInfo}>
         <View style={styles.titleRow}>
@@ -77,6 +87,12 @@ const styles = StyleSheet.create({
   },
   resultIcon: {
     marginRight: 12,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f0f0f0',
   },
   resultInfo: {
     flex: 1,

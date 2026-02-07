@@ -3,7 +3,7 @@
  * View another user's profile with outfits and lookbooks
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -12,19 +12,24 @@ import {
   TouchableOpacity,
   RefreshControl,
   SafeAreaView,
+  Animated,
+  ActivityIndicator,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserProfile, useFollowStatus } from '@/hooks/social';
+import { useUserProfile, useFollowStatus, useFeed } from '@/hooks/social';
 import { ProfileHeader } from '@/components/profile';
 import UserWardrobeScreen from '@/components/UserWardrobeScreen';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
+import { DiscoverGrid } from '@/components/social';
 import { Header } from '@/components/shared/layout';
 import { theme, commonStyles } from '@/styles';
+import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { colors, spacing, typography } = theme;
 
 type TabType = 'outfits' | 'lookbooks' | 'wardrobe';
 
@@ -34,21 +39,40 @@ export default function UserProfileScreen() {
   const { id: userId } = useLocalSearchParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<TabType>('outfits');
   const [refreshing, setRefreshing] = useState(false);
+  const { width } = useWindowDimensions();
+  const showTabLabels = Platform.OS === 'web' && width >= 1024;
+  const {
+    headerHeight,
+    headerOpacity,
+    headerTranslate,
+    headerReady,
+    uiHidden,
+    handleHeaderLayout,
+    handleScroll: handleProfileScroll,
+  } = useHideHeaderOnScroll();
 
   // Load user profile
   const {
     profile,
     outfits,
-    lookbooks,
-    outfitImages,
-    lookbookImages,
-    outfitWearCounts,
     loading,
     refreshingContent,
     refresh,
     refreshContent,
     isOwnProfile,
   } = useUserProfile({ userId, currentUserId: user?.id });
+
+  const {
+    feed,
+    outfitImages: feedOutfitImages,
+    lookbookImages: feedLookbookImages,
+    loading: feedLoading,
+    refresh: refreshFeed,
+  } = useFeed({
+    userId: user?.id,
+    filterByUserId: userId,
+    limit: 60,
+  });
 
   // Follow status
   const { isFollowing, status, loading: followLoading, follow, unfollow } =
@@ -60,8 +84,49 @@ export default function UserProfileScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     await refresh();
+    await refreshFeed();
     setRefreshing(false);
   };
+
+  const handleFeedRefresh = async () => {
+    await refreshContent();
+    await refreshFeed();
+  };
+
+  const outfitFeed = useMemo(
+    () =>
+      feed.filter((item) => {
+        const post = item.type === 'post' ? item.post : item.repost?.original_post;
+        return post?.entity_type === 'outfit';
+      }),
+    [feed]
+  );
+
+  const lookbookFeed = useMemo(
+    () =>
+      feed.filter((item) => {
+        const post = item.type === 'post' ? item.post : item.repost?.original_post;
+        return post?.entity_type === 'lookbook';
+      }),
+    [feed]
+  );
+
+  const lookbookGridImages = useMemo(() => {
+    const map = new Map<string, string | null>();
+    lookbookFeed.forEach((item) => {
+      const lookbook = item.entity?.lookbook;
+      if (!lookbook) return;
+      map.set(lookbook.id, feedLookbookImages.get(lookbook.id) || null);
+    });
+    return map;
+  }, [lookbookFeed, feedLookbookImages]);
+
+  const handleOpenFeedPost = (item: any) => {
+    const post = item.type === 'post' ? item.post : item.repost?.original_post;
+    if (!post) return;
+    router.push(`/users/${userId}/feed?postId=${post.id}`);
+  };
+
 
   const handleFollowPress = async () => {
     if (isFollowing) {
@@ -77,7 +142,9 @@ export default function UserProfileScreen() {
     return (
       <SafeAreaView style={commonStyles.container}>
         <Header showBack title="Profile" />
-        <LoadingSpinner />
+        <View style={commonStyles.loadingContainer}>
+          <LoadingSpinner />
+        </View>
       </SafeAreaView>
     );
   }
@@ -97,14 +164,65 @@ export default function UserProfileScreen() {
 
   return (
     <SafeAreaView style={commonStyles.container}>
-      <Header
-        showBack
-        title={profile.display_name || profile.handle || 'Profile'}
-      />
+      <Animated.View
+        style={[
+          styles.headerContainer,
+          {
+            height: headerReady ? headerHeight : undefined,
+            opacity: headerOpacity,
+            transform: [{ translateY: headerTranslate }],
+          },
+        ]}
+        pointerEvents={uiHidden ? 'none' : 'auto'}
+      >
+        <View onLayout={handleHeaderLayout}>
+          <Header
+            showBack
+            title={undefined}
+            leftContent={
+              <Text style={styles.headerHandle} numberOfLines={1}>
+                @{profile.handle || 'unknown'}
+              </Text>
+            }
+            rightContent={
+              !isOwnProfile ? (
+                <TouchableOpacity
+                  style={[
+                    styles.followButton,
+                    isFollowing && styles.followingButton,
+                    followLoading && styles.followButtonDisabled,
+                  ]}
+                  onPress={handleFollowPress}
+                  disabled={followLoading}
+                >
+                  {followLoading ? (
+                    <ActivityIndicator color={isFollowing ? colors.primary : '#fff'} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.followButtonText,
+                        isFollowing && styles.followingButtonText,
+                      ]}
+                    >
+                      {isFollowing
+                        ? status === 'requested'
+                          ? 'Requested'
+                          : 'Following'
+                        : 'Follow'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              ) : null
+            }
+          />
+        </View>
+      </Animated.View>
 
       <ScrollView
         style={commonStyles.flex1}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        onScroll={handleProfileScroll}
+        scrollEventThrottle={16}
       >
         {/* Profile Header */}
         <ProfileHeader
@@ -115,6 +233,8 @@ export default function UserProfileScreen() {
           followStatus={status}
           loadingFollow={followLoading}
           onFollowPress={handleFollowPress}
+          onFollowersPress={() => router.push(`/users/${userId}/followers`)}
+          onFollowingPress={() => router.push(`/users/${userId}/following`)}
         />
 
         {/* Tabs */}
@@ -128,9 +248,11 @@ export default function UserProfileScreen() {
               size={20}
               color={activeTab === 'outfits' ? colors.textPrimary : colors.textTertiary}
             />
-            <Text style={[styles.tabText, activeTab === 'outfits' && styles.tabTextActive]}>
-              Outfits ({outfits.length})
-            </Text>
+            {showTabLabels && (
+              <Text style={[styles.tabText, activeTab === 'outfits' && styles.tabTextActive]}>
+                Outfits
+              </Text>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'lookbooks' && styles.tabActive]}
@@ -141,11 +263,13 @@ export default function UserProfileScreen() {
               size={20}
               color={activeTab === 'lookbooks' ? colors.textPrimary : colors.textTertiary}
             />
-            <Text
-              style={[styles.tabText, activeTab === 'lookbooks' && styles.tabTextActive]}
-            >
-              Lookbooks ({lookbooks.length})
-            </Text>
+            {showTabLabels && (
+              <Text
+                style={[styles.tabText, activeTab === 'lookbooks' && styles.tabTextActive]}
+              >
+                Lookbooks
+              </Text>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'wardrobe' && styles.tabActive]}
@@ -156,9 +280,11 @@ export default function UserProfileScreen() {
               size={20}
               color={activeTab === 'wardrobe' ? colors.textPrimary : colors.textTertiary}
             />
-            <Text style={[styles.tabText, activeTab === 'wardrobe' && styles.tabTextActive]}>
-              Wardrobe
-            </Text>
+            {showTabLabels && (
+              <Text style={[styles.tabText, activeTab === 'wardrobe' && styles.tabTextActive]}>
+                Wardrobe
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -169,99 +295,51 @@ export default function UserProfileScreen() {
               userId={typeof userId === 'string' ? userId : ''}
               showSearchControls
               showAddButton={isOwnProfile}
+              onGridScroll={handleProfileScroll}
+              scrollEventThrottle={16}
             />
           ) : activeTab === 'outfits' ? (
-            outfits.length === 0 ? (
-              <EmptyState
-                icon="shirt-outline"
-                title="No outfits yet"
-                message={
-                  isOwnProfile
-                    ? 'Create your first outfit to get started'
-                    : 'This user has not created any outfits yet'
-                }
-              />
-            ) : (
-              <View style={styles.grid}>
-                {outfits.map((outfit) => {
-                  const imageUrl = outfitImages.get(outfit.id);
-                  const wearCount = outfitWearCounts.get(outfit.id) || 0;
-
-                  return (
-                    <TouchableOpacity
-                      key={outfit.id}
-                      style={styles.gridItem}
-                      onPress={() => router.push(`/users/${userId}/feed`)}
-                    >
-                      {imageUrl ? (
-                        <ExpoImage
-                          source={{ uri: imageUrl }}
-                          style={styles.gridImage}
-                          contentFit="cover"
-                          cachePolicy="memory-disk"
-                        />
-                      ) : (
-                        <View style={[styles.gridImage, commonStyles.imagePlaceholder]} />
-                      )}
-                      <View style={styles.outfitOverlay}>
-                        <Text style={styles.outfitTitle} numberOfLines={1}>
-                          {outfit.title}
-                        </Text>
-                        {wearCount > 0 && (
-                          <View style={styles.wearBadge}>
-                            <Ionicons name="people" size={12} color={colors.textLight} />
-                            <Text style={styles.wearCount}>{wearCount}</Text>
-                          </View>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )
-          ) : lookbooks.length === 0 ? (
-            <EmptyState
-              icon="book-outline"
-              title="No lookbooks yet"
-              message={
+            <DiscoverGrid
+              feed={outfitFeed}
+              images={feedOutfitImages}
+              loading={feedLoading}
+              refreshing={refreshingContent}
+              onRefresh={handleFeedRefresh}
+              onLoadMore={async () => {}}
+              hasMore={false}
+              alignLeft
+              onItemPress={handleOpenFeedPost}
+              scrollEnabled={false}
+              emptyIcon="shirt-outline"
+              emptyTitle="No outfits yet"
+              emptyMessage={
+                isOwnProfile
+                  ? 'Create your first outfit to get started'
+                  : 'This user has not created any outfits yet'
+              }
+              showOwnerOverlay={false}
+            />
+          ) : (
+            <DiscoverGrid
+              feed={lookbookFeed}
+              images={lookbookGridImages}
+              loading={feedLoading}
+              refreshing={refreshingContent}
+              onRefresh={handleFeedRefresh}
+              onLoadMore={async () => {}}
+              hasMore={false}
+              alignLeft
+              onItemPress={handleOpenFeedPost}
+              scrollEnabled={false}
+              emptyIcon="book-outline"
+              emptyTitle="No lookbooks yet"
+              emptyMessage={
                 isOwnProfile
                   ? 'Create your first lookbook to get started'
                   : 'This user has not created any lookbooks yet'
               }
+              showOwnerOverlay={false}
             />
-          ) : (
-            <View style={styles.grid}>
-              {lookbooks.map((lookbook) => {
-                const thumbnailUrl = lookbookImages.get(lookbook.id);
-
-                return (
-                  <TouchableOpacity
-                    key={lookbook.id}
-                    style={styles.gridItem}
-                    onPress={() => router.push(`/lookbooks/${lookbook.id}`)}
-                  >
-                    {thumbnailUrl ? (
-                      <ExpoImage
-                        source={{ uri: thumbnailUrl }}
-                        style={styles.gridImage}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                      />
-                    ) : (
-                      <View style={[styles.gridImage, commonStyles.imagePlaceholder]} />
-                    )}
-                    <View style={styles.lookbookOverlay}>
-                      <Text style={styles.lookbookTitle} numberOfLines={2}>
-                        {lookbook.title}
-                      </Text>
-                      <Text style={styles.lookbookCount}>
-                        {lookbook.outfit_count || 0} outfits
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
           )}
         </View>
       </ScrollView>
@@ -270,6 +348,10 @@ export default function UserProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerContainer: {
+    overflow: 'hidden',
+    backgroundColor: colors.background,
+  },
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: colors.background,
@@ -302,63 +384,32 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 400,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: spacing.sm,
-  },
-  gridItem: {
-    width: '50%',
-    aspectRatio: 3 / 4,
-    padding: spacing.xs,
-  },
-  gridImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.backgroundTertiary,
-  },
-  outfitOverlay: {
-    position: 'absolute',
-    bottom: spacing.sm,
-    left: spacing.sm,
-    right: spacing.sm,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: borderRadius.md,
-    padding: spacing.sm,
-  },
-  outfitTitle: {
-    fontSize: typography.fontSize.xs,
+  headerHandle: {
+    fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginLeft: spacing.xs,
+  },
+  followButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 16,
+  },
+  followButtonDisabled: {
+    opacity: 0.7,
+  },
+  followingButton: {
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  followButtonText: {
     color: colors.textLight,
-  },
-  wearBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  wearCount: {
-    fontSize: 11,
-    color: colors.textLight,
-  },
-  lookbookOverlay: {
-    position: 'absolute',
-    bottom: spacing.sm,
-    left: spacing.sm,
-    right: spacing.sm,
-    backgroundColor: colors.overlayDark,
-    borderRadius: borderRadius.md,
-    padding: spacing.sm,
-  },
-  lookbookTitle: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textLight,
-    marginBottom: spacing.xs,
   },
-  lookbookCount: {
-    fontSize: 11,
-    color: colors.gray400,
+  followingButtonText: {
+    color: colors.primary,
   },
 });

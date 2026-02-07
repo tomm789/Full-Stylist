@@ -3,7 +3,7 @@
  * Screen for adding new wardrobe items with AI analysis
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,15 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAddWardrobeItem } from '@/hooks/wardrobe';
 import {
   Header,
   LoadingOverlay,
+  LoadingSpinner,
 } from '@/components/shared';
-import { HeaderActionButton } from '@/components/shared/layout';
+import { HeaderIconButton } from '@/components/shared/layout';
 import ImageCropper from '@/components/wardrobe/ImageCropper';
 import { theme, commonStyles } from '@/styles';
 import { Image } from 'expo-image';
@@ -27,6 +28,8 @@ const { colors, spacing, borderRadius, typography } = theme;
 
 export default function AddItemScreen() {
   const router = useRouter();
+  const { action } = useLocalSearchParams<{ action?: string }>();
+  const didAutoActionRef = useRef(false);
   const {
     selectedImages,
     handleTakePhoto,
@@ -44,10 +47,24 @@ export default function AddItemScreen() {
     wardrobeLoading,
   } = useAddWardrobeItem();
 
+  useEffect(() => {
+    if (didAutoActionRef.current) return;
+    if (!action) return;
+    didAutoActionRef.current = true;
+
+    if (action === 'photo') {
+      handleTakePhoto();
+    } else if (action === 'upload') {
+      handleUploadPhoto();
+    }
+  }, [action, handleTakePhoto, handleUploadPhoto]);
+
   if (wardrobeLoading) {
     return (
       <View style={styles.container}>
-        <LoadingOverlay visible={true} message="Loading..." />
+        <View style={commonStyles.loadingContainer}>
+          <LoadingSpinner text="Loading..." />
+        </View>
       </View>
     );
   }
@@ -56,13 +73,7 @@ export default function AddItemScreen() {
     <View style={styles.container}>
       <Header
         title="Add Item"
-        leftContent={
-          <HeaderActionButton
-            label="Cancel"
-            onPress={() => router.back()}
-            variant="secondary"
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
       />
 
       <ScrollView

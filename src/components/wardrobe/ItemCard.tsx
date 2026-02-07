@@ -88,9 +88,6 @@ function ItemCard({
       ) : (
         <ImagePlaceholder aspectRatio={1} />
       )}
-      <Text style={styles.title} numberOfLines={1}>
-        {item.title}
-      </Text>
     </TouchableOpacity>
   );
 }
@@ -98,8 +95,7 @@ function ItemCard({
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    margin: spacing.sm,
-    borderRadius: borderRadius.md,
+    margin: 1,
     overflow: 'hidden',
     backgroundColor: colors.backgroundSecondary,
   },
@@ -126,12 +122,6 @@ const styles = StyleSheet.create({
     top: spacing.xs,
     right: spacing.xs,
     padding: spacing.xs,
-  },
-  title: {
-    padding: spacing.sm,
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.textPrimary,
   },
 });
 

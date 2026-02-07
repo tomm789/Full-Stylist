@@ -9,7 +9,9 @@ const { PROMPTS } = require("../prompts");
 const {
   downloadImageFromStorage,
   uploadImageToStorage,
-  callGeminiAPI
+  callGeminiAPI,
+  resolveModelFromSettings,
+  DEFAULT_IMAGE_MODEL
 } = require("../utils");
 
 /**
@@ -69,10 +71,14 @@ async function processOutfitMannequin(input, supabase, userId, perfTracker = nul
   // Determine the model to use
   const { data: userSettings } = await supabase
     .from("user_settings")
-    .select("ai_model_preference")
+    .select("ai_model_preference, ai_model_outfit_mannequin")
     .eq("user_id", userId)
     .single();
-  const preferredModel = userSettings?.ai_model_preference || "gemini-2.5-flash-image";
+  const preferredModel = resolveModelFromSettings(
+    userSettings,
+    "ai_model_outfit_mannequin",
+    DEFAULT_IMAGE_MODEL
+  );
   const mannequinPrompt = PROMPTS.OUTFIT_MANNEQUIN(
     itemImages.length,
     prompt || "No additional details"

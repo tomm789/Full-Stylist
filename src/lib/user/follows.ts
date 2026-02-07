@@ -84,7 +84,8 @@ export async function isFollowing(
  */
 export async function getFollowers(
   userId: string,
-  limit: number = 50
+  limit: number = 50,
+  offset: number = 0
 ): Promise<{
   data: Array<{
     id: string;
@@ -103,11 +104,11 @@ export async function getFollowers(
   try {
     const { data, error } = await supabase
       .from('follows')
-      .select('*, follower:users!follower_user_id(id, handle, display_name)')
+      .select('*, follower:users!follower_user_id(id, handle, display_name, avatar_url)')
       .eq('followed_user_id', userId)
       .eq('status', 'accepted')
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
 
     if (error) {
       throw error;
@@ -124,7 +125,8 @@ export async function getFollowers(
  */
 export async function getFollowing(
   userId: string,
-  limit: number = 50
+  limit: number = 50,
+  offset: number = 0
 ): Promise<{
   data: Array<{
     id: string;
@@ -136,6 +138,7 @@ export async function getFollowing(
       id: string;
       handle: string;
       display_name?: string;
+      avatar_url?: string | null;
     };
   }>;
   error: any;
@@ -143,11 +146,11 @@ export async function getFollowing(
   try {
     const { data, error } = await supabase
       .from('follows')
-      .select('*, followed:users!followed_user_id(id, handle, display_name)')
+      .select('*, followed:users!followed_user_id(id, handle, display_name, avatar_url)')
       .eq('follower_user_id', userId)
       .eq('status', 'accepted')
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
 
     if (error) {
       throw error;
@@ -175,6 +178,7 @@ export async function getPendingFollowRequests(
       id: string;
       handle: string;
       display_name?: string;
+      avatar_url?: string | null;
     };
   }>;
   error: any;
@@ -182,7 +186,7 @@ export async function getPendingFollowRequests(
   try {
     const { data, error } = await supabase
       .from('follows')
-      .select('*, follower:users!follower_user_id(id, handle, display_name)')
+      .select('*, follower:users!follower_user_id(id, handle, display_name, avatar_url)')
       .eq('followed_user_id', userId)
       .eq('status', 'requested')
       .order('created_at', { ascending: false });

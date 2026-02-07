@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheet } from '@/components/shared';
@@ -25,6 +26,17 @@ interface SortModalProps {
   sortOrder: SortOrder;
   onSortChange: (sortBy: SortOption) => void;
   onOrderToggle: () => void;
+  showFavoritesOnly?: boolean;
+  onToggleFavoritesOnly?: () => void;
+  showGridOutfits?: boolean;
+  showGridLookbooks?: boolean;
+  onToggleGridOutfits?: () => void;
+  onToggleGridLookbooks?: () => void;
+  occasionOptions?: string[];
+  selectedOccasions?: string[];
+  onToggleOccasion?: (occasion: string) => void;
+  onClearOccasions?: () => void;
+  onResetFilters?: () => void;
 }
 
 const sortOptions: Array<{ value: SortOption; label: string }> = [
@@ -40,10 +52,51 @@ export default function SortModal({
   sortOrder,
   onSortChange,
   onOrderToggle,
+  showFavoritesOnly = false,
+  onToggleFavoritesOnly,
+  showGridOutfits = true,
+  showGridLookbooks = true,
+  onToggleGridOutfits,
+  onToggleGridLookbooks,
+  occasionOptions = [],
+  selectedOccasions = [],
+  onToggleOccasion,
+  onClearOccasions,
+  onResetFilters,
 }: SortModalProps) {
+  const { height } = useWindowDimensions();
+  const maxBodyHeight = Math.min(height * 0.8, 700);
+
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="Sort By">
-      <ScrollView style={styles.body}>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title="Sort & Filters"
+      headerRight={
+        <TouchableOpacity onPress={onResetFilters} disabled={!onResetFilters}>
+          <Text style={styles.resetText}>Reset</Text>
+        </TouchableOpacity>
+      }
+    >
+      <ScrollView
+        style={[styles.body, { maxHeight: maxBodyHeight }]}
+        contentContainerStyle={styles.bodyContent}
+        showsVerticalScrollIndicator
+      >
+        <TouchableOpacity
+          style={[styles.filterRow, styles.savedFilterRow]}
+          onPress={onToggleFavoritesOnly}
+          disabled={!onToggleFavoritesOnly}
+        >
+          <Text style={styles.filterText}>Show saved only</Text>
+          <Ionicons
+            name={showFavoritesOnly ? 'bookmark' : 'bookmark-outline'}
+            size={20}
+            color={showFavoritesOnly ? colors.primary : colors.textTertiary}
+          />
+        </TouchableOpacity>
+
+        <Text style={styles.sectionHeading}>Sort by</Text>
         {sortOptions.map((option) => (
           <TouchableOpacity
             key={option.value}
@@ -80,14 +133,83 @@ export default function SortModal({
             </Text>
           </TouchableOpacity>
         </View>
+
+        <View style={styles.filterSection}>
+          <Text style={styles.orderLabel}>Grid Filters</Text>
+          <TouchableOpacity
+            style={styles.filterRow}
+            onPress={onToggleGridOutfits}
+            disabled={!onToggleGridOutfits}
+          >
+            <Text style={styles.filterText}>Show outfits</Text>
+            <Ionicons
+              name={showGridOutfits ? 'checkbox' : 'square-outline'}
+              size={20}
+              color={showGridOutfits ? colors.primary : colors.textTertiary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.filterRow}
+            onPress={onToggleGridLookbooks}
+            disabled={!onToggleGridLookbooks}
+          >
+            <Text style={styles.filterText}>Show lookbooks</Text>
+            <Ionicons
+              name={showGridLookbooks ? 'checkbox' : 'square-outline'}
+              size={20}
+              color={showGridLookbooks ? colors.primary : colors.textTertiary}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.filterSection}>
+          <View style={styles.filterHeader}>
+            <Text style={styles.orderLabel}>Occasions</Text>
+            {selectedOccasions.length > 0 && (
+              <TouchableOpacity onPress={onClearOccasions}>
+                <Text style={styles.clearText}>Clear</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {occasionOptions.length === 0 ? (
+            <Text style={styles.emptyText}>No occasions found</Text>
+          ) : (
+            occasionOptions.map((occasion) => {
+              const selected = selectedOccasions.includes(occasion);
+              return (
+                <TouchableOpacity
+                  key={occasion}
+                  style={styles.filterRow}
+                  onPress={() => onToggleOccasion?.(occasion)}
+                  disabled={!onToggleOccasion}
+                >
+                  <Text style={styles.filterText}>{occasion}</Text>
+                  <Ionicons
+                    name={selected ? 'checkbox' : 'square-outline'}
+                    size={20}
+                    color={selected ? colors.primary : colors.textTertiary}
+                  />
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
       </ScrollView>
     </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
+  resetText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.primary,
+    fontWeight: '600',
+  },
   body: {
     padding: spacing.md,
+  },
+  bodyContent: {
+    paddingBottom: spacing.lg,
   },
   option: {
     flexDirection: 'row',
@@ -115,6 +237,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,
   },
+  filterSection: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
   orderLabel: {
     fontSize: typography.fontSize.sm,
     fontWeight: '600',
@@ -132,5 +260,43 @@ const styles = StyleSheet.create({
   orderText: {
     fontSize: typography.fontSize.base,
     color: colors.textPrimary,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.backgroundSecondary,
+    marginTop: spacing.sm,
+  },
+  filterText: {
+    fontSize: typography.fontSize.base,
+    color: colors.textPrimary,
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  clearText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  emptyText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+  sectionHeading: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '600',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    color: colors.textSecondary,
+  },
+  savedFilterRow: {
+    marginTop: spacing.xs,
   },
 });

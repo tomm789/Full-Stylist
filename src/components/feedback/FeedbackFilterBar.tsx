@@ -4,7 +4,11 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { PillButton } from '@/components/shared';
+import { theme } from '@/styles';
+
+const { colors, spacing } = theme;
 
 interface FeedbackFilterBarProps {
   selectedCategory: 'bug' | 'feature' | 'general' | 'other' | 'all';
@@ -32,53 +36,43 @@ export function FeedbackFilterBar({
     <View style={styles.container}>
       <View style={styles.filterRow}>
         <Text style={styles.filterLabel}>Category:</Text>
-        <View style={styles.filterButtons}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterButtons}
+        >
           {(['all', 'bug', 'feature', 'general', 'other'] as const).map((cat) => (
-            <TouchableOpacity
+            <PillButton
               key={cat}
-              style={[
-                styles.filterButton,
-                selectedCategory === cat && styles.filterButtonActive,
-              ]}
+              label={cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+              selected={selectedCategory === cat}
               onPress={() => onCategoryChange(cat)}
-            >
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  selectedCategory === cat && styles.filterButtonTextActive,
-                ]}
-              >
-                {cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
-              </Text>
-            </TouchableOpacity>
+              variant="default"
+              size="medium"
+            />
           ))}
-        </View>
+        </ScrollView>
       </View>
       <View style={styles.filterRow}>
         <Text style={styles.filterLabel}>Status:</Text>
-        <View style={styles.filterButtons}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterButtons}
+        >
           {(['all', 'open', 'in_progress', 'resolved', 'closed'] as const).map(
             (status) => (
-              <TouchableOpacity
+              <PillButton
                 key={status}
-                style={[
-                  styles.filterButton,
-                  selectedStatus === status && styles.filterButtonActive,
-                ]}
+                label={status === 'all' ? 'All' : getStatusLabel(status)}
+                selected={selectedStatus === status}
                 onPress={() => onStatusChange(status)}
-              >
-                <Text
-                  style={[
-                    styles.filterButtonText,
-                    selectedStatus === status && styles.filterButtonTextActive,
-                  ]}
-                >
-                  {status === 'all' ? 'All' : getStatusLabel(status)}
-                </Text>
-              </TouchableOpacity>
+                variant="default"
+                size="medium"
+              />
             )
           )}
-        </View>
+        </ScrollView>
       </View>
     </View>
   );
@@ -88,8 +82,8 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#f9f9f9',
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.backgroundSecondary,
   },
   filterRow: {
     marginBottom: 12,
@@ -97,32 +91,13 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   filterButtons: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  filterButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
-  },
-  filterButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  filterButtonText: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-  },
-  filterButtonTextActive: {
-    color: '#fff',
+    flexWrap: 'nowrap',
+    gap: spacing.xs,
+    paddingRight: spacing.sm,
   },
 });

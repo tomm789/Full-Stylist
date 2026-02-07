@@ -29,6 +29,8 @@ interface ItemGridProps {
   onEmptyAction?: () => void;
   numColumns?: number;
   style?: ViewStyle;
+  onScroll?: (event: any) => void;
+  scrollEventThrottle?: number;
 }
 
 export default function ItemGrid({
@@ -46,8 +48,10 @@ export default function ItemGrid({
   emptyMessage,
   emptyActionLabel,
   onEmptyAction,
-  numColumns = 2,
+  numColumns = 3,
   style,
+  onScroll,
+  scrollEventThrottle,
 }: ItemGridProps) {
   const renderItem = ({ item }: { item: WardrobeItem }) => {
     const isSelected = selectedItems.includes(item.id);
@@ -95,6 +99,9 @@ export default function ItemGrid({
       keyExtractor={(item) => item.id}
       numColumns={numColumns}
       contentContainerStyle={styles.list}
+      columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
+      onScroll={onScroll}
+      scrollEventThrottle={scrollEventThrottle}
       refreshControl={
         onRefresh ? (
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -107,6 +114,9 @@ export default function ItemGrid({
 
 const styles = StyleSheet.create({
   list: {
-    padding: spacing.sm,
+    padding: 1,
+  },
+  row: {
+    gap: 1,
   },
 });

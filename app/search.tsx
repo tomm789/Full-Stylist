@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearch } from '@/hooks';
 import { SearchResultItem, SearchFilterBar, LoadingSpinner } from '@/components/shared';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { Header, HeaderIconButton } from '@/components/shared/layout';
 
 export default function SearchScreen() {
   const { user } = useAuth();
@@ -50,12 +50,7 @@ export default function SearchScreen() {
       {/* Header */}
       <Header
         title="Search"
-        leftContent={
-          <HeaderActionButton
-            label="Back"
-            onPress={() => router.back()}
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
       />
 
       {/* Search Input */}

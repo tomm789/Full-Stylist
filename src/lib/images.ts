@@ -129,15 +129,54 @@ export async function getUserGeneratedImages(userId: string): Promise<{
   }
 
   const headshots = allImages
-    .filter((img) => img.storage_key?.includes('/ai/headshots/'))
+    .filter((img) => (img.storage_key || '').toLowerCase().includes('headshot'))
     .map((img) => ({
       id: img.id,
       url: getPublicImageUrl(img),
       created_at: img.created_at,
     }));
 
+  // Include saved headshot variations (from hair & make-up sessions)
+  const { data: savedVariations } = await supabase
+    .from('headshot_generation_variations')
+    .select('image_id, created_at')
+    .eq('user_id', userId)
+    .eq('is_saved', true)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  const existingHeadshotIds = new Set(headshots.map((item) => item.id));
+  const savedVariationIds =
+    savedVariations
+      ?.map((item) => item.image_id)
+      .filter((id): id is string => Boolean(id))
+      .filter((id) => !existingHeadshotIds.has(id)) || [];
+
+  if (savedVariationIds.length > 0) {
+    const { data: savedImages, error: savedError } = await supabase
+      .from('images')
+      .select('id, storage_bucket, storage_key, created_at')
+      .in('id', savedVariationIds);
+
+    if (!savedError && savedImages) {
+      const createdAtById = new Map(
+        (savedVariations || []).map((item) => [item.image_id, item.created_at])
+      );
+      savedImages.forEach((img) => {
+        headshots.push({
+          id: img.id,
+          url: getPublicImageUrl(img),
+          created_at: createdAtById.get(img.id) || img.created_at,
+        });
+      });
+    }
+  }
+
   const bodyShots = allImages
-    .filter((img) => img.storage_key?.includes('/ai/body_shots/'))
+    .filter((img) => {
+      const key = (img.storage_key || '').toLowerCase();
+      return key.includes('body_shot') || key.includes('bodyshot');
+    })
     .map((img) => ({
       id: img.id,
       url: getPublicImageUrl(img),

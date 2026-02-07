@@ -8,13 +8,19 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { uploadBase64ImageToStorage } from '@/lib/utils/image-helpers';
 import { generateClothingGrid } from '@/utils/clothing-grid';
 import type { WardrobeItem } from '@/lib/wardrobe';
 
+const CAN_CLIENT_STACK =
+  Platform.OS === 'web' && typeof document !== 'undefined' && typeof Image !== 'undefined';
+
 const PREGEND_GRID_ENABLED =
-  typeof process !== 'undefined' && process.env.EXPO_PUBLIC_PREGEND_GRID === 'true';
+  CAN_CLIENT_STACK &&
+  typeof process !== 'undefined' &&
+  process.env.EXPO_PUBLIC_PREGEND_GRID === 'true';
 
 const DEBOUNCE_MS = 2000;
 const STORAGE_PREFIX = 'background-preview';

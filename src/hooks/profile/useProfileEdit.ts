@@ -7,7 +7,6 @@ import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { updateUserProfile } from '@/lib/user';
-import { updateUserSettings } from '@/lib/settings';
 import { uploadImageToStorage } from '@/lib/utils/image-helpers';
 import { supabase } from '@/lib/supabase';
 
@@ -19,7 +18,11 @@ interface UseProfileEditProps {
 interface UseProfileEditReturn {
   savingProfile: boolean;
   uploadingAvatar: boolean;
-  saveProfile: (handle: string, displayName: string) => Promise<boolean>;
+  saveProfile: (
+    handle: string,
+    displayName: string,
+    avatarUrl?: string | null
+  ) => Promise<boolean>;
   uploadAvatar: () => Promise<void>;
 }
 
@@ -35,7 +38,11 @@ export function useProfileEdit({
     return handleRegex.test(h);
   };
 
-  const saveProfile = async (handle: string, displayName: string): Promise<boolean> => {
+  const saveProfile = async (
+    handle: string,
+    displayName: string,
+    avatarUrl?: string | null
+  ): Promise<boolean> => {
     if (!userId) return false;
 
     if (!handle.trim()) {
@@ -62,6 +69,7 @@ export function useProfileEdit({
       const { error } = await updateUserProfile(userId, {
         handle: handle.trim(),
         display_name: displayName.trim(),
+        ...(avatarUrl !== undefined ? { avatar_url: avatarUrl } : {}),
       });
 
       if (error) {
@@ -123,7 +131,7 @@ export function useProfileEdit({
         `avatar-${stamp}.jpg`
       );
 
-      const { data: imageRecord, error: imageError } = await supabase
+      const { error: imageError } = await supabase
         .from('images')
         .insert({
           owner_user_id: userId,
@@ -135,13 +143,13 @@ export function useProfileEdit({
         .select()
         .single();
 
-      if (imageError || !imageRecord) {
-        throw imageError || new Error('Failed to create image record');
+      if (imageError) {
+        throw imageError;
       }
 
-      const { error: updateError } = await updateUserSettings(userId, {
-        headshot_image_id: imageRecord.id,
-      } as any);
+      const { error: updateError } = await updateUserProfile(userId, {
+        avatar_url: uploadResult.data!.fullPath,
+      });
 
       if (updateError) throw updateError;
 

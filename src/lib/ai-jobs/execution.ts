@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { resolveNetlifyBaseUrl } from '../netlify';
 import { debugIngest } from './debug-ingest';
 
 /**
@@ -24,35 +25,19 @@ export async function triggerAIJobExecution(
       return { error: new Error('No active session') };
     }
 
-    const isDev =
-      (typeof process !== 'undefined' &&
-        process.env.NODE_ENV === 'development') ||
-      (typeof __DEV__ !== 'undefined' && (__DEV__ as boolean) === true);
-    
-    // Prefer the explicitly configured Netlify URL in all environments
-    let baseUrl = process.env.EXPO_PUBLIC_NETLIFY_URL || '';
+    const { baseUrl, isDev, inferredFromMetro } = resolveNetlifyBaseUrl();
+    const devUrl =
+      typeof process !== 'undefined' ? process.env.EXPO_PUBLIC_NETLIFY_DEV_URL || '' : '';
 
     if (!baseUrl) {
-      if (isDev) {
-        // Allow environment variable to override for physical devices
-        baseUrl =
-          process.env.EXPO_PUBLIC_NETLIFY_DEV_URL || 'http://localhost:8888';
+      if (!isDev) {
+        console.warn(
+          '[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set and window.location unavailable, using relative URL'
+        );
       } else {
-        // Fallback: For web builds, use current origin if available
-        if (typeof window !== 'undefined' && window.location) {
-          baseUrl = window.location.origin;
-          console.warn(
-            '[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set, using window.location.origin as fallback:',
-            baseUrl
-          );
-        }
-
-        // If still empty, use relative URL
-        if (!baseUrl) {
-          console.warn(
-            '[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set and window.location unavailable, using relative URL'
-          );
-        }
+        console.warn(
+          '[AIJobs] EXPO_PUBLIC_NETLIFY_DEV_URL not set; attempting Metro host inference'
+        );
       }
     }
 
@@ -60,7 +45,23 @@ export async function triggerAIJobExecution(
     const baseUrlNormalized = baseUrl.replace(/\/+$/, '');
     const functionUrl = `${baseUrlNormalized}/.netlify/functions/ai-job-runner`;
 
-    debugIngest({ location: 'execution.ts:55', message: 'triggerAIJobExecution before fetch', data: { jobId, functionUrl, baseUrl, hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+    debugIngest({
+      location: 'execution.ts:55',
+      message: 'triggerAIJobExecution before fetch',
+      data: {
+        jobId,
+        functionUrl,
+        baseUrl,
+        hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL,
+        hasExpoPublicNetlifyDevUrl: !!devUrl,
+        inferredFromMetro,
+        isDev,
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'D'
+    });
 
     // Validate URL format
     if (
@@ -72,78 +73,85 @@ export async function triggerAIJobExecution(
       return { error: new Error('Invalid Netlify function URL configuration') };
     }
 
-    // Call Netlify function to process the job (fire-and-forget with short timeout)
-    fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ job_id: jobId }),
-      // @ts-ignore - React Native fetch doesn't support signal in the same way
-      signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined,
-    })
-      .then(async (response) => {
-        const ts = Date.now();
-        console.debug('[outfit_render_timing] trigger_timeout_or_response', { ts, jobId, status: response.status });
-        debugIngest({ location: 'execution.ts:78', message: 'triggerAIJobExecution fetch response', data: { jobId, status: response.status, statusText: response.statusText, ok: response.ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
-
-        if (!response.ok) {
-          const responseText = await response
-            .text()
-            .catch(() => 'could not read response');
-          console.warn('[AIJobs] Function trigger returned non-OK response', {
-            status: response.status,
-            statusText: response.statusText,
-            responseText: responseText.substring(0, 200),
-          });
-          debugIngest({ location: 'execution.ts:84', message: 'triggerAIJobExecution non-OK response', data: { jobId, status: response.status, responseText: responseText.substring(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
-        }
-        return response;
-      })
-      .catch((error) => {
-        const isTimeoutOrAbort =
-          error?.name === 'AbortError' ||
-          error?.name === 'TimeoutError' ||
-          error?.message?.toLowerCase().includes('timeout') ||
-          error?.message?.toLowerCase().includes('abort');
-        const errorDetails = {
-          message: error?.message,
-          name: error?.name,
-          functionUrl,
-          baseUrl: baseUrlNormalized,
-          hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL,
-        };
-
-        if (isTimeoutOrAbort) {
-          const ts = Date.now();
-          console.debug('[outfit_render_timing] trigger_timeout_or_response', { ts, jobId, status: 'timeout' });
-          console.debug('[AIJobs] Trigger timed out (expected); job runs on server, poll for status.', { jobId });
-          debugIngest({
-            location: 'execution.ts:91',
-            message: 'triggerAIJobExecution fetch error',
-            data: { jobId, ...errorDetails, expected: true, kind: 'timeout' },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'D',
-          });
-        } else {
-          console.error('[AIJobs] Failed to trigger job execution:', errorDetails);
-          if (error?.name === 'TypeError' && error?.message?.includes('fetch')) {
-            console.error('[AIJobs] Network error - check EXPO_PUBLIC_NETLIFY_URL configuration');
-          }
-          debugIngest({
-            location: 'execution.ts:91',
-            message: 'triggerAIJobExecution fetch error',
-            data: { jobId, ...errorDetails },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'D',
-          });
-        }
+    // Call Netlify function to process the job (short timeout)
+    try {
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ job_id: jobId }),
+        // @ts-ignore - React Native fetch doesn't support signal in the same way
+        signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined,
       });
+
+      const ts = Date.now();
+      console.debug('[outfit_render_timing] trigger_timeout_or_response', { ts, jobId, status: response.status });
+      debugIngest({ location: 'execution.ts:78', message: 'triggerAIJobExecution fetch response', data: { jobId, status: response.status, statusText: response.statusText, ok: response.ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+
+      if (!response.ok) {
+        const responseText = await response
+          .text()
+          .catch(() => 'could not read response');
+        console.warn('[AIJobs] Function trigger returned non-OK response', {
+          status: response.status,
+          statusText: response.statusText,
+          responseText: responseText.substring(0, 200),
+        });
+        debugIngest({ location: 'execution.ts:84', message: 'triggerAIJobExecution non-OK response', data: { jobId, status: response.status, responseText: responseText.substring(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+
+        if (response.status === 401 && responseText.toLowerCase().includes('invalid token')) {
+          return { error: new Error('AI auth failed. Please sign out and back in.') };
+        }
+        return { error: new Error(`AI job trigger failed (${response.status})`) };
+      }
+    } catch (error: any) {
+      const isTimeoutOrAbort =
+        error?.name === 'AbortError' ||
+        error?.name === 'TimeoutError' ||
+        error?.message?.toLowerCase().includes('timeout') ||
+        error?.message?.toLowerCase().includes('abort');
+      const errorDetails = {
+        message: error?.message,
+        name: error?.name,
+        functionUrl,
+        baseUrl: baseUrlNormalized,
+        hasExpoPublicNetlifyUrl: !!process.env.EXPO_PUBLIC_NETLIFY_URL,
+      };
+
+      if (isTimeoutOrAbort) {
+        const ts = Date.now();
+        console.debug('[outfit_render_timing] trigger_timeout_or_response', { ts, jobId, status: 'timeout' });
+        console.debug('[AIJobs] Trigger timed out (expected); job runs on server, poll for status.', { jobId });
+        debugIngest({
+          location: 'execution.ts:91',
+          message: 'triggerAIJobExecution fetch error',
+          data: { jobId, ...errorDetails, expected: true, kind: 'timeout' },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'D',
+        });
+        // Timeouts shouldn't block; job may still run server-side.
+        return { error: null };
+      }
+
+      console.error('[AIJobs] Failed to trigger job execution:', errorDetails);
+      if (error?.name === 'TypeError' && error?.message?.includes('fetch')) {
+        console.error('[AIJobs] Network error - check EXPO_PUBLIC_NETLIFY_URL configuration');
+      }
+      debugIngest({
+        location: 'execution.ts:91',
+        message: 'triggerAIJobExecution fetch error',
+        data: { jobId, ...errorDetails },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'D',
+      });
+      return { error };
+    }
 
     debugIngest({ location: 'execution.ts:123', message: 'triggerAIJobExecution returning success', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
     const elapsedMs = Date.now() - triggerStartMs;
@@ -179,15 +187,10 @@ export async function createAndTriggerJob(
       return { data: null, error };
     }
 
-    // Fire-and-forget: do not await. Server job runs via handler; UI polls status.
-    triggerAIJobExecution(job.id).then((result) => {
-      if (result.error) {
-        console.warn('[AIJobs] Trigger returned error (job still runs on server):', result.error?.message);
-      }
-    }).catch((err) => {
-      console.warn('[AIJobs] Trigger failed (job still runs on server):', err?.message ?? err);
-    });
-
+    const triggerResult = await triggerAIJobExecution(job.id);
+    if (triggerResult.error) {
+      return { data: { jobId: job.id }, error: triggerResult.error };
+    }
     return { data: { jobId: job.id }, error: null };
   } catch (error: any) {
     return { data: null, error };

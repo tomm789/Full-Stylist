@@ -3,7 +3,7 @@
  * Add menu button and modal for tabs header
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal';
+import { theme } from '@/styles';
+
+const { colors, typography, spacing } = theme;
 
 interface HeaderAddMenuProps {
   title: string;
@@ -20,13 +22,13 @@ interface HeaderAddMenuProps {
 
 export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
   const router = useRouter();
-  const [showAddMenu, setShowAddMenu] = useState(false);
 
-  const handleAddOption = (type: string) => {
-    setShowAddMenu(false);
+  const action = title.toLowerCase();
+  const hasPrimaryAction = ['outfits', 'calendar', 'wardrobe', 'lookbooks'].includes(action);
 
-    switch (type) {
-      case 'outfit':
+  const handlePrimaryAction = () => {
+    switch (action) {
+      case 'outfits':
         router.push('/outfits/new' as any);
         break;
       case 'calendar':
@@ -35,8 +37,10 @@ export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
       case 'wardrobe':
         router.push('/wardrobe/add' as any);
         break;
-      case 'lookbook':
+      case 'lookbooks':
         router.push('/lookbooks/new' as any);
+        break;
+      default:
         break;
     }
   };
@@ -44,48 +48,14 @@ export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
   return (
     <View style={styles.headerTitleContainer}>
       <Text style={styles.headerTitleText}>{title}</Text>
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setShowAddMenu(true)}
-      >
-        <Ionicons name="add-circle-outline" size={24} color="#000" />
-      </TouchableOpacity>
-
-      <DropdownMenuModal
-        visible={showAddMenu}
-        onClose={() => setShowAddMenu(false)}
-        fullWidth
-      >
-        <Text style={styles.menuTitle}>Add New</Text>
+      {hasPrimaryAction && (
         <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleAddOption('outfit')}
+          style={styles.addButton}
+          onPress={handlePrimaryAction}
         >
-          <Ionicons name="shirt-outline" size={20} color="#000" />
-          <Text style={styles.menuItemText}>Outfit</Text>
+          <Ionicons name="add-circle-outline" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleAddOption('calendar')}
-        >
-          <Ionicons name="calendar-outline" size={20} color="#000" />
-          <Text style={styles.menuItemText}>Calendar Entry</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleAddOption('wardrobe')}
-        >
-          <Ionicons name="pricetag-outline" size={20} color="#000" />
-          <Text style={styles.menuItemText}>Wardrobe Item</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleAddOption('lookbook')}
-        >
-          <Ionicons name="book-outline" size={20} color="#000" />
-          <Text style={styles.menuItemText}>Lookbook</Text>
-        </TouchableOpacity>
-      </DropdownMenuModal>
+      )}
     </View>
   );
 }
@@ -94,36 +64,14 @@ const styles = StyleSheet.create({
   headerTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   headerTitleText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
   },
   addButton: {
-    padding: 4,
-  },
-  menuTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    gap: 12,
-    borderRadius: 8,
-  },
-  menuItemText: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: '500',
+    padding: spacing.xs,
   },
 });

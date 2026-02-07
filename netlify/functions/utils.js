@@ -120,6 +120,19 @@ function createTimingTracker() {
   return tracker;
 }
 
+const DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-image";
+const DEFAULT_BODY_MODEL = "gemini-3-pro-image";
+
+function resolveModelFromSettings(settings, field, fallback = DEFAULT_IMAGE_MODEL) {
+  if (settings && field && settings[field]) {
+    return settings[field];
+  }
+  if (settings && settings.ai_model_preference) {
+    return settings.ai_model_preference;
+  }
+  return fallback;
+}
+
 /**
  * Creates a performance tracker for comparing text vs image generation.
  * Generates a unique request ID and tracks timing for each generation type.
@@ -438,6 +451,15 @@ async function callGeminiAPI(prompt, images, model = "gemini-2.5-flash-image", r
   if (!GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY missing");
   }
+
+  if (typeof model === "string") {
+    const normalizedModel = model.toLowerCase();
+    if (normalizedModel.startsWith("imagen-") || normalizedModel.startsWith("veo-")) {
+      throw new Error(
+        `Model ${model} requires a different API endpoint (not supported by Gemini generateContent in this integration yet).`
+      );
+    }
+  }
   
   // Record start time for performance tracking
   const imageCount = Array.isArray(images) ? images.length : (images ? 1 : 0);
@@ -512,13 +534,23 @@ async function callGeminiAPI(prompt, images, model = "gemini-2.5-flash-image", r
   const data = await response.json();
   if (!response.ok || data.error) {
     console.error("[GeminiAPI] Error response:", JSON.stringify(data.error || data, null, 2));
+    const firstImage = Array.isArray(images) ? images[0] : images;
+    let firstImageLength = 0;
+    let firstImagePreview = "N/A";
+    if (typeof firstImage === "string") {
+      firstImageLength = firstImage.length;
+      firstImagePreview = firstImage.substring(0, 100);
+    } else if (firstImage && typeof firstImage === "object" && firstImage.base64) {
+      firstImageLength = firstImage.base64.length;
+      firstImagePreview = firstImage.base64.substring(0, 100);
+    }
     console.error("[GeminiAPI] Request details:", {
       model,
       responseType,
       promptLength: prompt.length,
       imageCount: images.length,
-      firstImageLength: images[0]?.length || 0,
-      firstImagePreview: images[0]?.substring(0, 100) || "N/A"
+      firstImageLength,
+      firstImagePreview
     });
     const errorMessage = data.error?.message || data.error || "Gemini API Error";
     // Preserve the original error message from Gemini
@@ -788,5 +820,8 @@ module.exports = {
   compositeOutfitGrid,
   optimizeGeminiOutput,
   createPerformanceTracker,
-  createTimingTracker
+  createTimingTracker,
+  resolveModelFromSettings,
+  DEFAULT_IMAGE_MODEL,
+  DEFAULT_BODY_MODEL
 };

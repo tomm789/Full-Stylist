@@ -1,0 +1,20 @@
+-- Add per-generation AI model settings and lock flags
+alter table public.user_settings
+  add column if not exists ai_model_outfit_render text not null default 'gemini-2.5-flash-image',
+  add column if not exists ai_model_outfit_mannequin text not null default 'gemini-2.5-flash-image',
+  add column if not exists ai_model_wardrobe_item_generate text not null default 'gemini-2.5-flash-image',
+  add column if not exists ai_model_wardrobe_item_render text not null default 'gemini-2.5-flash-image',
+  add column if not exists ai_model_product_shot text not null default 'gemini-2.5-flash-image',
+  add column if not exists ai_model_headshot_generate text not null default 'gemini-2.5-flash-image',
+  add column if not exists ai_model_body_shot_generate text not null default 'gemini-3-pro-image',
+  add column if not exists ai_model_auto_tag text not null default 'gemini-2.5-flash-image',
+  add column if not exists ai_model_style_advice text not null default 'gemini-2.5-flash-image',
+  add column if not exists ai_model_lock_outfit_render boolean not null default false,
+  add column if not exists ai_model_lock_outfit_mannequin boolean not null default false,
+  add column if not exists ai_model_lock_wardrobe_item_generate boolean not null default false,
+  add column if not exists ai_model_lock_wardrobe_item_render boolean not null default false,
+  add column if not exists ai_model_lock_product_shot boolean not null default false,
+  add column if not exists ai_model_lock_headshot_generate boolean not null default false,
+  add column if not exists ai_model_lock_body_shot_generate boolean not null default true,
+  add column if not exists ai_model_lock_auto_tag boolean not null default true,
+  add column if not exists ai_model_lock_style_advice boolean not null default true;

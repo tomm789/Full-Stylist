@@ -28,3 +28,5 @@ export { useAddToHomeScreenDetection } from './useAddToHomeScreenDetection';
 
 // Find Similar
 export { useFindSimilar } from './useFindSimilar';
+export { useHideHeaderOnScroll } from './useHideHeaderOnScroll';
+export { useLookbookSelection } from './lookbooks/useLookbookSelection';

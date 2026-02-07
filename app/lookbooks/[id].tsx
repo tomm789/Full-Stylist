@@ -84,13 +84,8 @@ export default function LookbookDetailScreen() {
     return (
       <View style={styles.container}>
         <Header
-          leftContent={
-            <HeaderActionButton
-              label="Back"
-              onPress={() => router.back()}
-            />
-          }
-        />
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
+      />
         <View style={styles.loadingContainer}>
           <LoadingSpinner size="large" />
         </View>
@@ -102,13 +97,8 @@ export default function LookbookDetailScreen() {
     return (
       <View style={styles.container}>
         <Header
-          leftContent={
-            <HeaderActionButton
-              label="Back"
-              onPress={() => router.back()}
-            />
-          }
-        />
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
+      />
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Lookbook not found</Text>
         </View>
@@ -120,12 +110,7 @@ export default function LookbookDetailScreen() {
     <View style={styles.container}>
       {/* Header */}
       <Header
-        leftContent={
-          <HeaderActionButton
-            label="Back"
-            onPress={() => router.back()}
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         rightContent={
           <View style={styles.headerActions}>
             {outfitsState.length > 0 && (

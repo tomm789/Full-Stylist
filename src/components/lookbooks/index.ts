@@ -12,3 +12,5 @@ export { LookbookHeader } from './LookbookHeader';
 export { LookbookOutfitGrid } from './LookbookOutfitGrid';
 export { AddOutfitsModal } from './AddOutfitsModal';
 export { OutfitActionsMenu } from './OutfitActionsMenu';
+export { default as LookbookCreatorBar } from './LookbookCreatorBar';
+export { default as LookbookPickerModal } from './LookbookPickerModal';

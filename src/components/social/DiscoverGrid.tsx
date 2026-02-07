@@ -28,6 +28,19 @@ interface DiscoverGridProps {
   onRefresh: () => Promise<void>;
   onLoadMore: () => Promise<void>;
   hasMore: boolean;
+  alignLeft?: boolean;
+  onItemPress?: (item: FeedItem) => void;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelection?: (outfitId: string, imageUrl?: string | null) => void;
+  onItemLongPress?: (item: FeedItem) => void;
+  onScroll?: (event: any) => void;
+  scrollEventThrottle?: number;
+  scrollEnabled?: boolean;
+  emptyTitle?: string;
+  emptyMessage?: string;
+  emptyIcon?: keyof typeof Ionicons.glyphMap;
+  showOwnerOverlay?: boolean;
 }
 
 export function DiscoverGrid({
@@ -38,10 +51,28 @@ export function DiscoverGrid({
   onRefresh,
   onLoadMore,
   hasMore,
+  alignLeft = false,
+  onItemPress,
+  selectionMode = false,
+  selectedIds,
+  onToggleSelection,
+  onItemLongPress,
+  onScroll,
+  scrollEventThrottle,
+  scrollEnabled = true,
+  emptyTitle = 'No public posts yet',
+  emptyMessage = 'Check back later for new content from the community',
+  emptyIcon = 'globe-outline',
+  showOwnerOverlay = true,
 }: DiscoverGridProps) {
   const router = useRouter();
 
   const handlePostPress = (item: FeedItem) => {
+    if (onItemPress) {
+      onItemPress(item);
+      return;
+    }
+
     const post = item.post;
     if (!post) return;
 
@@ -64,11 +95,28 @@ export function DiscoverGrid({
     if (!entity) return null;
 
     const imageUrl = images.get(entity.id);
+    const isOutfit = item.post?.entity_type === 'outfit';
+    const isSelected = Boolean(isOutfit && selectedIds?.has(entity.id));
+
+    const handlePress = () => {
+      if (selectionMode && isOutfit && onToggleSelection) {
+        onToggleSelection(entity.id, imageUrl || null);
+        return;
+      }
+      handlePostPress(item);
+    };
+
+    const handleLongPress = () => {
+      if (!isOutfit || !onItemLongPress) return;
+      onItemLongPress(item);
+    };
 
     return (
       <TouchableOpacity
-        style={styles.gridItem}
-        onPress={() => handlePostPress(item)}
+        style={[styles.gridItem, alignLeft && styles.gridItemFixed]}
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+        delayLongPress={500}
         activeOpacity={0.8}
       >
         {imageUrl ? (
@@ -87,16 +135,22 @@ export function DiscoverGrid({
             />
           </View>
         )}
-        {/* Owner handle overlay */}
-        <TouchableOpacity
-          style={styles.ownerOverlay}
-          onPress={() => handleOwnerPress(item)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.ownerHandle} numberOfLines={1}>
-            @{item.owner?.handle || 'unknown'}
-          </Text>
-        </TouchableOpacity>
+        {isSelected && (
+          <View style={styles.selectedBadge}>
+            <Text style={styles.selectedBadgeText}>✓</Text>
+          </View>
+        )}
+        {showOwnerOverlay && (
+          <TouchableOpacity
+            style={styles.ownerOverlay}
+            onPress={() => handleOwnerPress(item)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.ownerHandle} numberOfLines={1}>
+              @{item.owner?.handle || 'unknown'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
     );
   };
@@ -117,7 +171,10 @@ export function DiscoverGrid({
       numColumns={3}
       style={styles.gridList}
       contentContainerStyle={styles.gridContent}
-      columnWrapperStyle={styles.gridRow}
+      columnWrapperStyle={[styles.gridRow, alignLeft && styles.gridRowLeft]}
+      onScroll={onScroll}
+      scrollEventThrottle={scrollEventThrottle}
+      scrollEnabled={scrollEnabled}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
@@ -125,11 +182,9 @@ export function DiscoverGrid({
       onEndReachedThreshold={0.5}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
-          <Ionicons name="globe-outline" size={48} color={colors.gray400} />
-          <Text style={styles.emptyText}>No public posts yet</Text>
-          <Text style={styles.emptySubtext}>
-            Check back later for new content from the community
-          </Text>
+          <Ionicons name={emptyIcon} size={48} color={colors.gray400} />
+          <Text style={styles.emptyText}>{emptyTitle}</Text>
+          <Text style={styles.emptySubtext}>{emptyMessage}</Text>
         </View>
       }
       ListFooterComponent={
@@ -156,11 +211,20 @@ const styles = StyleSheet.create({
   gridRow: {
     gap: 1,
   },
+  gridRowLeft: {
+    justifyContent: 'flex-start',
+  },
   gridItem: {
     flex: 1,
     aspectRatio: 3 / 4,
     margin: 0.5,
     position: 'relative',
+  },
+  gridItemFixed: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: '33.333333%',
+    maxWidth: '33.333333%',
   },
   gridImage: {
     width: '100%',
@@ -173,6 +237,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundTertiary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  selectedBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectedBadgeText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.bold,
   },
   ownerOverlay: {
     position: 'absolute',

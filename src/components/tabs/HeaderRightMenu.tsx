@@ -3,18 +3,21 @@
  * Right header menu with notifications and profile menu
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   TouchableOpacity,
   StyleSheet,
-  Text,
+  Text as RNText,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal';
+import { FullScreenMenuModal } from '@/components/tabs';
+import { theme } from '@/styles';
+
+const { colors, spacing, borderRadius, typography } = theme;
 
 export function HeaderRightMenu() {
   const router = useRouter();
@@ -26,17 +29,47 @@ export function HeaderRightMenu() {
     setShowMenu(false);
 
     switch (action) {
+      case 'profile_headshots':
+        router.push('/(tabs)/profile?tab=headshots' as any);
+        break;
       case 'outfits':
         router.push('/(tabs)/outfits' as any);
         break;
+      case 'outfits_explore':
+        router.push('/(tabs)/outfits?tab=explore' as any);
+        break;
+      case 'outfits_following':
+        router.push('/(tabs)/outfits?tab=following' as any);
+        break;
+      case 'lookbooks':
+        router.push('/(tabs)/outfits/lookbooks' as any);
+        break;
+      case 'calendar':
+        router.push('/(tabs)/calendar' as any);
+        break;
+      case 'wardrobe':
+        router.push('/(tabs)/wardrobe' as any);
+        break;
       case 'profile':
         router.push('/(tabs)/profile' as any);
+        break;
+      case 'search':
+        router.push('/search' as any);
+        break;
+      case 'notifications':
+        router.push('/notifications' as any);
         break;
       case 'settings':
         router.push('/account-settings' as any);
         break;
       case 'feedback':
         router.push('/feedback' as any);
+        break;
+      case 'hair_makeup':
+        router.push('/hair-and-make-up' as any);
+        break;
+      case 'outfit_archive':
+        router.push('/archive' as any);
         break;
       case 'logout':
         await signOut();
@@ -45,24 +78,155 @@ export function HeaderRightMenu() {
     }
   };
 
+  const gridItems = useMemo(
+    () => [
+      {
+        key: 'outfits_explore',
+        label: 'Explore',
+        icon: 'compass-outline' as const,
+        description: 'Discover new looks',
+        keywords: ['discover', 'trending', 'inspire'],
+        onPress: () => handleMenuOption('outfits_explore'),
+      },
+      {
+        key: 'outfits_following',
+        label: 'Following',
+        icon: 'people-outline' as const,
+        description: 'Outfits from people you follow',
+        keywords: ['feed', 'friends', 'social'],
+        onPress: () => handleMenuOption('outfits_following'),
+      },
+      {
+        key: 'profile',
+        label: 'Profile',
+        icon: 'person-outline' as const,
+        description: 'Your account and stats',
+        keywords: ['account', 'stats', 'bio'],
+        onPress: () => handleMenuOption('profile'),
+      },
+      {
+        key: 'headshots',
+        label: 'Headshots',
+        icon: 'camera-outline' as const,
+        description: 'Generate a new headshot',
+        keywords: ['model', 'studio', 'selfie', 'portrait'],
+        onPress: () => handleMenuOption('profile_headshots'),
+      },
+      {
+        key: 'lookbooks',
+        label: 'Lookbooks',
+        icon: 'book-outline' as const,
+        description: 'Highlights and personal lookbooks',
+        keywords: ['highlights', 'collections'],
+        onPress: () => handleMenuOption('lookbooks'),
+      },
+      {
+        key: 'outfits',
+        label: 'Outfits',
+        icon: 'sparkles-outline' as const,
+        description: 'Your saved and created outfits',
+        keywords: ['looks', 'styling', 'saved'],
+        onPress: () => handleMenuOption('outfits'),
+      },
+      {
+        key: 'wardrobe',
+        label: 'Wardrobe',
+        icon: 'shirt-outline' as const,
+        description: 'Browse items and collections',
+        keywords: ['closet', 'items', 'clothes', 'collection'],
+        onPress: () => handleMenuOption('wardrobe'),
+      },
+      {
+        key: 'calendar',
+        label: 'Calendar',
+        icon: 'calendar-outline' as const,
+        description: 'Plan and schedule outfits',
+        keywords: ['schedule', 'plan', 'events', 'dates'],
+        onPress: () => handleMenuOption('calendar'),
+      },
+    ],
+    [handleMenuOption, router]
+  );
+
+  const actionItems = useMemo(
+    () => [
+      {
+        key: 'feedback',
+        label: 'Feedback',
+        icon: 'chatbubbles-outline' as const,
+        description: 'Share ideas and report issues',
+        keywords: ['support', 'help', 'bug', 'idea'],
+        onPress: () => handleMenuOption('feedback'),
+      },
+      {
+        key: 'hair_makeup',
+        label: 'Hair & Make-Up',
+        icon: 'cut-outline' as const,
+        description: 'Preset styles for headshots',
+        keywords: ['hair', 'makeup', 'headshot', 'preset', 'style', 'beauty'],
+        onPress: () => handleMenuOption('hair_makeup'),
+      },
+      {
+        key: 'outfit_archive',
+        label: 'Archive',
+        icon: 'archive-outline' as const,
+        description: 'View archived items',
+        keywords: ['archive', 'hidden', 'storage', 'past'],
+        onPress: () => handleMenuOption('outfit_archive'),
+      },
+      {
+        key: 'notifications',
+        label: 'Notifications',
+        icon: 'notifications-outline' as const,
+        description: 'Mentions, likes, and comments',
+        keywords: ['alerts', 'mentions', 'likes', 'comments'],
+        onPress: () => handleMenuOption('notifications'),
+      },
+      {
+        key: 'settings',
+        label: 'Account Settings',
+        icon: 'settings-outline' as const,
+        description: 'Preferences and privacy',
+        keywords: [
+          'settings',
+          'preferences',
+          'privacy',
+          'model',
+          'studio',
+          'headshot',
+          'bodyshot',
+        ],
+        onPress: () => handleMenuOption('settings'),
+      },
+      {
+        key: 'logout',
+        label: 'Log Out',
+        icon: 'log-out-outline' as const,
+        onPress: () => handleMenuOption('logout'),
+        tone: 'destructive' as const,
+      },
+    ],
+    [handleMenuOption]
+  );
+
   return (
     <View style={styles.headerRightContainer}>
       <TouchableOpacity
         style={styles.iconButton}
         onPress={() => router.push('/search')}
       >
-        <Ionicons name="search-outline" size={24} color="#000" />
+        <Ionicons name="search-outline" size={24} color={colors.textPrimary} />
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.iconButton}
         onPress={() => router.push('/notifications')}
       >
-        <Ionicons name="notifications-outline" size={24} color="#000" />
+        <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
         {unreadCount > 0 && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>
+            <RNText style={styles.badgeText}>
               {unreadCount > 99 ? '99+' : unreadCount}
-            </Text>
+            </RNText>
           </View>
         )}
       </TouchableOpacity>
@@ -70,53 +234,16 @@ export function HeaderRightMenu() {
         style={styles.iconButton}
         onPress={() => setShowMenu(true)}
       >
-        <Ionicons name="menu-outline" size={24} color="#000" />
+        <Ionicons name="menu-outline" size={24} color={colors.textPrimary} />
       </TouchableOpacity>
 
-      <DropdownMenuModal
+      <FullScreenMenuModal
         visible={showMenu}
         onClose={() => setShowMenu(false)}
-        fullWidth
-      >
-        <Text style={styles.menuTitle}>Menu</Text>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleMenuOption('outfits')}
-        >
-          <Ionicons name="shirt-outline" size={20} color="#000" />
-          <Text style={styles.menuItemText}>All Outfits</Text>
-        </TouchableOpacity>
-        <View style={styles.menuDivider} />
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleMenuOption('profile')}
-        >
-          <Ionicons name="person-outline" size={20} color="#000" />
-          <Text style={styles.menuItemText}>My Profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleMenuOption('settings')}
-        >
-          <Ionicons name="settings-outline" size={20} color="#000" />
-          <Text style={styles.menuItemText}>Account Settings</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleMenuOption('feedback')}
-        >
-          <Ionicons name="chatbubbles-outline" size={20} color="#000" />
-          <Text style={styles.menuItemText}>Feedback</Text>
-        </TouchableOpacity>
-        <View style={styles.menuDivider} />
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handleMenuOption('logout')}
-        >
-          <Ionicons name="log-out-outline" size={20} color="#ff3b30" />
-          <Text style={[styles.menuItemText, styles.logoutText]}>Log Out</Text>
-        </TouchableOpacity>
-      </DropdownMenuModal>
+        gridTitle=""
+        gridItems={gridItems}
+        actionItems={actionItems}
+      />
     </View>
   );
 }
@@ -125,58 +252,28 @@ const styles = StyleSheet.create({
   headerRightContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   iconButton: {
     position: 'relative',
-    padding: 8,
-    marginHorizontal: 4,
+    padding: spacing.sm,
+    marginHorizontal: spacing.xs,
   },
   badge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#ff3b30',
-    borderRadius: 10,
+    top: spacing.xs,
+    right: spacing.xs,
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.round,
     minWidth: 18,
     height: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.xs,
   },
   badgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  menuTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    gap: 12,
-    borderRadius: 8,
-  },
-  menuItemText: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: '500',
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 4,
-  },
-  logoutText: {
-    color: '#ff3b30',
+    color: colors.textLight,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
   },
 });

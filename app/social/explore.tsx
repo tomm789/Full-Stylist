@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getPublicOutfits } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
+import { commonStyles, theme } from '@/styles';
 
 interface PublicOutfit {
   id: string;
@@ -75,7 +76,11 @@ export default function ExploreScreen() {
   }, [user]);
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <View style={commonStyles.loadingContainer}>
+        <LoadingSpinner />
+      </View>
+    );
   }
 
   return (
@@ -132,39 +137,39 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   grid: {
-    padding: 8,
+    padding: theme.spacing.sm,
   },
   outfitCard: {
     flex: 1,
-    margin: 8,
-    borderRadius: 12,
-    backgroundColor: '#f9f9f9',
+    margin: theme.spacing.sm,
+    borderRadius: theme.borderRadius.lg,
+    backgroundColor: theme.colors.backgroundSecondary,
     overflow: 'hidden',
   },
   outfitImage: {
     width: '100%',
     aspectRatio: 3 / 4,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.colors.backgroundTertiary,
   },
   imagePlaceholder: {
     width: '100%',
     aspectRatio: 3 / 4,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.colors.backgroundTertiary,
   },
   outfitInfo: {
-    padding: 12,
+    padding: theme.spacing.md,
   },
   outfitTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
   },
   userName: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.textSecondary,
   },
 });

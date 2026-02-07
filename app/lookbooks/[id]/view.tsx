@@ -10,6 +10,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +31,7 @@ import {
   Comment,
 } from '@/lib/engagement';
 import { useLookbookDetail, useSlideshow } from '@/hooks/lookbooks';
+import { archiveLookbook, restoreLookbook } from '@/lib/lookbooks';
 import {
   LookbookHeader,
   LookbookOutfitGrid,
@@ -40,7 +43,7 @@ import {
   DropdownMenuItem,
 } from '@/components/shared/modals';
 import { CommentsModal } from '@/components/social';
-import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
+import { Header, HeaderIconButton } from '@/components/shared/layout';
 
 export default function LookbookViewScreen() {
   const { id } = useLocalSearchParams();
@@ -66,6 +69,7 @@ export default function LookbookViewScreen() {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const isOwnLookbook = lookbook?.owner_user_id === user?.id;
 
   useEffect(() => {
     if (id && user) {
@@ -99,6 +103,82 @@ export default function LookbookViewScreen() {
     } catch (error) {
       console.error('Failed to load social engagement', error);
     }
+  };
+
+  const handleArchiveLookbook = async () => {
+    if (!user?.id || !lookbook?.id) return;
+
+    const confirmArchive = async () => {
+      const { error } = await archiveLookbook(user.id, lookbook.id);
+      if (error) {
+        if (Platform.OS === 'web') {
+          alert(error?.message || 'Failed to archive lookbook');
+        } else {
+          Alert.alert('Error', error?.message || 'Failed to archive lookbook');
+        }
+        return;
+      }
+      if (Platform.OS === 'web') {
+        alert('Lookbook archived');
+      } else {
+        Alert.alert('Success', 'Lookbook archived');
+      }
+      await refresh();
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm('Archive this lookbook?')) {
+        void confirmArchive();
+      }
+      return;
+    }
+
+    setTimeout(() => {
+      Alert.alert('Archive lookbook', 'Move this lookbook to your archive?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Archive',
+          style: 'destructive',
+          onPress: confirmArchive,
+        },
+      ]);
+    }, 50);
+  };
+
+  const handleRestoreLookbook = async () => {
+    if (!user?.id || !lookbook?.id) return;
+
+    const confirmRestore = async () => {
+      const { error } = await restoreLookbook(user.id, lookbook.id);
+      if (error) {
+        if (Platform.OS === 'web') {
+          alert(error?.message || 'Failed to restore lookbook');
+        } else {
+          Alert.alert('Error', error?.message || 'Failed to restore lookbook');
+        }
+        return;
+      }
+      if (Platform.OS === 'web') {
+        alert('Lookbook restored');
+      } else {
+        Alert.alert('Success', 'Lookbook restored');
+      }
+      await refresh();
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm('Restore this lookbook?')) {
+        void confirmRestore();
+      }
+      return;
+    }
+
+    setTimeout(() => {
+      Alert.alert('Restore lookbook', 'Move this lookbook back to your lookbooks?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Restore', onPress: confirmRestore },
+      ]);
+    }, 50);
   };
 
   const handleLike = async () => {
@@ -178,12 +258,7 @@ export default function LookbookViewScreen() {
     return (
       <View style={styles.container}>
         <Header
-          leftContent={
-            <HeaderActionButton
-              label="Back"
-              onPress={() => router.back()}
-            />
-          }
+          leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         />
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Lookbook not found</Text>
@@ -196,12 +271,7 @@ export default function LookbookViewScreen() {
     <View style={styles.container}>
       {/* Header */}
       <Header
-        leftContent={
-          <HeaderActionButton
-            label="Back"
-            onPress={() => router.back()}
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         rightContent={
           <HeaderIconButton
             icon="ellipsis-vertical"
@@ -226,6 +296,31 @@ export default function LookbookViewScreen() {
           }}
           disabled={outfits.length === 0 || slideshow.loading}
         />
+        {isOwnLookbook && (
+          <>
+            <View style={styles.menuDivider} />
+            {lookbook?.archived_at ? (
+              <DropdownMenuItem
+                label="Restore"
+                icon="refresh-outline"
+                onPress={() => {
+                  closeMenu();
+                  handleRestoreLookbook();
+                }}
+              />
+            ) : (
+              <DropdownMenuItem
+                label="Archive"
+                icon="archive-outline"
+                onPress={() => {
+                  closeMenu();
+                  handleArchiveLookbook();
+                }}
+                danger
+              />
+            )}
+          </>
+        )}
       </DropdownMenuModal>
 
       <ScrollView style={styles.content}>
@@ -375,5 +470,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontWeight: '600',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 4,
   },
 });

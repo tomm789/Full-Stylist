@@ -21,7 +21,7 @@ export async function getUserProfile(userId: string): Promise<{
  */
 export async function updateUserProfile(
   userId: string,
-  updates: { handle?: string; display_name?: string }
+  updates: { handle?: string; display_name?: string; avatar_url?: string | null }
 ): Promise<{ error: any }> {
   const { error } = await supabase
     .from('users')
@@ -55,7 +55,7 @@ export async function searchUsers(query: string, limit: number = 20): Promise<{
     
     const { data, error } = await supabase
       .from('users')
-      .select('id, handle, display_name')
+      .select('id, handle, display_name, avatar_url')
       .or(`handle.ilike.${searchTerm},display_name.ilike.${searchTerm}`)
       .limit(limit);
 
@@ -93,7 +93,7 @@ export async function getFullUserProfile(userId: string): Promise<{
     // Get user basic info
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, handle, display_name, created_at')
+      .select('id, handle, display_name, created_at, avatar_url')
       .eq('id', userId)
       .single();
 

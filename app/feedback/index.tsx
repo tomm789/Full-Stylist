@@ -15,7 +15,8 @@ import { useRouter } from 'expo-router';
 import { useFeedbackThreads } from '@/hooks/feedback';
 import { FeedbackCard, FeedbackFilterBar } from '@/components/feedback';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { commonStyles } from '@/styles';
+import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 
 export default function FeedbackListScreen() {
   const router = useRouter();
@@ -44,12 +45,7 @@ export default function FeedbackListScreen() {
       <View style={styles.container}>
         <Header
           title="Feedback"
-          leftContent={
-            <HeaderActionButton
-              label="Back"
-              onPress={() => router.back()}
-            />
-          }
+          leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
           rightContent={
             <HeaderActionButton
               label="+ New"
@@ -57,7 +53,9 @@ export default function FeedbackListScreen() {
             />
           }
         />
-        <LoadingSpinner />
+        <View style={commonStyles.loadingContainer}>
+          <LoadingSpinner />
+        </View>
       </View>
     );
   }
@@ -66,12 +64,7 @@ export default function FeedbackListScreen() {
     <View style={styles.container}>
       <Header
         title="Feedback"
-        leftContent={
-          <HeaderActionButton
-            label="Back"
-            onPress={() => router.back()}
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         rightContent={
           <HeaderActionButton
             label="+ New"

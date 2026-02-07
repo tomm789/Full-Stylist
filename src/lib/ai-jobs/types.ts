@@ -196,6 +196,27 @@ export async function triggerHeadshotGenerate(
 }
 
 /**
+ * Trigger headshot_generate job with a fully formed prompt text.
+ * Used for hair & make-up preset variations without touching legacy flow.
+ */
+export async function triggerHeadshotGenerateWithPrompt(
+  userId: string,
+  selfieImageId: string,
+  promptText: string,
+  options?: {
+    outputFolder?: string;
+    skipUserSettingsUpdate?: boolean;
+  }
+): Promise<QueryResult<AIJob>> {
+  return createAIJob(userId, 'headshot_generate', {
+    selfie_image_id: selfieImageId,
+    prompt_text: promptText,
+    output_folder: options?.outputFolder,
+    skip_user_settings_update: options?.skipUserSettingsUpdate,
+  });
+}
+
+/**
  * Trigger body_shot_generate job to create studio model
  * @param headshotImageId Optional headshot to use. If not provided, uses active headshot from user_settings
  */

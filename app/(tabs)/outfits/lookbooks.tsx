@@ -102,7 +102,9 @@ export default function LookbooksScreen() {
             {/* System Lookbooks */}
             {systemLookbooks.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Highlights</Text>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Highlights</Text>
+                </View>
                 <FlatList
                   horizontal
                   data={systemLookbooks}

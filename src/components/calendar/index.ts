@@ -4,7 +4,6 @@
  */
 
 export { default as MonthNavigator } from './MonthNavigator';
-export { default as CalendarGrid } from './CalendarGrid';
 export { default as CalendarDayCell } from './CalendarDayCell';
 export { default as EntryCard } from './EntryCard';
 export { default as SlotPresetSelector } from './SlotPresetSelector';

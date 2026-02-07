@@ -17,7 +17,8 @@ export async function getSystemLookbookOutfits(
       .from('outfits')
       .select('id')
       .eq('owner_user_id', userId)
-      .is('archived_at', null);
+      .is('archived_at', null)
+      .is('deleted_at', null);
 
     switch (type) {
       case 'system_favorites':

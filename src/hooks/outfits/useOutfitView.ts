@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
-import { getOutfit, deleteOutfit } from '@/lib/outfits';
+import { getOutfit, archiveOutfit } from '@/lib/outfits';
 import { getInitialCoverDataUri } from '@/lib/outfits/initialCoverCache';
 import { getWardrobeItemImages } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
@@ -151,7 +151,7 @@ export function useOutfitView({
   const deleteOutfitAction = async () => {
     if (!userId || !outfit) return;
 
-    const { error } = await deleteOutfit(userId, outfit.id);
+    const { error } = await archiveOutfit(userId, outfit.id);
     if (error) {
       throw error;
     }

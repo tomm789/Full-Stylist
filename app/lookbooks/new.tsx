@@ -12,7 +12,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useNewLookbook } from '@/hooks/lookbooks';
 import { OutfitGridSelector } from '@/components/lookbooks';
 import FilterDefinitionEditor from '@/components/FilterDefinitionEditor';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 
 export default function NewLookbookScreen() {
   const router = useRouter();
@@ -42,6 +42,14 @@ export default function NewLookbookScreen() {
     loadOutfits,
   } = useNewLookbook();
 
+  const isDirty =
+    title.trim().length > 0 ||
+    description.trim().length > 0 ||
+    type !== 'custom_manual' ||
+    visibility !== 'followers' ||
+    selectedOutfits.size > 0 ||
+    Object.keys(filterDefinition || {}).length > 0;
+
   // Reload outfits when screen comes into focus (e.g., after deleting an outfit)
   useFocusEffect(
     React.useCallback(() => {
@@ -61,19 +69,15 @@ export default function NewLookbookScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <Header
         title="New Lookbook"
-        leftContent={
-          <HeaderActionButton
-            label="Cancel"
-            onPress={() => router.back()}
-            variant="secondary"
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         rightContent={
-          <HeaderActionButton
-            label="Create"
-            onPress={handleCreate}
-            disabled={saving}
-          />
+          isDirty ? (
+            <HeaderActionButton
+              label="Create"
+              onPress={handleCreate}
+              disabled={saving}
+            />
+          ) : null
         }
       />
 

@@ -5,6 +5,7 @@
 
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import FeedOutfitCard from '@/components/social/FeedOutfitCard';
@@ -117,6 +118,16 @@ export function FeedItemComponent({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
+          {item.owner?.avatar_url ? (
+            <ExpoImage
+              source={{ uri: item.owner.avatar_url }}
+              style={styles.avatar}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <View style={styles.avatarFallback} />
+          )}
           {item.type === 'repost' && (
             <Text style={styles.repostLabel}>
               <TouchableOpacity
@@ -262,6 +273,21 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+  },
+  avatarFallback: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e0e0e0',
   },
   headerRight: {
     flexDirection: 'row',

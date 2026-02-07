@@ -13,9 +13,19 @@ type DropdownMenuModalProps = {
   topOffset?: number;
 
   /**
+   * Distance from bottom of screen (roughly above tab bar)
+   */
+  bottomOffset?: number;
+
+  /**
    * Align the menu to the right edge instead of centered.
    */
   align?: 'center' | 'right';
+
+  /**
+   * Position the menu from the top or bottom of the screen.
+   */
+  placement?: 'top' | 'bottom';
 
   /**
    * Optional extra style for the menu container
@@ -33,14 +43,21 @@ export function DropdownMenuModal({
   onClose,
   children,
   topOffset = layout.headerHeightWithPadding,
+  bottomOffset = spacing.huge + spacing.md,
   align = 'center',
+  placement = 'top',
   menuStyle,
   fullWidth = false,
 }: DropdownMenuModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable
-        style={[styles.overlay, fullWidth && styles.overlayFullWidth, { paddingTop: topOffset }]}
+        style={[
+          styles.overlay,
+          placement === 'bottom' && styles.overlayBottom,
+          fullWidth && styles.overlayFullWidth,
+          placement === 'top' ? { paddingTop: topOffset } : { paddingBottom: bottomOffset },
+        ]}
         onPress={onClose}
       >
         <View
@@ -64,6 +81,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'flex-start',
     alignItems: 'center',
+  },
+  overlayBottom: {
+    justifyContent: 'flex-end',
   },
   overlayFullWidth: {
     alignItems: 'stretch',
