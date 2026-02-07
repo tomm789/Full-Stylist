@@ -277,6 +277,9 @@ export default function OutfitsScreen() {
       resetScroll();
       setActiveView('feed');
     },
+    onOpenPostFeed: (postId, ownerUserId) => {
+      router.push(`/users/${ownerUserId}/feed?postId=${postId}`);
+    },
     onOpenLookbook: (lookbookId) => router.push(`/lookbooks/${lookbookId}`),
     outfitImages,
     lookbookImages,
@@ -538,9 +541,6 @@ export default function OutfitsScreen() {
             onScrollToIndexFailed={handleMyOutfitsScrollToIndexFailed}
             refreshing={refreshing}
             onRefresh={refresh}
-            gridListStyle={styles.gridList}
-            gridContentStyle={styles.gridContent}
-            gridRowStyle={styles.gridRowLeft}
             feedListStyle={styles.feedListWrapper}
             feedContentStyle={styles.feedList}
             searchQuery={filters.searchQuery}
@@ -608,7 +608,6 @@ export default function OutfitsScreen() {
             message: 'Follow people to see their posts, or check out Explore!',
           }}
           styles={styles}
-          alignLeft
         />
       )}
 

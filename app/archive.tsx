@@ -9,7 +9,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
   RefreshControl,
   Alert,
   Platform,
@@ -24,6 +23,7 @@ import ItemGrid from '@/components/wardrobe/ItemGrid';
 import { Header, LoadingSpinner } from '@/components/shared';
 import { HeaderIconButton } from '@/components/shared/layout';
 import { DropdownMenuModal, DropdownMenuItem } from '@/components/shared/modals';
+import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import { theme, commonStyles } from '@/styles';
 import { restoreOutfit } from '@/lib/outfits';
 import { restoreLookbook } from '@/lib/lookbooks';
@@ -161,18 +161,11 @@ export default function ArchiveScreen() {
     }
 
     return (
-      <FlatList
+      <PostGrid
         data={outfitsState.outfits}
         keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.columnWrapper}
-        contentContainerStyle={styles.gridContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={outfitsState.refreshing}
-            onRefresh={outfitsState.refresh}
-          />
-        }
+        refreshing={outfitsState.refreshing}
+        onRefresh={outfitsState.refresh}
         renderItem={({ item }) => {
           const imageUrl = outfitsState.imageCache.get(item.id) ?? null;
           const imageLoading = !outfitsState.imageCache.has(item.id);
@@ -184,7 +177,6 @@ export default function ArchiveScreen() {
               imageLoading={imageLoading}
               onPress={() => router.push(`/outfits/${item.id}/view`)}
               onLongPress={() => setOpenOutfitId(item.id)}
-              style={styles.gridItem}
             />
           );
         }}
@@ -213,21 +205,14 @@ export default function ArchiveScreen() {
     }
 
     return (
-      <FlatList
+      <PostGrid
         data={lookbooksState.lookbooks}
         keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.columnWrapper}
-        contentContainerStyle={styles.gridContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={lookbooksState.loading}
-            onRefresh={lookbooksState.refresh}
-          />
-        }
+        refreshing={lookbooksState.loading}
+        onRefresh={lookbooksState.refresh}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.lookbookCard}
+            style={postGridStyles.gridItem}
             onPress={() => router.push(`/lookbooks/${item.id}`)}
             onLongPress={() => setOpenLookbookId(item.id)}
             delayLongPress={500}
@@ -236,9 +221,9 @@ export default function ArchiveScreen() {
             <View style={styles.lookbookThumbnail}>
               <Text style={styles.lookbookIcon}>📚</Text>
             </View>
-            <View style={styles.lookbookInfo}>
+            <View style={postGridStyles.infoOverlay}>
               <Text style={styles.lookbookTitle} numberOfLines={2}>
-                {item.title}
+                {item.title || 'Untitled lookbook'}
               </Text>
               {item.description ? (
                 <Text style={styles.lookbookDescription} numberOfLines={1}>
@@ -413,17 +398,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  gridContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  columnWrapper: {
-    justifyContent: 'space-between',
-  },
-  gridItem: {
-    marginBottom: spacing.lg,
-  },
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -441,13 +415,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  lookbookCard: {
-    width: '48%',
-    borderRadius: spacing.md,
-    overflow: 'hidden',
-    backgroundColor: colors.backgroundSecondary,
-    marginBottom: spacing.lg,
-  },
   lookbookThumbnail: {
     width: '100%',
     aspectRatio: 3 / 4,
@@ -458,17 +425,14 @@ const styles = StyleSheet.create({
   lookbookIcon: {
     fontSize: 36,
   },
-  lookbookInfo: {
-    padding: spacing.sm,
-  },
   lookbookTitle: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
+    color: colors.white,
   },
   lookbookDescription: {
     fontSize: typography.fontSize.xs,
-    color: colors.textSecondary,
+    color: colors.white,
     marginTop: spacing.xs,
   },
   wardrobeGrid: {

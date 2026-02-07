@@ -53,7 +53,7 @@ export function OnboardingAccountStep({
       >
         {/* Header Section */}
         <View style={styles.headerSection}>
-          <Text style={styles.stepIndicator}>Welcome</Text>
+          <Text style={styles.stepIndicator}>Step 1 of 3</Text>
           <Text style={styles.title}>Create Your Account</Text>
           <Text style={styles.subtitle}>
             Set up your profile to get started with Full-Stylist

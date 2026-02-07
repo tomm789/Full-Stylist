@@ -31,7 +31,15 @@ ai_jobs:
 ## 2) body_shot_generate (studio model creation)
 ### input
 {
-  "body_photo_image_id": "uuid"
+  "body_photo_image_id": "uuid",
+  "headshot_image_id": "uuid"
+}
+
+or
+
+{
+  "selfie_image_id": "uuid",
+  "mirror_selfie_image_id": "uuid"
 }
 
 ### result
@@ -41,8 +49,9 @@ ai_jobs:
 }
 
 ### notes
-- Requires user to have headshot_image_id already set in user_settings
-- Combines the generated headshot with user's body photo to create studio model
+- If selfie + mirror_selfie are provided, uses those directly (no headshot required)
+- Otherwise requires user to have headshot_image_id already set in user_settings
+- Combines the head reference with user's body photo to create studio model
 - Uses "8-heads-tall" rule for proper body proportions
 - Result is stored as body_shot_image_id in user_settings
 
@@ -218,6 +227,9 @@ Same as auto_tag (attributes, suggested_title, suggested_notes, updates_applied)
     }
   ]
 }
+
+### notes
+- If reference_image_id is provided, render uses the user's body shot plus the reference image (try-on mode) and ignores stacked/selected item images.
 
 ## 7) lookbook_generate (optional later)
 ### input

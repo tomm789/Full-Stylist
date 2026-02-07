@@ -20,6 +20,7 @@ import { useUserProfile, useFollowStatus } from '@/hooks/social';
 import { ProfileHeader } from '@/components/profile';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
 import { commonStyles } from '@/styles';
+import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 
 /** Header component for user profile; accepts profile + stats and renders via ProfileHeader */
 export function UserProfileHeader({
@@ -182,30 +183,32 @@ export default function UserProfileScreen() {
               }
             />
           ) : (
-            <View style={styles.grid}>
-              {outfits.map((outfit) => {
-                const imageUrl = outfitImages.get(outfit.id);
-                const wearCount = outfitWearCounts.get(outfit.id) || 0;
+            <PostGrid
+              data={outfits}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+              renderItem={({ item }) => {
+                const imageUrl = outfitImages.get(item.id);
+                const wearCount = outfitWearCounts.get(item.id) || 0;
 
                 return (
                   <TouchableOpacity
-                    key={outfit.id}
-                    style={styles.gridItem}
-                    onPress={() => router.push(`/outfits/${outfit.id}`)}
+                    style={postGridStyles.gridItem}
+                    onPress={() => router.push(`/outfits/${item.id}`)}
                   >
                     {imageUrl ? (
                       <ExpoImage
                         source={{ uri: imageUrl }}
-                        style={styles.gridImage}
+                        style={postGridStyles.gridImage}
                         contentFit="cover"
                         cachePolicy="memory-disk"
                       />
                     ) : (
-                      <View style={styles.imagePlaceholder} />
+                      <View style={postGridStyles.gridImagePlaceholder} />
                     )}
-                    <View style={styles.outfitOverlay}>
+                    <View style={postGridStyles.infoOverlay}>
                       <Text style={styles.outfitTitle} numberOfLines={1}>
-                        {outfit.title}
+                        {item.title}
                       </Text>
                       {wearCount > 0 && (
                         <View style={styles.wearBadge}>
@@ -216,8 +219,8 @@ export default function UserProfileScreen() {
                     </View>
                   </TouchableOpacity>
                 );
-              })}
-            </View>
+              }}
+            />
           )
         ) : lookbooks.length === 0 ? (
           <EmptyState
@@ -230,38 +233,39 @@ export default function UserProfileScreen() {
             }
           />
         ) : (
-          <View style={styles.grid}>
-            {lookbooks.map((lookbook) => {
-              const thumbnailUrl = lookbookImages.get(lookbook.id);
-
+          <PostGrid
+            data={lookbooks}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+            renderItem={({ item }) => {
+              const thumbnailUrl = lookbookImages.get(item.id);
               return (
                 <TouchableOpacity
-                  key={lookbook.id}
-                  style={styles.gridItem}
-                  onPress={() => router.push(`/lookbooks/${lookbook.id}`)}
+                  style={postGridStyles.gridItem}
+                  onPress={() => router.push(`/lookbooks/${item.id}`)}
                 >
                   {thumbnailUrl ? (
                     <ExpoImage
                       source={{ uri: thumbnailUrl }}
-                      style={styles.gridImage}
+                      style={postGridStyles.gridImage}
                       contentFit="cover"
                       cachePolicy="memory-disk"
                     />
                   ) : (
-                    <View style={styles.imagePlaceholder} />
+                    <View style={postGridStyles.gridImagePlaceholder} />
                   )}
-                  <View style={styles.lookbookOverlay}>
+                  <View style={postGridStyles.infoOverlay}>
                     <Text style={styles.lookbookTitle} numberOfLines={2}>
-                      {lookbook.title}
+                      {item.title}
                     </Text>
                     <Text style={styles.lookbookCount}>
-                      {lookbook.outfit_count || 0} outfits
+                      {item.outfit_count || 0} outfits
                     </Text>
                   </View>
                 </TouchableOpacity>
               );
-            })}
-          </View>
+            }}
+          />
         )}
       </View>
     </ScrollView>
@@ -305,37 +309,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 400,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 8,
-  },
-  gridItem: {
-    width: '50%',
-    aspectRatio: 3 / 4,
-    padding: 4,
-  },
-  gridImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-  },
-  outfitOverlay: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    right: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 8,
-    padding: 8,
-  },
   outfitTitle: {
     fontSize: 12,
     fontWeight: '600',
@@ -350,15 +323,6 @@ const styles = StyleSheet.create({
   wearCount: {
     fontSize: 11,
     color: '#fff',
-  },
-  lookbookOverlay: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    right: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 8,
-    padding: 8,
   },
   lookbookTitle: {
     fontSize: 13,

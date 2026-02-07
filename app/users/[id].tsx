@@ -307,7 +307,6 @@ export default function UserProfileScreen() {
               onRefresh={handleFeedRefresh}
               onLoadMore={async () => {}}
               hasMore={false}
-              alignLeft
               onItemPress={handleOpenFeedPost}
               scrollEnabled={false}
               emptyIcon="shirt-outline"
@@ -328,7 +327,6 @@ export default function UserProfileScreen() {
               onRefresh={handleFeedRefresh}
               onLoadMore={async () => {}}
               hasMore={false}
-              alignLeft
               onItemPress={handleOpenFeedPost}
               scrollEnabled={false}
               emptyIcon="book-outline"

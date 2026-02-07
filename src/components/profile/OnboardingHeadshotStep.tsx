@@ -1,13 +1,12 @@
 /**
  * OnboardingHeadshotStep Component (Improved)
- * Headshot generation step in onboarding - matches styling of headshot/new.tsx
+ * Selfie capture step in onboarding
  */
 
 import React from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -20,30 +19,23 @@ import { theme } from '@/styles';
 const { colors, spacing, borderRadius, typography } = theme;
 
 interface OnboardingHeadshotStepProps {
-  onComplete: () => void;
   onSkip: () => void;
-  generating: boolean;
-  loadingMessage: string;
+  processing: boolean;
   uploadedUri: string | null;
-  hairStyle?: string;
-  makeupStyle?: string;
-  onPickImage: () => void;
-  onGenerate: () => void;
-  onHairStyleChange?: (style: string) => void;
-  onMakeupStyleChange?: (style: string) => void;
+  onPickCamera: () => void;
+  onPickLibrary: () => void;
+  onUndo: () => void;
+  onAccept: () => void;
 }
 
 export function OnboardingHeadshotStep({
   onSkip,
-  generating,
-  loadingMessage,
+  processing,
   uploadedUri,
-  hairStyle = '',
-  makeupStyle = '',
-  onPickImage,
-  onGenerate,
-  onHairStyleChange,
-  onMakeupStyleChange,
+  onPickCamera,
+  onPickLibrary,
+  onUndo,
+  onAccept,
 }: OnboardingHeadshotStepProps) {
   return (
     <SafeAreaView style={styles.container}>
@@ -54,121 +46,89 @@ export function OnboardingHeadshotStep({
       >
         {/* Header Section */}
         <View style={styles.headerSection}>
-          <Text style={styles.stepIndicator}>Step 1 of 2</Text>
-          <Text style={styles.title}>Create Your Headshot</Text>
-          <Text style={styles.subtitle}>
-            Upload a selfie to generate your professional headshot
-          </Text>
+          <Text style={styles.stepIndicator}>Step 2 of 3</Text>
+          <Text style={styles.title}>Take a Selfie</Text>
         </View>
 
-        {!uploadedUri ? (
-          <View style={styles.uploadSection}>
-            <Text style={styles.sectionTitle}>Take or Upload a Photo</Text>
-            <Text style={styles.hint}>
-              Take a selfie or upload a photo to generate a professional headshot
+        <View style={styles.instructions}>
+          <Text style={styles.instructionsTitle}>For best results:</Text>
+          <View style={styles.instructionsItem}>
+            <Text style={styles.instructionsBullet}>•</Text>
+            <Text style={styles.instructionsText}>
+              Find the best lighting to illuminate your head and shoulders
             </Text>
-
-            <TouchableOpacity
-              style={styles.optionButton}
-              onPress={onPickImage}
-              disabled={generating}
-            >
-              <Ionicons name="camera-outline" size={32} color={colors.primary} />
-              <View style={styles.optionTextContainer}>
-                <Text style={styles.optionTitle}>Take Photo</Text>
-                <Text style={styles.optionSubtext}>Use your camera</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.optionButton}
-              onPress={onPickImage}
-              disabled={generating}
-            >
-              <Ionicons name="images-outline" size={32} color={colors.primary} />
-              <View style={styles.optionTextContainer}>
-                <Text style={styles.optionTitle}>Upload Photo</Text>
-                <Text style={styles.optionSubtext}>Choose from library</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color={colors.gray400} />
-            </TouchableOpacity>
           </View>
-        ) : (
-          <View style={styles.previewSection}>
-            <Text style={styles.sectionTitle}>Your Photo</Text>
+          <View style={styles.instructionsItem}>
+            <Text style={styles.instructionsBullet}>•</Text>
+            <Text style={styles.instructionsText}>
+              Hold the phone as far in front of your body as you can
+            </Text>
+          </View>
+          <View style={styles.instructionsItem}>
+            <Text style={styles.instructionsBullet}>•</Text>
+            <Text style={styles.instructionsText}>
+              Don't use wide-angle mode to take the photo
+            </Text>
+          </View>
+        </View>
 
-            <View style={styles.imagePreviewContainer}>
+        <View style={styles.previewSection}>
+          <View style={styles.imagePreviewContainer}>
+            {uploadedUri ? (
               <ExpoImage
                 source={{ uri: uploadedUri }}
                 style={styles.imagePreview}
                 contentFit="cover"
               />
-            </View>
-
-            <View style={styles.refineSection}>
-              <Text style={styles.sectionTitle}>Refine Your Headshot</Text>
-              <Text style={styles.hint}>
-                Customize your hairstyle and makeup (optional)
-              </Text>
-
-              {onHairStyleChange && (
-                <>
-                  <Text style={styles.label}>Hairstyle</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g., Shoulder-length wavy hair, Short pixie cut"
-                    value={hairStyle}
-                    onChangeText={onHairStyleChange}
-                    editable={!generating}
-                    multiline
-                  />
-                  <Text style={styles.inputHint}>
-                    Describe your desired hairstyle or leave blank to keep original
-                  </Text>
-                </>
-              )}
-
-              {onMakeupStyleChange && (
-                <>
-                  <Text style={styles.label}>Makeup Style</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g., Natural look, Bold red lips, Smokey eye"
-                    value={makeupStyle}
-                    onChangeText={onMakeupStyleChange}
-                    editable={!generating}
-                    multiline
-                  />
-                  <Text style={styles.inputHint}>
-                    Describe your desired makeup or leave blank for natural look
-                  </Text>
-                </>
-              )}
-            </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.placeholder}
+                onPress={onPickCamera}
+                disabled={processing}
+              >
+                <Ionicons name="camera-outline" size={42} color={colors.textSecondary} />
+                <Text style={styles.placeholderText}>Tap to open camera</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
-              style={[
-                styles.generateButton,
-                generating && styles.generateButtonDisabled,
-              ]}
-              onPress={onGenerate}
-              disabled={generating}
+              style={styles.mediaButton}
+              onPress={onPickLibrary}
+              disabled={processing}
             >
-              <Ionicons name="sparkles-outline" size={20} color={colors.textLight} />
-              <Text style={styles.generateButtonText}>
-                {generating ? loadingMessage : 'Generate Headshot'}
-              </Text>
+              <Ionicons name="images-outline" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
-        )}
+
+          {uploadedUri ? (
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={styles.undoButton}
+                onPress={onUndo}
+                disabled={processing}
+              >
+                <Ionicons name="arrow-undo-outline" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.acceptButton,
+                  processing && styles.acceptButtonDisabled,
+                ]}
+                onPress={onAccept}
+                disabled={processing}
+              >
+                <Text style={styles.acceptButtonText}>Continue</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </View>
 
         {/* Footer Actions */}
         <View style={styles.footerSection}>
           <TouchableOpacity
             style={styles.skipButton}
             onPress={onSkip}
-            disabled={generating}
+            disabled={processing}
           >
             <Text style={styles.skipButtonText}>Skip for Now</Text>
           </TouchableOpacity>
@@ -190,7 +150,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   headerSection: {
-    marginBottom: spacing.xxxl,
+    marginBottom: spacing.lg,
   },
   stepIndicator: {
     fontSize: typography.fontSize.md,
@@ -206,48 +166,30 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
-  subtitle: {
-    fontSize: typography.fontSize.base,
-    color: colors.textSecondary,
-    lineHeight: 22,
+  instructions: {
+    marginBottom: spacing.xxl,
   },
-  uploadSection: {
-    gap: spacing.lg,
-    marginBottom: spacing.xxxl,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    marginBottom: spacing.sm,
-    color: colors.textPrimary,
-  },
-  hint: {
+  instructionsTitle: {
     fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-  },
-  optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.xl,
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    gap: spacing.lg,
-  },
-  optionTextContainer: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  instructionsItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
     marginBottom: spacing.xs,
   },
-  optionSubtext: {
+  instructionsBullet: {
     fontSize: typography.fontSize.md,
     color: colors.textSecondary,
+    lineHeight: typography.lineHeight.normal,
+  },
+  instructionsText: {
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+    flex: 1,
   },
   previewSection: {
     gap: spacing.lg,
@@ -259,50 +201,65 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     backgroundColor: colors.backgroundTertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   imagePreview: {
     width: '100%',
     height: '100%',
   },
-  refineSection: {
-    marginTop: spacing.sm,
-  },
-  label: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    marginBottom: spacing.sm,
-    marginTop: spacing.lg,
-    color: colors.textPrimary,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    fontSize: typography.fontSize.base,
-    backgroundColor: colors.backgroundSecondary,
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  inputHint: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textTertiary,
-    marginTop: spacing.xs,
-  },
-  generateButton: {
-    flexDirection: 'row',
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+  placeholder: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.xxl,
     gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
   },
-  generateButtonDisabled: {
+  placeholderText: {
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  mediaButton: {
+    position: 'absolute',
+    right: spacing.md,
+    bottom: spacing.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  undoButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.backgroundSecondary,
+  },
+  acceptButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acceptButtonDisabled: {
     opacity: 0.6,
   },
-  generateButtonText: {
+  acceptButtonText: {
     color: colors.textLight,
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semibold,
@@ -310,8 +267,6 @@ const styles = StyleSheet.create({
   footerSection: {
     marginTop: spacing.xxl,
     paddingTop: spacing.xxl,
-    borderTopWidth: 1,
-    borderTopColor: colors.backgroundTertiary,
   },
   skipButton: {
     padding: spacing.lg,

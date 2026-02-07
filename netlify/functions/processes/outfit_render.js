@@ -11,6 +11,7 @@ const {
   callGeminiAPI,
   optimizeGeminiOutput,
   resolveModelFromSettings,
+  getGeminiApiVersion,
   DEFAULT_IMAGE_MODEL
 } = require("../utils");
 
@@ -60,7 +61,8 @@ Respond with ONLY the JSON object, no additional text.`;
 
     // Call Gemini with text-only model (much faster than image generation)
     const model = "gemini-2.5-flash";
-    console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
+    const apiVersion = getGeminiApiVersion(model);
+    console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, apiVersion });
     const response = await callGeminiAPI(
       prompt,
       [], // No images needed for description
@@ -222,20 +224,28 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
     selected,
     prompt,
     settings,
-    headshot_image_id
+    headshot_image_id,
+    reference_image_id
   } = input;
 
   if (!outfit_id) {
     throw new Error("Missing outfit_id");
   }
 
-  // Require either stacked_image_id OR selected items
-  if (!stacked_image_id && (!selected || selected.length === 0)) {
-    throw new Error("Missing stacked_image_id or selected items");
+  const useReferenceImage = !!reference_image_id;
+
+  // Require either reference image OR stacked_image_id OR selected items
+  if (!useReferenceImage && !stacked_image_id && (!selected || selected.length === 0)) {
+    throw new Error("Missing reference image, stacked_image_id, or selected items");
   }
 
-  const useStackedImage = !!stacked_image_id;
-  console.log(`[OutfitRender] Processing outfit ${outfit_id}, using ${useStackedImage ? 'pre-stacked' : 'individual'} images`);
+  const useStackedImage = !useReferenceImage && !!stacked_image_id;
+  const modeLabel = useReferenceImage
+    ? 'reference'
+    : useStackedImage
+      ? 'pre-stacked'
+      : 'individual';
+  console.log(`[OutfitRender] Processing outfit ${outfit_id}, using ${modeLabel} images`);
 
   // Retrieve user settings for default head/body shots, model preference, and headshot inclusion setting
   const { data: userSettings } = await supabase
@@ -245,7 +255,8 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
     .single();
 
   const bodyId = userSettings?.body_shot_image_id;
-  const includeHeadshot = userSettings?.include_headshot_in_generation ?? false;
+  const includeHeadshot =
+    !useReferenceImage && (userSettings?.include_headshot_in_generation ?? false);
   const headId = includeHeadshot ? (headshot_image_id || userSettings?.headshot_image_id) : null;
 
   if (!bodyId) {
@@ -276,6 +287,16 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
   })();
 
   const outfitImagePromise = (async () => {
+    if (useReferenceImage) {
+      console.log(`[OutfitRender] Downloading reference image from storage: ${reference_image_id}`);
+      const referenceResult = await downloadImageFromStorage(
+        supabase,
+        reference_image_id,
+        timingTracker
+      );
+      return { referenceResult, itemCount: selected?.length || 0 };
+    }
+
     if (useStackedImage) {
       console.log(`[OutfitRender] Downloading pre-stacked image from storage: ${stacked_image_id}`);
       const { data: stackedBlob, error: downloadError } = await supabase
@@ -358,7 +379,7 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
     return { bodyResult, headResult };
   })();
 
-  const [{ stackedItemsB64, itemCount }, { bodyResult, headResult }] = await Promise.all([
+  const [{ stackedItemsB64, referenceResult, itemCount }, { bodyResult, headResult }] = await Promise.all([
     outfitImagePromise,
     bodyImagePromise
   ]);
@@ -368,9 +389,11 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
   if (includeHeadshot && headResult) {
     allInputs.push(headResult);
   }
-  
-  if (Array.isArray(stackedItemsB64)) {
-    const stackedInputs = stackedItemsB64.map(b64 => 
+
+  if (useReferenceImage && referenceResult) {
+    allInputs = [bodyResult, referenceResult];
+  } else if (Array.isArray(stackedItemsB64)) {
+    const stackedInputs = stackedItemsB64.map(b64 =>
       typeof b64 === 'string' ? { base64: b64, mimeType: 'image/jpeg' } : b64
     );
     allInputs = [...allInputs, ...stackedInputs];
@@ -381,11 +404,14 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
   console.log(`[OutfitRender] Total images being sent to AI: ${allInputs.length}`);
 
   // Use existing prompt system from prompts.js
-  const renderPrompt = useStackedImage
-    ? PROMPTS.OUTFIT_FINAL_STACKED(prompt || "Style this outfit naturally", itemCount, includeHeadshot)
-    : PROMPTS.OUTFIT_FINAL(prompt || "Style this outfit naturally", itemCount, includeHeadshot);
+  const renderPrompt = useReferenceImage
+    ? PROMPTS.OUTFIT_REFERENCE(prompt || "Match the outfit exactly")
+    : useStackedImage
+      ? PROMPTS.OUTFIT_FINAL_STACKED(prompt || "Style this outfit naturally", itemCount, includeHeadshot)
+      : PROMPTS.OUTFIT_FINAL(prompt || "Style this outfit naturally", itemCount, includeHeadshot);
 
-  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model: preferredModel });
+  const apiVersion = getGeminiApiVersion(preferredModel);
+  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model: preferredModel, apiVersion });
   console.log(`[OutfitRender] Generating outfit with model: ${preferredModel}`);
 
   // Generate the outfit image
@@ -432,7 +458,8 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
     settings: { 
       ...(settings || {}), 
       items_count: itemCount,
-      used_stacked_image: useStackedImage
+      used_stacked_image: useStackedImage,
+      used_reference_image: useReferenceImage
     },
     status: "succeeded"
   });

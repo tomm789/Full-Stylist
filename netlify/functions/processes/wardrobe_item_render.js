@@ -11,6 +11,7 @@ const {
   callGeminiAPI,
   optimizeGeminiOutput,
   resolveModelFromSettings,
+  getGeminiApiVersion,
   DEFAULT_IMAGE_MODEL
 } = require("../utils");
 
@@ -59,7 +60,8 @@ async function processWardrobeItemRender(input, supabase, userId, perfTracker = 
     "ai_model_wardrobe_item_render",
     DEFAULT_IMAGE_MODEL
   );
-  console.log("[WardrobeItemRender] Gemini call start", { job_id: jobId, model });
+  const apiVersion = getGeminiApiVersion(model);
+  console.log("[WardrobeItemRender] Gemini call start", { job_id: jobId, model, apiVersion });
   const productShotB64 = await callGeminiAPI(
     PROMPTS.PRODUCT_SHOT,
     [imageResult],

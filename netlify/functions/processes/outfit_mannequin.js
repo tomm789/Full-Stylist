@@ -11,6 +11,7 @@ const {
   uploadImageToStorage,
   callGeminiAPI,
   resolveModelFromSettings,
+  getGeminiApiVersion,
   DEFAULT_IMAGE_MODEL
 } = require("../utils");
 
@@ -84,7 +85,8 @@ async function processOutfitMannequin(input, supabase, userId, perfTracker = nul
     prompt || "No additional details"
   );
   // Generate the mannequin image
-  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model: preferredModel });
+  const apiVersion = getGeminiApiVersion(preferredModel);
+  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model: preferredModel, apiVersion });
   const mannequinB64 = await callGeminiAPI(
     mannequinPrompt,
     itemImages,

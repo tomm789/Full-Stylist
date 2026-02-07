@@ -8,6 +8,7 @@ import { FlatList, RefreshControl } from 'react-native';
 import { OutfitWithRating } from '@/lib/outfits';
 import { EmptyState } from '@/components/shared';
 import { theme } from '@/styles';
+import PostGrid from '@/components/social/PostGrid';
 
 const { colors } = theme;
 
@@ -23,9 +24,6 @@ type MyOutfitsSectionProps = {
   onScrollToIndexFailed?: (info: { index: number; averageItemLength: number }) => void;
   refreshing: boolean;
   onRefresh: () => void;
-  gridListStyle: object;
-  gridContentStyle: object;
-  gridRowStyle: object;
   feedListStyle: object;
   feedContentStyle: object;
   emptyTitle: string;
@@ -46,9 +44,6 @@ export default function MyOutfitsSection({
   onScrollToIndexFailed,
   refreshing,
   onRefresh,
-  gridListStyle,
-  gridContentStyle,
-  gridRowStyle,
   feedListStyle,
   feedContentStyle,
   emptyTitle,
@@ -57,32 +52,49 @@ export default function MyOutfitsSection({
   onEmptyAction,
 }: MyOutfitsSectionProps) {
   return (
-    <FlatList
-      ref={listRef}
-      data={data}
-      renderItem={activeView === 'grid' ? renderGridItem : renderFeedItem}
-      keyExtractor={(item) => item.id}
-      key={`my-outfits-${activeView}`}
-      numColumns={activeView === 'grid' ? 3 : 1}
-      style={activeView === 'grid' ? gridListStyle : feedListStyle}
-      contentContainerStyle={activeView === 'grid' ? gridContentStyle : feedContentStyle}
-      columnWrapperStyle={activeView === 'grid' ? gridRowStyle : undefined}
-      onScroll={activeView === 'grid' ? onScroll : undefined}
-      scrollEventThrottle={activeView === 'grid' ? scrollEventThrottle : undefined}
-      onLayout={activeView === 'feed' ? onLayout : undefined}
-      onScrollToIndexFailed={activeView === 'feed' ? onScrollToIndexFailed : undefined}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-      }
-      ListEmptyComponent={
-        <EmptyState
-          title={emptyTitle}
-          message={emptyMessage}
-          actionLabel={emptyActionLabel}
-          onAction={onEmptyAction}
-          icon="shirt-outline"
-        />
-      }
-    />
+    activeView === 'grid' ? (
+      <PostGrid
+        data={data}
+        renderItem={({ item }) => renderGridItem({ item })}
+        keyExtractor={(item) => item.id}
+        onScroll={onScroll}
+        scrollEventThrottle={scrollEventThrottle}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        ListEmptyComponent={
+          <EmptyState
+            title={emptyTitle}
+            message={emptyMessage}
+            actionLabel={emptyActionLabel}
+            onAction={onEmptyAction}
+            icon="shirt-outline"
+          />
+        }
+      />
+    ) : (
+      <FlatList
+        ref={listRef}
+        data={data}
+        renderItem={renderFeedItem}
+        keyExtractor={(item) => item.id}
+        key={`my-outfits-${activeView}`}
+        style={feedListStyle}
+        contentContainerStyle={feedContentStyle}
+        onLayout={onLayout}
+        onScrollToIndexFailed={onScrollToIndexFailed}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+        ListEmptyComponent={
+          <EmptyState
+            title={emptyTitle}
+            message={emptyMessage}
+            actionLabel={emptyActionLabel}
+            onAction={onEmptyAction}
+            icon="shirt-outline"
+          />
+        }
+      />
+    )
   );
 }

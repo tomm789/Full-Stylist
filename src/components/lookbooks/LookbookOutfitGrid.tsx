@@ -8,7 +8,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -16,6 +15,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { Lookbook } from '@/lib/lookbooks';
+import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 
 interface LookbookOutfitGridProps {
   outfits: any[];
@@ -63,12 +63,12 @@ export function LookbookOutfitGrid({
     };
 
     return (
-      <TouchableOpacity style={styles.outfitCard} onPress={handlePress}>
+      <TouchableOpacity style={postGridStyles.gridItem} onPress={handlePress}>
         {imageUrl ? (
           <>
             <ExpoImage
               source={{ uri: imageUrl }}
-              style={styles.outfitImage}
+              style={postGridStyles.gridImage}
               contentFit="cover"
             />
             <TouchableOpacity
@@ -84,11 +84,11 @@ export function LookbookOutfitGrid({
             </TouchableOpacity>
           </>
         ) : (
-          <View style={styles.outfitImagePlaceholder}>
+          <View style={[postGridStyles.gridImagePlaceholder, styles.outfitImagePlaceholder]}>
             <Text style={styles.outfitImagePlaceholderText}>No Image</Text>
           </View>
         )}
-        <View style={styles.outfitTitleRow}>
+        <View style={[postGridStyles.infoOverlay, styles.outfitOverlay]}>
           <Text style={styles.outfitTitle} numberOfLines={2}>
             {item.title || 'Untitled Outfit'}
           </Text>
@@ -97,7 +97,7 @@ export function LookbookOutfitGrid({
               onPress={handleMenuPress}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="ellipsis-vertical" size={18} color="#666" />
+              <Ionicons name="ellipsis-vertical" size={18} color="#fff" />
             </TouchableOpacity>
           )}
         </View>
@@ -116,13 +116,11 @@ export function LookbookOutfitGrid({
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Outfits</Text>
-      <FlatList
+      <PostGrid
         data={outfits}
         renderItem={({ item, index }) => <OutfitCard item={item} index={index} />}
         keyExtractor={(item) => item.id}
-        numColumns={2}
         scrollEnabled={false}
-        contentContainerStyle={styles.outfitsList}
       />
     </View>
   );
@@ -138,49 +136,30 @@ const styles = StyleSheet.create({
     color: '#000',
     marginBottom: 16,
   },
-  outfitsList: {
-    gap: 8,
-  },
-  outfitCard: {
-    flex: 1,
-    margin: 4,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#f9f9f9',
-  },
-  outfitImage: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-  },
   favoriteButton: {
     position: 'absolute',
     top: 2,
     right: 2,
     padding: 2,
   },
-  outfitTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    gap: 8,
-  },
   outfitImagePlaceholder: {
-    width: '100%',
-    aspectRatio: 3 / 4,
     backgroundColor: '#e0e0e0',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   outfitImagePlaceholderText: {
     color: '#999',
     fontSize: 12,
   },
+  outfitOverlay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   outfitTitle: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
   },
   emptyContainer: {
     padding: 32,

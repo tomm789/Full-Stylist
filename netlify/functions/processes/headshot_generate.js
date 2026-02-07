@@ -10,6 +10,7 @@ const {
   uploadImageToStorage,
   callGeminiAPI,
   resolveModelFromSettings,
+  getGeminiApiVersion,
   DEFAULT_IMAGE_MODEL
 } = require("../utils");
 
@@ -69,7 +70,8 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
     "ai_model_headshot_generate",
     DEFAULT_IMAGE_MODEL
   );
-  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
+  const apiVersion = getGeminiApiVersion(model);
+  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, apiVersion });
   console.log(`[processHeadshotGenerate] Calling Gemini API with prompt length: ${prompt.length}`);
   // Generate the headshot via Gemini - pass full result object to include mime-type
   const headshotB64 = await callGeminiAPI(

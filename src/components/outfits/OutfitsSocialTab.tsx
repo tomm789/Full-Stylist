@@ -42,7 +42,6 @@ export type OutfitsSocialTabProps = {
     emptyText: any;
     emptySubtext: any;
   };
-  alignLeft?: boolean;
 };
 
 export default function OutfitsSocialTab({
@@ -69,7 +68,6 @@ export default function OutfitsSocialTab({
   onScrollToIndexFailed,
   emptyCopy,
   styles,
-  alignLeft,
 }: OutfitsSocialTabProps) {
   const handleItemLongPress = (item: FeedItem) => {
     if (!selectionMode) {
@@ -110,7 +108,6 @@ export default function OutfitsSocialTab({
       onScrollToIndexFailed={onScrollToIndexFailed}
       emptyCopy={emptyCopy}
       styles={styles}
-      alignLeft={alignLeft}
     />
   );
 }
