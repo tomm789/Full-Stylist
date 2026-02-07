@@ -20,7 +20,9 @@ import { getDefaultWardrobeId, getWardrobeItems } from '@/lib/wardrobe';
 import { getWardrobeItemImages } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
-import { commonStyles } from '@/styles';
+import { createCommonStyles } from '@/styles/commonStyles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 interface FollowedUser {
   id: string;
@@ -33,6 +35,9 @@ interface FollowedUser {
 }
 
 export default function FollowingWardrobesScreen() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+  const commonStyles = createCommonStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<FollowedUser[]>([]);
@@ -179,17 +184,17 @@ export default function FollowingWardrobesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   list: {
     padding: 16,
   },
   userCard: {
     flexDirection: 'row',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -210,7 +215,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.gray200,
     marginRight: 12,
   },
   userText: {
@@ -219,22 +224,22 @@ const styles = StyleSheet.create({
   displayName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   handle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   itemCount: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textTertiary,
   },
   previewImage: {
     width: 60,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.backgroundTertiary,
   },
 });

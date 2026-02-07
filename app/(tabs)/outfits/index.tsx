@@ -42,10 +42,12 @@ import {
 } from '@/hooks/social';
 import { useLookbookSelection } from '@/hooks/lookbooks';
 import { LoadingSpinner } from '@/components/shared';
-import { commonStyles, colors, layout } from '@/styles';
+import { layout } from '@/styles';
 import { useSlotPresets } from '@/hooks/calendar';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
-import styles from './styles';
+import createOutfitStyles from './styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
 type OutfitsTab = 'my_outfits' | 'explore' | 'following';
 type ViewMode = 'grid' | 'feed';
 const SHOW_VIEW_TOGGLE = false;
@@ -56,6 +58,9 @@ const STATUS_LABELS: Record<OutfitScheduleStatus, string> = {
 };
 
 export default function OutfitsScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createOutfitStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
   const { tab } = useLocalSearchParams<{ tab?: string }>();

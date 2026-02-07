@@ -14,9 +14,11 @@ import {
   TextStyle,
   StyleProp,
 } from 'react-native';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
 
-const { colors, spacing, typography } = theme;
+const { spacing, typography } = theme;
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'outline';
 type ButtonSize = 'small' | 'medium' | 'large';
@@ -33,20 +35,6 @@ interface PrimaryButtonProps extends TouchableOpacityProps {
   textStyle?: StyleProp<TextStyle>;
 }
 
-const VARIANT_STYLE_MAP: Record<ButtonVariant, any> = {
-  primary: commonStyles.buttonPrimary,
-  secondary: commonStyles.buttonSecondary,
-  danger: commonStyles.buttonDanger,
-  outline: commonStyles.buttonOutline,
-};
-
-const VARIANT_TEXT_STYLE_MAP: Record<ButtonVariant, any> = {
-  primary: commonStyles.buttonTextPrimary,
-  secondary: commonStyles.buttonTextSecondary,
-  danger: commonStyles.buttonTextPrimary,
-  outline: commonStyles.buttonTextSecondary,
-};
-
 export default function PrimaryButton({
   title,
   onPress,
@@ -60,12 +48,28 @@ export default function PrimaryButton({
   textStyle,
   ...props
 }: PrimaryButtonProps) {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
   const isDisabled = !!disabled || loading;
+
+  const variantStyleMap: Record<ButtonVariant, any> = {
+    primary: commonStyles.buttonPrimary,
+    secondary: commonStyles.buttonSecondary,
+    danger: commonStyles.buttonDanger,
+    outline: commonStyles.buttonOutline,
+  };
+
+  const variantTextStyleMap: Record<ButtonVariant, any> = {
+    primary: commonStyles.buttonTextPrimary,
+    secondary: commonStyles.buttonTextSecondary,
+    danger: commonStyles.buttonTextPrimary,
+    outline: commonStyles.buttonTextSecondary,
+  };
 
   const buttonStyle = [
     styles.buttonBase,
     styles[size],
-    VARIANT_STYLE_MAP[variant],
+    variantStyleMap[variant],
     fullWidth && styles.fullWidth,
     isDisabled && commonStyles.buttonDisabled,
     style,
@@ -74,7 +78,7 @@ export default function PrimaryButton({
   const labelStyle = [
     commonStyles.buttonText,
     styles[`${size}Text` as const],
-    VARIANT_TEXT_STYLE_MAP[variant],
+    variantTextStyleMap[variant],
     textStyle,
   ];
 

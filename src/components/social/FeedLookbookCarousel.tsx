@@ -15,8 +15,10 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_WIDTH = Math.min(SCREEN_WIDTH, 630);
 
@@ -35,6 +37,8 @@ export default function FeedLookbookCarousel({
   onPlayPress,
   loading = false,
 }: FeedLookbookCarouselProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -166,7 +170,7 @@ export default function FeedLookbookCarousel({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     padding: 0,
     backgroundColor: colors.white,

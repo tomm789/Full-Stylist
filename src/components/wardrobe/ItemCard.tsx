@@ -16,9 +16,11 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import ImagePlaceholder from '../shared/images/ImagePlaceholder';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 import { WardrobeItem } from '@/lib/wardrobe';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface ItemCardProps {
   item: WardrobeItem;
@@ -43,6 +45,9 @@ function ItemCard({
   onFavoritePress,
   showFavorite = true,
 }: ItemCardProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   const handleFavoritePress = (e: any) => {
     e.stopPropagation();
     onFavoritePress?.();
@@ -92,7 +97,7 @@ function ItemCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     flex: 1,
     margin: 1,

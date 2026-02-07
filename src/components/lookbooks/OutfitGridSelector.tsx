@@ -8,8 +8,10 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 interface OutfitGridSelectorProps {
   outfits: any[];
@@ -63,6 +65,8 @@ export default function OutfitGridSelector({
   imageUrls,
   onToggle,
 }: OutfitGridSelectorProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <PostGrid
       data={outfits}
@@ -80,7 +84,7 @@ export default function OutfitGridSelector({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     overflow: 'hidden',
     backgroundColor: colors.backgroundSecondary,

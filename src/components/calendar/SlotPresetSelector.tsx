@@ -7,8 +7,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CalendarSlotPreset } from '@/lib/calendar';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface SlotPresetSelectorProps {
   presets: CalendarSlotPreset[];
@@ -23,6 +25,8 @@ export default function SlotPresetSelector({
   onSelectPreset,
   onCreatePreset,
 }: SlotPresetSelectorProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Slot Preset</Text>
@@ -54,7 +58,7 @@ export default function SlotPresetSelector({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: spacing.lg + spacing.md,
   },

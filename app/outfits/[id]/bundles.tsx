@@ -27,14 +27,20 @@ import {
   LoadingSpinner,
 } from '@/components/shared';
 import { HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 type SaleMode = 'items_only' | 'bundle_only' | 'both';
 
 export default function CreateBundleScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -268,7 +274,7 @@ export default function CreateBundleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: {
     flex: 1,
   },

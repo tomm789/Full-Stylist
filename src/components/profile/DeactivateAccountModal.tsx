@@ -14,7 +14,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, typography } from '@/styles';
+import { spacing, borderRadius, typography } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 interface DeactivateAccountModalProps {
   visible: boolean;
@@ -27,6 +29,8 @@ export function DeactivateAccountModal({
   onClose,
   onConfirm,
 }: DeactivateAccountModalProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {
@@ -116,7 +120,7 @@ export function DeactivateAccountModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.overlayDark,

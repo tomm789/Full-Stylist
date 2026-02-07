@@ -16,8 +16,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 const MODAL_MAX_HEIGHT = Math.min(640, Dimensions.get('window').height * 0.85);
 const MODAL_BODY_MAX_HEIGHT = Math.min(400, Dimensions.get('window').height * 0.4);
 
@@ -53,6 +55,8 @@ export default function GenerationProgressModal({
   activeMessage,
   perfMode = false,
 }: GenerationProgressModalProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   if (perfMode) {
     return (
       <Modal
@@ -218,7 +222,7 @@ export default function GenerationProgressModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.black,

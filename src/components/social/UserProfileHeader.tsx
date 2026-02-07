@@ -19,8 +19,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile, useFollowStatus } from '@/hooks/social';
 import { ProfileHeader } from '@/components/profile';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
-import { commonStyles } from '@/styles';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
+import { createCommonStyles } from '@/styles/commonStyles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 /** Header component for user profile; accepts profile + stats and renders via ProfileHeader */
 export function UserProfileHeader({
@@ -56,6 +58,9 @@ export function UserProfileHeader({
 type TabType = 'outfits' | 'lookbooks';
 
 export default function UserProfileScreen() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+  const commonStyles = createCommonStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
   const { id: userId } = useLocalSearchParams<{ id: string }>();
@@ -146,7 +151,7 @@ export default function UserProfileScreen() {
           <Ionicons
             name="shirt-outline"
             size={20}
-            color={activeTab === 'outfits' ? '#000' : '#999'}
+            color={activeTab === 'outfits' ? colors.textPrimary : colors.textTertiary}
           />
           <Text style={[styles.tabText, activeTab === 'outfits' && styles.tabTextActive]}>
             Outfits ({outfits.length})
@@ -159,7 +164,7 @@ export default function UserProfileScreen() {
           <Ionicons
             name="book-outline"
             size={20}
-            color={activeTab === 'lookbooks' ? '#000' : '#999'}
+            color={activeTab === 'lookbooks' ? colors.textPrimary : colors.textTertiary}
           />
           <Text
             style={[styles.tabText, activeTab === 'lookbooks' && styles.tabTextActive]}
@@ -272,16 +277,16 @@ export default function UserProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.borderLight,
   },
   tab: {
     flex: 1,
@@ -294,15 +299,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#000',
+    borderBottomColor: colors.textPrimary,
   },
   tabText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textTertiary,
     fontWeight: '500',
   },
   tabTextActive: {
-    color: '#000',
+    color: colors.textPrimary,
     fontWeight: '600',
   },
   content: {
@@ -312,7 +317,7 @@ const styles = StyleSheet.create({
   outfitTitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#fff',
+    color: '#fff', // On image overlay, always white
   },
   wearBadge: {
     flexDirection: 'row',
@@ -322,16 +327,16 @@ const styles = StyleSheet.create({
   },
   wearCount: {
     fontSize: 11,
-    color: '#fff',
+    color: '#fff', // On image overlay, always white
   },
   lookbookTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#fff',
+    color: '#fff', // On image overlay, always white
     marginBottom: 4,
   },
   lookbookCount: {
     fontSize: 11,
-    color: '#ccc',
+    color: '#ccc', // On image overlay, slightly dimmed white
   },
 });

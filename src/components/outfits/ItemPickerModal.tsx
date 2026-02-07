@@ -9,8 +9,10 @@ import { Image } from 'expo-image';
 import { WardrobeItem } from '@/lib/wardrobe';
 import { BottomSheet } from '@/components/shared';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface ItemPickerModalProps {
   visible: boolean;
@@ -29,6 +31,8 @@ export default function ItemPickerModal({
   onSelectItem,
   title = 'Select Item',
 }: ItemPickerModalProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <BottomSheet visible={visible} onClose={onClose} title={title}>
       <FlatList
@@ -67,7 +71,7 @@ export default function ItemPickerModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   listContent: {
     padding: spacing.md,
   },

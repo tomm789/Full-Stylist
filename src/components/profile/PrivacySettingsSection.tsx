@@ -6,6 +6,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { UserSettings } from '@/lib/settings';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 interface PrivacySettingsSectionProps {
   settings: UserSettings;
@@ -21,6 +23,9 @@ export function PrivacySettingsSection({
   saving,
   onUpdateSetting,
 }: PrivacySettingsSectionProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   return (
     <>
       <View style={styles.section}>
@@ -158,13 +163,14 @@ export function PrivacySettingsSection({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   section: {
     marginBottom: 32,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   radioGroup: {
@@ -174,21 +180,21 @@ const styles = StyleSheet.create({
   radioOption: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
   },
   radioSelected: {
-    borderColor: '#000',
-    backgroundColor: '#000',
+    borderColor: colors.textPrimary,
+    backgroundColor: colors.textPrimary,
   },
   radioText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
   },
   radioTextSelected: {
-    color: '#fff',
+    color: colors.background,
     fontWeight: '600',
   },
   optionsList: {
@@ -196,20 +202,20 @@ const styles = StyleSheet.create({
   },
   option: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
   },
   optionSelected: {
-    borderColor: '#000',
-    backgroundColor: '#f0f0f0',
+    borderColor: colors.textPrimary,
+    backgroundColor: colors.backgroundTertiary,
   },
   optionText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
   },
   optionTextSelected: {
-    color: '#000',
+    color: colors.textPrimary,
     fontWeight: '600',
   },
   toggleContainer: {
@@ -220,24 +226,24 @@ const styles = StyleSheet.create({
   },
   toggleLabel: {
     fontSize: 16,
-    color: '#000',
+    color: colors.textPrimary,
   },
   toggle: {
     width: 50,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#ddd',
+    backgroundColor: colors.border,
     justifyContent: 'center',
     padding: 2,
   },
   toggleActive: {
-    backgroundColor: '#000',
+    backgroundColor: colors.textPrimary,
   },
   toggleThumb: {
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     alignSelf: 'flex-start',
   },
   toggleThumbActive: {

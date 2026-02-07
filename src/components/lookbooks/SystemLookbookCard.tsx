@@ -8,8 +8,10 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { SystemLookbookData } from '@/hooks/lookbooks';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface SystemLookbookCardProps {
   lookbook: SystemLookbookData;
@@ -22,6 +24,8 @@ export default function SystemLookbookCard({
   onPress,
   onPlayPress,
 }: SystemLookbookCardProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       {lookbook.coverImageUrl ? (
@@ -58,7 +62,7 @@ export default function SystemLookbookCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     width: 130,
     marginRight: spacing.sm + spacing.xs / 2,

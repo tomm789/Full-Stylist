@@ -13,8 +13,10 @@ import {
   ViewStyle,
 } from 'react-native';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography, shadows } = theme;
+const { spacing, borderRadius, typography, shadows } = theme;
 
 interface LoadingOverlayProps {
   visible: boolean;
@@ -29,6 +31,8 @@ export default function LoadingOverlay({
   subMessage,
   style,
 }: LoadingOverlayProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   if (!visible) return null;
 
   return (
@@ -49,7 +53,7 @@ export default function LoadingOverlay({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',

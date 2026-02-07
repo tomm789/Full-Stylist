@@ -17,8 +17,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { OutfitWithRating } from '@/lib/outfits';
 import { postGridStyles } from '@/components/social/PostGrid';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, typography } = theme;
+const { spacing, typography } = theme;
 
 interface OutfitCardProps {
   outfit: OutfitWithRating;
@@ -40,6 +42,8 @@ const OutfitCard = React.memo(
     showRating = false,
     style,
   }: OutfitCardProps) => {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
     return (
       <TouchableOpacity
         style={[postGridStyles.gridItem, style]}
@@ -82,7 +86,7 @@ const OutfitCard = React.memo(
 
 OutfitCard.displayName = 'OutfitCard';
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   placeholderText: {
     color: colors.gray500,
     fontSize: typography.fontSize.xs,

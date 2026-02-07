@@ -7,8 +7,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, typography } = theme;
+const { spacing, typography } = theme;
 
 interface FilterAccordionSectionProps {
   title: string;
@@ -23,6 +25,9 @@ export function FilterAccordionSection({
   onToggle,
   children,
 }: FilterAccordionSectionProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   return (
     <View style={styles.section}>
       <TouchableOpacity style={styles.accordionHeader} onPress={onToggle}>
@@ -38,7 +43,7 @@ export function FilterAccordionSection({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
     paddingBottom: spacing.lg,

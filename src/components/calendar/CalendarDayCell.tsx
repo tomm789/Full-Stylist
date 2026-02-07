@@ -9,6 +9,9 @@ import type { ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { CalendarEntry } from '@/lib/calendar';
 import { theme as importedTheme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+
+const { spacing } = importedTheme;
 
 interface CalendarDayCellProps {
   date: Date;
@@ -19,24 +22,6 @@ interface CalendarDayCellProps {
   onPress: () => void;
 }
 
-function getThemeSafe() {
-  const t: any = importedTheme ?? {};
-  const colors = t.colors ?? {
-    border: '#E5E7EB',
-    gray50: '#F9FAFB',
-    gray100: '#F3F4F6',
-    gray200: '#E5E7EB',
-    primaryLight: '#EEF2FF',
-    primary: '#4F46E5',
-    textPrimary: '#111827',
-    textSecondary: '#6B7280',
-    textTertiary: '#9CA3AF',
-    white: '#FFFFFF',
-  };
-  const spacing = t.spacing ?? { xs: 8, sm: 12, md: 16, lg: 24 };
-  return { colors, spacing };
-}
-
 export default function CalendarDayCell({
   date,
   entries,
@@ -45,7 +30,7 @@ export default function CalendarDayCell({
   isToday,
   onPress,
 }: CalendarDayCellProps) {
-  const { colors, spacing } = useMemo(() => getThemeSafe(), []);
+  const colors = useThemeColors();
 
   const outfitEntries = entries.filter((e) => e.outfit_id);
   const firstEntry = outfitEntries[0];
@@ -177,7 +162,7 @@ export default function CalendarDayCell({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      {/* Background image layer (only if there’s an outfit entry) */}
+      {/* Background image layer (only if there's an outfit entry) */}
       {outfitEntries.length > 0 && (
         <View style={styles.outfitImagesContainer} pointerEvents="none">
           {imageUrl ? (

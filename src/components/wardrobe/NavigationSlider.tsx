@@ -8,8 +8,10 @@ import { View, ScrollView, TouchableOpacity, StyleSheet, ViewStyle } from 'react
 import { Image } from 'expo-image';
 import { ImagePlaceholder } from '@/components/shared';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, layout } = theme;
+const { spacing, borderRadius, layout } = theme;
 
 interface NavigationItem {
   id: string;
@@ -30,6 +32,9 @@ export default function NavigationSlider({
   onNavigate,
   style,
 }: NavigationSliderProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   const scrollRef = useRef<ScrollView>(null);
   const currentIndex = items.findIndex((item) => item.id === currentItemId);
 
@@ -41,7 +46,7 @@ export default function NavigationSlider({
         0,
         currentIndex * itemWidth - 150 // Center approximately
       );
-      
+
       setTimeout(() => {
         scrollRef.current?.scrollTo({ x: scrollPosition, animated: true });
       }, 100);
@@ -60,7 +65,7 @@ export default function NavigationSlider({
       >
         {items.map((item) => {
           const isActive = item.id === currentItemId;
-          
+
           return (
             <TouchableOpacity
               key={item.id}
@@ -86,7 +91,7 @@ export default function NavigationSlider({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     position: 'absolute',
     bottom: 0,

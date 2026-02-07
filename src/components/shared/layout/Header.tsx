@@ -7,9 +7,11 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
+import { createCommonStyles } from '@/styles/commonStyles';
+import { useThemeColors } from '@/contexts/ThemeContext';
 
-const { colors, spacing, typography, layout } = theme;
+const { spacing, typography, layout } = theme;
 
 interface HeaderProps {
   title?: string;
@@ -33,6 +35,8 @@ export default function Header({
   style,
   variant = 'default',
 }: HeaderProps) {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
   const router = useRouter();
 
   const handleBack = () => {

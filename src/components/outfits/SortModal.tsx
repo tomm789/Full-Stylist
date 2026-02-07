@@ -16,8 +16,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { BottomSheet } from '@/components/shared';
 import { theme } from '@/styles';
 import { SortOption, SortOrder } from '@/hooks/outfits';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface SortModalProps {
   visible: boolean;
@@ -64,6 +66,8 @@ export default function SortModal({
   onClearOccasions,
   onResetFilters,
 }: SortModalProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const { height } = useWindowDimensions();
   const maxBodyHeight = Math.min(height * 0.8, 700);
 
@@ -199,7 +203,7 @@ export default function SortModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   resetText: {
     fontSize: typography.fontSize.sm,
     color: colors.primary,

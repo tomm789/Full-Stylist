@@ -7,12 +7,14 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
 import { BottomSheet, PrimaryButton } from '@/components/shared';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 import { FilterState } from '@/hooks/wardrobe';
 import { WardrobeSubcategory } from '@/lib/wardrobe';
 import { FilterPillGroup } from './FilterPillGroup';
 import { FilterAccordionSection } from './FilterAccordionSection';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 interface FilterDrawerProps {
   visible: boolean;
@@ -41,6 +43,9 @@ export default function FilterDrawer({
   availableSeasons = [],
   availableTags = [],
 }: FilterDrawerProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   const toggleSection = (sectionKey: string) => {
@@ -219,7 +224,7 @@ export default function FilterDrawer({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
     paddingBottom: spacing.lg,

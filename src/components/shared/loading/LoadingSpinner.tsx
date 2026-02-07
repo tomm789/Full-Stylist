@@ -5,9 +5,11 @@
 
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, ViewStyle } from 'react-native';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
 
-const { colors, spacing, typography } = theme;
+const { spacing, typography } = theme;
 
 interface LoadingSpinnerProps {
   size?: 'small' | 'large';
@@ -18,13 +20,16 @@ interface LoadingSpinnerProps {
 
 export default function LoadingSpinner({
   size = 'small',
-  color = colors.primary,
+  color,
   text,
   style,
 }: LoadingSpinnerProps) {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const resolvedColor = color ?? colors.primary;
   return (
     <View style={[styles.container, style]}>
-      <ActivityIndicator size={size} color={color} />
+      <ActivityIndicator size={size} color={resolvedColor} />
       {text && <Text style={commonStyles.loadingText}>{text}</Text>}
     </View>
   );

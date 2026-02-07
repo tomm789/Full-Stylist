@@ -6,8 +6,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface IndicatorDotsProps {
   total: number;
@@ -22,6 +24,9 @@ export default function IndicatorDots({
   variant = 'numeric',
   style,
 }: IndicatorDotsProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   if (variant === 'numeric') {
     return (
       <View style={[styles.numericContainer, style]}>
@@ -47,7 +52,7 @@ export default function IndicatorDots({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   numericContainer: {
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: borderRadius.md,

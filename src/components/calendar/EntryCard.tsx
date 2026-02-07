@@ -8,8 +8,10 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { CalendarEntry, CalendarSlotPreset } from '@/lib/calendar';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface EntryCardProps {
   entry: CalendarEntry;
@@ -40,6 +42,8 @@ export default function EntryCard({
   onViewOutfit,
   onStatusChange,
 }: EntryCardProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const getPresetName = (): string => {
     if (entry.slot_preset_id) {
       const preset = slotPresets.find((p) => p.id === entry.slot_preset_id);
@@ -175,7 +179,7 @@ export default function EntryCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     borderWidth: 1,
     borderColor: colors.border,

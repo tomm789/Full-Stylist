@@ -9,8 +9,8 @@ import { OutfitWithRating } from '@/lib/outfits';
 import { EmptyState } from '@/components/shared';
 import { theme } from '@/styles';
 import PostGrid from '@/components/social/PostGrid';
+import { useThemeColors } from '@/contexts/ThemeContext';
 
-const { colors } = theme;
 
 type MyOutfitsSectionProps = {
   data: OutfitWithRating[];
@@ -51,6 +51,7 @@ export default function MyOutfitsSection({
   emptyActionLabel,
   onEmptyAction,
 }: MyOutfitsSectionProps) {
+  const colors = useThemeColors();
   return (
     activeView === 'grid' ? (
       <PostGrid

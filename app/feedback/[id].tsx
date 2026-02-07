@@ -16,11 +16,16 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeedbackThread } from '@/hooks/feedback';
 import { LoadingSpinner } from '@/components/shared';
-import { commonStyles } from '@/styles';
 import { CommentInput, ThreadHeader, CommentsList } from '@/components/feedback';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
+import { createCommonStyles } from '@/styles/commonStyles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 export default function FeedbackThreadDetailScreen() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+  const commonStyles = createCommonStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
   const { id: threadId } = useLocalSearchParams();
@@ -93,10 +98,10 @@ export default function FeedbackThreadDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   keyboardView: {
     flex: 1,

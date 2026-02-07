@@ -14,9 +14,11 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface PillButtonProps extends TouchableOpacityProps {
   label: string;
@@ -43,6 +45,9 @@ export default function PillButton({
   textStyle,
   ...props
 }: PillButtonProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   const pillStyle = [
     styles.pill,
     styles[size],
@@ -91,7 +96,7 @@ export default function PillButton({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -100,7 +105,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.white,
   },
-  
+
   // Sizes
   small: {
     paddingHorizontal: spacing.sm,
@@ -117,7 +122,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.sm,
   },
-  
+
   // Selected states
   defaultSelected: {
     backgroundColor: colors.black,
@@ -131,7 +136,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray800,
     borderColor: colors.gray800,
   },
-  
+
   // Text styles
   pillText: {
     fontWeight: typography.fontWeight.regular,
@@ -158,7 +163,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: typography.fontWeight.semibold,
   },
-  
+
   // Icon and remove button
   icon: {
     marginRight: spacing.xs / 2,
@@ -167,7 +172,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs / 2,
     padding: spacing.xs / 2,
   },
-  
+
   // Disabled
   disabled: {
     opacity: 0.5,

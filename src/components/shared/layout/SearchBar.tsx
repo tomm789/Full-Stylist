@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import IconButton from '../buttons/IconButton';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface SearchBarProps extends Omit<TextInputProps, 'style'> {
   value: string;
@@ -39,6 +41,9 @@ export default function SearchBar({
   placeholder = 'Search...',
   ...textInputProps
 }: SearchBarProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   return (
     <View style={[styles.container, containerStyle]}>
       <TextInput
@@ -50,7 +55,7 @@ export default function SearchBar({
         autoCapitalize="none"
         {...textInputProps}
       />
-      
+
       {showFilter && onFilter && (
         <View
           style={[
@@ -66,7 +71,7 @@ export default function SearchBar({
           />
         </View>
       )}
-      
+
       {showAdd && onAdd && (
         <View style={styles.addButton}>
           <IconButton
@@ -81,7 +86,7 @@ export default function SearchBar({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     padding: spacing.sm,

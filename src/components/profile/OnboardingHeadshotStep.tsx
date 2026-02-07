@@ -16,8 +16,10 @@ import {
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface OnboardingHeadshotStepProps {
   onComplete: () => void;
@@ -45,6 +47,8 @@ export function OnboardingHeadshotStep({
   onHairStyleChange,
   onMakeupStyleChange,
 }: OnboardingHeadshotStepProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -178,7 +182,7 @@ export function OnboardingHeadshotStep({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

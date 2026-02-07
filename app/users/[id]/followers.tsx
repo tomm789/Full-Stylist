@@ -20,9 +20,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { followUser, getFollowers, isFollowing, unfollowUser } from '@/lib/user/follows';
 import { Header } from '@/components/shared/layout';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, typography } = theme;
+const { spacing, typography } = theme;
 
 type FollowerRow = {
   id: string;
@@ -38,6 +41,9 @@ type FollowerRow = {
 const PAGE_SIZE = 30;
 
 export default function FollowersScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const router = useRouter();
   const { user } = useAuth();
   const { id: userId } = useLocalSearchParams<{ id: string }>();
@@ -252,7 +258,7 @@ export default function FollowersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   listContent: {
     paddingVertical: spacing.sm,
   },

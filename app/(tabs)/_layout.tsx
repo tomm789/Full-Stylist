@@ -4,9 +4,13 @@ import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { HeaderAddMenu, HeaderRightMenu } from '@/components/tabs';
 import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal';
-import { borderRadius, colors, spacing } from '@/styles/theme';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { borderRadius, spacing } from '@/styles/theme';
+import type { ThemeColors } from '@/styles/themes';
 
 export default function TabsLayout() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const router = useRouter();
   const [showCreateMenu, setShowCreateMenu] = useState(false);
 
@@ -40,9 +44,15 @@ export default function TabsLayout() {
           headerRight: () => <HeaderRightMenu />,
           headerTitleAlign: 'left',
           headerStyle: {
-            backgroundColor: '#fff',
+            backgroundColor: colors.background,
           },
           headerShadowVisible: true,
+          tabBarStyle: {
+            backgroundColor: colors.background,
+            borderTopColor: colors.border,
+          },
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textTertiary,
         }}
       >
         <Tabs.Screen
@@ -161,7 +171,7 @@ export default function TabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   createButtonContainer: {
     alignItems: 'center',
     justifyContent: 'center',

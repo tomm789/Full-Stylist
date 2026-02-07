@@ -6,8 +6,10 @@
 import React from 'react';
 import { Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, typography, spacing } = theme;
+const { typography, spacing } = theme;
 
 type HeaderActionVariant = 'primary' | 'secondary' | 'danger' | 'muted';
 
@@ -19,12 +21,12 @@ interface HeaderActionButtonProps {
   loading?: boolean;
 }
 
-const variantTextColor: Record<HeaderActionVariant, string> = {
+const getVariantTextColor = (colors: ThemeColors): Record<HeaderActionVariant, string> => ({
   primary: colors.primary,
   secondary: colors.textPrimary,
   danger: colors.error,
   muted: colors.textSecondary,
-};
+});
 
 export default function HeaderActionButton({
   label,
@@ -33,6 +35,8 @@ export default function HeaderActionButton({
   variant = 'primary',
   loading = false,
 }: HeaderActionButtonProps) {
+  const colors = useThemeColors();
+  const variantTextColor = getVariantTextColor(colors);
   const isDisabled = disabled || loading;
   return (
     <TouchableOpacity

@@ -16,8 +16,10 @@ import { Image } from 'expo-image';
 import ImagePlaceholder from './ImagePlaceholder';
 import IndicatorDots from '../layout/IndicatorDots';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, borderRadius } = theme;
+const { borderRadius } = theme;
 
 export interface CarouselImage {
   id: string;
@@ -44,6 +46,8 @@ export default function ImageCarousel({
   borderRadius: customBorderRadius,
   style,
 }: ImageCarouselProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const [currentIndex, setCurrentIndex] = useState(0);
   const width = containerWidth || Math.min(Dimensions.get('window').width, 630);
 
@@ -112,7 +116,7 @@ export default function ImageCarousel({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     position: 'relative',
   },

@@ -14,7 +14,9 @@ import { useRouter } from 'expo-router';
 import { useAISettings, AIModelSettingKey, AIModelLockKey } from '@/hooks/profile';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
 import PrimaryButton from '@/components/shared/buttons/PrimaryButton';
-import { colors, spacing, borderRadius, typography, shadows } from '@/styles';
+import { spacing, borderRadius, typography, shadows } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 const DEFAULT_IMAGE_MODEL = 'gemini-2.5-flash-image';
 const DEFAULT_BODY_MODEL = 'gemini-3-pro-image';
@@ -215,6 +217,8 @@ const GENERATION_SETTINGS: Array<{
 ];
 
 export default function AISettingsScreen() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const router = useRouter();
   const { settings, loading, saving, updateModel, updateLock, updateMany, lockedKeys } = useAISettings();
 
@@ -476,7 +480,7 @@ export default function AISettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

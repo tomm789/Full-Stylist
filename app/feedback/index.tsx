@@ -15,10 +15,15 @@ import { useRouter } from 'expo-router';
 import { useFeedbackThreads } from '@/hooks/feedback';
 import { FeedbackCard, FeedbackFilterBar } from '@/components/feedback';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
-import { commonStyles } from '@/styles';
 import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
+import { createCommonStyles } from '@/styles/commonStyles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 export default function FeedbackListScreen() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+  const commonStyles = createCommonStyles(colors);
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<
     'bug' | 'feature' | 'general' | 'other' | 'all'
@@ -107,10 +112,10 @@ export default function FeedbackListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   threadsList: {
     padding: 16,

@@ -19,8 +19,10 @@ import StatusSelector from './StatusSelector';
 import { PrimaryButton } from '@/components/shared';
 import { theme } from '@/styles';
 import { CalendarEntry } from '@/lib/calendar';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius } = theme;
+const { spacing, borderRadius } = theme;
 
 interface CalendarDayEntryFormProps {
   visible: boolean;
@@ -63,6 +65,8 @@ export function CalendarDayEntryForm({
   onSubmit,
   onCreatePreset,
 }: CalendarDayEntryFormProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <Modal
       visible={visible}
@@ -133,7 +137,7 @@ export function CalendarDayEntryForm({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

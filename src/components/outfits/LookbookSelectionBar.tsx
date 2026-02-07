@@ -5,8 +5,10 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { theme, colors, typography, spacing, borderRadius } from '@/styles';
+import { theme, typography, spacing, borderRadius } from '@/styles';
 import { LookbookCreatorBar } from '@/components/lookbooks';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 type SelectedOutfit = {
   id: string;
@@ -30,6 +32,8 @@ export default function LookbookSelectionBar({
   onExit,
   onOpenPicker,
 }: LookbookSelectionBarProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <View>
       <LookbookCreatorBar
@@ -53,7 +57,7 @@ export default function LookbookSelectionBar({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   actionBar: {
     backgroundColor: colors.background,
     paddingHorizontal: spacing.md,

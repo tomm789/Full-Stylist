@@ -10,7 +10,9 @@ import type { SortOption, SortOrder } from '@/hooks/outfits';
 import { CommentsModal, GeneratingOutfitModal, PostMenuModal } from '@/components/social';
 import { SlideshowModal } from '@/components/lookbooks';
 import LookbookPickerModal from '@/components/lookbooks/LookbookPickerModal';
-import { colors, typography, spacing, borderRadius } from '@/styles';
+import { typography, spacing, borderRadius } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 type OutfitsModalsProps = {
   showSortModal: boolean;
@@ -159,6 +161,8 @@ export default function OutfitsModals({
   onSelectLookbook,
   onAddToExistingLookbook,
 }: OutfitsModalsProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <>
       <SortModal
@@ -258,7 +262,7 @@ export default function OutfitsModals({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   loadingModalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.8)',

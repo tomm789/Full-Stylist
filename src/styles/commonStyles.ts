@@ -5,10 +5,14 @@
 
 import { StyleSheet } from 'react-native';
 import { theme } from './theme';
+import type { ThemeColors } from './themes';
 
 const { colors, spacing, borderRadius, typography, shadows, layout } = theme;
 
-export const commonStyles = StyleSheet.create({
+/**
+ * Dynamic common styles factory - use with useThemeColors() for theme support
+ */
+export const createCommonStyles = (themeColors: ThemeColors) => StyleSheet.create({
   // Flex layouts
   flex1: {
     flex: 1,
@@ -29,17 +33,17 @@ export const commonStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   // Containers
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: themeColors.background,
   },
   containerDark: {
     flex: 1,
-    backgroundColor: colors.backgroundDark,
+    backgroundColor: themeColors.backgroundDark,
   },
-  
+
   // Headers
   header: {
     flexDirection: 'row',
@@ -48,9 +52,9 @@ export const commonStyles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: layout.headerHeight - spacing.md,
     paddingBottom: spacing.md,
-    backgroundColor: colors.background,
+    backgroundColor: themeColors.background,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderBottomColor: themeColors.borderLight,
   },
   headerOverlay: {
     position: 'absolute',
@@ -64,9 +68,9 @@ export const commonStyles = StyleSheet.create({
   headerTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
+    color: themeColors.textPrimary,
   },
-  
+
   // Buttons
   button: {
     paddingHorizontal: spacing.lg,
@@ -76,28 +80,28 @@ export const commonStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonPrimary: {
-    backgroundColor: colors.primary,
+    backgroundColor: themeColors.primary,
   },
   buttonSecondary: {
-    backgroundColor: colors.gray100,
+    backgroundColor: themeColors.gray100,
   },
   buttonDanger: {
-    backgroundColor: colors.error,
+    backgroundColor: themeColors.error,
   },
   buttonOutline: {
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.transparent,
+    borderColor: themeColors.border,
+    backgroundColor: themeColors.transparent,
   },
   buttonText: {
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semibold,
   },
   buttonTextPrimary: {
-    color: colors.textLight,
+    color: themeColors.textLight,
   },
   buttonTextSecondary: {
-    color: colors.textPrimary,
+    color: themeColors.textPrimary,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -113,49 +117,49 @@ export const commonStyles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  
+
   // Pills
   pill: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.round,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: themeColors.border,
   },
   pillSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: themeColors.primary,
+    borderColor: themeColors.primary,
   },
   pillText: {
     fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
+    color: themeColors.textSecondary,
   },
   pillTextSelected: {
-    color: colors.textLight,
+    color: themeColors.textLight,
     fontWeight: typography.fontWeight.semibold,
   },
-  
+
   // Inputs
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: themeColors.border,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     fontSize: typography.fontSize.base,
-    backgroundColor: colors.backgroundSecondary,
-    color: colors.textPrimary,
+    backgroundColor: themeColors.backgroundSecondary,
+    color: themeColors.textPrimary,
   },
   inputFocused: {
-    borderColor: colors.primary,
+    borderColor: themeColors.primary,
   },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
   },
-  
+
   // Cards
   card: {
-    backgroundColor: colors.background,
+    backgroundColor: themeColors.background,
     borderRadius: borderRadius.md,
     padding: spacing.lg,
     ...shadows.sm,
@@ -166,18 +170,18 @@ export const commonStyles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  
+
   // Images
   imagePlaceholder: {
-    backgroundColor: colors.gray200,
+    backgroundColor: themeColors.gray200,
     justifyContent: 'center',
     alignItems: 'center',
   },
   imagePlaceholderText: {
-    color: colors.textTertiary,
+    color: themeColors.textTertiary,
     fontSize: typography.fontSize.sm,
   },
-  
+
   // Lists
   listContainer: {
     padding: spacing.sm,
@@ -185,9 +189,9 @@ export const commonStyles = StyleSheet.create({
   listItem: {
     padding: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderBottomColor: themeColors.borderLight,
   },
-  
+
   // Empty states
   emptyContainer: {
     flex: 1,
@@ -197,11 +201,11 @@ export const commonStyles = StyleSheet.create({
   },
   emptyText: {
     fontSize: typography.fontSize.base,
-    color: colors.textSecondary,
+    color: themeColors.textSecondary,
     marginBottom: spacing.lg,
     textAlign: 'center',
   },
-  
+
   // Loading states
   loadingContainer: {
     flex: 1,
@@ -210,19 +214,19 @@ export const commonStyles = StyleSheet.create({
   },
   loadingText: {
     fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
+    color: themeColors.textSecondary,
     marginTop: spacing.md,
     textAlign: 'center',
   },
-  
+
   // Modals
   modalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlayLight,
+    backgroundColor: themeColors.overlayLight,
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: colors.background,
+    backgroundColor: themeColors.background,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     paddingBottom: spacing.xl,
@@ -234,7 +238,7 @@ export const commonStyles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xl,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderBottomColor: themeColors.borderLight,
   },
   modalTitle: {
     fontSize: typography.fontSize.xl,
@@ -243,7 +247,7 @@ export const commonStyles = StyleSheet.create({
   modalContent: {
     padding: spacing.xl,
   },
-  
+
   // Sections
   section: {
     marginBottom: spacing.xxl,
@@ -257,21 +261,21 @@ export const commonStyles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
+    color: themeColors.textPrimary,
   },
-  
+
   // Text styles
   textPrimary: {
-    color: colors.textPrimary,
+    color: themeColors.textPrimary,
   },
   textSecondary: {
-    color: colors.textSecondary,
+    color: themeColors.textSecondary,
   },
   textTertiary: {
-    color: colors.textTertiary,
+    color: themeColors.textTertiary,
   },
   textLight: {
-    color: colors.textLight,
+    color: themeColors.textLight,
   },
   textBold: {
     fontWeight: typography.fontWeight.bold,
@@ -279,7 +283,7 @@ export const commonStyles = StyleSheet.create({
   textSemibold: {
     fontWeight: typography.fontWeight.semibold,
   },
-  
+
   // Spacing helpers
   mt8: { marginTop: spacing.sm },
   mt12: { marginTop: spacing.md },
@@ -295,16 +299,22 @@ export const commonStyles = StyleSheet.create({
   p12: { padding: spacing.md },
   p16: { padding: spacing.lg },
   p20: { padding: spacing.xl },
-  
+
   // Borders
   borderBottom: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    borderBottomColor: themeColors.borderLight,
   },
   borderTop: {
     borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
+    borderTopColor: themeColors.borderLight,
   },
 });
+
+/**
+ * Static common styles - light mode only (backward compatible)
+ * Use createCommonStyles() with useThemeColors() for theme support
+ */
+export const commonStyles = createCommonStyles(colors);
 
 export default commonStyles;

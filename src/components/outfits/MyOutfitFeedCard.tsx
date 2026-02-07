@@ -7,12 +7,14 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { theme, colors } from '@/styles';
+import { theme } from '@/styles';
 import SocialActionBar from '@/components/outfits/SocialActionBar';
 import { useSocialEngagement } from '@/hooks/outfits/useSocialEngagement';
 import { OutfitWithRating } from '@/lib/outfits';
 import { formatTimestamp } from '@/utils/formatUtils';
 import { OutfitScheduleStatus, ScheduleInfo } from '@/types/outfits';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 const { spacing, typography } = theme;
 
@@ -40,6 +42,8 @@ const MyOutfitFeedCard = React.memo(
     onComment,
     onSchedulePress,
   }: MyOutfitFeedCardProps) => {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
     const engagement = useSocialEngagement('outfit', outfit.id, userId);
 
     return (
@@ -115,7 +119,7 @@ MyOutfitFeedCard.displayName = 'MyOutfitFeedCard';
 
 export default MyOutfitFeedCard;
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   myFeedCard: {
     backgroundColor: colors.white,
     borderBottomWidth: 1,

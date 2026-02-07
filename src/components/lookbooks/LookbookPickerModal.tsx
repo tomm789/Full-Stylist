@@ -15,8 +15,10 @@ import {
   View,
 } from 'react-native';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 type VisibilityOption = 'public' | 'followers' | 'private_link';
 
@@ -62,6 +64,8 @@ export default function LookbookPickerModal({
   onSelectLookbook,
   onAddToExisting,
 }: LookbookPickerModalProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const disableCreate =
     lookbookSaving || selectedOutfitCount === 0 || !lookbookTitle.trim();
   const disableAddExisting =
@@ -198,7 +202,7 @@ export default function LookbookPickerModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   lookbookPickerContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,

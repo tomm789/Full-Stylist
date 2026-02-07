@@ -7,8 +7,10 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { PillButton } from '@/components/shared';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 interface FeedbackFilterBarProps {
   selectedCategory: 'bug' | 'feature' | 'general' | 'other' | 'all';
@@ -32,6 +34,8 @@ export function FeedbackFilterBar({
   onCategoryChange,
   onStatusChange,
 }: FeedbackFilterBarProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <View style={styles.container}>
       <View style={styles.filterRow}>
@@ -78,7 +82,7 @@ export function FeedbackFilterBar({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     padding: 16,
     borderBottomWidth: 1,

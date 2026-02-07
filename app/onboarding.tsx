@@ -23,10 +23,14 @@ import {
 import { useImageGeneration } from '@/hooks/profile';
 import { supabase } from '@/lib/supabase';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 export default function OnboardingScreen() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
 
@@ -222,7 +226,7 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   loadingOverlay: {
     flex: 1,
     backgroundColor: colors.overlayDark,

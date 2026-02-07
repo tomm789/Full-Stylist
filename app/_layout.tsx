@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
 import { AddToHomeScreenBanner } from '@/components/AddToHomeScreenBanner';
@@ -89,23 +90,25 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <AuthProvider>
-      <NotificationsProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="index" />
-          <Stack.Screen name="auth" />
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="import" />
-          <Stack.Screen name="marketplace" />
-          <Stack.Screen name="notifications" />
-          <Stack.Screen name="search" />
-          <Stack.Screen name="users/[id]" />
-          <Stack.Screen name="account-settings" />
-          <Stack.Screen name="feedback/index" />
-        </Stack>
-        <AddToHomeScreenBanner />
-      </NotificationsProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <NotificationsProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="index" />
+            <Stack.Screen name="auth" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="import" />
+            <Stack.Screen name="marketplace" />
+            <Stack.Screen name="notifications" />
+            <Stack.Screen name="search" />
+            <Stack.Screen name="users/[id]" />
+            <Stack.Screen name="account-settings" />
+            <Stack.Screen name="feedback/index" />
+          </Stack>
+          <AddToHomeScreenBanner />
+        </NotificationsProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
