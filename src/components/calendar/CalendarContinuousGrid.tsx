@@ -8,8 +8,10 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import CalendarDayCell from './CalendarDayCell';
 import { CalendarEntry } from '@/lib/calendar';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { spacing, colors } = theme;
+const { spacing } = theme;
 
 interface CalendarContinuousGridProps {
   startDate: Date;
@@ -30,6 +32,8 @@ export default function CalendarContinuousGrid({
   scrollY,
   viewportHeight,
 }: CalendarContinuousGridProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const days = useMemo(() => {
     const list: Date[] = [];
     const cursor = new Date(startDate);
@@ -196,7 +200,7 @@ function isToday(date: Date): boolean {
 const ROW_HEIGHT = 120;
 const PILL_HEIGHT = 24;
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     position: 'relative',
     paddingBottom: spacing.md,

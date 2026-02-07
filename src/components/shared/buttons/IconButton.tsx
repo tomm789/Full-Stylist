@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
 
-const { colors, spacing, borderRadius } = theme;
+const { spacing, borderRadius } = theme;
 
 interface IconButtonProps extends TouchableOpacityProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -29,13 +30,16 @@ export default function IconButton({
   icon,
   onPress,
   size = 24,
-  color = colors.textPrimary,
+  color,
   backgroundColor,
   variant = 'default',
   disabled,
   style,
   ...props
 }: IconButtonProps) {
+  const colors = useThemeColors();
+  const iconColor = color ?? colors.textPrimary;
+
   const buttonStyle = [
     variant !== 'default' && styles.button,
     variant === 'circle' && styles.circle,
@@ -54,7 +58,7 @@ export default function IconButton({
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       {...props}
     >
-      <Ionicons name={icon} size={size} color={disabled ? colors.gray400 : color} />
+      <Ionicons name={icon} size={size} color={disabled ? colors.gray400 : iconColor} />
     </TouchableOpacity>
   );
 }

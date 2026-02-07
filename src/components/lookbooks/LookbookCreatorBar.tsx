@@ -9,8 +9,10 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { ImagePlaceholder, IconButton } from '@/components/shared';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface SelectedOutfit {
   id: string;
@@ -28,6 +30,8 @@ export default function LookbookCreatorBar({
   onRemoveOutfit,
   onExit,
 }: LookbookCreatorBarProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <View style={styles.container}>
       <View style={styles.bar}>
@@ -71,7 +75,7 @@ export default function LookbookCreatorBar({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     backgroundColor: colors.background,
     borderBottomWidth: 1,

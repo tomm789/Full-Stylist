@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlatList, RefreshControl, StyleSheet, ViewStyle } from 'react-native';
-import { colors, spacing, layout, typography } from '@/styles';
+import { spacing, layout, typography } from '@/styles';
+import { lightColors } from '@/styles/themes';
 
 export const postGridStyles = StyleSheet.create({
   gridList: {
@@ -28,12 +29,12 @@ export const postGridStyles = StyleSheet.create({
   gridImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: colors.backgroundTertiary,
+    backgroundColor: lightColors.backgroundTertiary,
   },
   gridImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: colors.backgroundTertiary,
+    backgroundColor: lightColors.backgroundTertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -52,12 +53,12 @@ export const postGridStyles = StyleSheet.create({
     right: spacing.xs,
     width: 24,
     height: 24,
-    backgroundColor: colors.primary,
+    backgroundColor: lightColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   selectionBadgeText: {
-    color: colors.textLight,
+    color: lightColors.textLight,
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.bold,
   },

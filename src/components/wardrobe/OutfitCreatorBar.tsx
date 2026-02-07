@@ -9,8 +9,10 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton, IconButton, ImagePlaceholder } from '@/components/shared';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius } = theme;
+const { spacing, borderRadius } = theme;
 
 interface SelectedItem {
   id: string;
@@ -30,6 +32,9 @@ export default function OutfitCreatorBar({
   onGenerate,
   onExit,
 }: OutfitCreatorBarProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   return (
     <>
       {/* Selection Bar */}
@@ -62,7 +67,7 @@ export default function OutfitCreatorBar({
             </View>
           ))}
         </ScrollView>
-        
+
         <IconButton
           icon="close"
           onPress={onExit}
@@ -85,7 +90,7 @@ export default function OutfitCreatorBar({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   bar: {
     flexDirection: 'row',
     backgroundColor: colors.backgroundTertiary,

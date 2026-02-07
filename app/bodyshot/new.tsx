@@ -22,10 +22,14 @@ import { useNewBodyshot } from '@/hooks/profile';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 export default function NewBodyshotScreen() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const router = useRouter();
   const {
     headshots,
@@ -194,7 +198,7 @@ export default function NewBodyshotScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

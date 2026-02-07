@@ -17,8 +17,10 @@ import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { FeedItem } from '@/lib/posts';
-import { colors, spacing, typography } from '@/styles';
+import { spacing, typography } from '@/styles';
 import PostGrid, { postGridStyles } from './PostGrid';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 
 interface DiscoverGridProps {
@@ -64,6 +66,8 @@ export function DiscoverGrid({
   emptyIcon = 'globe-outline',
   showOwnerOverlay = true,
 }: DiscoverGridProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const router = useRouter();
 
   const handlePostPress = (item: FeedItem) => {
@@ -197,7 +201,7 @@ export function DiscoverGrid({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   ownerHandle: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.medium,

@@ -16,8 +16,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface OnboardingAccountStepProps {
   handle: string;
@@ -44,6 +46,8 @@ export function OnboardingAccountStep({
   onSearchVisibilityChange,
   onComplete,
 }: OnboardingAccountStepProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -246,7 +250,7 @@ export function OnboardingAccountStep({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

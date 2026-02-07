@@ -36,7 +36,7 @@ import {
 } from '@/components/outfits';
 
 // Styles
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
 
 // Utils
 import { findConflictingItem } from '@/utils';
@@ -45,10 +45,15 @@ import { WardrobeItem } from '@/lib/wardrobe';
 import { logClientTiming } from '@/lib/perf/logClientTiming';
 import { PERF_MODE } from '@/lib/perf/perfMode';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors } = theme;
 
 export default function WardrobeScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
   const { addItemId } = useLocalSearchParams<{ addItemId?: string }>();
@@ -554,7 +559,7 @@ export default function WardrobeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   // Minimal styles - most come from theme and commonStyles
   headerContainer: {
     overflow: 'hidden',

@@ -7,9 +7,12 @@ import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PrimaryButton from '../buttons/PrimaryButton';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
+import { createCommonStyles } from '@/styles/commonStyles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, typography } = theme;
+const { spacing, typography } = theme;
 
 interface EmptyStateProps {
   icon?: keyof typeof Ionicons.glyphMap;
@@ -30,6 +33,10 @@ export default function EmptyState({
   onAction,
   style,
 }: EmptyStateProps) {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
+
   return (
     <View style={[commonStyles.emptyContainer, style]}>
       <Ionicons name={icon} size={iconSize} color={colors.gray400} />
@@ -46,7 +53,7 @@ export default function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   title: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,

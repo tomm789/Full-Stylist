@@ -6,8 +6,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { theme, colors, typography, spacing } from '@/styles';
+import { theme, typography, spacing } from '@/styles';
 import { SearchBar } from '@/components/shared';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 type OutfitsTab = 'my_outfits' | 'explore' | 'following';
 
@@ -38,6 +40,8 @@ export default function OutfitsHeaderBar({
   hasActiveFilters,
   showSearch,
 }: OutfitsHeaderBarProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <View style={styles.container}>
       <View style={styles.tabBar}>
@@ -148,7 +152,7 @@ export default function OutfitsHeaderBar({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     backgroundColor: colors.background,
     borderBottomWidth: 1,

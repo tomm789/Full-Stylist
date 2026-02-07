@@ -16,5 +16,6 @@ export { AccountDangerZone } from './AccountDangerZone';
 export { DeactivateAccountModal } from './DeactivateAccountModal';
 export { DeleteAccountModal } from './DeleteAccountModal';
 export { PrivacySettingsSection } from './PrivacySettingsSection';
+export { AppearanceSection } from './AppearanceSection';
 export { HeadshotSection } from './HeadshotSection';
 export { BodyShotSection } from './BodyShotSection';

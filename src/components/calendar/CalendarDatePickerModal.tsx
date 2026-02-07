@@ -13,8 +13,10 @@ import {
   View,
 } from 'react-native';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius } = theme;
+const { spacing, borderRadius } = theme;
 
 const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const monthNames = [
@@ -45,6 +47,8 @@ export default function CalendarDatePickerModal({
   onClose,
   onSelectDate,
 }: CalendarDatePickerModalProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const [modalCurrentDate, setModalCurrentDate] = useState(initialDate ?? new Date());
 
   useEffect(() => {
@@ -174,7 +178,7 @@ export default function CalendarDatePickerModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

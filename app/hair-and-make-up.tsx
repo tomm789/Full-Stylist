@@ -48,13 +48,17 @@ import {
 } from '@/lib/ai-jobs';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import ErrorModal from '@/components/ErrorModal';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography, shadows } = theme;
+const { spacing, borderRadius, typography, shadows } = theme;
 
 type TabId = 'hair' | 'makeup';
 type ScreenMode = 'library' | 'detail' | 'editor';
 
 export default function HairAndMakeUpScreen() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const router = useRouter();
   const { user } = useAuth();
   const {
@@ -708,7 +712,7 @@ export default function HairAndMakeUpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

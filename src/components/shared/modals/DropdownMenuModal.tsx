@@ -1,6 +1,8 @@
 import React from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
-import { layout, colors, spacing, borderRadius } from '@/styles/theme';
+import { layout, spacing, borderRadius } from '@/styles/theme';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 type DropdownMenuModalProps = {
   visible: boolean;
@@ -49,6 +51,8 @@ export function DropdownMenuModal({
   menuStyle,
   fullWidth = false,
 }: DropdownMenuModalProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable
@@ -75,7 +79,7 @@ export function DropdownMenuModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',

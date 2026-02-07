@@ -7,8 +7,10 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 interface CalendarDayHeaderProps {
   date: string | undefined;
@@ -21,6 +23,8 @@ export function CalendarDayHeader({
   onBack,
   onNavigateDay,
 }: CalendarDayHeaderProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', {
@@ -62,7 +66,7 @@ export function CalendarDayHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     paddingTop: 60,
     paddingHorizontal: spacing.md,

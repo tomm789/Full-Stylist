@@ -16,8 +16,10 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface SlideshowModalProps {
@@ -43,6 +45,8 @@ export default function SlideshowModal({
   onPrevious,
   onToggleAutoPlay,
 }: SlideshowModalProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   if (!visible || outfits.length === 0) return null;
 
   const currentOutfit = outfits[currentIndex];
@@ -116,7 +120,7 @@ export default function SlideshowModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.black,

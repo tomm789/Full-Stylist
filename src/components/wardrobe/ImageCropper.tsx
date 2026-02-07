@@ -10,8 +10,10 @@ import Cropper, { Area } from 'react-easy-crop';
 import { getCroppedImg } from '@/utils/canvasUtils';
 import { compressImageFile } from '@/utils/image-compression';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface ImageCropperProps {
   visible: boolean;
@@ -26,6 +28,9 @@ export default function ImageCropper({
   onCancel,
   onDone,
 }: ImageCropperProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
@@ -189,7 +194,7 @@ export default function ImageCropper({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.9)',

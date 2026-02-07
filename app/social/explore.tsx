@@ -17,7 +17,10 @@ import { getPublicOutfits } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
-import { commonStyles, theme } from '@/styles';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
 interface PublicOutfit {
   id: string;
@@ -30,6 +33,9 @@ interface PublicOutfit {
 }
 
 export default function ExploreScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
   const [outfits, setOutfits] = useState<PublicOutfit[]>([]);
@@ -130,7 +136,7 @@ export default function ExploreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

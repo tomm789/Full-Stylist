@@ -14,8 +14,10 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { WardrobeCategory, WardrobeItem } from '@/lib/wardrobe';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface CategorySlotSelectorProps {
   categories: WardrobeCategory[];
@@ -50,6 +52,8 @@ export default function CategorySlotSelector({
   onAddItem,
   onRemoveItem,
 }: CategorySlotSelectorProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Category Slots</Text>
@@ -109,7 +113,7 @@ export default function CategorySlotSelector({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: spacing.lg + spacing.md,
   },

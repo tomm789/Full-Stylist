@@ -7,8 +7,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 interface FeedOutfitCardProps {
   outfit: any;
@@ -25,6 +27,8 @@ export default function FeedOutfitCard({
   tryOnAvatarUrl,
   loading = false,
 }: FeedOutfitCardProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       {loading || !imageUrl ? (
@@ -52,7 +56,7 @@ export default function FeedOutfitCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: 0,
     position: 'relative',

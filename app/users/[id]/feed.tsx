@@ -22,10 +22,16 @@ import {
 } from '@/components/social';
 import { SlideshowModal } from '@/components/lookbooks';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
-import { commonStyles, theme } from '@/styles';
+import { theme } from '@/styles';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
 export default function UserFeedScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
   const { id: userId, postId } = useLocalSearchParams<{ id: string; postId?: string }>();
@@ -259,7 +265,7 @@ export default function UserFeedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

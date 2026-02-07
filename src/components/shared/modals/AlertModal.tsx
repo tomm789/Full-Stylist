@@ -1,7 +1,9 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { theme } from '@/styles';
-const { colors, spacing, borderRadius, typography } = theme;
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
+const { spacing, borderRadius, typography } = theme;
 
 export type AlertModalProps = {
   visible: boolean;
@@ -24,6 +26,8 @@ export function AlertModal({
   onSecondary,
   onClose,
 }: AlertModalProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const handleDismiss = onClose ?? onPrimary;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleDismiss}>
@@ -47,7 +51,7 @@ export function AlertModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.overlayDark,

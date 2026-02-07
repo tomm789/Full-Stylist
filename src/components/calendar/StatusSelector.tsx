@@ -6,8 +6,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface StatusSelectorProps {
   status: 'planned' | 'worn' | 'skipped';
@@ -20,6 +22,8 @@ export default function StatusSelector({
   onStatusChange,
   disabled = false,
 }: StatusSelectorProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const statuses: Array<'planned' | 'worn' | 'skipped'> = ['planned', 'worn', 'skipped'];
 
   return (
@@ -43,7 +47,7 @@ export default function StatusSelector({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: spacing.lg + spacing.md,
   },

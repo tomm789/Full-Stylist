@@ -6,8 +6,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, typography } = theme;
+const { spacing, typography } = theme;
 
 interface MonthNavigatorProps {
   currentDate: Date;
@@ -31,6 +33,8 @@ const monthNames = [
 ];
 
 export default function MonthNavigator({ currentDate, onNavigate, onToday }: MonthNavigatorProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const month = currentDate.getMonth();
   const year = currentDate.getFullYear();
 
@@ -56,7 +60,7 @@ export default function MonthNavigator({ currentDate, onNavigate, onToday }: Mon
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',

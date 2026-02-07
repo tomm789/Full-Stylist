@@ -16,10 +16,14 @@ import { useNotifications } from '@/contexts/NotificationsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { FullScreenMenuModal } from '@/components/tabs';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 export function HeaderRightMenu() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const router = useRouter();
   const { unreadCount } = useNotifications();
   const { signOut } = useAuth();
@@ -248,7 +252,7 @@ export function HeaderRightMenu() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   headerRightContainer: {
     flexDirection: 'row',
     alignItems: 'center',

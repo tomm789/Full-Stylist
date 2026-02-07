@@ -14,8 +14,10 @@ import {
 } from 'react-native';
 import { Comment } from '@/lib/engagement';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface CommentSectionProps {
   comments: Comment[];
@@ -26,6 +28,8 @@ export default function CommentSection({
   comments,
   onSubmit,
 }: CommentSectionProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -85,7 +89,7 @@ export default function CommentSection({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginTop: spacing.md,
     paddingTop: spacing.md,

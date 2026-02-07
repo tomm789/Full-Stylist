@@ -27,11 +27,17 @@ import {
   CreatePresetModal,
 } from '@/components/calendar';
 import { LoadingSpinner } from '@/components/shared';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius } = theme;
+const { spacing, borderRadius } = theme;
 
 export default function CalendarDayScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const { date, autoAdd } = useLocalSearchParams<{
     date: string | string[];
     autoAdd?: string | string[];
@@ -233,7 +239,7 @@ export default function CalendarDayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white,

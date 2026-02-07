@@ -7,8 +7,10 @@ import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { Input, PrimaryButton } from '@/components/shared';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius } = theme;
+const { spacing, borderRadius } = theme;
 
 interface CreatePresetModalProps {
   visible: boolean;
@@ -25,6 +27,8 @@ export function CreatePresetModal({
   onCreate,
   onClose,
 }: CreatePresetModalProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <Modal
       visible={visible}
@@ -60,7 +64,7 @@ export function CreatePresetModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

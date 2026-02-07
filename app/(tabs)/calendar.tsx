@@ -23,11 +23,17 @@ import { MonthNavigator, CalendarDatePickerModal } from '@/components/calendar';
 import CalendarWeekHeader from '@/components/calendar/CalendarWeekHeader';
 import CalendarContinuousGrid from '@/components/calendar/CalendarContinuousGrid';
 import { LoadingSpinner } from '@/components/shared';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 export default function CalendarScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -409,7 +415,7 @@ function parseMonthKey(key: string) {
   return new Date(year, month - 1, 1);
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',

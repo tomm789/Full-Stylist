@@ -26,14 +26,20 @@ import UserWardrobeScreen from '@/components/UserWardrobeScreen';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
 import { DiscoverGrid } from '@/components/social';
 import { Header } from '@/components/shared/layout';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, typography } = theme;
+const { spacing, typography } = theme;
 
 type TabType = 'outfits' | 'lookbooks' | 'wardrobe';
 
 export default function UserProfileScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
   const { id: userId } = useLocalSearchParams<{ id: string }>();
@@ -345,7 +351,7 @@ export default function UserProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   headerContainer: {
     overflow: 'hidden',
     backgroundColor: colors.background,

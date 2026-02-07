@@ -24,16 +24,22 @@ import { Header, LoadingSpinner } from '@/components/shared';
 import { HeaderIconButton } from '@/components/shared/layout';
 import { DropdownMenuModal, DropdownMenuItem } from '@/components/shared/modals';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
 import { restoreOutfit } from '@/lib/outfits';
 import { restoreLookbook } from '@/lib/lookbooks';
 import { restoreWardrobeItem } from '@/lib/wardrobe';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, typography } = theme;
+const { spacing, typography } = theme;
 
 type ArchiveTab = 'outfits' | 'lookbooks' | 'wardrobe';
 
 export default function ArchiveScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const router = useRouter();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ArchiveTab>('outfits');
@@ -364,7 +370,7 @@ export default function ArchiveScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

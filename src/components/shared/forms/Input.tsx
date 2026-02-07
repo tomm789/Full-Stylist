@@ -12,9 +12,12 @@ import {
   TextInputProps,
   ViewStyle,
 } from 'react-native';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -35,6 +38,9 @@ export default function Input({
   onBlur,
   ...props
 }: InputProps) {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const [isFocused, setIsFocused] = useState(false);
 
   const handleFocus = (e: any) => {
@@ -73,7 +79,7 @@ export default function Input({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: spacing.lg,
   },

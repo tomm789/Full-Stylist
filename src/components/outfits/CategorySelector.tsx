@@ -15,8 +15,10 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { WardrobeCategory, WardrobeItem } from '@/lib/wardrobe';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface CategorySelectorProps {
   categories: WardrobeCategory[];
@@ -52,6 +54,8 @@ export default function CategorySelector({
   getCategoryIcon,
   style,
 }: CategorySelectorProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const getIcon = getCategoryIcon || ((name: string) => defaultCategoryIcons[name] || '👔');
 
   return (
@@ -110,7 +114,7 @@ export default function CategorySelector({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     gap: spacing.sm + spacing.xs / 2,
   },

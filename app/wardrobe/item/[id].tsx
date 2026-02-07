@@ -37,9 +37,14 @@ import {
 } from '@/components/shared/modals';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
 import { LoadingSpinner } from '@/components/shared';
-import { commonStyles } from '@/styles';
+import { createCommonStyles } from '@/styles/commonStyles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 export default function ItemDetailScreen() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+  const commonStyles = createCommonStyles(colors);
   const { id, itemIds, readOnly, traceId: traceIdParam } = useLocalSearchParams<{
     id: string;
     itemIds?: string;
@@ -238,7 +243,7 @@ export default function ItemDetailScreen() {
             {isOwnItem && (
               <HeaderIconButton
                 icon={item?.is_favorite ? 'heart' : 'heart-outline'}
-                color={item?.is_favorite ? '#ff0000' : '#000'}
+                color={item?.is_favorite ? colors.favorite : colors.textPrimary}
                 onPress={actions.toggleFavorite}
                 accessibilityLabel="Toggle favorite"
               />
@@ -438,10 +443,10 @@ export default function ItemDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#000', // Image viewer always dark
   },
   headerRightButtons: {
     flexDirection: 'row',
@@ -452,7 +457,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     paddingTop: 100,
@@ -460,39 +465,39 @@ const styles = StyleSheet.create({
   },
   detailsContent: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   itemTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   itemBrand: {
     fontSize: 18,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   itemCategory: {
     fontSize: 14,
-    color: '#999',
+    color: colors.textTertiary,
     marginBottom: 12,
   },
   itemDescription: {
     fontSize: 16,
-    color: '#333',
+    color: colors.gray800,
     marginBottom: 20,
     lineHeight: 24,
   },
   emptyText: {
-    color: '#fff',
+    color: '#fff', // On dark image viewer background
     fontSize: 16,
     textAlign: 'center',
     marginTop: 40,
   },
   fastPathImageContainer: {
     aspectRatio: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#000', // Image viewer always dark
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
@@ -512,7 +517,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   generatingOverlayText: {
-    color: '#fff',
+    color: '#fff', // Overlay text always white on dark overlay
     fontSize: 16,
     marginTop: 12,
     fontWeight: '500',
@@ -528,7 +533,7 @@ const styles = StyleSheet.create({
   },
   skeletonLine: {
     height: 16,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.gray200,
     borderRadius: 4,
     marginBottom: 8,
     width: '100%',
@@ -539,11 +544,11 @@ const styles = StyleSheet.create({
   generationErrorBox: {
     marginBottom: 16,
     padding: 12,
-    backgroundColor: '#fff3f3',
+    backgroundColor: colors.error + '10',
     borderRadius: 8,
   },
   generationErrorText: {
-    color: '#c00',
+    color: colors.error,
     fontSize: 14,
     marginBottom: 8,
   },
@@ -551,11 +556,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#fff',
+    color: '#fff', // Button text always white on primary bg
     fontSize: 14,
     fontWeight: '600',
   },
@@ -569,7 +574,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   imageErrorText: {
-    color: '#fff',
+    color: '#fff', // Overlay text always white
     fontSize: 12,
     fontWeight: '600',
   },
@@ -577,7 +582,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1a1a1a', // Image placeholder always dark
     alignSelf: 'center',
   },
 });

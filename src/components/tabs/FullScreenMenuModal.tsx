@@ -15,7 +15,9 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { borderRadius, colors, spacing, typography, shadows } from '@/styles/theme';
+import { borderRadius, spacing, typography, shadows } from '@/styles/theme';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 export type MenuItem = {
   key: string;
@@ -42,6 +44,8 @@ export function FullScreenMenuModal({
   gridItems,
   actionItems,
 }: FullScreenMenuModalProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const [query, setQuery] = useState('');
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -168,7 +172,7 @@ export function FullScreenMenuModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,

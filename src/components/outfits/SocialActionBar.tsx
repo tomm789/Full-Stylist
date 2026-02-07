@@ -7,8 +7,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 interface SocialActionBarProps {
   liked: boolean;
@@ -31,6 +33,8 @@ export default function SocialActionBar({
   onComment,
   onSave,
 }: SocialActionBarProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <View style={styles.container}>
       <View style={styles.actionRow}>
@@ -67,7 +71,7 @@ export default function SocialActionBar({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     backgroundColor: colors.background,
     paddingHorizontal: spacing.md,

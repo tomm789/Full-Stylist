@@ -8,10 +8,13 @@ import { Modal, View, Text, Pressable, StyleSheet, TouchableOpacity } from 'reac
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { ImagePlaceholder, PrimaryButton } from '@/components/shared';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
+import { createCommonStyles } from '@/styles/commonStyles';
 import { WardrobeItem } from '@/lib/wardrobe';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface ItemDetailModalProps {
   visible: boolean;
@@ -36,6 +39,10 @@ export default function ItemDetailModal({
   onEdit,
   onDelete,
 }: ItemDetailModalProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+  const commonStyles = createCommonStyles(colors);
+
   if (!item) return null;
 
   return (
@@ -56,7 +63,7 @@ export default function ItemDetailModal({
                 <Text style={styles.addButtonText}>Add to outfit</Text>
               </TouchableOpacity>
             )}
-            
+
             <View style={styles.actions}>
               {onOpenDetail && (
                 <TouchableOpacity style={styles.actionButton} onPress={onOpenDetail}>
@@ -86,7 +93,7 @@ export default function ItemDetailModal({
             ) : (
               <ImagePlaceholder aspectRatio={1} />
             )}
-            
+
             <View style={styles.details}>
               <Text style={styles.title}>{item.title}</Text>
               {item.description && (
@@ -102,7 +109,7 @@ export default function ItemDetailModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.overlayLight,

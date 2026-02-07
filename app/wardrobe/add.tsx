@@ -21,12 +21,18 @@ import {
 } from '@/components/shared';
 import { HeaderIconButton } from '@/components/shared/layout';
 import ImageCropper from '@/components/wardrobe/ImageCropper';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
 import { Image } from 'expo-image';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 export default function AddItemScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const router = useRouter();
   const { action } = useLocalSearchParams<{ action?: string }>();
   const didAutoActionRef = useRef(false);
@@ -158,7 +164,7 @@ export default function AddItemScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white,

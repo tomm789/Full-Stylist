@@ -13,14 +13,18 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, typography, spacing } = theme;
+const { typography, spacing } = theme;
 
 interface HeaderAddMenuProps {
   title: string;
 }
 
 export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const router = useRouter();
 
   const action = title.toLowerCase();
@@ -60,7 +64,7 @@ export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   headerTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',

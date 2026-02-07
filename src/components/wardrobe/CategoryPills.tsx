@@ -7,9 +7,11 @@ import React from 'react';
 import { View, FlatList, StyleSheet, ViewStyle } from 'react-native';
 import { PillButton } from '@/components/shared';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 import { WardrobeCategory, WardrobeSubcategory } from '@/lib/wardrobe';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 interface CategoryPillsProps {
   categories?: WardrobeCategory[];
@@ -32,6 +34,9 @@ export default function CategoryPills({
   variant = 'category',
   style,
 }: CategoryPillsProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   const isCategory = variant === 'category';
   const items = isCategory ? categories : subcategories;
   const selectedId = isCategory ? selectedCategoryId : selectedSubcategoryId;
@@ -70,7 +75,7 @@ export default function CategoryPills({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,

@@ -11,7 +11,9 @@ import { OutfitWithRating } from '@/lib/outfits';
 import { ScheduleInfo } from '@/types/outfits';
 import { postGridStyles } from '@/components/social/PostGrid';
 import MyOutfitFeedCard from './MyOutfitFeedCard';
-import { colors, typography, spacing } from '@/styles';
+import { typography, spacing } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 type GridItemProps = {
   item: OutfitWithRating;
@@ -48,6 +50,8 @@ export function MyOutfitGridItem({
   onOpenFeed,
   onActivateSelection,
 }: GridItemProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const handlePress = () => {
     if (selectionMode) {
       onSelect(item.id, imageUrl);
@@ -127,7 +131,7 @@ export function MyOutfitFeedItem({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   gridImage: {
   },
   gridImagePlaceholder: {
