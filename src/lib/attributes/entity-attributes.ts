@@ -69,6 +69,42 @@ export async function createEntityAttribute(
 }
 
 /**
+ * Get entity attributes for multiple items at once (batch query).
+ * Returns a Map keyed by entity_id -> array of attributes with definitions and values.
+ */
+export async function getEntityAttributesForItems(
+  entityType: 'wardrobe_item' | 'outfit',
+  entityIds: string[]
+): Promise<{
+  data: Map<string, Array<EntityAttribute & { attribute_definitions?: AttributeDefinition; attribute_values?: AttributeValue }>>;
+  error: any;
+}> {
+  if (entityIds.length === 0) {
+    return { data: new Map(), error: null };
+  }
+
+  const { data, error } = await supabase
+    .from('entity_attributes')
+    .select('*, attribute_definitions(*), attribute_values(*)')
+    .eq('entity_type', entityType)
+    .in('entity_id', entityIds)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    return { data: new Map(), error };
+  }
+
+  const map = new Map<string, Array<any>>();
+  (data || []).forEach((attr) => {
+    const list = map.get(attr.entity_id) || [];
+    list.push(attr);
+    map.set(attr.entity_id, list);
+  });
+
+  return { data: map, error: null };
+}
+
+/**
  * Get entity attributes for a wardrobe item or outfit
  */
 export async function getEntityAttributes(

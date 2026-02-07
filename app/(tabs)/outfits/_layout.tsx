@@ -1,8 +1,11 @@
 import React from 'react';
 import { Stack } from 'expo-router';
 import { HeaderAddMenu, HeaderRightMenu } from '@/components/tabs';
+import { useThemeColors } from '@/contexts/ThemeContext';
 
 export default function OutfitsLayout() {
+  const colors = useThemeColors();
+
   return (
     <Stack
       screenOptions={{
@@ -10,7 +13,7 @@ export default function OutfitsLayout() {
         headerRight: () => <HeaderRightMenu />,
         headerTitleAlign: 'left',
         headerStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: colors.background,
         },
         headerShadowVisible: true,
       }}

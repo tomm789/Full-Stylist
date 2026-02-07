@@ -258,19 +258,17 @@ export default function OutfitViewScreen() {
             <>
               <HeaderIconButton
                 icon="calendar-outline"
-                color={colors.textPrimary}
                 onPress={() => setShowDatePickerModal(true)}
                 accessibilityLabel="Open calendar"
               />
               <HeaderIconButton
                 icon={outfit?.is_favorite ? 'heart' : 'heart-outline'}
-                color={outfit?.is_favorite ? colors.error : colors.textPrimary}
+                color={outfit?.is_favorite ? colors.error : undefined}
                 onPress={actions.toggleFavorite}
                 accessibilityLabel="Toggle favorite"
               />
               <HeaderIconButton
                 icon="ellipsis-vertical"
-                color={colors.textPrimary}
                 onPress={() => setShowMenu(true)}
                 accessibilityLabel="Open menu"
               />
@@ -457,7 +455,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     padding: 20,
   },
   deleteModalContent: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: 16,
     padding: 24,
     width: '100%',
@@ -487,7 +485,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.backgroundTertiary,
   },
   cancelButtonText: {
     fontSize: 16,

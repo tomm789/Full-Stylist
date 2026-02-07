@@ -18,5 +18,5 @@ export { useWardrobeItemDetailActions } from './useWardrobeItemDetailActions';
 export { useAddWardrobeItem } from './useAddWardrobeItem';
 export { useAttributeEditor } from './useAttributeEditor';
 
-export type { FilterState } from './useFilters';
+export type { FilterState, AvailableEntityAttribute } from './useFilters';
 export type { WardrobeItemsState } from './useWardrobeItems';

@@ -11,6 +11,8 @@ import {
   buildWardrobeItemsImageUrlCache,
   WardrobeItem,
 } from '@/lib/wardrobe';
+import { getEntityAttributesForItems } from '@/lib/attributes/entity-attributes';
+import { getTagsForItems } from '@/lib/tags';
 
 interface UseWardrobeItemsOptions {
   wardrobeId: string | null;
@@ -38,6 +40,8 @@ export function useWardrobeItems({
 }: UseWardrobeItemsOptions) {
   const [allItems, setAllItems] = useState<WardrobeItem[]>([]);
   const [imageCache, setImageCache] = useState<Map<string, string | null>>(new Map());
+  const [entityAttributesMap, setEntityAttributesMap] = useState<Map<string, any[]>>(new Map());
+  const [tagsMap, setTagsMap] = useState<Map<string, Array<{ id: string; name: string }>>>(new Map());
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -77,13 +81,24 @@ export function useWardrobeItems({
 
       setAllItems(combinedItems);
 
-      // Batch load images
+      // Batch load images, entity attributes, and tags in parallel
       if (combinedItems.length > 0) {
         const itemIds = combinedItems.map(item => item.id);
-        const { data: imagesMap } = await getWardrobeItemsImages(itemIds);
+
+        const [
+          { data: imagesMap },
+          { data: entityAttrsMap },
+          { data: tagsData },
+        ] = await Promise.all([
+          getWardrobeItemsImages(itemIds),
+          getEntityAttributesForItems('wardrobe_item', itemIds),
+          getTagsForItems('wardrobe_item', itemIds),
+        ]);
 
         const newCache = buildWardrobeItemsImageUrlCache(itemIds, imagesMap);
         setImageCache(newCache);
+        setEntityAttributesMap(entityAttrsMap);
+        setTagsMap(tagsData);
       }
     } catch (err) {
       setError(err as Error);
@@ -111,6 +126,8 @@ export function useWardrobeItems({
   return {
     allItems,
     imageCache,
+    entityAttributesMap,
+    tagsMap,
     loading,
     refreshing,
     error,

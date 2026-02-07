@@ -124,7 +124,6 @@ export default function OutfitEditorScreen() {
           !isNew && (
             <HeaderIconButton
               icon="archive-outline"
-              color={colors.textPrimary}
               onPress={actions.handleDelete}
               disabled={actions.saving}
               accessibilityLabel="Archive outfit"

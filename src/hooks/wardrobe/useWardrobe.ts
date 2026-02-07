@@ -12,7 +12,7 @@ export function useWardrobe(userId: string | null | undefined) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const { categories, loadCategories, getCategoryById } = useCategories();
+  const { categories, subcategories, loadCategories, loadSubcategories, getCategoryById } = useCategories();
 
   useEffect(() => {
     if (userId) {
@@ -45,9 +45,11 @@ export function useWardrobe(userId: string | null | undefined) {
   return {
     wardrobeId,
     categories,
+    subcategories,
     loading,
     error,
     loadWardrobe,
+    loadSubcategories,
     getCategoryById,
   };
 }
