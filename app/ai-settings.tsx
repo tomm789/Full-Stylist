@@ -19,7 +19,7 @@ import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 
 const DEFAULT_IMAGE_MODEL = 'gemini-2.5-flash-image';
-const DEFAULT_BODY_MODEL = 'gemini-3-pro-image';
+const DEFAULT_BODY_MODEL = 'gemini-3-pro-image-preview';
 
 const MODEL_CATALOG = [
   {

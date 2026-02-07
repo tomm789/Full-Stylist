@@ -94,12 +94,26 @@ export async function triggerAIJobExecution(
         const responseText = await response
           .text()
           .catch(() => 'could not read response');
+        const responseTextLower = responseText.toLowerCase();
+        const isTimeoutResponse =
+          (response.status === 500 || response.status === 504) &&
+          (responseTextLower.includes('task timed out') ||
+            responseTextLower.includes('timeouterror') ||
+            responseTextLower.includes('timed out'));
         console.warn('[AIJobs] Function trigger returned non-OK response', {
           status: response.status,
           statusText: response.statusText,
           responseText: responseText.substring(0, 200),
         });
         debugIngest({ location: 'execution.ts:84', message: 'triggerAIJobExecution non-OK response', data: { jobId, status: response.status, responseText: responseText.substring(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
+
+        if (isTimeoutResponse) {
+          console.debug(
+            '[AIJobs] Trigger timed out on server (expected in dev); job may still complete.',
+            { jobId }
+          );
+          return { error: null };
+        }
 
         if (response.status === 401 && responseText.toLowerCase().includes('invalid token')) {
           return { error: new Error('AI auth failed. Please sign out and back in.') };

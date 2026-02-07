@@ -121,7 +121,7 @@ function createTimingTracker() {
 }
 
 const DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-image";
-const DEFAULT_BODY_MODEL = "gemini-3-pro-image";
+const DEFAULT_BODY_MODEL = "gemini-3-pro-image-preview";
 
 function resolveModelFromSettings(settings, field, fallback = DEFAULT_IMAGE_MODEL) {
   if (settings && field && settings[field]) {
@@ -134,13 +134,6 @@ function resolveModelFromSettings(settings, field, fallback = DEFAULT_IMAGE_MODE
 }
 
 function getGeminiApiVersion(model) {
-  if (!model || typeof model !== "string") {
-    return "v1beta";
-  }
-  const normalized = model.toLowerCase();
-  if (normalized.startsWith("gemini-3")) {
-    return "v1";
-  }
   return "v1beta";
 }
 
