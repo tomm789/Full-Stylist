@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { LoadingSpinner } from '@/components/shared';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 import {
   Notification,
   markAsRead,
@@ -177,12 +177,7 @@ export default function NotificationsScreen() {
       {/* Header */}
       <Header
         title="Notifications"
-        leftContent={
-          <HeaderActionButton
-            label="Back"
-            onPress={() => router.back()}
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         rightContent={
           notifications.some((n) => !n.is_read) ? (
             <HeaderActionButton

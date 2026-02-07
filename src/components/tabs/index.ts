@@ -5,3 +5,4 @@
 
 export { HeaderAddMenu } from './HeaderAddMenu';
 export { HeaderRightMenu } from './HeaderRightMenu';
+export { FullScreenMenuModal } from './FullScreenMenuModal';

@@ -206,5 +206,9 @@ export async function getRecentJob(
 export function getOutfitRenderItemLimit(
   modelPreference?: string | null
 ): number {
-  return modelPreference?.includes('pro') ? 7 : 2;
+  const normalized = (modelPreference || '').toLowerCase();
+  if (normalized.includes('pro') || normalized.includes('ultra')) {
+    return 7;
+  }
+  return 2;
 }

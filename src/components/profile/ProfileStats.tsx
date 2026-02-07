@@ -4,13 +4,15 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 interface ProfileStatsProps {
   primaryLabel: string;
   primaryValue: number;
   followers: number;
   following: number;
+  onFollowersPress?: () => void;
+  onFollowingPress?: () => void;
 }
 
 export function ProfileStats({
@@ -18,21 +20,36 @@ export function ProfileStats({
   primaryValue,
   followers,
   following,
+  onFollowersPress,
+  onFollowingPress,
 }: ProfileStatsProps) {
+  const FollowersWrapper = onFollowersPress ? TouchableOpacity : View;
+  const FollowingWrapper = onFollowingPress ? TouchableOpacity : View;
+
   return (
     <View style={styles.container}>
       <View style={styles.statItem}>
         <Text style={styles.statValue}>{primaryValue}</Text>
         <Text style={styles.statLabel}>{primaryLabel}</Text>
       </View>
-      <View style={styles.statItem}>
+      <FollowersWrapper
+        style={styles.statItem}
+        onPress={onFollowersPress}
+        disabled={!onFollowersPress}
+        activeOpacity={0.7}
+      >
         <Text style={styles.statValue}>{followers}</Text>
         <Text style={styles.statLabel}>Followers</Text>
-      </View>
-      <View style={styles.statItem}>
+      </FollowersWrapper>
+      <FollowingWrapper
+        style={styles.statItem}
+        onPress={onFollowingPress}
+        disabled={!onFollowingPress}
+        activeOpacity={0.7}
+      >
         <Text style={styles.statValue}>{following}</Text>
         <Text style={styles.statLabel}>Following</Text>
-      </View>
+      </FollowingWrapper>
     </View>
   );
 }

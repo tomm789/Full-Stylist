@@ -3,14 +3,14 @@
   "version": "3.1.0",
   "description": "AI styling app for creating virtual headshots and outfits",
   "scripts": {
-  "start": "expo start",
-  "android": "expo start --android",
-  "ios": "expo start --ios",
-  "web": "expo start --web",
-  "build:web": "expo export -p web",
-  "dev": "netlify dev",
-  "typecheck": "tsc --noEmit"
-},
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build:web": "expo export -p web",
+    "dev": "netlify dev",
+    "typecheck": "tsc --noEmit"
+  },
   "keywords": [
     "ai",
     "styling",
@@ -32,7 +32,9 @@
     "expo-constants": "~18.0.13",
     "expo-file-system": "^19.0.21",
     "expo-image": "~3.0.11",
+    "expo-image-manipulator": "^14.0.7",
     "expo-image-picker": "^17.0.10",
+    "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.11",
     "expo-router": "^6.0.21",
     "react": "19.1.0",

@@ -9,7 +9,9 @@ const {
   downloadImageFromStorage,
   uploadImageToStorage,
   callGeminiAPI,
-  optimizeGeminiOutput
+  optimizeGeminiOutput,
+  resolveModelFromSettings,
+  DEFAULT_IMAGE_MODEL
 } = require("../utils");
 
 /**
@@ -38,6 +40,7 @@ ${itemsList}
 
 Provide a JSON response with this exact structure:
 {
+  "title": "A short outfit title (max 25 characters)",
   "description": "A 2-3 sentence description of the overall outfit style and aesthetic",
   "occasions": ["occasion1", "occasion2", "occasion3"],
   "style_tags": ["tag1", "tag2", "tag3"],
@@ -45,6 +48,7 @@ Provide a JSON response with this exact structure:
 }
 
 Guidelines:
+- Title must be 25 characters or fewer (short, punchy, no quotes). If uncertain, keep it very short.
 - Description should be engaging and highlight how the pieces work together
 - Occasions should be specific (e.g., "casual brunch", "business meeting", "date night")
 - Provide exactly 3 occasions
@@ -70,16 +74,34 @@ Respond with ONLY the JSON object, no additional text.`;
     // Parse the JSON response
     const description = parseDescriptionResponse(response);
     
+    const { data: outfitRow } = await supabase
+      .from('outfits')
+      .select('title')
+      .eq('id', outfitId)
+      .maybeSingle();
+
+    const existingTitle = (outfitRow?.title || '').trim();
+    const isDefaultTitle =
+      existingTitle === '' ||
+      existingTitle.toLowerCase() === 'generated outfit' ||
+      existingTitle.toLowerCase() === 'untitled outfit';
+
+    const updates = {
+      description: description.description,
+      occasions: description.occasions,
+      style_tags: description.styleTags,
+      season: description.season,
+      description_generated_at: new Date().toISOString()
+    };
+
+    if (description.title && isDefaultTitle) {
+      updates.title = description.title;
+    }
+
     // Save to database immediately
     const { error: updateError } = await supabase
       .from('outfits')
-      .update({
-        description: description.description,
-        occasions: description.occasions,
-        style_tags: description.styleTags,
-        season: description.season,
-        description_generated_at: new Date().toISOString()
-      })
+      .update(updates)
       .eq('id', outfitId);
 
     if (updateError) {
@@ -111,7 +133,11 @@ function parseDescriptionResponse(apiResponse) {
     
     const parsed = JSON.parse(jsonMatch[0]);
     
+    const rawTitle = typeof parsed.title === 'string' ? parsed.title.trim() : '';
+    const safeTitle = rawTitle ? rawTitle.slice(0, 25) : '';
+
     return {
+      title: safeTitle,
       description: parsed.description || '',
       occasions: Array.isArray(parsed.occasions) ? parsed.occasions.slice(0, 3) : [],
       styleTags: Array.isArray(parsed.style_tags) ? parsed.style_tags.slice(0, 3) : [],
@@ -121,6 +147,7 @@ function parseDescriptionResponse(apiResponse) {
     console.error('[OutfitDescription] Failed to parse JSON:', error);
     // Fallback to extracting what we can from raw text
     return {
+      title: '',
       description: apiResponse.substring(0, 500).trim(),
       occasions: [],
       styleTags: [],
@@ -213,7 +240,7 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
   // Retrieve user settings for default head/body shots, model preference, and headshot inclusion setting
   const { data: userSettings } = await supabase
     .from("user_settings")
-    .select("headshot_image_id, body_shot_image_id, ai_model_preference, include_headshot_in_generation")
+    .select("headshot_image_id, body_shot_image_id, ai_model_preference, ai_model_outfit_render, include_headshot_in_generation")
     .eq("user_id", userId)
     .single();
 
@@ -230,7 +257,11 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
     throw new Error("Missing headshot (required when include_headshot_in_generation is enabled)");
   }
 
-  const preferredModel = userSettings?.ai_model_preference || "gemini-2.5-flash-image";
+  const preferredModel = resolveModelFromSettings(
+    userSettings,
+    "ai_model_outfit_render",
+    DEFAULT_IMAGE_MODEL
+  );
 
   // START PARALLEL OPERATIONS
   // 1. Description (fast: 1-3s) — fire-and-forget until end

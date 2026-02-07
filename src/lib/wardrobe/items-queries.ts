@@ -37,6 +37,7 @@ export async function getWardrobeItems(
   const queryFilters: Record<string, any> = {
     wardrobe_id: wardrobeId,
     archived_at: null,
+    deleted_at: null,
   };
 
   if (filters?.category_id) {
@@ -78,6 +79,7 @@ export async function searchWardrobeItems(
     {
       additionalFilters: {
         archived_at: null,
+        deleted_at: null,
         visibility_override: ['public', 'followers', 'inherit'],
       },
       limit,
@@ -94,6 +96,7 @@ export async function getWardrobeItem(
   return fetchSingle<WardrobeItem>('wardrobe_items', '*', {
     id: itemId,
     archived_at: null,
+    deleted_at: null,
   });
 }
 
@@ -111,6 +114,7 @@ export async function getWardrobeItemsByIds(
     filters: {
       id: itemIds,
       archived_at: null,
+      deleted_at: null,
     },
   });
 }
@@ -134,6 +138,53 @@ export async function getUserWardrobeItems(
     }
 
     return getWardrobeItems(wardrobeId, filters);
+  } catch (error: any) {
+    return { data: [], error };
+  }
+}
+
+/**
+ * Get archived wardrobe items for a user
+ */
+export async function getArchivedWardrobeItems(
+  wardrobeId: string,
+  filters?: {
+    category_id?: string;
+    search?: string;
+    is_favorite?: boolean;
+  }
+): Promise<QueryListResult<WardrobeItem>> {
+  try {
+    let query = supabase
+      .from('wardrobe_items')
+      .select('*')
+      .eq('wardrobe_id', wardrobeId)
+      .not('archived_at', 'is', null)
+      .is('deleted_at', null);
+
+    if (filters?.category_id) {
+      query = query.eq('category_id', filters.category_id);
+    }
+
+    if (filters?.is_favorite !== undefined) {
+      query = query.eq('is_favorite', filters.is_favorite);
+    }
+
+    query = query.order('archived_at', { ascending: false });
+
+    const { data, error } = await query;
+    if (error) return { data: [], error };
+
+    let results = (data || []) as WardrobeItem[];
+
+    if (filters?.search) {
+      const searchLower = filters.search.toLowerCase();
+      results = results.filter((item) =>
+        item.title.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return { data: results, error: null };
   } catch (error: any) {
     return { data: [], error };
   }
@@ -187,6 +238,7 @@ export async function getSavedWardrobeItems(
     const queryFilters: Record<string, any> = {
       id: itemIds,
       archived_at: null,
+      deleted_at: null,
     };
 
     if (filters?.category_id) {

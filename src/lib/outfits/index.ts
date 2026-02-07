@@ -12,10 +12,14 @@ export {
   searchOutfits,
   getPublicOutfits,
   getUserOutfits,
+  getUserArchivedOutfitsWithOptions,
   getUserOutfitsWithOptions,
+  getOutfitsByIds,
   getOutfit,
   getOutfitWithDetails,
   deleteOutfit,
+  archiveOutfit,
+  restoreOutfit,
 } from './core';
 
 // Re-export from items

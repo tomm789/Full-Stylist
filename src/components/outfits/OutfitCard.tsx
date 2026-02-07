@@ -24,6 +24,7 @@ interface OutfitCardProps {
   imageUrl: string | null;
   imageLoading: boolean;
   onPress: () => void;
+  onLongPress?: () => void;
   showRating?: boolean;
   style?: ViewStyle;
 }
@@ -34,11 +35,17 @@ const OutfitCard = React.memo(
     imageUrl,
     imageLoading,
     onPress,
+    onLongPress,
     showRating = false,
     style,
   }: OutfitCardProps) => {
     return (
-      <TouchableOpacity style={[styles.card, style]} onPress={onPress}>
+      <TouchableOpacity
+        style={[styles.card, style]}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        delayLongPress={500}
+      >
         {imageLoading ? (
           <View style={styles.placeholder}>
             <ActivityIndicator />

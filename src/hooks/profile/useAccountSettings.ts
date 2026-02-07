@@ -1,6 +1,6 @@
 /**
  * useAccountSettings Hook
- * Load and manage account settings
+ * Load and manage account settings, including account deactivation and deletion
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -8,6 +8,7 @@ import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserSettings, updateUserSettings, validateModelPassword, UserSettings } from '@/lib/settings';
+import { deactivateAccount, deleteAccountPermanently } from '@/lib/user';
 
 interface UseAccountSettingsReturn {
   settings: UserSettings | null;
@@ -23,6 +24,8 @@ interface UseAccountSettingsReturn {
   handleModelSelection: (model: string, password?: string) => Promise<void>;
   handleHeadshotToggle: (enabled: boolean, password: string) => Promise<void>;
   handleSignOut: () => Promise<void>;
+  handleDeactivateAccount: () => Promise<void>;
+  handleDeleteAccount: () => Promise<void>;
 }
 
 export function useAccountSettings(): UseAccountSettingsReturn {
@@ -98,7 +101,7 @@ export function useAccountSettings(): UseAccountSettingsReturn {
         setSaving(true);
         try {
           const { valid, error } = await validateModelPassword(password, user.id);
-          
+
           if (!valid) {
             Alert.alert('Error', error || 'Incorrect password');
             setSaving(false);
@@ -114,9 +117,30 @@ export function useAccountSettings(): UseAccountSettingsReturn {
       }
 
       try {
-        const { error: updateError } = await updateUserSettings(user.id, {
+        const modelUpdates: Record<string, string> = {
           ai_model_preference: model,
-        } as any);
+        };
+
+        const modelKeyPairs: Array<{ key: string; lock: string }> = [
+          { key: 'ai_model_outfit_render', lock: 'ai_model_lock_outfit_render' },
+          { key: 'ai_model_outfit_mannequin', lock: 'ai_model_lock_outfit_mannequin' },
+          { key: 'ai_model_wardrobe_item_generate', lock: 'ai_model_lock_wardrobe_item_generate' },
+          { key: 'ai_model_wardrobe_item_render', lock: 'ai_model_lock_wardrobe_item_render' },
+          { key: 'ai_model_product_shot', lock: 'ai_model_lock_product_shot' },
+          { key: 'ai_model_headshot_generate', lock: 'ai_model_lock_headshot_generate' },
+          { key: 'ai_model_body_shot_generate', lock: 'ai_model_lock_body_shot_generate' },
+          { key: 'ai_model_auto_tag', lock: 'ai_model_lock_auto_tag' },
+          { key: 'ai_model_style_advice', lock: 'ai_model_lock_style_advice' },
+        ];
+
+        modelKeyPairs.forEach(({ key, lock }) => {
+          const isLocked = (settings as any)?.[lock] === true;
+          if (!isLocked) {
+            modelUpdates[key] = model;
+          }
+        });
+
+        const { error: updateError } = await updateUserSettings(user.id, modelUpdates as any);
 
         if (updateError) {
           Alert.alert('Error', 'Failed to update model preference');
@@ -142,7 +166,7 @@ export function useAccountSettings(): UseAccountSettingsReturn {
       setSaving(true);
       try {
         const { valid, error } = await validateModelPassword(password, user.id);
-        
+
         if (!valid) {
           Alert.alert('Error', error || 'Incorrect password');
           setSaving(false);
@@ -211,6 +235,44 @@ export function useAccountSettings(): UseAccountSettingsReturn {
     }
   }, [signOut, router]);
 
+  const handleDeactivateAccount = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const { success, error } = await deactivateAccount(user.id);
+
+      if (!success) {
+        Alert.alert('Error', error || 'Failed to deactivate account');
+        return;
+      }
+
+      // Sign out after deactivation
+      await signOut();
+      router.replace('/');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to deactivate account');
+    }
+  }, [user, signOut, router]);
+
+  const handleDeleteAccount = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const { success, error } = await deleteAccountPermanently(user.id);
+
+      if (!success) {
+        Alert.alert('Error', error || 'Failed to delete account');
+        return;
+      }
+
+      // Sign out after deletion
+      await signOut();
+      router.replace('/');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to delete account');
+    }
+  }, [user, signOut, router]);
+
   return {
     settings,
     loading,
@@ -222,5 +284,7 @@ export function useAccountSettings(): UseAccountSettingsReturn {
     handleModelSelection,
     handleHeadshotToggle,
     handleSignOut,
+    handleDeactivateAccount,
+    handleDeleteAccount,
   };
 }

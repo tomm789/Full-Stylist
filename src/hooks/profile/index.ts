@@ -13,3 +13,4 @@ export { useHeadshotDetailActions } from './useHeadshotDetailActions';
 export { useAccountSettings } from './useAccountSettings';
 export { useProfileImageGeneration } from './useProfileImageGeneration';
 export { useNewBodyshot } from './useNewBodyshot';
+export { useAISettings } from './useAISettings';

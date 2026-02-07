@@ -4,10 +4,11 @@
  */
 
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImageToStorage, uriToBlob } from '@/lib/utils/image-helpers';
 import { supabase } from '@/lib/supabase';
+import { updateUserProfile } from '@/lib/user';
 import {
   triggerHeadshotGenerate,
   triggerBodyShotGenerate,
@@ -91,12 +92,15 @@ export function useImageGeneration(): UseImageGenerationReturn {
       return;
     }
 
-    console.log('[pickImage] Converting to blob...');
-    const blob = await uriToBlob(result.assets[0].uri, 'image/jpeg');
-    console.log('[pickImage] Blob created, size:', blob.size);
-
     setUploadedUri(result.assets[0].uri);
-    setUploadedBlob(blob);
+    if (Platform.OS === 'web') {
+      console.log('[pickImage] Converting to blob...');
+      const blob = await uriToBlob(result.assets[0].uri, 'image/jpeg');
+      console.log('[pickImage] Blob created, size:', blob.size);
+      setUploadedBlob(blob);
+    } else {
+      setUploadedBlob(null);
+    }
     console.log('[pickImage] Done!');
   };
 
@@ -114,7 +118,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     console.log('userId:', userId);
     console.log('uploadedBlob exists:', !!uploadedBlob);
 
-    if (!uploadedBlob) {
+    if (!uploadedBlob && !uploadedUri) {
       console.log('ERROR: No blob');
       Alert.alert('Error', 'Please take or upload a photo first');
       return null;
@@ -126,11 +130,15 @@ export function useImageGeneration(): UseImageGenerationReturn {
     try {
       console.log('-> Uploading...');
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-const uploadResult = await uploadImageToStorage(
-  userId,
-  uploadedBlob,
-  `selfie-${stamp}.jpg`
-);
+      const uploadSource =
+        Platform.OS === 'web'
+          ? uploadedBlob
+          : { uri: uploadedUri as string, mimeType: 'image/jpeg' };
+      const uploadResult = await uploadImageToStorage(
+        userId,
+        uploadSource,
+        `selfie-${stamp}.jpg`
+      );
       console.log('Upload done, error:', !!uploadResult.error);
       
       if (uploadResult.error) throw uploadResult.error;
@@ -208,6 +216,37 @@ const uploadResult = await uploadImageToStorage(
         completedJob.result?.image_id || completedJob.result?.generated_image_id;
 
       console.log('=== SUCCESS! Image ID:', generatedImageId);
+
+      if (generatedImageId) {
+        try {
+          const { data: userProfile } = await supabase
+            .from('users')
+            .select('avatar_url')
+            .eq('id', userId)
+            .single();
+
+          if (!userProfile?.avatar_url) {
+            const { data: imageData } = await supabase
+              .from('images')
+              .select('storage_bucket, storage_key')
+              .eq('id', generatedImageId)
+              .single();
+
+            if (imageData?.storage_key) {
+              const { data: urlData } = supabase.storage
+                .from(imageData.storage_bucket || 'media')
+                .getPublicUrl(imageData.storage_key);
+
+              if (urlData?.publicUrl) {
+                await updateUserProfile(userId, { avatar_url: urlData.publicUrl });
+              }
+            }
+          }
+        } catch (avatarError) {
+          console.warn('[Headshot] Failed to auto-set avatar:', avatarError);
+        }
+      }
+
       return generatedImageId || null;
     } catch (error: any) {
       console.error('=== ERROR:', error.message);
@@ -232,7 +271,7 @@ const uploadResult = await uploadImageToStorage(
     userId: string,
     headshotId: string
   ): Promise<string | null> => {
-    if (!uploadedBlob) {
+    if (!uploadedBlob && !uploadedUri) {
       Alert.alert('Error', 'Please take or upload a photo first');
       return null;
     }
@@ -242,10 +281,14 @@ const uploadResult = await uploadImageToStorage(
 
     try {
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-const uploadResult = await uploadImageToStorage(
-  userId,
-  uploadedBlob,
-  `body-${stamp}.jpg`
+      const uploadSource =
+        Platform.OS === 'web'
+          ? uploadedBlob
+          : { uri: uploadedUri as string, mimeType: 'image/jpeg' };
+      const uploadResult = await uploadImageToStorage(
+        userId,
+        uploadSource,
+        `body-${stamp}.jpg`
       );
       if (uploadResult.error) throw uploadResult.error;
 

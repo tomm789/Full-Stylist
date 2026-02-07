@@ -6,6 +6,9 @@
 // public configuration if necessary. The client created here does not
 // automatically refresh tokens or persist sessions.
 
+// Load local .env for Netlify function development (no-op in production).
+require("dotenv").config();
+
 const { createClient } = require("@supabase/supabase-js");
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || "";

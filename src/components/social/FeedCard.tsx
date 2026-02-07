@@ -5,48 +5,25 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedItem } from '@/lib/posts';
-import { EngagementCounts } from '@/hooks/social';
 import { theme } from '@/styles';
+import { formatTimestamp } from '@/utils/formatUtils';
 
 const { colors, spacing, typography } = theme;
 
 interface FeedCardProps {
   item: FeedItem;
-  counts: EngagementCounts;
-  currentUserId: string | undefined;
-  onUserPress: (userId: string) => void;
-  onMenuPress: () => void;
+  onUserPress?: (userId: string) => void;
+  onMenuPress?: () => void;
   children: React.ReactNode; // Content (outfit/lookbook)
   actions: React.ReactNode; // Social action buttons
   caption?: string;
 }
 
-const formatTimestamp = (timestamp: string): string => {
-  const now = new Date();
-  const posted = new Date(timestamp);
-  const diffMs = now.getTime() - posted.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-
-  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-  if (posted.getFullYear() !== now.getFullYear()) {
-    options.year = 'numeric';
-  }
-  return posted.toLocaleDateString('en-US', options);
-};
-
 export default function FeedCard({
   item,
-  counts,
-  currentUserId,
   onUserPress,
   onMenuPress,
   children,
@@ -57,38 +34,62 @@ export default function FeedCard({
   if (!post) return null;
 
   const timestamp = item.type === 'post' ? item.post!.created_at : item.repost!.created_at;
-  const isOwnPost = item.type === 'post' && post.owner_user_id === currentUserId;
+  const canOpenProfile = Boolean(onUserPress);
 
   return (
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
+          {item.owner?.avatar_url ? (
+            <ExpoImage
+              source={{ uri: item.owner.avatar_url }}
+              style={styles.avatar}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <View style={styles.avatarFallback} />
+          )}
           {item.type === 'repost' && (
             <Text style={styles.repostLabel}>
-              <TouchableOpacity
-                onPress={() => item.owner?.id && onUserPress(item.owner.id)}
-              >
+              {canOpenProfile ? (
+                <TouchableOpacity
+                  onPress={() => item.owner?.id && onUserPress?.(item.owner.id)}
+                >
+                  <Text style={styles.repostLabelName}>
+                    {item.owner?.display_name || item.owner?.handle || 'User'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
                 <Text style={styles.repostLabelName}>
                   {item.owner?.display_name || item.owner?.handle || 'User'}
                 </Text>
-              </TouchableOpacity>
+              )}
               {' reposted'}
             </Text>
           )}
           {item.type === 'post' && item.owner && (
-            <TouchableOpacity onPress={() => onUserPress(item.owner.id)}>
+            canOpenProfile ? (
+              <TouchableOpacity onPress={() => onUserPress?.(item.owner.id)}>
+                <Text style={styles.ownerName}>
+                  {item.owner?.display_name || item.owner?.handle || 'User'}
+                </Text>
+              </TouchableOpacity>
+            ) : (
               <Text style={styles.ownerName}>
                 {item.owner?.display_name || item.owner?.handle || 'User'}
               </Text>
-            </TouchableOpacity>
+            )
           )}
         </View>
         <View style={styles.headerRight}>
           <Text style={styles.timestamp}>{formatTimestamp(timestamp)}</Text>
-          <TouchableOpacity style={styles.menuButton} onPress={onMenuPress}>
-            <Ionicons name="ellipsis-vertical" size={20} color={colors.textPrimary} />
-          </TouchableOpacity>
+          {onMenuPress ? (
+            <TouchableOpacity style={styles.menuButton} onPress={onMenuPress}>
+              <Ionicons name="ellipsis-vertical" size={20} color={colors.textPrimary} />
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
 
@@ -123,6 +124,21 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  avatarFallback: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.backgroundTertiary,
   },
   headerRight: {
     flexDirection: 'row',

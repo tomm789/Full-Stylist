@@ -16,8 +16,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeedbackThread } from '@/hooks/feedback';
 import { LoadingSpinner } from '@/components/shared';
+import { commonStyles } from '@/styles';
 import { CommentInput, ThreadHeader, CommentsList } from '@/components/feedback';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { Header, HeaderIconButton } from '@/components/shared/layout';
 
 export default function FeedbackThreadDetailScreen() {
   const { user } = useAuth();
@@ -49,7 +50,11 @@ export default function FeedbackThreadDetailScreen() {
   const isOwner = thread?.user_id === user?.id;
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <View style={[styles.container, commonStyles.loadingContainer]}>
+        <LoadingSpinner />
+      </View>
+    );
   }
 
   if (!thread) {
@@ -59,12 +64,7 @@ export default function FeedbackThreadDetailScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header
-        leftContent={
-          <HeaderActionButton
-            label="Back"
-            onPress={() => router.back()}
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
       />
 
       <KeyboardAvoidingView

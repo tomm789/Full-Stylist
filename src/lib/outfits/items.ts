@@ -10,6 +10,48 @@ export interface OutfitItem {
   created_at: string;
 }
 
+async function upsertOutfitPost(
+  userId: string,
+  outfitId: string,
+  visibility: 'public' | 'followers' | 'private_link' | 'private' | 'inherit'
+): Promise<void> {
+  const { data: existingPost, error: existingError } = await supabase
+    .from('posts')
+    .select('id')
+    .eq('owner_user_id', userId)
+    .eq('entity_type', 'outfit')
+    .eq('entity_id', outfitId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  if (existingPost?.id) {
+    const { error: updateError } = await supabase
+      .from('posts')
+      .update({ visibility })
+      .eq('id', existingPost.id)
+      .eq('owner_user_id', userId);
+
+    if (updateError) {
+      throw updateError;
+    }
+    return;
+  }
+
+  const { error: insertError } = await supabase.from('posts').insert({
+    owner_user_id: userId,
+    entity_type: 'outfit',
+    entity_id: outfitId,
+    visibility,
+  });
+
+  if (insertError) {
+    throw insertError;
+  }
+}
+
 /**
  * Create or update outfit
  */
@@ -94,6 +136,19 @@ export async function saveOutfit(
       .select('*')
       .eq('id', outfitId)
       .single();
+
+    if (fullOutfit) {
+      await upsertOutfitPost(
+        userId,
+        outfitId,
+        (outfitData.visibility || fullOutfit.visibility || 'followers') as
+          | 'public'
+          | 'followers'
+          | 'private_link'
+          | 'private'
+          | 'inherit'
+      );
+    }
 
     return {
       data: { outfit: fullOutfit, items: outfitItems || [] },

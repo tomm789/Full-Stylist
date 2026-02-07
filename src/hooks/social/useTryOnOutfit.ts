@@ -38,7 +38,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
     try {
       const { data: userSettings } = await supabase
         .from('user_settings')
-        .select('body_shot_image_id, headshot_image_id, ai_model_preference')
+        .select('body_shot_image_id, headshot_image_id, ai_model_preference, ai_model_outfit_render')
         .eq('user_id', userId)
         .single();
 
@@ -113,7 +113,10 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
         };
       });
 
-      const modelPreference = userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
+      const modelPreference =
+        userSettings?.ai_model_outfit_render ||
+        userSettings?.ai_model_preference ||
+        'gemini-2.5-flash-image';
       const renderLimit = getOutfitRenderItemLimit(modelPreference);
       let mannequinImageId: string | undefined;
 

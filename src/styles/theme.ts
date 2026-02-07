@@ -3,6 +3,8 @@
  * Central theme definition for consistent styling across the app
  */
 
+import { Platform } from 'react-native';
+
 export const colors = {
   // Primary colors
   primary: '#007AFF',
@@ -109,35 +111,25 @@ export const typography = {
   },
 } as const;
 
+const createShadow = (offsetY: number, radius: number, opacity: number, elevation: number) =>
+  Platform.select({
+    web: {
+      boxShadow: `0px ${offsetY}px ${radius}px rgba(0, 0, 0, ${opacity})`,
+    },
+    default: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: offsetY },
+      shadowOpacity: opacity,
+      shadowRadius: radius,
+      elevation,
+    },
+  });
+
 export const shadows = {
-  sm: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  md: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  lg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  xl: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-  },
+  sm: createShadow(1, 2, 0.1, 1),
+  md: createShadow(2, 4, 0.15, 2),
+  lg: createShadow(4, 8, 0.2, 4),
+  xl: createShadow(8, 16, 0.25, 8),
 } as const;
 
 export const layout = {

@@ -9,7 +9,9 @@ const {
   downloadImageFromStorage,
   uploadImageToStorage,
   callGeminiAPI,
-  optimizeGeminiOutput
+  optimizeGeminiOutput,
+  resolveModelFromSettings,
+  DEFAULT_IMAGE_MODEL
 } = require("../utils");
 
 /**
@@ -47,7 +49,16 @@ async function processWardrobeItemRender(input, supabase, userId, perfTracker = 
 
   // Gemini IMAGE model (same as product_shot)
   const geminiStart = Date.now();
-  const model = "gemini-2.5-flash-image";
+  const { data: userSettings } = await supabase
+    .from("user_settings")
+    .select("ai_model_preference, ai_model_wardrobe_item_render")
+    .eq("user_id", userId)
+    .single();
+  const model = resolveModelFromSettings(
+    userSettings,
+    "ai_model_wardrobe_item_render",
+    DEFAULT_IMAGE_MODEL
+  );
   console.log("[WardrobeItemRender] Gemini call start", { job_id: jobId, model });
   const productShotB64 = await callGeminiAPI(
     PROMPTS.PRODUCT_SHOT,

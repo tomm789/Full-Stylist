@@ -78,7 +78,8 @@ export function useOutfitViewActions({
         .select('*')
         .in('id', idsArray)
         .eq('owner_user_id', user.id)
-        .is('archived_at', null);
+        .is('archived_at', null)
+        .is('deleted_at', null);
 
       if (outfitsData) {
         const outfitMap = new Map(
@@ -155,6 +156,7 @@ export function useOutfitViewActions({
       await deleteOutfit();
       setShowDeleteConfirm(false);
       setDeleting(false);
+      Alert.alert('Success', 'Outfit archived');
       
       // Use replace instead of back to avoid navigation timing issues
       if (returnTo === 'outfits' || outfitIds) {
@@ -165,7 +167,7 @@ export function useOutfitViewActions({
         router.replace('/(tabs)/outfits');
       }
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to delete outfit');
+      Alert.alert('Error', 'Failed to archive outfit');
       setDeleting(false);
       setShowDeleteConfirm(false);
     }

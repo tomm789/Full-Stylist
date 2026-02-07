@@ -41,6 +41,7 @@ export {
   getActiveProductShotJob,
   getRecentProductShotJob,
   triggerHeadshotGenerate,
+  triggerHeadshotGenerateWithPrompt,
   triggerBodyShotGenerate,
   getActiveOutfitRenderJob,
   getRecentOutfitRenderJob,

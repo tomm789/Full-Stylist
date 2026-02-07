@@ -6,6 +6,7 @@ export interface Outfit {
   owner_user_id: string;
   title?: string;
   notes?: string;
+  occasions?: string[];
   visibility: 'public' | 'followers' | 'private_link' | 'private' | 'inherit';
   share_slug?: string;
   is_favorite: boolean;
@@ -49,6 +50,7 @@ export async function searchOutfits(query: string, limit: number = 20): Promise<
       .select('id, owner_user_id, title, visibility, created_at, owner:users!owner_user_id(handle, display_name)')
       .or(`title.ilike.${searchTerm},notes.ilike.${searchTerm}`)
       .is('archived_at', null)
+      .is('deleted_at', null)
       .in('visibility', ['public', 'followers'])
       .limit(limit);
 
@@ -78,18 +80,20 @@ export async function getPublicOutfits(
     id: string;
     owner_user_id: string;
     title?: string;
+    cover_image_id?: string;
     visibility: string;
     created_at: string;
-    owner?: { handle: string; display_name: string };
+    owner?: { id?: string; handle: string; display_name?: string; avatar_url?: string | null };
   }>;
   error: any;
 }> {
   try {
     const { data, error } = await supabase
       .from('outfits')
-      .select('id, owner_user_id, title, visibility, created_at, owner:users!owner_user_id(handle, display_name)')
-      .eq('visibility', 'public')
+      .select('id, owner_user_id, title, cover_image_id, visibility, created_at, owner:users!owner_user_id(id, handle, display_name, avatar_url)')
+      .in('visibility', ['public', 'inherit'])
       .is('archived_at', null)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -117,7 +121,29 @@ export async function getUserOutfits(userId: string): Promise<{
     .select('*')
     .eq('owner_user_id', userId)
     .is('archived_at', null)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
+
+  return { data: data || [], error };
+}
+
+/**
+ * Get outfits by a list of IDs
+ */
+export async function getOutfitsByIds(outfitIds: string[]): Promise<{
+  data: Outfit[];
+  error: any;
+}> {
+  if (outfitIds.length === 0) {
+    return { data: [], error: null };
+  }
+
+  const { data, error } = await supabase
+    .from('outfits')
+    .select('*')
+    .in('id', outfitIds)
+    .is('archived_at', null)
+    .is('deleted_at', null);
 
   return { data: data || [], error };
 }
@@ -141,7 +167,8 @@ export async function getUserOutfitsWithOptions(
     .from('outfits')
     .select('*')
     .eq('owner_user_id', userId)
-    .is('archived_at', null);
+    .is('archived_at', null)
+    .is('deleted_at', null);
 
   // Apply filters
   if (options?.favorites !== undefined) {
@@ -175,6 +202,77 @@ export async function getUserOutfitsWithOptions(
     const outfitIds = outfitsList.map((o) => o.id);
     const ratingMap = await calculateOutfitRatings(outfitIds);
     
+    const outfitsWithRatings: OutfitWithRating[] = outfitsList.map((outfit) => ({
+      ...outfit,
+      rating: ratingMap.get(outfit.id) || 0,
+    }));
+
+    outfitsWithRatings.sort((a, b) => {
+      const ratingA = a.rating || 0;
+      const ratingB = b.rating || 0;
+      return options.sortOrder === 'asc' ? ratingA - ratingB : ratingB - ratingA;
+    });
+
+    return { data: outfitsWithRatings, error: null };
+  }
+
+  return { data: outfitsList, error: null };
+}
+
+/**
+ * Get user's archived outfits with optional filters and sorting
+ */
+export async function getUserArchivedOutfitsWithOptions(
+  userId: string,
+  options?: {
+    search?: string;
+    favorites?: boolean;
+    sortBy?: 'date' | 'rating' | 'title';
+    sortOrder?: 'asc' | 'desc';
+  }
+): Promise<{
+  data: OutfitWithRating[];
+  error: any;
+}> {
+  let query = supabase
+    .from('outfits')
+    .select('*')
+    .eq('owner_user_id', userId)
+    .not('archived_at', 'is', null)
+    .is('deleted_at', null);
+
+  // Apply filters
+  if (options?.favorites !== undefined) {
+    query = query.eq('is_favorite', options.favorites);
+  }
+
+  if (options?.search) {
+    query = query.or(`title.ilike.%${options.search}%,notes.ilike.%${options.search}%`);
+  }
+
+  // Apply sorting
+  if (options?.sortBy === 'date') {
+    query = query.order('created_at', { ascending: options.sortOrder === 'asc' });
+  } else if (options?.sortBy === 'title') {
+    query = query.order('title', { ascending: options.sortOrder !== 'desc' });
+  } else {
+    // Default to date desc
+    query = query.order('created_at', { ascending: false });
+  }
+
+  const { data: outfits, error } = await query;
+
+  if (error) {
+    return { data: [], error };
+  }
+
+  const outfitsList = (outfits || []) as Outfit[];
+
+  // If sorting by rating, calculate ratings and sort
+  if (options?.sortBy === 'rating') {
+    const outfitIds = outfitsList.map((o) => o.id);
+    const ratingMap = await calculateOutfitRatings(outfitIds);
+
     const outfitsWithRatings: OutfitWithRating[] = outfitsList.map((outfit) => ({
       ...outfit,
       rating: ratingMap.get(outfit.id) || 0,
@@ -280,7 +378,39 @@ export async function deleteOutfit(
 ): Promise<{ error: any }> {
   const { error } = await supabase
     .from('outfits')
-    .update({ archived_at: new Date().toISOString() })
+    .update({ deleted_at: new Date().toISOString(), archived_at: null })
+    .eq('id', outfitId)
+    .eq('owner_user_id', userId);
+
+  return { error };
+}
+
+/**
+ * Archive outfit
+ */
+export async function archiveOutfit(
+  userId: string,
+  outfitId: string
+): Promise<{ error: any }> {
+  const { error } = await supabase
+    .from('outfits')
+    .update({ archived_at: new Date().toISOString(), deleted_at: null })
+    .eq('id', outfitId)
+    .eq('owner_user_id', userId);
+
+  return { error };
+}
+
+/**
+ * Restore outfit from archive
+ */
+export async function restoreOutfit(
+  userId: string,
+  outfitId: string
+): Promise<{ error: any }> {
+  const { error } = await supabase
+    .from('outfits')
+    .update({ archived_at: null })
     .eq('id', outfitId)
     .eq('owner_user_id', userId);
 

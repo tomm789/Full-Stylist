@@ -20,12 +20,13 @@ import { getDefaultWardrobeId, getWardrobeItems } from '@/lib/wardrobe';
 import { getWardrobeItemImages } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
+import { commonStyles } from '@/styles';
 
 interface FollowedUser {
   id: string;
   display_name: string;
   handle: string;
-  headshot_image_url: string | null;
+  avatar_url: string | null;
   wardrobeId?: string;
   itemCount?: number;
   previewImage?: string | null;
@@ -82,7 +83,7 @@ export default function FollowingWardrobesScreen() {
             id: followedUser.followed_user_id,
             display_name: followed?.display_name ?? '',
             handle: followed?.handle ?? '',
-            headshot_image_url: null,
+            avatar_url: followed?.avatar_url ?? null,
             wardrobeId,
             itemCount,
             previewImage,
@@ -109,7 +110,11 @@ export default function FollowingWardrobesScreen() {
   }, [user]);
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <View style={commonStyles.loadingContainer}>
+        <LoadingSpinner />
+      </View>
+    );
   }
 
   return (
@@ -135,9 +140,9 @@ export default function FollowingWardrobesScreen() {
               }
             >
               <View style={styles.userInfo}>
-                {item.headshot_image_url ? (
+                {item.avatar_url ? (
                   <ExpoImage
-                    source={{ uri: item.headshot_image_url }}
+                    source={{ uri: item.avatar_url }}
                     style={styles.avatar}
                     contentFit="cover"
                     cachePolicy="memory-disk"

@@ -8,7 +8,9 @@ const { PROMPTS } = require("../prompts");
 const {
   downloadImageFromStorage,
   uploadImageToStorage,
-  callGeminiAPI
+  callGeminiAPI,
+  resolveModelFromSettings,
+  DEFAULT_IMAGE_MODEL
 } = require("../utils");
 
 /**
@@ -16,7 +18,7 @@ const {
  * styles can override the defaults. The generated image is stored and
  * the user's settings are updated to point to the new headshot.
  *
- * @param {object} input - Job input including selfie_image_id, hair_style and makeup_style
+ * @param {object} input - Job input including selfie_image_id, optional hair/makeup or prompt_text
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase - Supabase client
  * @param {string} userId - The user's ID
  * @param {object} perfTracker - Optional performance tracker for timing measurements
@@ -26,7 +28,14 @@ const {
  */
 async function processHeadshotGenerate(input, supabase, userId, perfTracker = null, timingTracker = null, jobId = null) {
   console.log(`[processHeadshotGenerate] Starting for userId: ${userId}`, input);
-  const { selfie_image_id, hair_style, makeup_style } = input;
+  const {
+    selfie_image_id,
+    hair_style,
+    makeup_style,
+    prompt_text,
+    output_folder,
+    skip_user_settings_update
+  } = input;
   if (!selfie_image_id) {
     throw new Error("Missing selfie_image_id");
   }
@@ -47,8 +56,19 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
   
   const hair = hair_style || "Keep original hair";
   const makeup = makeup_style || "Natural look";
-  const prompt = PROMPTS.HEADSHOT(hair, makeup);
-  const model = "gemini-2.5-flash-image";
+  const prompt = prompt_text
+    ? PROMPTS.HEADSHOT_PRESET(prompt_text)
+    : PROMPTS.HEADSHOT(hair, makeup);
+  const { data: userSettings } = await supabase
+    .from("user_settings")
+    .select("ai_model_preference, ai_model_headshot_generate")
+    .eq("user_id", userId)
+    .single();
+  const model = resolveModelFromSettings(
+    userSettings,
+    "ai_model_headshot_generate",
+    DEFAULT_IMAGE_MODEL
+  );
   console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
   console.log(`[processHeadshotGenerate] Calling Gemini API with prompt length: ${prompt.length}`);
   // Generate the headshot via Gemini - pass full result object to include mime-type
@@ -65,7 +85,8 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
   // Upload and store the headshot
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const headshotKey = jobId ? `headshot-${jobId}` : `headshot-${stamp}`;
-  const storagePath = `${userId}/ai/headshots/${headshotKey}.jpg`;
+  const outputFolder = output_folder || "headshots";
+  const storagePath = `${userId}/ai/${outputFolder}/${headshotKey}.jpg`;
   const { imageId, storageKey } = await uploadImageToStorage(
     supabase,
     userId,
@@ -73,10 +94,12 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
     storagePath
   );
   // Update the user's settings to reference the new headshot
-  await supabase
-    .from("user_settings")
-    .update({ headshot_image_id: imageId })
-    .eq("user_id", userId);
+  if (!skip_user_settings_update) {
+    await supabase
+      .from("user_settings")
+      .update({ headshot_image_id: imageId })
+      .eq("user_id", userId);
+  }
   return { image_id: imageId, storage_key: storageKey };
 }
 

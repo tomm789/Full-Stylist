@@ -30,3 +30,11 @@ export {
   initializeUserProfile,
   isUserProfileComplete,
 } from './initialization';
+
+// Re-export from deletion
+export {
+  deactivateAccount,
+  reactivateAccount,
+  getDeactivationStatus,
+  deleteAccountPermanently,
+} from './deletion';

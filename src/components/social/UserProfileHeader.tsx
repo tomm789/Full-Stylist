@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile, useFollowStatus } from '@/hooks/social';
 import { ProfileHeader } from '@/components/profile';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
+import { commonStyles } from '@/styles';
 
 /** Header component for user profile; accepts profile + stats and renders via ProfileHeader */
 export function UserProfileHeader({
@@ -102,7 +103,11 @@ export default function UserProfileScreen() {
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <View style={commonStyles.loadingContainer}>
+        <LoadingSpinner />
+      </View>
+    );
   }
 
   if (!profile) {

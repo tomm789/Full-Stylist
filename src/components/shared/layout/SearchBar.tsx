@@ -12,7 +12,7 @@ import {
   TextInputProps,
 } from 'react-native';
 import IconButton from '../buttons/IconButton';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
 
 const { colors, spacing, borderRadius, typography } = theme;
 
@@ -59,7 +59,7 @@ export default function SearchBar({
           ]}
         >
           <IconButton
-            icon="filter"
+            icon="options-outline"
             onPress={onFilter}
             size={20}
             color={hasActiveFilters ? colors.white : colors.gray600}

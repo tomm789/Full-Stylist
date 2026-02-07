@@ -19,7 +19,7 @@ import {
   useProfileImageGeneration,
 } from '@/hooks/profile';
 import { HeadshotSection, BodyShotSection } from '@/components/profile';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { Header, HeaderIconButton } from '@/components/shared/layout';
 
 export default function ProfileImagesScreen() {
   const { user } = useAuth();
@@ -68,12 +68,7 @@ export default function ProfileImagesScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Header
           title="Profile Images"
-          leftContent={
-            <HeaderActionButton
-              label="Back"
-              onPress={() => router.back()}
-            />
-          }
+          leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         />
 
         {/* Headshot Section */}

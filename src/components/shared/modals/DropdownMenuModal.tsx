@@ -1,6 +1,6 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
-import { layout, colors, spacing, borderRadius, shadows } from '@/styles';
+import { Modal, Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { layout, colors, spacing, borderRadius } from '@/styles/theme';
 
 type DropdownMenuModalProps = {
   visible: boolean;
@@ -13,9 +13,19 @@ type DropdownMenuModalProps = {
   topOffset?: number;
 
   /**
+   * Distance from bottom of screen (roughly above tab bar)
+   */
+  bottomOffset?: number;
+
+  /**
    * Align the menu to the right edge instead of centered.
    */
   align?: 'center' | 'right';
+
+  /**
+   * Position the menu from the top or bottom of the screen.
+   */
+  placement?: 'top' | 'bottom';
 
   /**
    * Optional extra style for the menu container
@@ -33,14 +43,21 @@ export function DropdownMenuModal({
   onClose,
   children,
   topOffset = layout.headerHeightWithPadding,
+  bottomOffset = spacing.huge + spacing.md,
   align = 'center',
+  placement = 'top',
   menuStyle,
   fullWidth = false,
 }: DropdownMenuModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable
-        style={[styles.overlay, fullWidth && styles.overlayFullWidth, { paddingTop: topOffset }]}
+        style={[
+          styles.overlay,
+          placement === 'bottom' && styles.overlayBottom,
+          fullWidth && styles.overlayFullWidth,
+          placement === 'top' ? { paddingTop: topOffset } : { paddingBottom: bottomOffset },
+        ]}
         onPress={onClose}
       >
         <View
@@ -65,6 +82,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'center',
   },
+  overlayBottom: {
+    justifyContent: 'flex-end',
+  },
   overlayFullWidth: {
     alignItems: 'stretch',
   },
@@ -74,11 +94,15 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     padding: spacing.sm,
     minWidth: 200,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.3)' }
+      : {
+          shadowColor: colors.black,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8,
+        }),
   },
   menuFullWidth: {
     width: '100%',

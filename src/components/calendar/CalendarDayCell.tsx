@@ -5,6 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import type { ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { CalendarEntry } from '@/lib/calendar';
 import { theme as importedTheme } from '@/styles';
@@ -50,31 +51,32 @@ export default function CalendarDayCell({
   const firstEntry = outfitEntries[0];
   const imageUrl =
     firstEntry?.outfit_id ? outfitImages?.get(firstEntry.outfit_id) ?? null : null;
+  const hasOutfit = outfitEntries.length > 0;
 
   const styles = useMemo(() => {
     const cellPad = spacing.xs / 2;
 
     return StyleSheet.create({
       dayCell: {
-        width: `${100 / 7}%`,
-        height: 120,
-        borderWidth: 1,
-        borderColor: colors.border,
+        width: '100%',
+        height: '100%',
+        borderWidth: 0,
+        borderColor: 'transparent',
         padding: cellPad,
         justifyContent: 'flex-start',
         alignItems: 'flex-start',
         overflow: 'hidden',
         position: 'relative', // IMPORTANT: lets us layer image + overlays
+        backgroundColor: 'transparent',
       },
       dayCellOtherMonth: {
-        backgroundColor: colors.gray50,
+        backgroundColor: 'transparent',
       },
       dayCellToday: {
-        backgroundColor: colors.primaryLight,
-        borderColor: colors.primary,
-        borderWidth: 2,
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        borderWidth: 0,
       },
-
       // Date (keep original styling)
       dayNumber: {
         fontSize: 14,
@@ -119,7 +121,14 @@ export default function CalendarDayCell({
         height: '100%',
         backgroundColor: colors.gray200,
       },
-
+      emptySilhouette: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 5,
+      },
       moreIndicator: {
         position: 'absolute',
         bottom: spacing.xs / 2,
@@ -138,14 +147,31 @@ export default function CalendarDayCell({
         color: colors.white,
         fontWeight: '600',
       },
+
+      addIcon: {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: [{ translateX: -6 }, { translateY: -10 }],
+        zIndex: 10,
+        opacity: 0.2,
+      },
+      addIconText: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: colors.white,
+      },
+
     });
   }, [colors, spacing]);
+
+  const showAddIcon = outfitEntries.length === 0;
 
   return (
     <TouchableOpacity
       style={[
         styles.dayCell,
-        !inCurrentMonth && styles.dayCellOtherMonth,
+        !inCurrentMonth && !hasOutfit && styles.dayCellOtherMonth,
         isToday && styles.dayCellToday,
       ]}
       onPress={onPress}
@@ -153,21 +179,21 @@ export default function CalendarDayCell({
     >
       {/* Background image layer (only if there’s an outfit entry) */}
       {outfitEntries.length > 0 && (
-        <View pointerEvents="none" style={styles.outfitImagesContainer}>
+        <View style={styles.outfitImagesContainer} pointerEvents="none">
           {imageUrl ? (
             <Image
-              pointerEvents="none"
               source={{ uri: imageUrl }}
-              style={styles.outfitImage}
+              style={styles.outfitImage as ImageStyle}
               contentFit="cover"
+              pointerEvents="none"
             />
           ) : (
-            <View pointerEvents="none" style={styles.outfitImagePlaceholder} />
+            <View style={styles.outfitImagePlaceholder} pointerEvents="none" />
           )}
 
           {outfitEntries.length > 1 && (
-            <View pointerEvents="none" style={styles.moreIndicator}>
-              <Text pointerEvents="none" style={styles.moreIndicatorText}>
+            <View style={styles.moreIndicator} pointerEvents="none">
+              <Text style={styles.moreIndicatorText} pointerEvents="none">
                 +{outfitEntries.length - 1}
               </Text>
             </View>
@@ -175,18 +201,40 @@ export default function CalendarDayCell({
         </View>
       )}
 
+      {!hasOutfit && (
+        <Image
+          source={{
+            uri: 'https://earlhvpckbcpvppvmxsd.supabase.co/storage/v1/object/public/media/App%20Media/Graphics/Transparent-Female-on-White-Background.png',
+          }}
+          style={[
+            styles.emptySilhouette as ImageStyle,
+            !inCurrentMonth && ({ opacity: 0.7 } as ImageStyle),
+          ]}
+          contentFit="cover"
+          pointerEvents="none"
+        />
+      )}
+
       {/* Date is always anchored to the same top-left position in the cell */}
       <Text
-        pointerEvents="none"
         style={[
           styles.dayNumber,
           styles.dayNumberLayer,
-          !inCurrentMonth && styles.dayNumberOtherMonth,
+          !inCurrentMonth && !hasOutfit && styles.dayNumberOtherMonth,
           isToday && styles.dayNumberToday,
         ]}
+        pointerEvents="none"
       >
         {date.getDate()}
       </Text>
+
+      {showAddIcon && (
+        <View style={styles.addIcon} pointerEvents="none">
+          <Text style={styles.addIconText} pointerEvents="none">
+            +
+          </Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 }

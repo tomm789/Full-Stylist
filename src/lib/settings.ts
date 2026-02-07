@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { resolveNetlifyBaseUrl } from './netlify';
 
 export interface UserSettings {
   user_id: string;
@@ -10,6 +11,24 @@ export interface UserSettings {
   body_shot_image_id?: string | null;
   ai_model_preference?: string;
   ai_model_password?: string | null;
+  ai_model_outfit_render?: string | null;
+  ai_model_outfit_mannequin?: string | null;
+  ai_model_wardrobe_item_generate?: string | null;
+  ai_model_wardrobe_item_render?: string | null;
+  ai_model_product_shot?: string | null;
+  ai_model_headshot_generate?: string | null;
+  ai_model_body_shot_generate?: string | null;
+  ai_model_auto_tag?: string | null;
+  ai_model_style_advice?: string | null;
+  ai_model_lock_outfit_render?: boolean | null;
+  ai_model_lock_outfit_mannequin?: boolean | null;
+  ai_model_lock_wardrobe_item_generate?: boolean | null;
+  ai_model_lock_wardrobe_item_render?: boolean | null;
+  ai_model_lock_product_shot?: boolean | null;
+  ai_model_lock_headshot_generate?: boolean | null;
+  ai_model_lock_body_shot_generate?: boolean | null;
+  ai_model_lock_auto_tag?: boolean | null;
+  ai_model_lock_style_advice?: boolean | null;
   include_headshot_in_generation?: boolean;
   created_at?: string;
   updated_at?: string;
@@ -58,27 +77,16 @@ export async function validateModelPassword(
   userId?: string
 ): Promise<{ valid: boolean; error?: string }> {
   try {
-    // Determine the Netlify function URL
-    const isDev =
-      typeof process !== 'undefined' &&
-      process.env.NODE_ENV === 'development';
-    
-    let baseUrl = process.env.EXPO_PUBLIC_NETLIFY_URL || '';
-    
-    if (!baseUrl) {
-      if (isDev) {
-        baseUrl = process.env.EXPO_PUBLIC_NETLIFY_DEV_URL || 'http://localhost:8888';
-      } else {
-        // In production, try to use current origin
-        if (typeof window !== 'undefined') {
-          baseUrl = window.location.origin;
-        } else {
-          return { valid: false, error: 'Unable to determine Netlify URL' };
-        }
-      }
+    const { baseUrl, isDev } = resolveNetlifyBaseUrl();
+    if (!baseUrl && !isDev) {
+      return { valid: false, error: 'Unable to determine Netlify URL' };
     }
 
-    const functionUrl = `${baseUrl}/.netlify/functions/validate-model-password`;
+    let trimmedBaseUrl = baseUrl;
+    while (trimmedBaseUrl.endsWith('/')) {
+      trimmedBaseUrl = trimmedBaseUrl.slice(0, -1);
+    }
+    const functionUrl = `${trimmedBaseUrl}/.netlify/functions/validate-model-password`;
 
     const response = await fetch(functionUrl, {
       method: 'POST',

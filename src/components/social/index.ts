@@ -14,3 +14,4 @@ export { GeneratingOutfitModal } from './GeneratingOutfitModal';
 export { PostMenuModal } from './PostMenuModal';
 export { UserProfileHeader } from './UserProfileHeader';
 export { FeedItemComponent } from './FeedItem';
+export { DiscoverGrid } from './DiscoverGrid';

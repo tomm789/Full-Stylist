@@ -10,6 +10,8 @@ const {
   uploadImageToStorage,
   callGeminiAPI,
   optimizeGeminiOutput,
+  resolveModelFromSettings,
+  DEFAULT_IMAGE_MODEL
 } = require("../utils");
 
 /**
@@ -53,11 +55,20 @@ async function processWardrobeItemGenerate(
 
   // Start both branches in the same tick (no await between creating promises)
   console.log("[WardrobeItemGenerate] Starting image + text branches (parallel execution)");
+  const { data: userSettings } = await supabase
+    .from("user_settings")
+    .select("ai_model_preference, ai_model_wardrobe_item_generate")
+    .eq("user_id", userId)
+    .single();
 
   // Image branch: Gemini IMAGE → optimize → upload → DB
   const imageBranch = (async () => {
     const imageStart = Date.now();
-    const model = "gemini-2.5-flash-image";
+    const model = resolveModelFromSettings(
+      userSettings,
+      "ai_model_wardrobe_item_generate",
+      DEFAULT_IMAGE_MODEL
+    );
 
     console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, branch: "image" });
     const productShotB64 = await callGeminiAPI(

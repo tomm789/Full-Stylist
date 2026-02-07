@@ -24,12 +24,15 @@ interface EditProfileModalProps {
   handle: string;
   displayName: string;
   headshotUrl: string | null;
+  headshotOptions: Array<{ id: string; url: string }>;
+  selectedAvatarUrl: string | null;
   onHandleChange: (text: string) => void;
   onDisplayNameChange: (text: string) => void;
+  onSelectAvatar: (url: string) => void;
+  onClearAvatar: () => void;
+  onCreateHeadshot: () => void;
   onSave: () => void;
-  onUploadAvatar: () => void;
   saving: boolean;
-  uploadingAvatar: boolean;
 }
 
 export function EditProfileModal({
@@ -38,13 +41,18 @@ export function EditProfileModal({
   handle,
   displayName,
   headshotUrl,
+  headshotOptions,
+  selectedAvatarUrl,
   onHandleChange,
   onDisplayNameChange,
+  onSelectAvatar,
+  onClearAvatar,
+  onCreateHeadshot,
   onSave,
-  onUploadAvatar,
   saving,
-  uploadingAvatar,
 }: EditProfileModalProps) {
+  const avatarUrl = selectedAvatarUrl || headshotUrl;
+
   return (
     <Modal
       visible={visible}
@@ -62,32 +70,50 @@ export function EditProfileModal({
           </View>
 
           <ScrollView style={styles.modalBody}>
-            <TouchableOpacity
-              style={styles.avatarEditButton}
-              onPress={onUploadAvatar}
-              disabled={uploadingAvatar}
-            >
-              {headshotUrl ? (
+            <View style={styles.avatarPreview}>
+              {avatarUrl ? (
                 <ExpoImage
-                  source={{ uri: headshotUrl }}
+                  source={{ uri: avatarUrl }}
                   style={styles.avatarEdit}
                   contentFit="cover"
                 />
               ) : (
                 <Ionicons name="person-circle-outline" size={100} color="#999" />
               )}
-              {uploadingAvatar ? (
-                <ActivityIndicator
-                  style={styles.avatarLoader}
-                  size="small"
-                  color="#007AFF"
-                />
-              ) : (
-                <View style={styles.avatarEditOverlay}>
-                  <Ionicons name="camera" size={24} color="#fff" />
-                </View>
-              )}
-            </TouchableOpacity>
+            </View>
+
+            <Text style={styles.sectionLabel}>Profile Photo</Text>
+            {avatarUrl && (
+              <TouchableOpacity style={styles.clearButton} onPress={onClearAvatar}>
+                <Text style={styles.clearButtonText}>Remove</Text>
+              </TouchableOpacity>
+            )}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.headshotRow}
+            >
+              {headshotOptions.map((headshot) => {
+                const isSelected = headshot.url === avatarUrl;
+                return (
+                  <TouchableOpacity
+                    key={headshot.id}
+                    style={[styles.headshotCard, isSelected && styles.headshotCardSelected]}
+                    onPress={() => onSelectAvatar(headshot.url)}
+                  >
+                    <ExpoImage
+                      source={{ uri: headshot.url }}
+                      style={styles.headshotImage}
+                      contentFit="cover"
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity style={styles.newHeadshotCard} onPress={onCreateHeadshot}>
+                <Ionicons name="add" size={24} color="#007AFF" />
+                <Text style={styles.newHeadshotText}>New</Text>
+              </TouchableOpacity>
+            </ScrollView>
 
             <Text style={styles.label}>Handle (username)</Text>
             <TextInput
@@ -159,33 +185,69 @@ const styles = StyleSheet.create({
   modalBody: {
     padding: 20,
   },
-  avatarEditButton: {
+  avatarPreview: {
     width: 100,
     height: 100,
     alignSelf: 'center',
-    marginBottom: 24,
-    position: 'relative',
+    marginBottom: 16,
   },
   avatarEdit: {
     width: 100,
     height: 100,
     borderRadius: 50,
   },
-  avatarEditOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 32,
-    height: 32,
-    backgroundColor: '#007AFF',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 8,
   },
-  avatarLoader: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
+  clearButton: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  clearButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#ff3b30',
+  },
+  headshotRow: {
+    gap: 12,
+    paddingBottom: 8,
+    marginBottom: 8,
+  },
+  headshotCard: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  headshotCardSelected: {
+    borderColor: '#007AFF',
+  },
+  headshotImage: {
+    width: '100%',
+    height: '100%',
+  },
+  newHeadshotCard: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: '#f9f9f9',
+  },
+  newHeadshotText: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '600',
   },
   label: {
     fontSize: 16,

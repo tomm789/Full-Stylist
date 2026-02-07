@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -27,6 +27,7 @@ import {
 import { getUserSettings } from '@/lib/settings';
 import { generateClothingGrid } from '@/utils/clothing-grid';
 import { supabase } from '@/lib/supabase';
+import { uploadBase64ImageToStorage } from '@/lib/utils/image-helpers';
 import { startTimeline } from '@/lib/perf/timeline';
 
 const DESCRIPTION_POLL_MAX_MS = 30_000;
@@ -42,6 +43,7 @@ interface UseOutfitEditorActionsProps {
   saveOutfit: () => Promise<string | null>;
   setOutfitItems: React.Dispatch<React.SetStateAction<Map<string, WardrobeItem>>>;
   ensureItemImageUrls: (itemIds: string[]) => Promise<void>;
+  onDescriptionReady?: () => void;
 }
 
 interface UseOutfitEditorActionsReturn {
@@ -77,6 +79,7 @@ export function useOutfitEditorActions({
   saveOutfit,
   setOutfitItems,
   ensureItemImageUrls,
+  onDescriptionReady,
 }: UseOutfitEditorActionsProps): UseOutfitEditorActionsReturn {
   const router = useRouter();
   const { user } = useAuth();
@@ -166,6 +169,7 @@ export function useOutfitEditorActions({
           const messages = outfitDescriptionToGenerationMessages(description);
           setGenerationPhase('analysis');
           runDescriptionMessageDrip(messages, setActiveMessage, setGenerationPhase);
+          onDescriptionReady?.();
         }
       } catch (e) {
         console.error('[OutfitEditor] Description polling error:', e);
@@ -311,53 +315,46 @@ export function useOutfitEditorActions({
         return;
       }
 
-      // Client-side grid generation
+      // Client-side grid generation (web only)
       let stackedImageId = null;
-      try {
-        const itemsToStack = Array.from(outfitItems.values());
-        const imageUrls = itemsToStack.map((item) => {
-          const url = itemImageUrls.get(item.id);
-          if (!url) throw new Error(`No image URL for item ${item.id}`);
-          return url;
-        });
-
-        console.log(`[OutfitEditor] Generating grid for ${imageUrls.length} items...`);
-        const gridBase64 = await generateClothingGrid(imageUrls);
-        console.log(`[OutfitEditor] Grid generated successfully, base64 length: ${gridBase64.length}`);
-
-        // Convert base64 to Blob and upload to storage
-        const byteCharacters = atob(gridBase64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const gridBlob = new Blob([byteArray], { type: 'image/jpeg' });
-
-        // Upload to Supabase storage
-        const timestamp = Date.now();
-        const fileName = `grid-${timestamp}.jpg`;
-        const storagePath = `${user.id}/ai/stacked/${fileName}`;
-
-        const arrayBuffer = await gridBlob.arrayBuffer();
-        const uploadData = new Uint8Array(arrayBuffer);
-
-        const { data: uploadDataResult, error: uploadError } = await supabase.storage
-          .from('media')
-          .upload(storagePath, uploadData, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: 'image/jpeg',
+      const canClientStack =
+        Platform.OS === 'web' && typeof document !== 'undefined' && typeof Image !== 'undefined';
+      if (!canClientStack) {
+        console.warn('[OutfitEditor] Client grid generation unavailable; falling back to server stacking');
+      } else {
+        try {
+          const itemsToStack = Array.from(outfitItems.values());
+          const imageUrls = itemsToStack.map((item) => {
+            const url = itemImageUrls.get(item.id);
+            if (!url) throw new Error(`No image URL for item ${item.id}`);
+            return url;
           });
 
-        if (uploadError || !uploadDataResult) {
-          throw new Error(`Failed to upload grid image: ${uploadError?.message || 'Unknown error'}`);
-        }
+          console.log(`[OutfitEditor] Generating grid for ${imageUrls.length} items...`);
+          const gridBase64 = await generateClothingGrid(imageUrls);
+          console.log(`[OutfitEditor] Grid generated successfully, base64 length: ${gridBase64.length}`);
 
-        console.log(`[OutfitEditor] Grid uploaded successfully. Storage path: ${uploadDataResult.path}`);
-        stackedImageId = uploadDataResult.path;
-      } catch (gridError) {
-        console.warn('[OutfitEditor] Client-side grid generation failed:', gridError);
+          // Convert base64 to Blob and upload to storage
+          // Upload to Supabase storage
+          const timestamp = Date.now();
+          const fileName = `grid-${timestamp}.jpg`;
+          const storagePath = `${user.id}/ai/stacked/${fileName}`;
+          const { data: uploadDataResult, error: uploadError } = await uploadBase64ImageToStorage(
+            'media',
+            storagePath,
+            gridBase64,
+            'image/jpeg'
+          );
+
+          if (uploadError || !uploadDataResult) {
+            throw new Error(`Failed to upload grid image: ${uploadError?.message || 'Unknown error'}`);
+          }
+
+          console.log(`[OutfitEditor] Grid uploaded successfully. Storage path: ${uploadDataResult.path}`);
+          stackedImageId = uploadDataResult.path;
+        } catch (gridError) {
+          console.warn('[OutfitEditor] Client-side grid generation failed:', gridError);
+        }
       }
 
       // Prepare items for render job
@@ -395,7 +392,9 @@ export function useOutfitEditorActions({
       }
 
       const modelPreference =
-        userSettings?.ai_model_preference || 'gemini-2.5-flash-image';
+        userSettings?.ai_model_outfit_render ||
+        userSettings?.ai_model_preference ||
+        'gemini-2.5-flash-image';
 
       const timeline = startTimeline('outfit_render_editor');
       timeline.mark('generate_press');
@@ -423,7 +422,15 @@ export function useOutfitEditorActions({
 
       timeline.mark('job_created', { job_id: renderJob.id });
 
-      await triggerAIJobExecution(renderJob.id);
+      const triggerResult = await triggerAIJobExecution(renderJob.id);
+      if (triggerResult.error) {
+        Alert.alert(
+          'Generation Failed',
+          triggerResult.error.message || 'Failed to start AI generation. Please try again.'
+        );
+        setRendering(false);
+        return;
+      }
       timeline.mark('execution_triggered');
 
       clearDescriptionPoll();
@@ -519,26 +526,22 @@ export function useOutfitEditorActions({
   const handleDelete = useCallback(() => {
     if (!user || !outfit || isNew) return;
 
-    Alert.alert('Delete Outfit', 'Are you sure you want to delete this outfit?', [
+    Alert.alert('Archive Outfit', 'Move this outfit to your archive?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete',
+        text: 'Archive',
         style: 'destructive',
         onPress: async () => {
           setSaving(true);
           try {
-            const { supabase } = await import('@/lib/supabase');
-            const { error } = await supabase
-              .from('outfits')
-              .update({ archived_at: new Date().toISOString() })
-              .eq('id', outfit.id)
-              .eq('owner_user_id', user.id);
+            const { archiveOutfit } = await import('@/lib/outfits');
+            const { error } = await archiveOutfit(user.id, outfit.id);
 
             if (error) throw error;
-            Alert.alert('Success', 'Outfit deleted');
+            Alert.alert('Success', 'Outfit archived');
             router.back();
           } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to delete outfit');
+            Alert.alert('Error', error.message || 'Failed to archive outfit');
           } finally {
             setSaving(false);
           }

@@ -11,6 +11,8 @@ import {
   saveWardrobeItem,
   unsaveWardrobeItem,
   isWardrobeItemSaved,
+  archiveWardrobeItem,
+  restoreWardrobeItem,
   WardrobeItem,
 } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
@@ -38,6 +40,7 @@ interface UseWardrobeItemDetailActionsReturn {
   handleSaveItem: () => Promise<void>;
   handleEdit: () => void;
   handleDelete: () => Promise<void>;
+  handleRestore: () => Promise<void>;
   handleShare: () => Promise<void>;
   handleNavigateToItem: (targetItemId: string) => void;
 }
@@ -139,25 +142,21 @@ export function useWardrobeItemDetailActions({
 
     const deleteAction = async () => {
       try {
-        const { error } = await supabase
-          .from('wardrobe_items')
-          .update({ archived_at: new Date().toISOString() })
-          .eq('id', itemId)
-          .eq('owner_user_id', user.id);
+        const { error } = await archiveWardrobeItem(itemId, user.id);
 
         if (error) throw error;
 
         if (Platform.OS === 'web') {
-          alert('Item deleted successfully');
+          alert('Item archived successfully');
         } else {
-          Alert.alert('Success', 'Item deleted successfully');
+          Alert.alert('Success', 'Item archived successfully');
         }
         router.back();
       } catch (error: any) {
         if (Platform.OS === 'web') {
-          alert(error.message || 'Failed to delete item');
+          alert(error.message || 'Failed to archive item');
         } else {
-          Alert.alert('Error', error.message || 'Failed to delete item');
+          Alert.alert('Error', error.message || 'Failed to archive item');
         }
       }
     };
@@ -169,18 +168,49 @@ export function useWardrobeItemDetailActions({
         await deleteAction();
       }
     } else {
-      Alert.alert(
-        'Delete Item',
-        'Are you sure you want to delete this item? This action cannot be undone.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: deleteAction,
-          },
-        ]
-      );
+      Alert.alert('Archive Item', 'Are you sure you want to archive this item?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Archive',
+          style: 'destructive',
+          onPress: deleteAction,
+        },
+      ]);
+    }
+  }, [isOwnItem, itemId, user, router]);
+
+  const handleRestore = useCallback(async () => {
+    if (!isOwnItem || !itemId || !user) return;
+
+    const restoreAction = async () => {
+      try {
+        const { error } = await restoreWardrobeItem(itemId, user.id);
+        if (error) throw error;
+
+        if (Platform.OS === 'web') {
+          alert('Item restored successfully');
+        } else {
+          Alert.alert('Success', 'Item restored successfully');
+        }
+        router.back();
+      } catch (error: any) {
+        if (Platform.OS === 'web') {
+          alert(error.message || 'Failed to restore item');
+        } else {
+          Alert.alert('Error', error.message || 'Failed to restore item');
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm('Restore this item to your wardrobe?')) {
+        await restoreAction();
+      }
+    } else {
+      Alert.alert('Restore Item', 'Restore this item to your wardrobe?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Restore', onPress: restoreAction },
+      ]);
     }
   }, [isOwnItem, itemId, user, router]);
 
@@ -222,6 +252,7 @@ export function useWardrobeItemDetailActions({
     handleSaveItem,
     handleEdit,
     handleDelete,
+    handleRestore,
     handleShare,
     handleNavigateToItem,
   };

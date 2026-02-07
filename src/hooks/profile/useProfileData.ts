@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { getFullUserProfile } from '@/lib/user';
+import { getFullUserProfile, updateUserProfile } from '@/lib/user';
 import { getUserSettings } from '@/lib/settings';
 import { getFeed, FeedItem } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
@@ -18,8 +18,8 @@ interface UseProfileDataReturn {
   settings: any | null;
   posts: FeedItem[];
   postImages: Map<string, string | null>;
-  headshotImages: Array<{ id: string; url: string }>;
-  bodyShotImages: Array<{ id: string; url: string }>;
+  headshotImages: Array<{ id: string; url: string; created_at: string }>;
+  bodyShotImages: Array<{ id: string; url: string; created_at: string }>;
   loading: boolean;
   refresh: () => Promise<void>;
 }
@@ -94,8 +94,8 @@ export function useProfileData({
   const [settings, setSettings] = useState<any | null>(null);
   const [posts, setPosts] = useState<FeedItem[]>([]);
   const [postImages, setPostImages] = useState<Map<string, string | null>>(new Map());
-  const [headshotImages, setHeadshotImages] = useState<Array<{ id: string; url: string }>>([]);
-  const [bodyShotImages, setBodyShotImages] = useState<Array<{ id: string; url: string }>>([]);
+  const [headshotImages, setHeadshotImages] = useState<Array<{ id: string; url: string; created_at: string }>>([]);
+  const [bodyShotImages, setBodyShotImages] = useState<Array<{ id: string; url: string; created_at: string }>>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
@@ -152,15 +152,30 @@ export function useProfileData({
       // 🔥 OPTIMIZATION: Batch generate URLs for profile images (no async!)
       if (allImages) {
         const headshots = batchGenerateImageUrls(
-          allImages.filter((img) => img.storage_key?.includes('/ai/headshots/'))
+          allImages.filter((img) =>
+            (img.storage_key || '').toLowerCase().includes('headshot')
+          )
         );
         
         const bodyShots = batchGenerateImageUrls(
-          allImages.filter((img) => img.storage_key?.includes('/ai/body_shots/'))
+          allImages.filter((img) => {
+            const key = (img.storage_key || '').toLowerCase();
+            return key.includes('body_shot') || key.includes('bodyshot');
+          })
         );
 
         setHeadshotImages(headshots);
         setBodyShotImages(bodyShots);
+
+        if (profileData && !profileData.avatar_url && headshots.length > 0 && userId) {
+          const earliestHeadshot = [...headshots].sort(
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          )[0];
+          if (earliestHeadshot?.url) {
+            await updateUserProfile(userId, { avatar_url: earliestHeadshot.url });
+            setProfile({ ...profileData, avatar_url: earliestHeadshot.url });
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading profile data:', error);

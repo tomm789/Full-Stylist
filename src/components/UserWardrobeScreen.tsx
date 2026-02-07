@@ -11,6 +11,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '@/styles';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCategories, useFilters } from '@/hooks/wardrobe';
 import { CategoryPills, FilterDrawer, SearchBar } from '@/components/wardrobe';
@@ -28,12 +29,16 @@ interface UserWardrobeScreenProps {
   userId: string;
   showSearchControls?: boolean;
   showAddButton?: boolean;
+  onGridScroll?: (event: any) => void;
+  scrollEventThrottle?: number;
 }
 
 export default function UserWardrobeScreen({
   userId,
   showSearchControls = true,
   showAddButton = false,
+  onGridScroll,
+  scrollEventThrottle,
 }: UserWardrobeScreenProps) {
   const { user } = useAuth();
   const router = useRouter();
@@ -206,13 +211,10 @@ export default function UserWardrobeScreen({
             <Ionicons
               name={isSaved ? 'bookmark' : 'bookmark-outline'}
               size={24}
-              color={isSaved ? '#007AFF' : '#fff'}
+              color={isSaved ? '#007AFF' : colors.textTertiary}
             />
           )}
         </TouchableOpacity>
-        <Text style={styles.itemTitle} numberOfLines={1}>
-          {item.title}
-        </Text>
       </TouchableOpacity>
     );
   };
@@ -266,8 +268,11 @@ export default function UserWardrobeScreen({
           data={filteredItems}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          numColumns={2}
+          numColumns={3}
           contentContainerStyle={styles.itemsList}
+          columnWrapperStyle={styles.itemsRow}
+          onScroll={onGridScroll}
+          scrollEventThrottle={scrollEventThrottle}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
       )}
@@ -316,40 +321,33 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   itemsList: {
-    padding: 8,
+    padding: 1,
+  },
+  itemsRow: {
+    gap: 1,
   },
   itemCard: {
     flex: 1,
-    margin: 4,
+    margin: 1,
     backgroundColor: '#fff',
-    borderRadius: 8,
     overflow: 'hidden',
-    aspectRatio: 0.75,
+    aspectRatio: 1,
   },
   itemImage: {
     width: '100%',
-    height: '80%',
+    height: '100%',
     backgroundColor: '#f0f0f0',
   },
   itemImagePlaceholder: {
     width: '100%',
-    height: '80%',
+    height: '100%',
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   saveButton: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    padding: 4,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  itemTitle: {
-    padding: 8,
-    fontSize: 12,
-    color: '#000',
-    fontWeight: '500',
+    top: 4,
+    right: 4,
   },
 });

@@ -3,7 +3,7 @@
  * Edit wardrobe item details, categories, and attributes
  */
 
-import React from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,7 +24,7 @@ import {
   AttributeEditor,
   VisibilitySelector,
 } from '@/components/wardrobe';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -68,6 +68,7 @@ export default function EditItemScreen() {
   const {
     attributes,
     attributeDefinitions,
+    loading: attributesLoading,
     updateAttribute,
     deleteAttribute,
     createAttribute,
@@ -75,6 +76,69 @@ export default function EditItemScreen() {
     itemId: id,
     entityType: 'wardrobe_item',
   });
+
+  const initialSnapshotRef = useRef<{
+    title: string;
+    description: string;
+    brand: string;
+    size: string;
+    categoryId: string;
+    subcategoryId: string;
+    visibility: string;
+    attributeSignature: string;
+  } | null>(null);
+
+  const getAttributeSignature = (
+    attrs: Array<{ definition_id?: string; raw_value?: string }>
+  ) =>
+    attrs
+      .map(
+        (attr) =>
+          `${attr.definition_id || ''}:${attr.raw_value || ''}`
+      )
+      .sort()
+      .join('|');
+
+  useEffect(() => {
+    if (initialSnapshotRef.current || !item || attributesLoading) return;
+
+    initialSnapshotRef.current = {
+      title: item.title || '',
+      description: item.description || '',
+      brand: item.brand || '',
+      size,
+      categoryId: item.category_id || '',
+      subcategoryId: item.subcategory_id || '',
+      visibility: item.visibility_override || 'inherit',
+      attributeSignature: getAttributeSignature(attributes),
+    };
+  }, [item, attributesLoading, attributes, size]);
+
+  const isDirty = useMemo(() => {
+    if (!initialSnapshotRef.current || !item) return false;
+
+    const snapshot = initialSnapshotRef.current;
+    return (
+      title !== snapshot.title ||
+      description !== snapshot.description ||
+      brand !== snapshot.brand ||
+      size !== snapshot.size ||
+      selectedCategoryId !== snapshot.categoryId ||
+      selectedSubcategoryId !== snapshot.subcategoryId ||
+      visibility !== snapshot.visibility ||
+      getAttributeSignature(attributes) !== snapshot.attributeSignature
+    );
+  }, [
+    title,
+    description,
+    brand,
+    size,
+    selectedCategoryId,
+    selectedSubcategoryId,
+    visibility,
+    attributes,
+    item,
+  ]);
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -111,18 +175,14 @@ export default function EditItemScreen() {
       {/* Header */}
       <Header
         title="Edit Item"
-        leftContent={
-          <HeaderActionButton
-            label="Cancel"
-            onPress={() => router.back()}
-            variant="secondary"
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         rightContent={
-          <HeaderActionButton
-            label="Save"
-            onPress={handleSave}
-          />
+          isDirty ? (
+            <HeaderActionButton
+              label="Save"
+              onPress={handleSave}
+            />
+          ) : null
         }
       />
 

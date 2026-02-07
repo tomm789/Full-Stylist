@@ -28,12 +28,14 @@ interface UseOutfitEditorReturn {
   outfit: any | null;
   title: string;
   notes: string;
+  visibility: 'public' | 'followers' | 'private_link' | 'private';
   categories: WardrobeCategory[];
   outfitItems: Map<string, WardrobeItem>;
   itemImageUrls: Map<string, string>;
   coverImage: any | null;
   setTitle: (title: string) => void;
   setNotes: (notes: string) => void;
+  setVisibility: (visibility: 'public' | 'followers' | 'private_link' | 'private') => void;
   setOutfitItems: (items: Map<string, WardrobeItem>) => void;
   saveOutfit: () => Promise<string | null>;
   refreshOutfit: () => Promise<void>;
@@ -50,6 +52,9 @@ export function useOutfitEditor({
   const [outfit, setOutfit] = useState<any | null>(null);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
+  const [visibility, setVisibility] = useState<
+    'public' | 'followers' | 'private_link' | 'private'
+  >('followers');
   const [categories, setCategories] = useState<WardrobeCategory[]>([]);
   const [outfitItems, setOutfitItems] = useState<Map<string, WardrobeItem>>(
     new Map()
@@ -115,6 +120,7 @@ export function useOutfitEditor({
         id: outfitId === 'new' ? undefined : outfit?.id,
         title: title.trim() || undefined,
         notes: notes.trim() || undefined,
+        visibility,
       },
       items
     );
@@ -143,6 +149,9 @@ export function useOutfitEditor({
     setOutfit(data.outfit);
     setTitle(data.outfit.title || '');
     setNotes(data.outfit.notes || '');
+    setVisibility(
+      (data.outfit.visibility as typeof visibility | undefined) || 'followers'
+    );
     setCoverImage(data.coverImage);
 
     if (data.items.length > 0) {
@@ -219,12 +228,14 @@ export function useOutfitEditor({
     outfit,
     title,
     notes,
+    visibility,
     categories,
     outfitItems,
     itemImageUrls,
     coverImage,
     setTitle,
     setNotes,
+    setVisibility,
     setOutfitItems,
     saveOutfit: saveOutfitAction,
     refreshOutfit,

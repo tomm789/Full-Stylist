@@ -11,10 +11,13 @@ export {
   type LookbookOutfit,
   searchLookbooks,
   getUserLookbooks,
+  getUserArchivedLookbooks,
   getLookbook,
   saveLookbook,
   publishLookbook,
   deleteLookbook,
+  archiveLookbook,
+  restoreLookbook,
 } from './core';
 
 // Re-export from system

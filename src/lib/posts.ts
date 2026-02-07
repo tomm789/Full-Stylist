@@ -27,6 +27,7 @@ export interface FeedItem {
     id: string;
     handle: string;
     display_name?: string;
+    avatar_url?: string | null;
   };
   entity?: {
     outfit?: any;
@@ -145,7 +146,7 @@ export async function getFeed(
     // Build posts query
     let postsQuery = supabase
       .from('posts')
-      .select('*, owner:users(id, handle, display_name)');
+      .select('*, owner:users(id, handle, display_name, avatar_url)');
 
     // Filter posts
     let filterString = '';
@@ -169,7 +170,7 @@ export async function getFeed(
       .from('reposts')
       .select(`
         *,
-        user:users!reposts_user_id_fkey(id, handle, display_name),
+        user:users!reposts_user_id_fkey(id, handle, display_name, avatar_url),
         original_post:posts!reposts_original_post_id_fkey(*)
       `)
       .order('created_at', { ascending: false })
@@ -284,6 +285,98 @@ export async function getFeed(
     });
 
     return { data: limitedItems, error: null };
+  } catch (error: any) {
+    return { data: [], error };
+  }
+}
+
+/**
+ * Get discover feed - public posts from all users (excluding current user)
+ * Used for the Discover tab on the social page
+ */
+export async function getDiscoverFeed(
+  userId: string,
+  limit: number = 60,
+  offset: number = 0
+): Promise<{
+  data: FeedItem[];
+  error: any;
+}> {
+  try {
+    // Query public posts from all users except current user
+    const { data: posts, error: postsError } = await supabase
+      .from('posts')
+      .select('*, owner:users(id, handle, display_name, avatar_url)')
+      .eq('visibility', 'public')
+      .neq('owner_user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (postsError) throw postsError;
+
+    const feedItems: FeedItem[] = (posts || []).map((post) => ({
+      id: post.id,
+      type: 'post' as const,
+      post: post,
+      owner: post.owner as any,
+    }));
+
+    // Batch fetch entities (same optimization as getFeed)
+    const outfitIds = new Set<string>();
+    const lookbookIds = new Set<string>();
+
+    feedItems.forEach(item => {
+      const post = item.post!;
+      if (post.entity_type === 'outfit') {
+        outfitIds.add(post.entity_id);
+      } else if (post.entity_type === 'lookbook') {
+        lookbookIds.add(post.entity_id);
+      }
+    });
+
+    // Fetch all outfits in ONE query
+    let outfitsMap = new Map<string, any>();
+    if (outfitIds.size > 0) {
+      const { data: outfits } = await supabase
+        .from('outfits')
+        .select('*')
+        .in('id', Array.from(outfitIds));
+
+      if (outfits) {
+        outfits.forEach(outfit => outfitsMap.set(outfit.id, outfit));
+      }
+    }
+
+    // Fetch all lookbooks in ONE query
+    let lookbooksMap = new Map<string, any>();
+    if (lookbookIds.size > 0) {
+      const { data: lookbooks } = await supabase
+        .from('lookbooks')
+        .select('*')
+        .in('id', Array.from(lookbookIds));
+
+      if (lookbooks) {
+        lookbooks.forEach(lookbook => lookbooksMap.set(lookbook.id, lookbook));
+      }
+    }
+
+    // Attach entities
+    feedItems.forEach(item => {
+      const post = item.post!;
+      if (post.entity_type === 'outfit') {
+        const outfit = outfitsMap.get(post.entity_id);
+        if (outfit) {
+          item.entity = { outfit };
+        }
+      } else if (post.entity_type === 'lookbook') {
+        const lookbook = lookbooksMap.get(post.entity_id);
+        if (lookbook) {
+          item.entity = { lookbook };
+        }
+      }
+    });
+
+    return { data: feedItems, error: null };
   } catch (error: any) {
     return { data: [], error };
   }

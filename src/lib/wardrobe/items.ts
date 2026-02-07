@@ -10,6 +10,7 @@ export type { WardrobeItem } from './items-types';
 export {
   getDefaultWardrobeId,
   getWardrobeItems,
+  getArchivedWardrobeItems,
   searchWardrobeItems,
   getWardrobeItem,
   getWardrobeItemsByIds,
@@ -23,6 +24,8 @@ export {
   createWardrobeItem,
   updateWardrobeItem,
   deleteWardrobeItem,
+  archiveWardrobeItem,
+  restoreWardrobeItem,
   saveWardrobeItem,
   unsaveWardrobeItem,
 } from './items-mutations';

@@ -8,6 +8,7 @@ import {
   View,
   StyleSheet,
   ScrollView,
+  Text,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +26,7 @@ import {
   PrimaryButton,
   LoadingSpinner,
 } from '@/components/shared';
+import { VisibilitySelector } from '@/components/wardrobe/VisibilitySelector';
 import { HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 import { theme, commonStyles } from '@/styles';
 import { PERF_MODE } from '@/lib/perf/perfMode';
@@ -47,14 +49,17 @@ export default function OutfitEditorScreen() {
     outfit,
     title,
     notes,
+    visibility,
     categories,
     outfitItems,
     itemImageUrls,
     setTitle,
     setNotes,
+    setVisibility,
     setOutfitItems,
     saveOutfit: saveOutfitAction,
     ensureItemImageUrls,
+    refreshOutfit,
   } = useOutfitEditor({
     outfitId: id,
     userId: user?.id,
@@ -73,7 +78,10 @@ export default function OutfitEditorScreen() {
     saveOutfit: saveOutfitAction,
     setOutfitItems,
     ensureItemImageUrls,
+    onDescriptionReady: refreshOutfit,
   });
+
+  const [visibilityExpanded, setVisibilityExpanded] = React.useState(false);
 
   if (loading) {
     return (
@@ -105,21 +113,15 @@ export default function OutfitEditorScreen() {
 
       <Header
         title={isNew ? 'New Outfit' : 'Edit Outfit'}
-        leftContent={
-          <HeaderActionButton
-            label="Cancel"
-            onPress={() => router.back()}
-            variant="secondary"
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         rightContent={
           !isNew && (
             <HeaderIconButton
-              icon="trash-outline"
-              color={colors.error}
+              icon="archive-outline"
+              color={colors.textPrimary}
               onPress={actions.handleDelete}
               disabled={actions.saving}
-              accessibilityLabel="Delete outfit"
+              accessibilityLabel="Archive outfit"
             />
           )
         }
@@ -136,12 +138,38 @@ export default function OutfitEditorScreen() {
           placeholder="Untitled Outfit"
         />
 
-        <TextArea
-          label="Notes (optional)"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Add notes about this outfit..."
-        />
+        <View style={styles.aiSummarySection}>
+          {outfit?.description ? (
+            <View style={styles.aiContent}>
+              <Text style={styles.aiLabel}>Description</Text>
+              <Text style={styles.aiText}>{outfit.description}</Text>
+              {!!outfit?.occasions?.length && (
+                <View style={styles.aiRow}>
+                  <Text style={styles.aiLabel}>Occasions</Text>
+                  <Text style={styles.aiText}>{outfit.occasions.join(', ')}</Text>
+                </View>
+              )}
+              {!!outfit?.style_tags?.length && (
+                <View style={styles.aiRow}>
+                  <Text style={styles.aiLabel}>Style Tags</Text>
+                  <Text style={styles.aiText}>{outfit.style_tags.join(', ')}</Text>
+                </View>
+              )}
+              {!!outfit?.season && outfit.season !== 'all-season' && (
+                <View style={styles.aiRow}>
+                  <Text style={styles.aiLabel}>Season</Text>
+                  <Text style={styles.aiText}>{outfit.season}</Text>
+                </View>
+              )}
+            </View>
+          ) : (
+            <Text style={styles.aiEmptyText}>
+              {actions.rendering
+                ? 'Generating description...'
+                : 'No AI description yet. Generate an outfit image to create one.'}
+            </Text>
+          )}
+        </View>
 
         <CategorySlotSelector
           categories={categories}
@@ -151,10 +179,25 @@ export default function OutfitEditorScreen() {
           onRemoveItem={actions.removeItem}
         />
 
-    <OutfitScheduleSection
+        <VisibilitySelector
+          value={visibility}
+          onChange={setVisibility}
+          expanded={visibilityExpanded}
+          onToggleExpanded={() => setVisibilityExpanded(!visibilityExpanded)}
+          showInherit={false}
+        />
+
+        <OutfitScheduleSection
           outfitId={id}
           isNew={isNew}
           userId={user?.id}
+        />
+
+        <TextArea
+          label="Notes (optional)"
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="Add notes about this outfit..."
         />
 
         <View style={styles.actions}>
@@ -202,6 +245,32 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   renderButton: {
+    marginTop: spacing.sm,
+  },
+  aiSummarySection: {
+    marginTop: spacing.lg,
+  },
+  aiContent: {
+    gap: spacing.sm,
+  },
+  aiLabel: {
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  aiText: {
+    fontSize: 15,
+    color: '#111827',
+    lineHeight: 22,
+  },
+  aiEmptyText: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+  },
+  aiRow: {
     marginTop: spacing.sm,
   },
 });

@@ -13,6 +13,8 @@ export { OnboardingBodyShotStep } from './OnboardingBodyShotStep';
 export { ProfileImageGallery } from './ProfileImageGallery';
 export { AIModelSection } from './AIModelSection';
 export { AccountDangerZone } from './AccountDangerZone';
+export { DeactivateAccountModal } from './DeactivateAccountModal';
+export { DeleteAccountModal } from './DeleteAccountModal';
 export { PrivacySettingsSection } from './PrivacySettingsSection';
 export { HeadshotSection } from './HeadshotSection';
 export { BodyShotSection } from './BodyShotSection';

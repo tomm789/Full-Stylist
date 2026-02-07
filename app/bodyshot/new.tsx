@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useNewBodyshot } from '@/hooks/profile';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { Header, HeaderIconButton } from '@/components/shared/layout';
 import { theme } from '@/styles';
 
 const { colors, spacing, borderRadius, typography } = theme;
@@ -48,13 +48,7 @@ export default function NewBodyshotScreen() {
       <SafeAreaView style={styles.container}>
         <Header
           title="New Bodyshot"
-          leftContent={
-            <HeaderActionButton
-              label="Cancel"
-              onPress={() => router.back()}
-              variant="secondary"
-            />
-          }
+          leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         />
 
         <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>

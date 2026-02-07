@@ -6,7 +6,7 @@
  * AFTER: ~150 lines (50% reduction)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,7 +26,7 @@ import {
   PrimaryButton,
   LoadingSpinner,
 } from '@/components/shared';
-import { HeaderActionButton } from '@/components/shared/layout';
+import { HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 import { theme, commonStyles } from '@/styles';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -49,11 +49,48 @@ export default function CreateBundleScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const initialSnapshotRef = useRef<{
+    bundlePrice: string;
+    saleMode: SaleMode;
+    groupSignature: string;
+  } | null>(null);
+
+  const getGroupSignature = (
+    groupList: Array<{ title: string; is_required: boolean; itemIds: string[] }>
+  ) =>
+    groupList
+      .map(
+        (group) =>
+          `${group.title}|${group.is_required}|${[...group.itemIds].sort().join(',')}`
+      )
+      .sort()
+      .join('||');
+
   useEffect(() => {
     if (id && user) {
       loadOutfit();
     }
   }, [id, user]);
+
+  useEffect(() => {
+    if (initialSnapshotRef.current || groups.length === 0) return;
+
+    initialSnapshotRef.current = {
+      bundlePrice,
+      saleMode,
+      groupSignature: getGroupSignature(groups),
+    };
+  }, [bundlePrice, saleMode, groups]);
+
+  const isDirty = useMemo(() => {
+    if (!initialSnapshotRef.current) return false;
+
+    return (
+      bundlePrice !== initialSnapshotRef.current.bundlePrice ||
+      saleMode !== initialSnapshotRef.current.saleMode ||
+      getGroupSignature(groups) !== initialSnapshotRef.current.groupSignature
+    );
+  }, [bundlePrice, saleMode, groups]);
 
   const loadOutfit = async () => {
     if (!id) return;
@@ -140,19 +177,15 @@ export default function CreateBundleScreen() {
     <View style={commonStyles.container}>
       <Header
         title="Create Bundle"
-        leftContent={
-          <HeaderActionButton
-            label="Cancel"
-            onPress={() => router.back()}
-            variant="secondary"
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         rightContent={
-          <HeaderActionButton
-            label="Create"
-            onPress={handleCreate}
-            disabled={saving}
-          />
+          isDirty ? (
+            <HeaderActionButton
+              label="Create"
+              onPress={handleCreate}
+              disabled={saving}
+            />
+          ) : null
         }
       />
 

@@ -12,6 +12,8 @@ export interface Lookbook {
   cover_image_id?: string;
   created_at: string;
   updated_at: string;
+  archived_at?: string | null;
+  deleted_at?: string | null;
 }
 
 export interface LookbookOutfit {
@@ -48,6 +50,8 @@ export async function searchLookbooks(query: string, limit: number = 20): Promis
       .from('lookbooks')
       .select('id, owner_user_id, title, description, visibility, created_at, owner:users!owner_user_id(handle, display_name)')
       .or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`)
+      .is('archived_at', null)
+      .is('deleted_at', null)
       .in('visibility', ['public', 'followers'])
       .limit(limit);
 
@@ -77,7 +81,27 @@ export async function getUserLookbooks(userId: string): Promise<{
     .from('lookbooks')
     .select('*')
     .eq('owner_user_id', userId)
+    .is('archived_at', null)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
+
+  return { data: data || [], error };
+}
+
+/**
+ * Get user's archived lookbooks
+ */
+export async function getUserArchivedLookbooks(userId: string): Promise<{
+  data: Lookbook[];
+  error: any;
+}> {
+  const { data, error } = await supabase
+    .from('lookbooks')
+    .select('*')
+    .eq('owner_user_id', userId)
+    .not('archived_at', 'is', null)
+    .is('deleted_at', null)
+    .order('archived_at', { ascending: false });
 
   return { data: data || [], error };
 }
@@ -263,7 +287,39 @@ export async function deleteLookbook(
 ): Promise<{ error: any }> {
   const { error } = await supabase
     .from('lookbooks')
-    .delete()
+    .update({ deleted_at: new Date().toISOString(), archived_at: null })
+    .eq('id', lookbookId)
+    .eq('owner_user_id', userId);
+
+  return { error };
+}
+
+/**
+ * Archive lookbook
+ */
+export async function archiveLookbook(
+  userId: string,
+  lookbookId: string
+): Promise<{ error: any }> {
+  const { error } = await supabase
+    .from('lookbooks')
+    .update({ archived_at: new Date().toISOString(), deleted_at: null })
+    .eq('id', lookbookId)
+    .eq('owner_user_id', userId);
+
+  return { error };
+}
+
+/**
+ * Restore lookbook from archive
+ */
+export async function restoreLookbook(
+  userId: string,
+  lookbookId: string
+): Promise<{ error: any }> {
+  const { error } = await supabase
+    .from('lookbooks')
+    .update({ archived_at: null })
     .eq('id', lookbookId)
     .eq('owner_user_id', userId);
 

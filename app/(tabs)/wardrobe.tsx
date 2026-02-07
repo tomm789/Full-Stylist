@@ -1,15 +1,13 @@
 /**
- * Wardrobe Screen - REFACTORED
- * Main wardrobe screen using new modular architecture
- * 
- * BEFORE: 1400+ lines of mixed concerns
- * AFTER: ~250 lines of clean, focused code
+ * Wardrobe Screen - Refactored
+ * Main wardrobe screen using modular architecture.
  */
 
-import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, Alert, Platform } from 'react-native';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { View, StyleSheet, Alert, Platform, Animated, Text, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Hooks - Business logic separated
 import {
@@ -20,7 +18,7 @@ import {
 import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits';
 
 // Shared Components
-import { LoadingOverlay, EmptyState } from '@/components/shared';
+import { LoadingOverlay, LoadingSpinner } from '@/components/shared';
 
 // Wardrobe Components
 import {
@@ -46,6 +44,7 @@ import { supabase } from '@/lib/supabase';
 import { WardrobeItem } from '@/lib/wardrobe';
 import { logClientTiming } from '@/lib/perf/logClientTiming';
 import { PERF_MODE } from '@/lib/perf/perfMode';
+import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 
 const { colors } = theme;
 
@@ -57,7 +56,7 @@ export default function WardrobeScreen() {
   // === State Management via Hooks ===
   
   // Wardrobe data
-  const { wardrobeId, categories, getCategoryById } = useWardrobe(user?.id);
+  const { wardrobeId, categories, getCategoryById, loading: wardrobeLoading } = useWardrobe(user?.id);
 
   // Local UI state (must be before useMemo/backgroundGrid that depend on selectedOutfitItems + allItems)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -67,6 +66,18 @@ export default function WardrobeScreen() {
   const [selectedOutfitItems, setSelectedOutfitItems] = useState<string[]>([]);
   const [selectedItem, setSelectedItem] = useState<WardrobeItem | null>(null);
   const [showItemModal, setShowItemModal] = useState(false);
+  const [showFirstTimeTutorial, setShowFirstTimeTutorial] = useState(false);
+  const [tutorialChecked, setTutorialChecked] = useState(false);
+  const [showOutfitTipOnClose, setShowOutfitTipOnClose] = useState(false);
+  const {
+    headerHeight,
+    headerOpacity,
+    headerTranslate,
+    headerReady,
+    uiHidden,
+    handleHeaderLayout,
+    handleScroll: handleGridScroll,
+  } = useHideHeaderOnScroll();
 
   // Items data with caching (allItems required for selectedItemsForGeneration)
   const {
@@ -75,6 +86,7 @@ export default function WardrobeScreen() {
     loading,
     refresh,
     refreshing,
+    hasLoaded,
   } = useWardrobeItems({
     wardrobeId,
     userId: user?.id,
@@ -123,6 +135,69 @@ export default function WardrobeScreen() {
   } = useFilters(allItems, user?.id);
 
   // === Handlers ===
+
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkTutorial = async () => {
+      if (!user?.id) return;
+      if (!hasLoaded || loading || wardrobeLoading) return;
+
+      if (allItems.length > 0) {
+        if (isMounted) {
+          setShowFirstTimeTutorial(false);
+          setTutorialChecked(true);
+        }
+        return;
+      }
+
+      try {
+        const key = `wardrobe_first_time_dismissed:${user.id}`;
+        const dismissed = await AsyncStorage.getItem(key);
+        if (isMounted) {
+          setShowFirstTimeTutorial(!dismissed);
+          setTutorialChecked(true);
+        }
+      } catch (error) {
+        console.warn('Failed to read wardrobe tutorial flag:', error);
+        if (isMounted) {
+          setShowFirstTimeTutorial(true);
+          setTutorialChecked(true);
+        }
+      }
+    };
+
+    checkTutorial();
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, hasLoaded, loading, wardrobeLoading, allItems.length]);
+
+  const dismissFirstTimeTutorial = async () => {
+    if (!user?.id) {
+      setShowFirstTimeTutorial(false);
+      setTutorialChecked(true);
+      setShowOutfitTipOnClose(true);
+      return;
+    }
+
+    const key = `wardrobe_first_time_dismissed:${user.id}`;
+    try {
+      await AsyncStorage.setItem(key, 'true');
+    } catch (error) {
+      console.warn('Failed to persist wardrobe tutorial flag:', error);
+    }
+    setShowFirstTimeTutorial(false);
+    setTutorialChecked(true);
+    setShowOutfitTipOnClose(true);
+  };
+
+  useEffect(() => {
+    if (!showOutfitTipOnClose) return;
+    if (showFirstTimeTutorial) return;
+    Alert.alert('Tip', 'Long hold an item to add it to your outfit.');
+    setShowOutfitTipOnClose(false);
+  }, [showOutfitTipOnClose, showFirstTimeTutorial]);
 
   const handleItemPress = (item: WardrobeItem) => {
     if (outfitCreatorMode) {
@@ -323,10 +398,59 @@ export default function WardrobeScreen() {
 
   // === Render ===
 
+  if ((wardrobeLoading || loading || (!hasLoaded && user?.id)) && filteredItems.length === 0) {
+    return (
+      <View style={commonStyles.loadingContainer}>
+        <LoadingSpinner text="Loading wardrobe..." />
+      </View>
+    );
+  }
+
+  if (showFirstTimeTutorial && tutorialChecked) {
+    return (
+      <View style={styles.tutorialContainer}>
+        <View style={styles.tutorialContent}>
+          <Text style={styles.tutorialTitle}>Add your first wardrobe item</Text>
+          <Text style={styles.tutorialSubtitle}>
+            Take a photo or upload an item to start building your wardrobe.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.tutorialPrimaryButton}
+            onPress={async () => {
+              await dismissFirstTimeTutorial();
+              router.push('/wardrobe/add?action=photo');
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.tutorialPrimaryButtonText}>Take a photo</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.tutorialSecondaryButton}
+            onPress={async () => {
+              await dismissFirstTimeTutorial();
+              router.push('/wardrobe/add?action=upload');
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.tutorialSecondaryButtonText}>Upload an item</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={styles.tutorialLaterButton}
+          onPress={dismissFirstTimeTutorial}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.tutorialLaterText}>Later</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={commonStyles.container}>
-      {/* Loading Overlay */}
-      <LoadingOverlay visible={loading && filteredItems.length === 0} message="Loading wardrobe..." />
 
       {/* Generation Progress Modal (hidden in PERF_MODE to measure UI overhead) */}
       <LoadingOverlay
@@ -334,35 +458,48 @@ export default function WardrobeScreen() {
         message={progress.message || 'Generating outfit...'}
       />
 
-      {/* Outfit Creator Bar */}
-      {outfitCreatorMode && (
-        <OutfitCreatorBar
-          selectedItems={selectedItemsForBar}
-          onRemoveItem={(id) => setSelectedOutfitItems((prev) => prev.filter((i) => i !== id))}
-          onGenerate={handleGenerateOutfit}
-          onExit={() => {
-            setOutfitCreatorMode(false);
-            setSelectedOutfitItems([]);
-          }}
+      <Animated.View
+        style={[
+          styles.headerContainer,
+          {
+            height: headerReady ? headerHeight : undefined,
+            opacity: headerOpacity,
+            transform: [{ translateY: headerTranslate }],
+          },
+        ]}
+        pointerEvents={uiHidden ? 'none' : 'auto'}
+      >
+        <View onLayout={handleHeaderLayout}>
+        {/* Outfit Creator Bar */}
+        {outfitCreatorMode && (
+          <OutfitCreatorBar
+            selectedItems={selectedItemsForBar}
+            onRemoveItem={(id) => setSelectedOutfitItems((prev) => prev.filter((i) => i !== id))}
+            onGenerate={handleGenerateOutfit}
+            onExit={() => {
+              setOutfitCreatorMode(false);
+              setSelectedOutfitItems([]);
+            }}
+          />
+        )}
+
+        {/* Search Bar */}
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onFilter={() => setShowFilterDrawer(true)}
+          hasActiveFilters={hasActiveFilters}
         />
-      )}
 
-      {/* Search Bar */}
-      <SearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        onFilter={() => setShowFilterDrawer(true)}
-        onAdd={() => router.push('/wardrobe/add')}
-        hasActiveFilters={hasActiveFilters}
-      />
-
-      {/* Category Pills */}
-      <CategoryPills
-        categories={categories}
-        selectedCategoryId={selectedCategoryId}
-        onSelectCategory={setSelectedCategoryId}
-        variant="category"
-      />
+        {/* Category Pills */}
+        <CategoryPills
+          categories={categories}
+          selectedCategoryId={selectedCategoryId}
+          onSelectCategory={setSelectedCategoryId}
+          variant="category"
+        />
+        </View>
+      </Animated.View>
 
       {/* Items Grid */}
       <ItemGrid
@@ -378,6 +515,8 @@ export default function WardrobeScreen() {
         emptyTitle={searchQuery || selectedCategoryId || hasActiveFilters ? 'No items found' : 'Your wardrobe is empty'}
         emptyActionLabel="Add your first item"
         onEmptyAction={() => router.push('/wardrobe/add')}
+        onScroll={handleGridScroll}
+        scrollEventThrottle={16}
       />
 
       {/* Filter Drawer */}
@@ -417,4 +556,60 @@ export default function WardrobeScreen() {
 
 const styles = StyleSheet.create({
   // Minimal styles - most come from theme and commonStyles
+  headerContainer: {
+    overflow: 'hidden',
+    backgroundColor: theme.colors.background,
+  },
+  tutorialContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.xxxl,
+    paddingBottom: theme.spacing.xxl,
+    justifyContent: 'space-between',
+  },
+  tutorialContent: {
+    gap: theme.spacing.lg,
+  },
+  tutorialTitle: {
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.textPrimary,
+  },
+  tutorialSubtitle: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.textSecondary,
+  },
+  tutorialPrimaryButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  tutorialPrimaryButtonText: {
+    color: theme.colors.textLight,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.semibold,
+  },
+  tutorialSecondaryButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  tutorialSecondaryButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.semibold,
+  },
+  tutorialLaterButton: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+  },
+  tutorialLaterText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.fontSize.sm,
+    textDecorationLine: 'underline',
+  },
 });

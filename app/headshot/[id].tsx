@@ -29,7 +29,7 @@ import {
   DropdownMenuItem,
   dropdownMenuStyles,
 } from '@/components/shared/modals';
-import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
+import { Header, HeaderIconButton } from '@/components/shared/layout';
 
 export default function HeadshotDetailScreen() {
   const router = useRouter();
@@ -113,12 +113,7 @@ export default function HeadshotDetailScreen() {
       <SafeAreaView style={styles.container}>
         <Header
           title="Headshot"
-          leftContent={
-            <HeaderActionButton
-              label="Back"
-              onPress={() => router.back()}
-            />
-          }
+          leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" />
@@ -136,12 +131,7 @@ export default function HeadshotDetailScreen() {
       <SafeAreaView style={styles.container}>
         <Header
           title="Edit Headshot"
-          leftContent={
-            <HeaderActionButton
-              label="Back"
-              onPress={() => router.back()}
-            />
-          }
+          leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
           rightContent={
             <HeaderIconButton
               icon="ellipsis-vertical"

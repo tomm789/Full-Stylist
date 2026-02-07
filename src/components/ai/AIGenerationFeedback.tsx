@@ -98,7 +98,7 @@ export function AIGenerationFeedback({
   if (compact) {
     return (
       <>
-        <View style={styles.compactContainer} pointerEvents="box-none">
+        <View style={[styles.compactContainer, styles.pointerEventsBoxNone]}>
           <View style={[styles.compactButtons, glassDark]}>
             <TouchableOpacity
               style={styles.compactThumb}
@@ -122,7 +122,7 @@ export function AIGenerationFeedback({
 
   return (
     <>
-      <View style={[styles.overlay, glass]} pointerEvents="box-none">
+      <View style={[styles.overlay, glass, styles.pointerEventsBoxNone]}>
         <Text style={styles.prompt}>How does this look?</Text>
         <View style={styles.buttons}>
           <TouchableOpacity
@@ -254,6 +254,9 @@ const styles = StyleSheet.create({
     padding: 10,
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
+  },
+  pointerEventsBoxNone: {
+    pointerEvents: 'box-none',
   },
   compactButtons: {
     flexDirection: 'row',

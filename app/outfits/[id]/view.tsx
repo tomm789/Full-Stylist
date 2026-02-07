@@ -10,8 +10,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
   Modal,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,7 +28,7 @@ import {
   LoadingSpinner,
   LoadingOverlay,
 } from '@/components/shared';
-import { HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
+import { HeaderIconButton } from '@/components/shared/layout';
 import {
   CalendarDatePickerModal,
   CalendarDayEntryForm,
@@ -44,6 +46,7 @@ import {
   createCalendarEntry,
   getCalendarEntriesForDate,
 } from '@/lib/calendar';
+import { restoreOutfit } from '@/lib/outfits';
 
 const { colors } = theme;
 
@@ -134,6 +137,45 @@ export default function OutfitViewScreen() {
   const [showMenu, setShowMenu] = useState(false);
   const isOwnOutfit = outfit?.owner_user_id === user?.id;
   const closeMenu = () => setShowMenu(false);
+  const handleRestoreOutfit = useCallback(() => {
+    if (!user?.id || !outfit?.id) return;
+
+    const confirmRestore = async () => {
+      const { error } = await restoreOutfit(user.id, outfit.id);
+      if (error) {
+        if (Platform.OS === 'web') {
+          alert(error?.message || 'Failed to restore outfit');
+        } else {
+          Alert.alert('Error', error?.message || 'Failed to restore outfit');
+        }
+        return;
+      }
+      if (Platform.OS === 'web') {
+        alert('Outfit restored');
+      } else {
+        Alert.alert('Success', 'Outfit restored');
+      }
+      await refreshOutfit();
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm('Restore this outfit?')) {
+        void confirmRestore();
+      }
+      return;
+    }
+
+    setTimeout(() => {
+      Alert.alert('Restore outfit', 'Move this outfit back to your outfits?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Restore',
+          style: 'default',
+          onPress: confirmRestore,
+        },
+      ]);
+    }, 50);
+  }, [user?.id, outfit?.id, refreshOutfit]);
   const [showDatePickerModal, setShowDatePickerModal] = useState(false);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [entriesForDate, setEntriesForDate] = useState<CalendarEntry[]>([]);
@@ -205,12 +247,7 @@ export default function OutfitViewScreen() {
 
       {/* Header */}
       <Header
-        leftContent={
-          <HeaderActionButton
-            label="Back"
-            onPress={actions.handleBackPress}
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={actions.handleBackPress} />}
         rightContent={
           isOwnOutfit ? (
             <>
@@ -252,15 +289,26 @@ export default function OutfitViewScreen() {
           }}
         />
         <View style={dropdownMenuStyles.menuDivider} />
-        <DropdownMenuItem
-          label="Delete"
-          icon="trash-outline"
-          onPress={() => {
-            closeMenu();
-            actions.handleDelete();
-          }}
-          danger
-        />
+        {outfit?.archived_at ? (
+          <DropdownMenuItem
+            label="Restore"
+            icon="refresh-outline"
+            onPress={() => {
+              closeMenu();
+              handleRestoreOutfit();
+            }}
+          />
+        ) : (
+          <DropdownMenuItem
+            label="Archive"
+            icon="archive-outline"
+            onPress={() => {
+              closeMenu();
+              actions.handleDelete();
+            }}
+            danger
+          />
+        )}
       </DropdownMenuModal>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
@@ -287,6 +335,7 @@ export default function OutfitViewScreen() {
           onImagePress={() => actions.setShowImageModal(true)}
           renderTraceId={renderTraceId ?? undefined}
           jobSucceededAt={jobSucceededAt ?? undefined}
+          isGenerating={isGenerating}
           onCoverImageLoad={PERF_MODE && triggerLoadEngagement ? triggerLoadEngagement : undefined}
           onCoverImageErrorAfterRetries={PERF_MODE && triggerLoadEngagement ? triggerLoadEngagement : undefined}
           showFeedbackOverlay={showFeedbackOverlay}
@@ -342,7 +391,7 @@ export default function OutfitViewScreen() {
         }}
       />
 
-      {/* Delete Confirmation Modal */}
+      {/* Archive Confirmation Modal */}
       <Modal
         visible={actions.showDeleteConfirm}
         transparent
@@ -351,9 +400,9 @@ export default function OutfitViewScreen() {
       >
         <View style={styles.deleteModalContainer}>
           <View style={styles.deleteModalContent}>
-            <Text style={styles.deleteModalTitle}>Delete Outfit</Text>
+            <Text style={styles.deleteModalTitle}>Archive Outfit</Text>
             <Text style={styles.deleteModalMessage}>
-              Are you sure you want to delete this outfit?
+              Are you sure you want to move this outfit to your archive?
             </Text>
             <View style={styles.deleteModalButtons}>
               <TouchableOpacity
@@ -371,7 +420,7 @@ export default function OutfitViewScreen() {
                 {actions.deleting ? (
                   <ActivityIndicator color={colors.white} size="small" />
                 ) : (
-                  <Text style={styles.confirmDeleteButtonText}>Delete</Text>
+                  <Text style={styles.confirmDeleteButtonText}>Archive</Text>
                 )}
               </TouchableOpacity>
             </View>

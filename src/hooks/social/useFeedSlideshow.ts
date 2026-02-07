@@ -3,9 +3,8 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
 import { getLookbook } from '@/lib/lookbooks';
-import { getUserOutfits } from '@/lib/outfits';
+import { getOutfitsByIds } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 
 export const useFeedSlideshow = (userId: string | undefined) => {
@@ -27,18 +26,9 @@ export const useFeedSlideshow = (userId: string | undefined) => {
       let outfitsToShow: any[] = [];
       
       if (data && data.outfits.length > 0) {
-        // Get outfits from the lookbook owner (not current user!)
-        const lookbookOwnerId = data.lookbook.owner_user_id;
-        const { data: allOutfits } = await getUserOutfits(lookbookOwnerId);
-        
-        // DEBUG: Show what we got
-        Alert.alert('Debug Info', 
-          `Lookbook has ${data.outfits.length} outfit refs\n` +
-          `Owner: ${lookbookOwnerId}\n` +
-          `Got ${allOutfits?.length || 0} outfits from owner\n` +
-          `Current user: ${userId}`
-        );
-        
+        const outfitIds = data.outfits.map((lo: any) => lo.outfit_id);
+        const { data: allOutfits } = await getOutfitsByIds(outfitIds);
+
         if (allOutfits) {
           const outfitMap = new Map(allOutfits.map((o: any) => [o.id, o]));
           outfitsToShow = data.outfits

@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { getActiveListings, ListingWithImages } from '@/lib/listings';
 import { supabase } from '@/lib/supabase';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { Header, HeaderIconButton } from '@/components/shared/layout';
 
 export default function MarketplaceScreen() {
   const router = useRouter();
@@ -96,12 +96,7 @@ export default function MarketplaceScreen() {
     <View style={styles.container}>
       <Header
         title="Marketplace"
-        leftContent={
-          <HeaderActionButton
-            label="Back"
-            onPress={() => router.back()}
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
       />
 
       {listings.length === 0 ? (

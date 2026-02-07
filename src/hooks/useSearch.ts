@@ -16,6 +16,7 @@ export interface SearchResult {
   type: SearchResultType;
   title: string;
   subtitle?: string;
+  avatarUrl?: string | null;
   owner?: {
     handle: string;
     display_name: string;
@@ -77,6 +78,7 @@ export function useSearch({
               type: 'user',
               title: u.display_name,
               subtitle: `@${u.handle}`,
+              avatarUrl: u.avatar_url || null,
             });
           });
       }

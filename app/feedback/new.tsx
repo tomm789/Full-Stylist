@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Header, HeaderActionButton } from '@/components/shared/layout';
+import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 
 type Category = 'bug' | 'feature' | 'general' | 'other';
 
@@ -36,6 +36,11 @@ export default function NewFeedbackScreen() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const isDirty =
+    title.trim().length > 0 ||
+    body.trim().length > 0 ||
+    category !== 'general';
 
   const handleSubmit = async () => {
     if (!user) return;
@@ -84,20 +89,16 @@ export default function NewFeedbackScreen() {
     <SafeAreaView style={styles.container}>
       <Header
         title="New Feedback"
-        leftContent={
-          <HeaderActionButton
-            label="Cancel"
-            onPress={() => router.back()}
-            variant="secondary"
-          />
-        }
+        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         rightContent={
-          <HeaderActionButton
-            label="Submit"
-            onPress={handleSubmit}
-            disabled={submitting}
-            loading={submitting}
-          />
+          isDirty ? (
+            <HeaderActionButton
+              label="Submit"
+              onPress={handleSubmit}
+              disabled={submitting}
+              loading={submitting}
+            />
+          ) : null
         }
       />
 
