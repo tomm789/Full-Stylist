@@ -61,7 +61,7 @@ export default function WardrobeScreen() {
   // === State Management via Hooks ===
   
   // Wardrobe data
-  const { wardrobeId, categories, getCategoryById, loading: wardrobeLoading } = useWardrobe(user?.id);
+  const { wardrobeId, categories, subcategories, loadSubcategories, getCategoryById, loading: wardrobeLoading } = useWardrobe(user?.id);
 
   // Local UI state (must be before useMemo/backgroundGrid that depend on selectedOutfitItems + allItems)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -88,6 +88,8 @@ export default function WardrobeScreen() {
   const {
     allItems,
     imageCache,
+    entityAttributesMap,
+    tagsMap,
     loading,
     refresh,
     refreshing,
@@ -137,7 +139,19 @@ export default function WardrobeScreen() {
     availableMaterials,
     availableSizes,
     availableSeasons,
-  } = useFilters(allItems, user?.id);
+    availableBrands,
+    availableConditions,
+    availableEntityAttributes,
+    availableTags,
+  } = useFilters(allItems, user?.id, entityAttributesMap, tagsMap);
+
+  // Load subcategories when category changes; clear subcategory filter
+  useEffect(() => {
+    if (selectedCategoryId) {
+      loadSubcategories(selectedCategoryId);
+    }
+    updateFilter('subcategoryId', null);
+  }, [selectedCategoryId]);
 
   // === Handlers ===
 
@@ -503,6 +517,16 @@ export default function WardrobeScreen() {
           onSelectCategory={setSelectedCategoryId}
           variant="category"
         />
+
+        {/* Subcategory Pills - shown when a category is selected and has subcategories */}
+        {selectedCategoryId && subcategories.length > 0 && (
+          <CategoryPills
+            subcategories={subcategories}
+            selectedSubcategoryId={filters.subcategoryId}
+            onSelectSubcategory={(id) => updateFilter('subcategoryId', id)}
+            variant="subcategory"
+          />
+        )}
         </View>
       </Animated.View>
 
@@ -531,10 +555,15 @@ export default function WardrobeScreen() {
         filters={filters}
         onUpdateFilter={updateFilter}
         onClearAll={clearFilters}
+        subcategories={subcategories}
         availableColors={availableColors}
         availableMaterials={availableMaterials}
         availableSizes={availableSizes}
         availableSeasons={availableSeasons}
+        availableBrands={availableBrands}
+        availableConditions={availableConditions}
+        availableEntityAttributes={availableEntityAttributes}
+        availableTags={availableTags}
       />
 
       {/* Item Detail Modal */}
@@ -563,11 +592,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   // Minimal styles - most come from theme and commonStyles
   headerContainer: {
     overflow: 'hidden',
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   tutorialContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
     paddingHorizontal: theme.spacing.xl,
     paddingTop: theme.spacing.xxxl,
     paddingBottom: theme.spacing.xxl,
@@ -579,32 +608,32 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   tutorialTitle: {
     fontSize: theme.typography.fontSize.xl,
     fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
   },
   tutorialSubtitle: {
     fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
   },
   tutorialPrimaryButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: theme.borderRadius.lg,
     paddingVertical: theme.spacing.md,
     alignItems: 'center',
   },
   tutorialPrimaryButtonText: {
-    color: theme.colors.textLight,
+    color: colors.textLight,
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.typography.fontWeight.semibold,
   },
   tutorialSecondaryButton: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: theme.borderRadius.lg,
     paddingVertical: theme.spacing.md,
     alignItems: 'center',
   },
   tutorialSecondaryButtonText: {
-    color: theme.colors.textPrimary,
+    color: colors.textPrimary,
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.typography.fontWeight.semibold,
   },
@@ -613,7 +642,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingVertical: theme.spacing.sm,
   },
   tutorialLaterText: {
-    color: theme.colors.textSecondary,
+    color: colors.textSecondary,
     fontSize: theme.typography.fontSize.sm,
     textDecorationLine: 'underline',
   },

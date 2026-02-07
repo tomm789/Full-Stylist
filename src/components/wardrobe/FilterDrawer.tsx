@@ -9,7 +9,7 @@ import { BottomSheet, PrimaryButton } from '@/components/shared';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
-import { FilterState } from '@/hooks/wardrobe';
+import type { FilterState, AvailableEntityAttribute } from '@/hooks/wardrobe';
 import { WardrobeSubcategory } from '@/lib/wardrobe';
 import { FilterPillGroup } from './FilterPillGroup';
 import { FilterAccordionSection } from './FilterAccordionSection';
@@ -27,6 +27,9 @@ interface FilterDrawerProps {
   availableMaterials?: string[];
   availableSizes?: string[];
   availableSeasons?: string[];
+  availableBrands?: string[];
+  availableConditions?: Array<{ id: string; label: string }>;
+  availableEntityAttributes?: AvailableEntityAttribute[];
   availableTags?: Array<{ id: string; name: string }>;
 }
 
@@ -41,6 +44,9 @@ export default function FilterDrawer({
   availableMaterials = [],
   availableSizes = [],
   availableSeasons = [],
+  availableBrands = [],
+  availableConditions = [],
+  availableEntityAttributes = [],
   availableTags = [],
 }: FilterDrawerProps) {
   const colors = useThemeColors();
@@ -128,6 +134,42 @@ export default function FilterDrawer({
           </FilterAccordionSection>
         )}
 
+        {/* Brand Filter */}
+        {availableBrands.length > 0 && (
+          <FilterAccordionSection
+            title="Brand"
+            expanded={expandedSections.has('brand')}
+            onToggle={() => toggleSection('brand')}
+          >
+            <FilterPillGroup
+              label="Brand"
+              pills={availableBrands.map((brand) => ({ id: brand, label: brand }))}
+              selectedId={filters.brand}
+              onToggle={(id) =>
+                onUpdateFilter('brand', filters.brand === id ? null : (id as any))
+              }
+            />
+          </FilterAccordionSection>
+        )}
+
+        {/* Condition Filter */}
+        {availableConditions.length > 0 && (
+          <FilterAccordionSection
+            title="Condition"
+            expanded={expandedSections.has('condition')}
+            onToggle={() => toggleSection('condition')}
+          >
+            <FilterPillGroup
+              label="Condition"
+              pills={availableConditions.map((c) => ({ id: c.id, label: c.label }))}
+              selectedId={filters.condition}
+              onToggle={(id) =>
+                onUpdateFilter('condition', filters.condition === id ? null : (id as any))
+              }
+            />
+          </FilterAccordionSection>
+        )}
+
         {/* Color Filter */}
         {availableColors.length > 0 && (
           <FilterAccordionSection
@@ -202,6 +244,30 @@ export default function FilterDrawer({
             />
           </FilterAccordionSection>
         )}
+
+        {/* Dynamic Entity Attribute Filters (pattern, style, occasion, formality, etc.) */}
+        {availableEntityAttributes.map((attr) => (
+          <FilterAccordionSection
+            key={attr.key}
+            title={attr.name}
+            expanded={expandedSections.has(`entity_${attr.key}`)}
+            onToggle={() => toggleSection(`entity_${attr.key}`)}
+          >
+            <FilterPillGroup
+              label={attr.name}
+              pills={attr.values.map((v) => ({ id: v, label: v }))}
+              selectedId={filters.entityAttributes[attr.key] ?? null}
+              onToggle={(id) => {
+                const current = filters.entityAttributes[attr.key] ?? null;
+                const newValue = current === id ? null : id;
+                onUpdateFilter('entityAttributes', {
+                  ...filters.entityAttributes,
+                  [attr.key]: newValue,
+                } as any);
+              }}
+            />
+          </FilterAccordionSection>
+        ))}
 
         {/* Tags Filter */}
         {availableTags.length > 0 && (
