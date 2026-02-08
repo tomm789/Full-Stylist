@@ -81,7 +81,7 @@ export default function TabsLayout() {
         router.push('/feedback' as any);
         break;
       case 'hair_makeup':
-        router.push('/hair-and-make-up' as any);
+        router.push('/(tabs)/hair-and-make-up' as any);
         break;
       case 'outfit_archive':
         router.push('/archive' as any);
@@ -96,36 +96,12 @@ export default function TabsLayout() {
   const gridItems = useMemo(
     () => [
       {
-        key: 'outfits_explore',
-        label: 'Explore',
-        icon: 'compass-outline' as const,
-        description: 'Discover new looks',
-        keywords: ['discover', 'trending', 'inspire'],
-        onPress: () => handleMenuOption('outfits_explore'),
-      },
-      {
-        key: 'outfits_following',
-        label: 'Following',
-        icon: 'people-outline' as const,
-        description: 'Outfits from people you follow',
-        keywords: ['feed', 'friends', 'social'],
-        onPress: () => handleMenuOption('outfits_following'),
-      },
-      {
         key: 'profile',
         label: 'Profile',
         icon: 'person-outline' as const,
         description: 'Your account and stats',
         keywords: ['account', 'stats', 'bio'],
         onPress: () => handleMenuOption('profile'),
-      },
-      {
-        key: 'headshots',
-        label: 'Headshots',
-        icon: 'camera-outline' as const,
-        description: 'Generate a new headshot',
-        keywords: ['model', 'studio', 'selfie', 'portrait'],
-        onPress: () => handleMenuOption('profile_headshots'),
       },
       {
         key: 'lookbooks',
@@ -136,28 +112,20 @@ export default function TabsLayout() {
         onPress: () => handleMenuOption('lookbooks'),
       },
       {
-        key: 'outfits',
-        label: 'Outfits',
-        icon: 'sparkles-outline' as const,
-        description: 'Your saved and created outfits',
-        keywords: ['looks', 'styling', 'saved'],
-        onPress: () => handleMenuOption('outfits'),
+        key: 'outfits_explore',
+        label: 'Explore',
+        icon: 'compass-outline' as const,
+        description: 'Discover new looks',
+        keywords: ['discover', 'trending', 'inspire'],
+        onPress: () => handleMenuOption('outfits_explore'),
       },
       {
-        key: 'wardrobe',
-        label: 'Wardrobe',
-        icon: 'shirt-outline' as const,
-        description: 'Browse items and collections',
-        keywords: ['closet', 'items', 'clothes', 'collection'],
-        onPress: () => handleMenuOption('wardrobe'),
-      },
-      {
-        key: 'calendar',
-        label: 'Calendar',
-        icon: 'calendar-outline' as const,
-        description: 'Plan and schedule outfits',
-        keywords: ['schedule', 'plan', 'events', 'dates'],
-        onPress: () => handleMenuOption('calendar'),
+        key: 'outfits_following',
+        label: 'Followers',
+        icon: 'people-outline' as const,
+        description: 'Outfits from people you follow',
+        keywords: ['feed', 'friends', 'social'],
+        onPress: () => handleMenuOption('outfits_following'),
       },
     ],
     [handleMenuOption]
@@ -165,6 +133,14 @@ export default function TabsLayout() {
 
   const actionItems = useMemo(
     () => [
+      {
+        key: 'search',
+        label: 'Search',
+        icon: 'search-outline' as const,
+        description: 'Find outfits, people, and more',
+        keywords: ['discover', 'find', 'browse', 'query'],
+        onPress: () => handleMenuOption('search'),
+      },
       {
         key: 'feedback',
         label: 'Feedback',
@@ -182,20 +158,20 @@ export default function TabsLayout() {
         onPress: () => handleMenuOption('hair_makeup'),
       },
       {
-        key: 'outfit_archive',
-        label: 'Archive',
-        icon: 'archive-outline' as const,
-        description: 'View archived items',
-        keywords: ['archive', 'hidden', 'storage', 'past'],
-        onPress: () => handleMenuOption('outfit_archive'),
-      },
-      {
         key: 'notifications',
         label: 'Notifications',
         icon: 'notifications-outline' as const,
         description: 'Mentions, likes, and comments',
         keywords: ['alerts', 'mentions', 'likes', 'comments'],
         onPress: () => handleMenuOption('notifications'),
+      },
+      {
+        key: 'outfit_archive',
+        label: 'Archive',
+        icon: 'archive-outline' as const,
+        description: 'View archived items',
+        keywords: ['archive', 'hidden', 'storage', 'past'],
+        onPress: () => handleMenuOption('outfit_archive'),
       },
       {
         key: 'settings',
@@ -266,31 +242,30 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="create"
-          options={{
-            headerShown: false,
-            tabBarLabel: '',
-            tabBarButton: () => (
-              <TouchableOpacity
-                style={styles.createButtonContainer}
-                onPress={() => setShowCreateMenu(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Create"
-              >
-                <View style={styles.createButton}>
-                  <Ionicons name="add" size={28} color={colors.white} />
-                </View>
-              </TouchableOpacity>
-            ),
-          }}
-        />
-        <Tabs.Screen
           name="outfits"
           options={{
             headerShown: false,
             tabBarLabel: 'Outfits',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="sparkles-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="create"
+          options={{
+            headerShown: false,
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' },
+          }}
+        />
+        <Tabs.Screen
+          name="hair-and-make-up"
+          options={{
+            headerTitle: () => <HeaderAddMenu title="Hair & Make-Up" />,
+            tabBarLabel: 'Hair & Make-Up',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="cut-outline" size={size} color={color} />
             ),
           }}
         />

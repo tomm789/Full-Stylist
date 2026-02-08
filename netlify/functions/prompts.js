@@ -66,8 +66,8 @@ const PROMPTS = {
     SUBJECT: The person in the image.
     CLOTHING: Wearing a simple white ribbed singlet (wife beater).
     MODIFICATIONS: ${hair}, ${makeup}.
-    CRITICAL: Maintain the EXACT framing, zoom level, and head angle of the original image.
-    STYLE: Photorealistic, 8k, soft lighting, light grey/white background.
+    CRITICAL: Maintain the realistic headshot framing, zoom level, and head angle of the subject. Ensure only the head and shoulders are in frame.
+    STYLE: Photorealistic, 8k, soft lighting. Infinite, solid pure white background.
     OUTPUT: Professional headshot suitable for fashion photography.
   `,
   // Generate a professional headshot using preset-driven prompt text

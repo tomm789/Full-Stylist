@@ -46,9 +46,20 @@ export default function CalendarContinuousGrid({
       list.push(new Date(cursor));
       cursor.setDate(cursor.getDate() + 1);
     }
-
     return list;
   }, [startDate, endDate]);
+
+  // #region agent log
+  const lastLoggedRangeRef = useRef<string | null>(null);
+  const rangeKey = `${startDate.toISOString().split('T')[0]}-${endDate.toISOString().split('T')[0]}`;
+  useEffect(() => {
+    if (lastLoggedRangeRef.current === rangeKey || days.length === 0) return;
+    lastLoggedRangeRef.current = rangeKey;
+    const firstDay = days[0];
+    const lastDay = days[days.length - 1];
+    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CalendarContinuousGrid.tsx:days',message:'grid date range',data:{startISO: firstDay?.toISOString?.()?.split('T')[0], endISO: lastDay?.toISOString?.()?.split('T')[0], dayCount: days.length},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+  }, [days, rangeKey]);
+  // #endregion
 
   const getDayEntries = (date: Date): CalendarEntry[] => {
     const dateKey = date.toISOString().split('T')[0];

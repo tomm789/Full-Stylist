@@ -106,6 +106,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
+    backgroundColor: colors.backgroundDark,
   },
   list: {
     paddingHorizontal: spacing.sm,
@@ -122,7 +123,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingLeft: spacing.sm,
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
+    color: colors.textLight,
   },
   subcategoryList: {
     flex: 1,

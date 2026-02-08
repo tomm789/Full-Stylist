@@ -3,7 +3,7 @@ import type { PresetCategory } from './presetTypes';
 export const hairPresets: PresetCategory[] = [
   {
     id: 'short-hairstyles',
-    title: 'Short Hairstyles',
+    title: 'Short',
     sections: [
       {
         id: 'short-styles',
@@ -43,7 +43,7 @@ export const hairPresets: PresetCategory[] = [
           },
           {
             id: 'inverted-bob',
-            title: 'Inverted / A-Line Bob',
+            title: 'Inverted | A-Line Bob',
             description: 'Shorter in the back, angling longer toward the front.',
           },
           {
@@ -69,7 +69,7 @@ export const hairPresets: PresetCategory[] = [
   },
   {
     id: 'medium-hairstyles',
-    title: 'Medium Hairstyles (Shoulder to Collarbone)',
+    title: 'Medium',
     sections: [
       {
         id: 'medium-styles',
@@ -111,7 +111,7 @@ export const hairPresets: PresetCategory[] = [
   },
   {
     id: 'long-hairstyles',
-    title: 'Long Hairstyles',
+    title: 'Long',
     sections: [
       {
         id: 'long-styles',
@@ -135,7 +135,7 @@ export const hairPresets: PresetCategory[] = [
           },
           {
             id: 'v-cut-u-cut',
-            title: 'V-Cut / U-Cut',
+            title: 'V-Cut | U-Cut',
             description:
               'The back perimeter is shaped into a V or U curve rather than cut straight across.',
           },

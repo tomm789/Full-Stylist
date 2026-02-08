@@ -59,8 +59,9 @@ export default function CalendarDayCell({
       },
       dayCellToday: {
         backgroundColor: 'transparent',
-        borderColor: 'transparent',
-        borderWidth: 0,
+        borderWidth: 2,
+        borderColor: colors.primary ?? colors.textPrimary,
+        borderRadius: cellPad,
       },
       // Date (keep original styling)
       dayNumber: {
@@ -72,8 +73,8 @@ export default function CalendarDayCell({
         color: colors.textTertiary,
       },
       dayNumberToday: {
-        fontWeight: '500',
-        color: colors.textPrimary,
+        fontWeight: '700',
+        color: colors.primary ?? colors.textPrimary,
       },
 
       // Ensures date stays above any overlays and above the image

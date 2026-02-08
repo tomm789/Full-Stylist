@@ -11,7 +11,7 @@ export const makeupPresets: PresetCategory[] = [
         options: [
           {
             id: 'no-makeup-makeup',
-            title: 'No-Makeup Makeup (Clean Girl)',
+            title: 'No Makeup',
             description:
               'Focuses on skin prep, groomed brows, and enhancing natural features undetectably.',
           },
@@ -23,37 +23,37 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'full-glam',
-            title: 'Full Glam / Insta-Glam',
+            title: 'Full Glam | Insta-Glam',
             description:
               'High coverage, sharp contour, cut-crease eyeshadow, baking, and heavy false lashes.',
           },
           {
             id: 'matte-90s',
-            title: 'Matte / 90s Supermodel',
+            title: 'Matte | 90s Supermodel',
             description:
               'Velvety skin, cool-toned brown lips, thin arched brows, and matte eyeshadows.',
           },
           {
             id: 'dewy-glass-skin',
-            title: 'Dewy / Glass Skin',
+            title: 'Dewy | Glass Skin',
             description:
               'Extreme hydration, liquid highlighters, and cream products for a wet, reflective skin finish.',
           },
           {
             id: 'grunge',
-            title: 'Grunge / Rocker Chic',
+            title: 'Grunge | Rocker Chic',
             description:
               'Smudged eyeliner, dark or messy eyeshadow, and effortless or lived-in matte lips.',
           },
           {
             id: 'editorial',
-            title: 'Editorial / Avant-Garde',
+            title: 'Editorial | Avant-Garde',
             description:
               'Artistic and experimental with graphic liners, bold colors, bleached brows, or floating creases.',
           },
           {
             id: 'vintage-pinup',
-            title: 'Vintage / Pin-Up',
+            title: 'Vintage | Pin-Up',
             description:
               'Sharp winged liner, red matte lip, and pale, matte skin.',
           },
@@ -65,13 +65,13 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'latte',
-            title: 'Latte / Monochromatic',
+            title: 'Latte | Monochromatic',
             description:
               'Shades of brown, bronze, and tan across eyes, cheeks, and lips for a warm, sun-kissed look.',
           },
           {
             id: 'coquette-cold-girl',
-            title: 'Coquette / Cold Girl',
+            title: 'Coquette | Cold Girl',
             description:
               'Heavy blush on the nose and cheeks, doll-like lashes, and glossy lips.',
           },
@@ -95,12 +95,12 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'dewy-finish',
-            title: 'Dewy / Radiant',
+            title: 'Dewy | Radiant',
             description: 'Wet-look, reflective finish. Best for dry skin.',
           },
           {
             id: 'satin-finish',
-            title: 'Satin / Natural',
+            title: 'Satin | Natural',
             description:
               'A balance between matte and dewy; mimics real skin texture.',
           },
@@ -217,13 +217,13 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'smudged-liner',
-            title: 'Smudged / Blown Out',
+            title: 'Smudged | Blown Out',
             description:
               'Pencil liner is applied and buffed out for a soft, hazy edge.',
           },
           {
             id: 'graphic-liner',
-            title: 'Graphic / Floating Liner',
+            title: 'Graphic | Floating Liner',
             description:
               'Lines drawn in the crease or above the brow bone, often unconnected to the lash line.',
           },
@@ -253,13 +253,13 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'lifted-draping',
-            title: 'Lifted / Draping',
+            title: 'Lifted | Draping',
             description:
               'Applied high on the cheekbones and blended into the temples.',
           },
           {
             id: 'sunburn-w',
-            title: 'Sunburn / W Shape',
+            title: 'Sunburn | W Shape',
             description:
               'Swept across the cheeks and over the bridge of the nose.',
           },
@@ -295,7 +295,7 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'ombre-gradient',
-            title: 'Ombré / Gradient',
+            title: 'Ombré | Gradient',
             description:
               'Darker in the center and fading out (or vice versa).',
           },
@@ -307,13 +307,13 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'blotted-stained',
-            title: 'Blotted / Stained',
+            title: 'Blotted | Stained',
             description:
               'Lipstick applied and patted off for a sheer, just-bitten effect.',
           },
           {
             id: 'glossy-vinyl',
-            title: 'Glossy / Vinyl',
+            title: 'Glossy | Vinyl',
             description: 'High-shine, wet-look finish.',
           },
           {
@@ -336,7 +336,7 @@ export const makeupPresets: PresetCategory[] = [
         options: [
           {
             id: 'soap-brows',
-            title: 'Soap Brows / Laminated',
+            title: 'Soap Brows | Laminated',
             description:
               'Hairs brushed vertically and set for a feathery, fluffy look.',
           },
@@ -360,7 +360,7 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'natural-groomed',
-            title: 'Natural / Groomed',
+            title: 'Natural | Groomed',
             description:
               'Lightly filled following the natural shape, set with gel.',
           },

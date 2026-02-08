@@ -137,6 +137,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   pillRow: {
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
+    backgroundColor: colors.backgroundDark,
   },
   pillList: {
     paddingHorizontal: spacing.sm,
