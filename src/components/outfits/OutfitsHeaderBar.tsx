@@ -11,9 +11,16 @@ import { PillButton, SearchBar } from '@/components/shared';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 
-type OutfitsTab = 'my_outfits' | 'explore' | 'following';
+export type OutfitsTab = 'my_outfits' | 'explore' | 'following' | `lookbook_${string}`;
 
-const TAB_ITEMS: { id: OutfitsTab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+type PillItem = {
+  id: string;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  removable?: boolean;
+};
+
+const FIXED_TABS: PillItem[] = [
   { id: 'my_outfits', label: 'My Outfits', icon: 'shirt-outline' },
   { id: 'explore', label: 'Explore', icon: 'compass-outline' },
   { id: 'following', label: 'Following', icon: 'people-outline' },
@@ -31,6 +38,9 @@ type OutfitsHeaderBarProps = {
   onOpenSort: () => void;
   hasActiveFilters: boolean;
   showSearch: boolean;
+  pinnedLookbooks?: { id: string; title: string }[];
+  onAddLookbookTab?: () => void;
+  onRemoveLookbookTab?: (id: string) => void;
 };
 
 export default function OutfitsHeaderBar({
@@ -45,28 +55,55 @@ export default function OutfitsHeaderBar({
   onOpenSort,
   hasActiveFilters,
   showSearch,
+  pinnedLookbooks = [],
+  onAddLookbookTab,
+  onRemoveLookbookTab,
 }: OutfitsHeaderBarProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
+
+  const allPills: PillItem[] = [
+    ...FIXED_TABS,
+    ...pinnedLookbooks.map((lb) => ({
+      id: `lookbook_${lb.id}`,
+      label: lb.title,
+      icon: 'book-outline' as keyof typeof Ionicons.glyphMap,
+      removable: true,
+    })),
+  ];
+
   return (
     <View style={styles.container}>
       <View style={styles.pillRow}>
         <FlatList
           horizontal
-          data={TAB_ITEMS}
+          data={allPills}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <PillButton
               label={item.label}
               icon={item.icon}
               selected={activeTab === item.id}
-              onPress={() => onChangeTab(item.id)}
+              onPress={() => onChangeTab(item.id as OutfitsTab)}
+              onRemove={
+                item.removable && onRemoveLookbookTab
+                  ? () => onRemoveLookbookTab(item.id.replace('lookbook_', ''))
+                  : undefined
+              }
               variant="default"
               size="medium"
             />
           )}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.pillList}
+          style={styles.pillFlatList}
+          ListFooterComponent={
+            onAddLookbookTab ? (
+              <TouchableOpacity style={styles.addButton} onPress={onAddLookbookTab}>
+                <Ionicons name="add-circle-outline" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+            ) : null
+          }
         />
       </View>
 
@@ -138,10 +175,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
   },
+  pillFlatList: {
+    flexGrow: 0,
+  },
   pillList: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     gap: spacing.xs,
+    alignItems: 'center',
+  },
+  addButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
   },
   viewToggle: {
     flexDirection: 'row',
