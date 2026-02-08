@@ -47,6 +47,7 @@ import { useSlotPresets } from '@/hooks/calendar';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 import createOutfitStyles from './styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
+import { useHeaderSearch } from '@/contexts/HeaderSearchContext';
 import { createCommonStyles } from '@/styles/commonStyles';
 type OutfitsTab = 'my_outfits' | 'explore' | 'following';
 type ViewMode = 'grid' | 'feed';
@@ -126,6 +127,20 @@ export default function OutfitsScreen() {
     updateFilter,
     getSortLabel,
   } = useOutfitFilters([]);
+
+  // Register search/filter state for the native header bar
+  const { registerHeaderSearch, clearHeaderSearch } = useHeaderSearch();
+  React.useEffect(() => {
+    registerHeaderSearch({
+      searchQuery: filters.searchQuery,
+      onSearchChange: (text) => updateFilter('searchQuery', text),
+      onFilter: () => setShowSortModal(true),
+      onAdd: () => router.push('/outfits/new' as any),
+      hasActiveFilters: filters.showFavoritesOnly,
+      placeholder: 'Search outfits...',
+    });
+    return () => clearHeaderSearch();
+  }, [filters.searchQuery, filters.showFavoritesOnly]);
 
   const { presets, createPreset } = useSlotPresets({ userId: user?.id });
 
@@ -527,7 +542,7 @@ export default function OutfitsScreen() {
         onSearchChange={(text) => updateFilter('searchQuery', text)}
         onOpenSort={() => setShowSortModal(true)}
         hasActiveFilters={filters.showFavoritesOnly}
-        showSearch
+        showSearch={false}
         styles={styles}
       />
 

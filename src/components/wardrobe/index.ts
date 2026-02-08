@@ -20,5 +20,4 @@ export { EditItemForm } from './EditItemForm';
 export { CategorySelector } from './CategorySelector';
 export { AttributeEditor } from './AttributeEditor';
 export { AddAttributeModal } from './AddAttributeModal';
-export { FilterPillGroup } from './FilterPillGroup';
-export { FilterAccordionSection } from './FilterAccordionSection';
+export { FilterPillGroup, FilterAccordionSection } from '@/components/shared';
