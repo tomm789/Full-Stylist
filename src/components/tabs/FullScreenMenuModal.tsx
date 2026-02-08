@@ -1,6 +1,8 @@
 /**
  * FullScreenMenuModal Component
- * Full-screen navigation menu with search and card-style links
+ * Full-screen navigation menu with search and card-style links.
+ * Header matches the standard tab header pattern:
+ *   title - add new ----- search - notifications - close
  */
 
 import React, { useMemo, useState } from 'react';
@@ -14,7 +16,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useNotifications } from '@/contexts/NotificationsContext';
 import { borderRadius, spacing, typography, shadows } from '@/styles/theme';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -32,6 +36,7 @@ export type MenuItem = {
 type FullScreenMenuModalProps = {
   visible: boolean;
   onClose: () => void;
+  onAdd?: () => void;
   gridTitle: string;
   gridItems: MenuItem[];
   actionItems: MenuItem[];
@@ -40,12 +45,15 @@ type FullScreenMenuModalProps = {
 export function FullScreenMenuModal({
   visible,
   onClose,
+  onAdd,
   gridTitle,
   gridItems,
   actionItems,
 }: FullScreenMenuModalProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
+  const router = useRouter();
+  const { unreadCount } = useNotifications();
   const [query, setQuery] = useState('');
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -71,17 +79,51 @@ export function FullScreenMenuModal({
     [actionItems, normalizedQuery]
   );
 
+  const handleSearch = () => {
+    onClose();
+    router.push('/search' as any);
+  };
+
+  const handleNotifications = () => {
+    onClose();
+    router.push('/notifications' as any);
+  };
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={styles.container}>
+        {/* Header — matches Calendar page header layout */}
         <View style={styles.header}>
-          <RNText style={styles.title}>Menu</RNText>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
+          <View style={styles.headerLeft}>
+            <RNText style={styles.title}>Menu</RNText>
+            {onAdd && (
+              <TouchableOpacity style={styles.headerIcon} onPress={onAdd}>
+                <Ionicons name="add-circle-outline" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            )}
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.headerIcon} onPress={handleSearch}>
+              <Ionicons name="search-outline" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerIcon} onPress={handleNotifications}>
+              <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <RNText style={styles.badgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </RNText>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerIcon} onPress={onClose}>
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
+          {/* Inline menu search */}
           <View style={styles.searchWrap}>
             <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
             <TextInput
@@ -187,13 +229,41 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderBottomColor: colors.borderLight,
     backgroundColor: colors.background,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   title: {
-    fontSize: typography.fontSize.xl,
+    fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
   },
-  closeButton: {
-    padding: spacing.xs,
+  headerIcon: {
+    position: 'relative',
+    padding: spacing.sm,
+    marginHorizontal: spacing.xs,
+  },
+  badge: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.round,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+  },
+  badgeText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
   },
   content: {
     padding: spacing.lg,

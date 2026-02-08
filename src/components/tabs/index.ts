@@ -5,5 +5,5 @@
 
 export { HeaderAddMenu } from './HeaderAddMenu';
 export { HeaderRightMenu } from './HeaderRightMenu';
-export { HeaderSearchMenu, ConnectedHeaderSearchMenu } from './HeaderSearchMenu';
+export { HeaderSearchMenu, ConnectedHeaderSearchMenu, ConnectedHeaderSearchTitle, ConnectedHeaderSearchRight } from './HeaderSearchMenu';
 export { FullScreenMenuModal } from './FullScreenMenuModal';

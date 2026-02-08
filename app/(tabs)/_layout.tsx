@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { HeaderAddMenu, HeaderRightMenu, ConnectedHeaderSearchMenu, FullScreenMenuModal } from '@/components/tabs';
+import { HeaderAddMenu, HeaderRightMenu, ConnectedHeaderSearchTitle, ConnectedHeaderSearchRight, FullScreenMenuModal } from '@/components/tabs';
 import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -257,8 +257,8 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="wardrobe"
           options={{
-            headerTitle: 'Wardrobe',
-            headerRight: () => <ConnectedHeaderSearchMenu />,
+            headerTitle: () => <ConnectedHeaderSearchTitle fallbackTitle="Wardrobe" />,
+            headerRight: () => <ConnectedHeaderSearchRight />,
             tabBarLabel: 'Wardrobe',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="shirt-outline" size={size} color={color} />
@@ -302,9 +302,9 @@ export default function TabsLayout() {
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="menu-outline" size={size} color={color} />
             ),
-            tabBarButton: (props) => (
+            tabBarButton: ({ onPress: _nav, onLongPress: _long, onPressIn: _in, onPressOut: _out, href: _href, ...rest }) => (
               <TouchableOpacity
-                {...props}
+                {...rest}
                 onPress={() => setShowMenu(true)}
                 accessibilityRole="button"
                 accessibilityLabel="Menu"
@@ -325,6 +325,7 @@ export default function TabsLayout() {
       <FullScreenMenuModal
         visible={showMenu}
         onClose={() => setShowMenu(false)}
+        onAdd={() => { setShowMenu(false); setShowCreateMenu(true); }}
         gridTitle=""
         gridItems={gridItems}
         actionItems={actionItems}
