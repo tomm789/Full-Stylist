@@ -99,6 +99,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     padding: spacing.xs,
   },
   content: {
+    flex: 1,
     paddingHorizontal: spacing.xl,
   },
   footer: {

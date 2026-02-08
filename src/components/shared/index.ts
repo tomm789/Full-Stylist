@@ -21,6 +21,9 @@ export * from './modals';
 // Loading
 export * from './loading';
 
+// Filters
+export * from './filters';
+
 // Search
 export { SearchResultItem } from './SearchResultItem';
 export { SearchFilterBar } from './SearchFilterBar';

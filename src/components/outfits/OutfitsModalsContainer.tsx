@@ -95,7 +95,6 @@ export default function OutfitsModalsContainer({
       sortOrder={sortState.filters.sortOrder}
       onSortChange={(sortBy) => {
         sortState.updateFilter('sortBy', sortBy);
-        sortState.setShowSortModal(false);
       }}
       onOrderToggle={() =>
         sortState.updateFilter(

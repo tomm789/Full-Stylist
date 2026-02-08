@@ -5,14 +5,12 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
-import { BottomSheet, PrimaryButton } from '@/components/shared';
+import { BottomSheet, PrimaryButton, FilterPillGroup, FilterAccordionSection } from '@/components/shared';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 import type { FilterState, AvailableEntityAttribute } from '@/hooks/wardrobe';
 import { WardrobeSubcategory } from '@/lib/wardrobe';
-import { FilterPillGroup } from './FilterPillGroup';
-import { FilterAccordionSection } from './FilterAccordionSection';
 
 const { spacing } = theme;
 
@@ -75,18 +73,18 @@ export default function FilterDrawer({
       visible={visible}
       onClose={onClose}
       title="Filters"
-      footerContent={
-        <View style={styles.footer}>
+      headerRight={
+        <View style={styles.headerActions}>
           <PrimaryButton
-            title="Clear All"
+            title="Clear"
             onPress={onClearAll}
             variant="outline"
-            style={styles.footerButton}
+            size="small"
           />
           <PrimaryButton
             title="Apply"
             onPress={handleApply}
-            style={styles.footerButton}
+            size="small"
           />
         </View>
       }
@@ -307,11 +305,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
   },
-  footer: {
+  headerActions: {
     flexDirection: 'row',
-    gap: spacing.md,
-  },
-  footerButton: {
-    flex: 1,
+    gap: spacing.sm,
   },
 });

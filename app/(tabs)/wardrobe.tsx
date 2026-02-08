@@ -22,7 +22,6 @@ import { LoadingOverlay, LoadingSpinner } from '@/components/shared';
 
 // Wardrobe Components
 import {
-  SearchBar,
   CategoryPills,
   FilterDrawer,
   ItemGrid,
@@ -46,6 +45,7 @@ import { logClientTiming } from '@/lib/perf/logClientTiming';
 import { PERF_MODE } from '@/lib/perf/perfMode';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 import { useThemeColors } from '@/contexts/ThemeContext';
+import { useHeaderSearch } from '@/contexts/HeaderSearchContext';
 import { createCommonStyles } from '@/styles/commonStyles';
 import type { ThemeColors } from '@/styles/themes';
 
@@ -144,6 +144,20 @@ export default function WardrobeScreen() {
     availableEntityAttributes,
     availableTags,
   } = useFilters(allItems, user?.id, entityAttributesMap, tagsMap);
+
+  // Register search/filter state for the native header bar
+  const { registerHeaderSearch, clearHeaderSearch } = useHeaderSearch();
+  useEffect(() => {
+    registerHeaderSearch({
+      searchQuery,
+      onSearchChange: setSearchQuery,
+      onFilter: () => setShowFilterDrawer(true),
+      onAdd: () => router.push('/wardrobe/add' as any),
+      hasActiveFilters,
+      placeholder: 'Search wardrobe...',
+    });
+    return () => clearHeaderSearch();
+  }, [searchQuery, hasActiveFilters]);
 
   // Load subcategories when category changes; clear subcategory filter
   useEffect(() => {
@@ -501,14 +515,6 @@ export default function WardrobeScreen() {
             }}
           />
         )}
-
-        {/* Search Bar */}
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onFilter={() => setShowFilterDrawer(true)}
-          hasActiveFilters={hasActiveFilters}
-        />
 
         {/* Category Pills */}
         <CategoryPills
