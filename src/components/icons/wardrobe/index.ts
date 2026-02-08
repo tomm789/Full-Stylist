@@ -1,0 +1,14 @@
+export { default as AccessoriesIcon } from './Accessories';
+export { default as ActivewearIcon } from './Activewear';
+export { default as BagsIcon } from './Bags';
+export { default as BottomsIcon } from './Bottoms';
+export { default as DressesIcon } from './Dresses';
+export { default as IntimatesIcon } from './Intimates';
+export { default as JewelleryIcon } from './Jewellery';
+export { default as JumpsuitsRompersIcon } from './JumpsuitsRompers';
+export { default as KnitwearIcon } from './Knitwear';
+export { default as OuterwearIcon } from './Outerwear';
+export { default as ShoesIcon } from './Shoes';
+export { default as SleepwearLoungewearIcon } from './SleepwearLoungewear';
+export { default as SwimwearIcon } from './Swimwear';
+export { default as TopsIcon } from './Tops';

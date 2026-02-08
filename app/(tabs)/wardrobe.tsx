@@ -525,6 +525,9 @@ export default function WardrobeScreen() {
             selectedSubcategoryId={filters.subcategoryId}
             onSelectSubcategory={(id) => updateFilter('subcategoryId', id)}
             variant="subcategory"
+            selectedCategoryLabel={
+              categories.find((category) => category.id === selectedCategoryId)?.name
+            }
           />
         )}
         </View>

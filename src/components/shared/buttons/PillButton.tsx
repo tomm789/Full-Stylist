@@ -26,6 +26,7 @@ interface PillButtonProps extends TouchableOpacityProps {
   selected?: boolean;
   onRemove?: () => void;
   icon?: keyof typeof Ionicons.glyphMap;
+  leading?: React.ReactNode;
   size?: 'small' | 'medium' | 'large';
   variant?: 'default' | 'primary' | 'secondary';
   style?: ViewStyle;
@@ -38,6 +39,7 @@ export default function PillButton({
   selected = false,
   onRemove,
   icon,
+  leading,
   size = 'medium',
   variant = 'default',
   disabled,
@@ -47,6 +49,7 @@ export default function PillButton({
 }: PillButtonProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
+  const hasLabel = Boolean(label);
 
   const pillStyle = [
     styles.pill,
@@ -71,6 +74,11 @@ export default function PillButton({
       activeOpacity={0.7}
       {...props}
     >
+      {leading && (
+        <View style={[styles.leading, hasLabel && styles.leadingWithLabel]}>
+          {leading}
+        </View>
+      )}
       {icon && (
         <Ionicons
           name={icon}
@@ -79,7 +87,7 @@ export default function PillButton({
           style={styles.icon}
         />
       )}
-      <Text style={pillTextStyle}>{label}</Text>
+      {hasLabel && <Text style={pillTextStyle}>{label}</Text>}
       {onRemove && (
         <TouchableOpacity
           onPress={(e) => {
@@ -166,6 +174,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
 
   // Icon and remove button
   icon: {
+    marginRight: spacing.xs / 2,
+  },
+  leading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  leadingWithLabel: {
     marginRight: spacing.xs / 2,
   },
   removeButton: {

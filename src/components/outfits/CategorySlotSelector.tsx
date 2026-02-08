@@ -16,6 +16,7 @@ import { WardrobeCategory, WardrobeItem } from '@/lib/wardrobe';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
+import WardrobeCategoryIcon from '@/components/shared/WardrobeCategoryIcon';
 
 const { spacing, borderRadius, typography } = theme;
 
@@ -26,24 +27,6 @@ interface CategorySlotSelectorProps {
   onAddItem: (categoryId: string) => void;
   onRemoveItem: (categoryId: string) => void;
 }
-
-const getCategoryIcon = (categoryName: string): string => {
-  const iconMap: { [key: string]: string } = {
-    'Tops': '👕',
-    'Bottoms': '👖',
-    'Dresses': '👗',
-    'Outerwear': '🧥',
-    'Shoes': '👟',
-    'Accessories': '👜',
-    'Jewelry': '💍',
-    'Bags': '🎒',
-    'Hats': '🎩',
-    'Scarves': '🧣',
-    'Belts': '📿',
-    'Sunglasses': '🕶️',
-  };
-  return iconMap[categoryName] || '👔';
-};
 
 export default function CategorySlotSelector({
   categories,
@@ -69,9 +52,11 @@ export default function CategorySlotSelector({
           <View key={category.id} style={styles.slot}>
             <View style={styles.slotHeader}>
               <View style={styles.categoryTitle}>
-                <Text style={styles.categoryIcon}>
-                  {getCategoryIcon(category.name)}
-                </Text>
+                <WardrobeCategoryIcon
+                  categoryName={category.name}
+                  size={20}
+                  color={colors.textPrimary}
+                />
                 <Text style={styles.categoryName}>{category.name}</Text>
               </View>
               <View style={styles.actions}>
@@ -146,9 +131,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  categoryIcon: {
-    fontSize: 20,
   },
   categoryName: {
     fontSize: typography.fontSize.base,
