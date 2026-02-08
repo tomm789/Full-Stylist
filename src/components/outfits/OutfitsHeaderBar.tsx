@@ -1,17 +1,23 @@
 /**
  * OutfitsHeaderBar Component
- * Tab selector + view toggle + filters/search for Outfits screen.
+ * Pill-style tab selector + view toggle + filters/search for Outfits screen.
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, typography, spacing } from '@/styles';
-import { SearchBar } from '@/components/shared';
+import { PillButton, SearchBar } from '@/components/shared';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 
 type OutfitsTab = 'my_outfits' | 'explore' | 'following';
+
+const TAB_ITEMS: { id: OutfitsTab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { id: 'my_outfits', label: 'My Outfits', icon: 'shirt-outline' },
+  { id: 'explore', label: 'Explore', icon: 'compass-outline' },
+  { id: 'following', label: 'Following', icon: 'people-outline' },
+];
 
 type OutfitsHeaderBarProps = {
   activeTab: OutfitsTab;
@@ -44,52 +50,24 @@ export default function OutfitsHeaderBar({
   const styles = createStyles(colors);
   return (
     <View style={styles.container}>
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'my_outfits' && styles.tabActive]}
-          onPress={() => onChangeTab('my_outfits')}
-        >
-          <Ionicons
-            name="shirt-outline"
-            size={20}
-            color={activeTab === 'my_outfits' ? colors.textPrimary : colors.textTertiary}
-          />
-          {showTabLabels && (
-            <Text style={[styles.tabText, activeTab === 'my_outfits' && styles.tabTextActive]}>
-              My Outfits
-            </Text>
+      <View style={styles.pillRow}>
+        <FlatList
+          horizontal
+          data={TAB_ITEMS}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <PillButton
+              label={item.label}
+              icon={item.icon}
+              selected={activeTab === item.id}
+              onPress={() => onChangeTab(item.id)}
+              variant="default"
+              size="medium"
+            />
           )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'explore' && styles.tabActive]}
-          onPress={() => onChangeTab('explore')}
-        >
-          <Ionicons
-            name="compass-outline"
-            size={20}
-            color={activeTab === 'explore' ? colors.textPrimary : colors.textTertiary}
-          />
-          {showTabLabels && (
-            <Text style={[styles.tabText, activeTab === 'explore' && styles.tabTextActive]}>
-              Explore
-            </Text>
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'following' && styles.tabActive]}
-          onPress={() => onChangeTab('following')}
-        >
-          <Ionicons
-            name="people-outline"
-            size={20}
-            color={activeTab === 'following' ? colors.textPrimary : colors.textTertiary}
-          />
-          {showTabLabels && (
-            <Text style={[styles.tabText, activeTab === 'following' && styles.tabTextActive]}>
-              Following
-            </Text>
-          )}
-        </TouchableOpacity>
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.pillList}
+        />
       </View>
 
       {showViewToggle && (
@@ -155,32 +133,15 @@ export default function OutfitsHeaderBar({
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     backgroundColor: colors.background,
+  },
+  pillRow: {
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
   },
-  tabBar: {
-    flexDirection: 'row',
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.transparent,
-  },
-  tabActive: {
-    borderBottomColor: colors.textPrimary,
-  },
-  tabText: {
-    marginTop: spacing.xs,
-    fontSize: typography.fontSize.xs,
-    color: colors.textTertiary,
-    fontWeight: typography.fontWeight.medium,
-  },
-  tabTextActive: {
-    color: colors.textPrimary,
-    fontWeight: typography.fontWeight.semibold,
+  pillList: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
   },
   viewToggle: {
     flexDirection: 'row',
