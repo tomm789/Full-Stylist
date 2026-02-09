@@ -2,6 +2,7 @@ import React from 'react';
 import { Animated, View } from 'react-native';
 import LookbookSelectionBar from './LookbookSelectionBar';
 import OutfitsHeaderBar from './OutfitsHeaderBar';
+import type { OutfitsTab } from './OutfitsHeaderBar';
 
 export type OutfitsHeaderSectionProps = {
   headerReady: boolean;
@@ -17,10 +18,10 @@ export type OutfitsHeaderSectionProps = {
   onRemoveOutfit: (id: string) => void;
   onExitSelection: () => void;
   onOpenPicker: () => void;
-  activeTab: 'my_outfits' | 'explore' | 'following';
+  activeTab: OutfitsTab;
   showTabLabels: boolean;
   activeView: 'grid' | 'feed';
-  onChangeTab: (tab: 'my_outfits' | 'explore' | 'following') => void;
+  onChangeTab: (tab: OutfitsTab) => void;
   onChangeView: (view: 'grid' | 'feed') => void;
   showViewToggle: boolean;
   searchQuery: string;
@@ -31,6 +32,10 @@ export type OutfitsHeaderSectionProps = {
   styles: {
     headerContainer: any;
   };
+  pinnedLookbooks?: { id: string; title: string }[];
+  onAddLookbookTab?: () => void;
+  onRemoveLookbookTab?: (id: string) => void;
+  hintMessage?: string;
 };
 
 export default function OutfitsHeaderSection({
@@ -59,6 +64,10 @@ export default function OutfitsHeaderSection({
   hasActiveFilters,
   showSearch,
   styles,
+  pinnedLookbooks,
+  onAddLookbookTab,
+  onRemoveLookbookTab,
+  hintMessage,
 }: OutfitsHeaderSectionProps) {
   return (
     <Animated.View
@@ -81,6 +90,7 @@ export default function OutfitsHeaderSection({
             onRemoveOutfit={onRemoveOutfit}
             onExit={onExitSelection}
             onOpenPicker={onOpenPicker}
+            hintMessage={hintMessage}
           />
         )}
         <OutfitsHeaderBar
@@ -95,6 +105,9 @@ export default function OutfitsHeaderSection({
           onOpenSort={onOpenSort}
           hasActiveFilters={hasActiveFilters}
           showSearch={showSearch}
+          pinnedLookbooks={pinnedLookbooks}
+          onAddLookbookTab={onAddLookbookTab}
+          onRemoveLookbookTab={onRemoveLookbookTab}
         />
       </View>
     </Animated.View>

@@ -22,6 +22,7 @@ type LookbookSelectionBarProps = {
   onRemoveOutfit: (outfitId: string) => void;
   onExit: () => void;
   onOpenPicker: () => void;
+  hintMessage?: string;
 };
 
 export default function LookbookSelectionBar({
@@ -31,16 +32,26 @@ export default function LookbookSelectionBar({
   onRemoveOutfit,
   onExit,
   onOpenPicker,
+  hintMessage,
 }: LookbookSelectionBarProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   return (
     <View>
-      <LookbookCreatorBar
-        selectedOutfits={selectedOutfits}
-        onRemoveOutfit={onRemoveOutfit}
-        onExit={onExit}
-      />
+      {hintMessage && selectionCount === 0 ? (
+        <View style={styles.hintContainer}>
+          <Text style={styles.hintText}>{hintMessage}</Text>
+          <TouchableOpacity onPress={onExit} style={styles.hintClose}>
+            <Text style={styles.hintCloseText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <LookbookCreatorBar
+          selectedOutfits={selectedOutfits}
+          onRemoveOutfit={onRemoveOutfit}
+          onExit={onExit}
+        />
+      )}
       <View style={styles.actionBar}>
         <TouchableOpacity
           style={[
@@ -77,6 +88,30 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   actionButtonText: {
     color: colors.textLight,
     fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  hintContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.backgroundSecondary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  hintText: {
+    flex: 1,
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: typography.fontWeight.medium,
+  },
+  hintClose: {
+    paddingLeft: spacing.md,
+  },
+  hintCloseText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.primary,
     fontWeight: typography.fontWeight.semibold,
   },
 });

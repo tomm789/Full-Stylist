@@ -13,3 +13,4 @@ export { useLookbookOutfits } from './useLookbookOutfits';
 export { useLookbookDetailActions } from './useLookbookDetailActions';
 export { useNewLookbook } from './useNewLookbook';
 export { useLookbookSelection } from './useLookbookSelection';
+export { useLookbookTabs } from './useLookbookTabs';

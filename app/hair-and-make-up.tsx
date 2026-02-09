@@ -189,83 +189,34 @@ export default function HairAndMakeUpScreen() {
       setVariationUrls(new Map());
       return;
     }
-    const data = await listHeadshotGenerationVariations(currentSessionId);
-    setVariations(data);
+    setLoadingHistory(true);
+    try {
+      const data = await listHeadshotGenerationVariations(currentSessionId);
+      setVariations(data);
 
-    const imageIds = data.map((item) => item.image_id).filter(Boolean) as string[];
-    if (imageIds.length === 0) {
-      setVariationUrls(new Map());
-      return;
-    }
+      const imageIds = data.map((item) => item.image_id).filter(Boolean) as string[];
+      if (imageIds.length === 0) {
+        setVariationUrls(new Map());
+        return;
+      }
 
-    const { data: images } = await supabase
-      .from('images')
-      .select('id, storage_bucket, storage_key')
-      .in('id', imageIds);
+      const { data: images } = await supabase
+        .from('images')
+        .select('id, storage_bucket, storage_key')
+        .in('id', imageIds);
 
-    const urlMap = new Map<string, string | null>();
-    images?.forEach((image) => {
-      urlMap.set(image.id, getPublicImageUrl(image));
-    });
-    setVariationUrls(urlMap);
-  };
-
-  const generatePulse = React.useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    if (!generating) {
-      generatePulse.stopAnimation();
-      generatePulse.setValue(0);
-      return;
-    }
-
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(generatePulse, {
-          toValue: 1,
-          duration: 900,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(generatePulse, {
-          toValue: 0,
-          duration: 900,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    loop.start();
-    return () => loop.stop();
-  }, [generating, generatePulse]);
-
-  const resolveImageUrl = async (imageId: string | null): Promise<string | null> => {
-    if (!imageId) return null;
-    const { data: image } = await supabase
-      .from('images')
-      .select('id, storage_bucket, storage_key')
-      .eq('id', imageId)
-      .maybeSingle();
-    return image ? getPublicImageUrl(image) : null;
-  };
-
-  const loadSelfie = async () => {
-    if (!user?.id) return;
-    const { data: settings } = await getUserSettings(user.id);
-    const nextSelfieId = settings?.selfie_image_id ?? null;
-    setSelfieImageId(nextSelfieId);
-    const nextSelfieUrl = await resolveImageUrl(nextSelfieId);
-    setSelfieImageUrl(nextSelfieUrl);
-
-    if (previewSource === 'none' || previewSource === 'selfie') {
-      setBaseImageId(nextSelfieId);
-      setPreviewImageId(nextSelfieId);
-      setPreviewImageUrl(nextSelfieUrl);
-      setPreviewVariationId(null);
-      setPreviewSource(nextSelfieId ? 'selfie' : 'none');
+      const urlMap = new Map<string, string | null>();
+      images?.forEach((image) => {
+        urlMap.set(image.id, getPublicImageUrl(image));
+      });
+      setVariationUrls(urlMap);
+    } finally {
+      setLoadingHistory(false);
     }
   };
+
+  const baseHeadshotId = selectedHeadshotId || activeHeadshotId || null;
+  const baseHeadshotUrl = selectedHeadshotUrl || headshotImageUrl || null;
 
   const loadSession = async () => {
     if (!user?.id || !baseImageId) {
@@ -285,6 +236,7 @@ export default function HairAndMakeUpScreen() {
     const session = await getLatestHeadshotGenerationSession(user.id, baseImageId);
     if (session) {
       setSessionId(session.id);
+      setSelectedVariationIds([]);
       const input = session.input_json || {};
       const hairPresetIds = input.hairPresetIds || [];
       const makeupPresetIds = input.makeupPresetIds || [];
@@ -451,6 +403,7 @@ export default function HairAndMakeUpScreen() {
           );
           setPolicyModalVisible(true);
           await updateHeadshotGenerationVariation(variation.id, { status: 'failed' });
+          await loadVariations(activeSessionId);
           return;
         }
         await updateHeadshotGenerationVariation(variation.id, { status: 'failed' });
@@ -515,19 +468,19 @@ export default function HairAndMakeUpScreen() {
     setPreviewSource('variation');
   };
 
-  const handleNavigateGeneration = (direction: 'back' | 'forward') => {
-    if (completedVariations.length === 0) return;
-    if (previewGenerationIndex === -1) {
-      if (direction === 'back') {
-        void setPreviewFromVariation(completedVariations[0]);
-      }
-      return;
-    }
-    const nextIndex =
-      direction === 'back' ? previewGenerationIndex + 1 : previewGenerationIndex - 1;
-    const nextVariation = completedVariations[nextIndex];
-    if (nextVariation) {
-      void setPreviewFromVariation(nextVariation);
+  const handleSaveSelected = async () => {
+    if (selectedVariationIds.length === 0) return;
+    try {
+      await Promise.all(
+        selectedVariationIds.map((id) =>
+          updateHeadshotGenerationVariation(id, { is_saved: true })
+        )
+      );
+      await loadVariations(sessionId);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to save selected variations');
+    } finally {
+      setSelectedVariationIds([]);
     }
   };
 
@@ -540,241 +493,15 @@ export default function HairAndMakeUpScreen() {
     );
   }, [selectedHair, selectedMakeup, customDescription, baselineInput]);
 
-  const previewHasImage = Boolean(previewImageUrl);
-  const previewIsGenerated =
-    (previewSource === 'variation' || previewSource === 'headshot') && previewHasImage;
-  const completedVariations = useMemo(
-    () =>
-      variations.filter((variation) => {
-        if (variation.status !== 'complete' || !variation.image_id) return false;
-        if (hiddenVariationIds.includes(variation.id)) return false;
-        if (selfieImageId && variation.image_id === selfieImageId) return false;
-        return true;
-      }),
-    [variations, hiddenVariationIds, selfieImageId]
-  );
-  const previewGenerationIndex = useMemo(() => {
-    if (!previewVariationId) return -1;
-    return completedVariations.findIndex((variation) => variation.id === previewVariationId);
-  }, [completedVariations, previewVariationId]);
-  const showGenerationNav = completedVariations.length > 0;
-  const canNavigateBack =
-    previewGenerationIndex === -1
-      ? completedVariations.length > 0
-      : previewGenerationIndex < completedVariations.length - 1;
-  const canNavigateForward = previewGenerationIndex > 0;
-  const canShare = previewIsGenerated && previewHasImage;
-  const previewVariation = previewVariationId
-    ? variations.find((variation) => variation.id === previewVariationId) || null
-    : null;
-  const previewIsSaved = !!previewVariation?.is_saved;
-  const previewIsSavedImage =
-    (previewSource === 'variation' && previewIsSaved) || previewSource === 'headshot';
-  const previewIsDeletable = !!previewImageId && previewImageId !== selfieImageId;
-  const showDeletePreview =
-    !editorOpen && previewHasImage && previewIsSavedImage && previewIsDeletable;
-  const showUploadButton = !previewIsGenerated;
-  const isStyleDisabled = selfieUpload.generating || generating;
-  const isGenerateDisabled = !isDirty || generating;
-  const generateOverlayOpacity = generatePulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.08, 0.22],
-  });
-  const generateIconScale = generatePulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.12],
-  });
-  const generateIconOpacity = generatePulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0.7],
-  });
-
-  const handlePickCamera = () => {
-    if (selfieUpload.generating) return;
-    selfieUpload.pickImage(true);
+  const handleOpenHeadshotDetail = (id: string, url: string | null) => {
+    setSelectedHeadshotId(id);
+    setSelectedHeadshotUrl(url);
+    setScreenMode('detail');
   };
 
-  const handlePickLibrary = () => {
-    if (selfieUpload.generating) return;
-    selfieUpload.pickImage(false);
-  };
-
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <View style={styles.headerRightButtons}>
-          <HeaderIconButton
-            icon="sparkles-outline"
-            onPress={handleGenerateVariation}
-            disabled={isGenerateDisabled || !previewHasImage}
-            accessibilityLabel="Generate"
-          />
-          <HeaderIconButton
-            icon="camera-outline"
-            onPress={handlePickCamera}
-            disabled={isStyleDisabled}
-            accessibilityLabel="Open camera"
-          />
-        </View>
-      ),
-    });
-  }, [
-    navigation,
-    styles.headerRightButtons,
-    isGenerateDisabled,
-    previewHasImage,
-    isStyleDisabled,
-    handleGenerateVariation,
-    handlePickCamera,
-  ]);
-
-  const handleUndo = () => {
-    selfieUpload.clearImage();
-    setPreviewImageUrl(null);
-    setPreviewImageId(null);
-    setPreviewVariationId(null);
-    setPreviewSource('none');
-    setEditorOpen(false);
-    setBaseImageId(null);
-  };
-
-  const handleStylePress = async () => {
-    if (!user?.id) return;
-
-    if (previewSource === 'upload') {
-      const { imageId, errorMessage } = await selfieUpload.saveUploadedImage(user.id, 'selfie');
-      if (!imageId) {
-        Alert.alert('Error', errorMessage || 'Failed to save selfie.');
-        return;
-      }
-      await updateUserSettings(user.id, { selfie_image_id: imageId });
-      const resolvedUrl = await resolveImageUrl(imageId);
-      const nextUrl = resolvedUrl || previewImageUrl || null;
-      setSelfieImageId(imageId);
-      setSelfieImageUrl(resolvedUrl);
-      setBaseImageId(imageId);
-      setPreviewImageId(imageId);
-      setPreviewImageUrl(nextUrl);
-      setPreviewVariationId(null);
-      setPreviewSource('selfie');
-      selfieUpload.clearImage();
-    }
-
-    if (!baseImageId && !previewImageId) {
-      Alert.alert('Add a Selfie', 'Take or upload a selfie to start styling.');
-      return;
-    }
-
-    if (!baseImageId && previewImageId) {
-      setBaseImageId(previewImageId);
-    }
-
-    setEditorOpen(true);
-  };
-
-  const handleRestoreSelfie = () => {
-    if (!selfieImageId && !selfieImageUrl) return;
-    selfieUpload.clearImage();
-    setPreviewImageId(selfieImageId);
-    setPreviewImageUrl(selfieImageUrl);
-    setPreviewVariationId(null);
-    setPreviewSource(selfieImageId ? 'selfie' : 'none');
-  };
-
-  const getShareableUri = async (remoteUrl: string): Promise<string> => {
-    if (Platform.OS === 'web') {
-      return remoteUrl;
-    }
-    if (remoteUrl.startsWith('file://')) {
-      return remoteUrl;
-    }
-    const extension = remoteUrl.split('.').pop()?.split('?')[0] || 'jpg';
-    const targetDirectory = FileSystem.cacheDirectory || FileSystem.documentDirectory;
-    if (!targetDirectory) {
-      return remoteUrl;
-    }
-    const targetUri = `${targetDirectory}hair-makeup-share-${Date.now()}.${extension}`;
-    const download = await FileSystem.downloadAsync(remoteUrl, targetUri);
-    return download?.uri || remoteUrl;
-  };
-
-  const handleSharePreview = async () => {
-    if (!canShare || !previewImageUrl) return;
-    try {
-      const shareUri = await getShareableUri(previewImageUrl);
-      await Share.share({
-        url: shareUri,
-        message: shareUri,
-      });
-    } catch (shareError) {
-      console.error('Share error:', shareError);
-    }
-  };
-
-  const handleDeletePreviewImage = () => {
-    if (!user?.id || !previewImageId) return;
-    Alert.alert(
-      'Delete image?',
-      'This will permanently delete the image.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const imageId = previewImageId;
-            const variationId = previewVariationId;
-            const { error: deleteError } = await deleteImage(imageId, user.id);
-            if (deleteError) {
-              Alert.alert('Error', deleteError.message || 'Failed to delete image.');
-              return;
-            }
-            if (variationId) {
-              await updateHeadshotGenerationVariation(variationId, {
-                image_id: null,
-                is_saved: false,
-              });
-              setHiddenVariationIds((prev) =>
-                prev.includes(variationId) ? prev : [...prev, variationId]
-              );
-            }
-            setVariationUrls((prev) => {
-              const next = new Map(prev);
-              next.delete(imageId);
-              return next;
-            });
-            setPreviewVariationId(null);
-            setPreviewImageId(selfieImageId);
-            setPreviewImageUrl(selfieImageUrl);
-            setPreviewSource(selfieImageId ? 'selfie' : 'none');
-            if (sessionId) {
-              await loadVariations(sessionId);
-            }
-            await refreshImages();
-          },
-        },
-      ],
-      { cancelable: true }
-    );
-  };
-
-  const handlePreviewPress = () => {
-    if (previewImageUrl) {
-      setLightboxUrl(previewImageUrl);
-      setLightboxVisible(true);
-      return;
-    }
-    handlePickCamera();
-  };
-
-  const handleHeadshotSelect = (item: { id: string; url: string | null }) => {
-    selfieUpload.clearImage();
-    setBaseImageId(item.id);
-    setPreviewImageId(item.id);
-    setPreviewImageUrl(item.url || null);
-    setPreviewVariationId(null);
-    setPreviewSource('headshot');
-    setEditorOpen(false);
+  const handleEditHeadshot = () => {
+    if (!selectedHeadshotId) return;
+    setScreenMode('editor');
   };
 
   const renderHeadshotGridItem = ({ item }: { item: { id: string; url: string | null } }) => (
@@ -797,270 +524,308 @@ export default function HairAndMakeUpScreen() {
     </TouchableOpacity>
   );
 
-  return (
-    <SafeAreaView style={commonStyles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={commonStyles.sectionTopPadding}>
-          <View style={styles.pillRowStack}>
-            <View style={styles.tabPills}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.tabPillsRow}>
-                  <PillButton
-                    label=""
-                    icon="grid-outline"
-                    selected={showHeadshotGrid}
-                    onPress={() => setActiveView('grid')}
-                    size="medium"
-                    variant="default"
-                  />
-                  <PillButton
-                    label="Hair"
-                    icon="cut-outline"
-                    selected={activeView === 'hair'}
-                    onPress={() => {
-                      setLastPresetTab('hair');
-                      setActiveView('hair');
-                    }}
-                    size="medium"
-                    variant="default"
-                  />
-                  <PillButton
-                    label="Make-Up"
-                    icon="color-palette-outline"
-                    selected={activeView === 'makeup'}
-                    onPress={() => {
-                      setLastPresetTab('makeup');
-                      setActiveView('makeup');
-                    }}
-                    size="medium"
-                    variant="default"
-                  />
-                  <PillButton
-                    label="Face"
-                    icon="person-circle-outline"
-                    selected={activeView === 'face'}
-                    onPress={() => setActiveView('face')}
-                    size="medium"
-                    variant="default"
-                  />
-                </View>
-              </ScrollView>
-            </View>
+  if (screenMode === 'library') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title="Hair & Make-Up" showBack />
+        <View style={styles.libraryContainer}>
+          <TouchableOpacity
+            style={styles.newHeadshotButton}
+            onPress={() => router.push('/headshot/new' as any)}
+          >
+            <Ionicons name="camera-outline" size={20} color={colors.textLight} />
+            <Text style={styles.newHeadshotButtonText}>Create New Headshot</Text>
+          </TouchableOpacity>
 
-            {isPresetView && presets.length > 0 && (
-              <View style={styles.categoryPills}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.categoryPillsRow}>
-                    <PillButton
-                      label="Custom"
-                      selected={isCustomCategory}
-                      onPress={() => setActiveCategoryId(CUSTOM_CATEGORY_ID)}
-                      size="medium"
-                      variant="default"
-                    />
-                    {categoryPills.map((category) => (
-                      <PillButton
-                        key={category.id}
-                        label={formatCategoryLabel(category.title)}
-                        selected={activeCategory?.id === category.id}
-                        onPress={() => setActiveCategoryId(category.id)}
-                        size="medium"
-                        variant="default"
+          <PostGrid
+            data={allHeadshots}
+            keyExtractor={(item) => item.id}
+            renderItem={renderHeadshotGridItem}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (screenMode === 'detail') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header
+          title="Headshot"
+          showBack
+          onBack={() => setScreenMode('library')}
+        />
+        <View style={styles.detailContainer}>
+          <View style={styles.detailImageWrap}>
+            {selectedHeadshotUrl ? (
+              <ExpoImage source={{ uri: selectedHeadshotUrl }} style={styles.detailImage} contentFit="cover" />
+            ) : (
+              <View style={styles.detailImagePlaceholder}>
+                <Ionicons name="image-outline" size={32} color={colors.textTertiary} />
+              </View>
+            )}
+          </View>
+          <TouchableOpacity style={styles.detailActionButton} onPress={handleEditHeadshot}>
+            <Ionicons name="create-outline" size={20} color={colors.textLight} />
+            <Text style={styles.detailActionButtonText}>Edit This Headshot</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.detailSecondaryButton} onPress={handleEditHeadshot}>
+            <Ionicons name="sparkles-outline" size={20} color={colors.textPrimary} />
+            <Text style={styles.detailSecondaryButtonText}>
+              Create New Look From This Headshot
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Header
+        showBack
+        onBack={() => setScreenMode('detail')}
+        title="Hair & Make-Up"
+        rightContent={
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.infoIconButton}
+              onPress={() => setInfoModalVisible(true)}
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={20}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.headerGenerateButton,
+                (!isDirty || generating) && styles.headerGenerateButtonDisabled,
+              ]}
+              onPress={handleGenerateVariation}
+              disabled={!isDirty || generating}
+            >
+              {generating ? (
+                <ActivityIndicator color={colors.textLight} />
+              ) : (
+                <Ionicons name="sparkles-outline" size={18} color={colors.textLight} />
+              )}
+              <Text style={styles.headerGenerateButtonText}>Generate</Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
+
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.historySection}>
+          <Text style={styles.sectionTitle}>Variations</Text>
+          {loadingHistory ? (
+            <View style={styles.historyLoading}>
+              <ActivityIndicator color={colors.textSecondary} />
+              <Text style={styles.historyLoadingText}>Loading variations...</Text>
+            </View>
+          ) : variations.length === 0 ? (
+            <Text style={styles.historyEmptyText}>No variations yet.</Text>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.variationRow}
+            >
+              {variations.map((variation) => {
+                const isSelected = selectedVariationIds.includes(variation.id);
+                const imageUrl =
+                  variation.image_id ? variationUrls.get(variation.image_id) : null;
+                return (
+                  <TouchableOpacity
+                    key={variation.id}
+                    style={[
+                      styles.variationCard,
+                      isSelected && styles.variationCardSelected,
+                    ]}
+                    onPress={() => toggleVariationSelection(variation.id)}
+                    activeOpacity={0.85}
+                  >
+                    {variation.status === 'failed' ? (
+                      <View style={styles.variationPending}>
+                        <Ionicons name="close-circle" size={24} color={colors.error} />
+                        <Text style={styles.variationStatusText}>Failed</Text>
+                      </View>
+                    ) : variation.status !== 'complete' ? (
+                      <View style={styles.variationPending}>
+                        <ActivityIndicator color={colors.textSecondary} />
+                        <Text style={styles.variationStatusText}>Generating</Text>
+                      </View>
+                    ) : imageUrl ? (
+                      <ExpoImage
+                        source={{ uri: imageUrl }}
+                        style={styles.variationImage}
+                        contentFit="cover"
                       />
-                    ))}
-                  </View>
-                </ScrollView>
+                    ) : (
+                      <View style={styles.variationPending}>
+                        <Text style={styles.variationStatusText}>Unavailable</Text>
+                      </View>
+                    )}
+                    {variation.is_saved && (
+                      <View style={styles.savedBadge}>
+                        <Ionicons name="bookmark" size={14} color={colors.textLight} />
+                        <Text style={styles.savedBadgeText}>Saved</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          {selectedVariationIds.length > 0 && (
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={handleSaveSelected}
+            >
+              <Ionicons name="bookmark-outline" size={18} color={colors.textLight} />
+              <Text style={styles.saveButtonText}>
+                Save Selected as Headshots ({selectedVariationIds.length})
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.previewCard}>
+          <Text style={styles.sectionTitle}>Preview</Text>
+          <View style={styles.previewFrame}>
+            {baseHeadshotUrl ? (
+              <ExpoImage
+                source={{ uri: baseHeadshotUrl }}
+                style={styles.previewImage}
+                contentFit="cover"
+              />
+            ) : (
+              <View style={styles.previewPlaceholder}>
+                <Ionicons name="person-circle-outline" size={72} color={colors.gray400} />
+                <Text style={styles.previewPlaceholderText}>
+                  Add a headshot to preview
+                </Text>
               </View>
             )}
           </View>
         </View>
 
-        {showFacePreview && (
-          <View
-            style={[
-              styles.facePreviewSection,
-              commonStyles.sectionHorizontalPadding,
-              commonStyles.sectionTopPadding,
-            ]}
+        <View style={styles.tabs}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'hair' && styles.tabActive]}
+            onPress={() => setActiveTab('hair')}
           >
-            <View style={styles.imagePreviewContainer}>
-              {previewHasImage ? (
-                <TouchableOpacity
-                  style={styles.previewImageButton}
-                  onPress={handlePreviewPress}
-                  activeOpacity={0.9}
-                >
-                  <ExpoImage
-                    source={{ uri: previewImageUrl || undefined }}
-                    style={styles.imagePreview}
-                    contentFit="cover"
+            <Ionicons
+              name="cut-outline"
+              size={20}
+              color={activeTab === 'hair' ? colors.textPrimary : colors.textSecondary}
+            />
+            <Text style={[styles.tabText, activeTab === 'hair' && styles.tabTextActive]}>
+              Hair
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'makeup' && styles.tabActive]}
+            onPress={() => setActiveTab('makeup')}
+          >
+            <Ionicons
+              name="color-palette-outline"
+              size={20}
+              color={activeTab === 'makeup' ? colors.textPrimary : colors.textSecondary}
+            />
+            <Text style={[styles.tabText, activeTab === 'makeup' && styles.tabTextActive]}>
+              Make-Up
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {presets.length > 0 && (
+          <View style={styles.categoryPills}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.categoryPillsRow}>
+                {presets.map((category) => (
+                  <PillButton
+                    key={category.id}
+                    label={category.title}
+                    selected={activeCategory?.id === category.id}
+                    onPress={() => setActiveCategoryId(category.id)}
+                    size="medium"
+                    variant="default"
                   />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={styles.placeholder}
-                  onPress={handlePickCamera}
-                  disabled={isStyleDisabled}
-                >
-                  <Ionicons name="camera-outline" size={42} color={colors.textSecondary} />
-                  <Text style={styles.placeholderText}>Tap to open camera</Text>
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={[
-                  styles.faceMenuButton,
-                  !previewHasImage && styles.faceMenuButtonDisabled,
-                ]}
-                onPress={() => setShowFaceMenu(true)}
-                disabled={!previewHasImage}
-                accessibilityLabel="Open menu"
-              >
-                <Ionicons name="ellipsis-vertical" size={18} color={colors.textLight} />
-              </TouchableOpacity>
-
-              {generating && previewHasImage && (
-                <Animated.View
-                  style={[styles.generateOverlay, { opacity: generateOverlayOpacity }]}
-                  pointerEvents="none"
-                />
-              )}
-
-              {previewIsGenerated && (
-                <TouchableOpacity
-                  style={styles.restoreButton}
-                  onPress={handleRestoreSelfie}
-                  disabled={isStyleDisabled}
-                  accessibilityLabel="Restore selfie"
-                >
-                  <Ionicons name="person-circle-outline" size={20} color={colors.textSecondary} />
-                </TouchableOpacity>
-              )}
-            </View>
+                ))}
+              </View>
+            </ScrollView>
           </View>
         )}
 
-        {showHeadshotGrid && (
-          <PostGrid
-            data={allHeadshots}
-            keyExtractor={(item) => item.id}
-            renderItem={renderHeadshotGridItem}
-            scrollEnabled={false}
-          />
-        )}
-
-        {isPresetView && (
-          <>
-            {(isCustomCategory || activeCategory) && (
-              <View
-                style={[
-                  styles.categoryCard,
-                  commonStyles.sectionHorizontalPadding,
-                  commonStyles.sectionTopPadding,
-                ]}
-              >
-                {isCustomCategory ? (
-                  <>
-                    <View style={styles.customHeader}>
-                      <Text style={styles.customHint}>{customDescriptionCopy}</Text>
-                      <TouchableOpacity
-                        style={styles.infoIconButton}
-                        onPress={() => setInfoModalVisible(true)}
-                      >
-                        <Ionicons
-                          name="information-circle-outline"
-                          size={18}
-                          color={colors.textSecondary}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                    <TextInput
-                      style={styles.customInput}
-                      placeholder={customPlaceholder}
-                      placeholderTextColor={colors.textTertiary}
-                      multiline
-                      value={customDescription}
-                      onChangeText={setCustomDescription}
-                    />
-                  </>
-                ) : (
-                  activeCategory?.sections.map((section) => (
-                    <View key={section.id} style={styles.sectionBlock}>
-                      {activeCategory.sections.length > 1 && (
-                        <Text style={styles.sectionLabel}>{section.title}</Text>
-                      )}
-                      <View style={styles.pillRow}>
-                        {section.options.map((option) => {
-                          const isSelected = selectedIds.includes(option.id);
-                          return (
-                            <TouchableOpacity
-                              key={option.id}
-                              style={[styles.pill, isSelected && styles.pillSelected]}
-                              onPress={() => toggleSelection(option.id)}
-                              activeOpacity={0.85}
-                            >
-                              <Text
-                                style={[
-                                  styles.pillText,
-                                  isSelected && styles.pillTextSelected,
-                                ]}
-                              >
-                                {option.title}
-                              </Text>
-                              <TouchableOpacity
-                                style={styles.infoButton}
-                                onPress={(event) => {
-                                  event.stopPropagation?.();
-                                  handleInfoPress(option);
-                                }}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                              >
-                                <Ionicons
-                                  name="information-circle-outline"
-                                  size={INFO_ICON_SIZE}
-                                  color={isSelected ? colors.textLight : colors.textSecondary}
-                                />
-                              </TouchableOpacity>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-                    </View>
-                  ))
+        {activeCategory && (
+          <View style={styles.categoryCard}>
+            {activeCategory.sections.map((section) => (
+              <View key={section.id} style={styles.sectionBlock}>
+                {activeCategory.sections.length > 1 && (
+                  <Text style={styles.sectionLabel}>{section.title}</Text>
                 )}
+                <View style={styles.pillRow}>
+                  {section.options.map((option) => {
+                    const isSelected = selectedIds.includes(option.id);
+                    return (
+                      <TouchableOpacity
+                        key={option.id}
+                        style={[styles.pill, isSelected && styles.pillSelected]}
+                        onPress={() => toggleSelection(option.id)}
+                        activeOpacity={0.85}
+                      >
+                        <Text
+                          style={[
+                            styles.pillText,
+                            isSelected && styles.pillTextSelected,
+                          ]}
+                        >
+                          {option.title}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.infoButton}
+                          onPress={(event) => {
+                            event.stopPropagation?.();
+                            handleInfoPress(option);
+                          }}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons
+                            name="information-circle-outline"
+                            size={16}
+                            color={isSelected ? colors.textLight : colors.textSecondary}
+                          />
+                        </TouchableOpacity>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
-            )}
-          </>
+            ))}
+          </View>
         )}
-      </ScrollView>
 
-      <DropdownMenuModal
-        visible={showFaceMenu}
-        onClose={() => setShowFaceMenu(false)}
-        topOffset={120}
-        align="right"
-      >
-        <DropdownMenuItem
-          label="Share"
-          icon="share-outline"
-          onPress={() => {
-            setShowFaceMenu(false);
-            handleSharePreview();
-          }}
-          disabled={!canShare}
-        />
-        <View style={dropdownMenuStyles.menuDivider} />
-        <DropdownMenuItem
-          label="Delete"
-          icon="trash-outline"
-          onPress={() => {
-            setShowFaceMenu(false);
-            handleDeletePreviewImage();
-          }}
-          danger
-          disabled={!showDeletePreview}
-        />
-      </DropdownMenuModal>
+        <View style={styles.customSection}>
+          <Text style={styles.sectionTitle}>Custom Description</Text>
+          <Text style={styles.customHint}>
+            Add any extra details to combine with presets (optional).
+          </Text>
+          <TextInput
+            style={styles.customInput}
+            placeholder="e.g., soft glam with glossy lips, warm brown smoky eye"
+            placeholderTextColor={colors.textTertiary}
+            multiline
+            value={customDescription}
+            onChangeText={setCustomDescription}
+          />
+        </View>
+
+        
+      </ScrollView>
 
       <PolicyBlockModal
         visible={policyModalVisible}
@@ -1124,189 +889,43 @@ export default function HairAndMakeUpScreen() {
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: {
     paddingBottom: spacing.massive,
+    gap: spacing.lg,
   },
-  historyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  historyActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  headerRightButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginRight: spacing.xs,
-  },
-  facePreviewSection: {
-    width: '100%',
-    gap: spacing.md,
-  },
-  previewSection: {
-    alignSelf: 'center',
-    width: '100%',
-    gap: spacing.md,
-    paddingHorizontal: spacing.sm,
-  },
-  previewNavRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  previewNavButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  previewNavButtonDisabled: {
-    opacity: 0.4,
-  },
-  previewRailRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    width: '100%',
-  },
-  previewCore: {
-    flex: 1,
-    minWidth: 0,
-  },
-  railColumnLeft: {
-    width: 48,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-  },
-  railStack: {
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  railColumnRight: {
-    width: 48,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-  },
-  railSlot: {
-    minHeight: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imagePreviewContainer: {
-    width: '100%',
-    aspectRatio: 3 / 4,
+  previewCard: {
+    backgroundColor: colors.background,
     borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-    backgroundColor: colors.backgroundTertiary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  previewImageButton: {
-    width: '100%',
-    height: '100%',
-  },
-  imagePreview: {
-    width: '100%',
-    height: '100%',
-  },
-  generateOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.gray200,
-  },
-  railButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  placeholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
-  },
-  placeholderText: {
-    fontSize: typography.fontSize.base,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  mediaButton: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: spacing.md,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  restoreButton: {
-    position: 'absolute',
-    left: spacing.md,
-    bottom: spacing.md,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  faceMenuButton: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-  },
-  faceMenuButtonDisabled: {
-    opacity: 0.5,
-  },
-  generateButton: {
-    position: 'absolute',
-    bottom: spacing.md,
-    alignSelf: 'center',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-  },
-  generateButtonDisabled: {
-    opacity: 0.6,
+    padding: 0,
   },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
+    marginBottom: spacing.md,
+  },
+  previewFrame: {
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: colors.gray100,
+    aspectRatio: 3 / 4,
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewPlaceholder: {
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  previewPlaceholderText: {
+    color: colors.textSecondary,
+    fontSize: typography.fontSize.sm,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   infoIconButton: {
     padding: spacing.xs,
