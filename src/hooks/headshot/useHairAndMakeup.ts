@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,24 +36,18 @@ export function useHairAndMakeup() {
     activeHeadshotId,
     allHeadshots,
   } = useProfileImages({ userId: user?.id });
-
-  // Tab & preset selection state
   const [activeTab, setActiveTab] = useState<TabId>('hair');
   const [selectedHair, setSelectedHair] = useState<string[]>([]);
   const [selectedMakeup, setSelectedMakeup] = useState<string[]>([]);
   const [selectedHairCategory, setSelectedHairCategory] = useState<string | null>(null);
   const [selectedMakeupCategory, setSelectedMakeupCategory] = useState<string | null>(null);
   const [customDescription, setCustomDescription] = useState('');
-
-  // Session & generation state
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [variations, setVariations] = useState<HeadshotGenerationVariation[]>([]);
   const [variationUrls, setVariationUrls] = useState<Map<string, string | null>>(new Map());
   const [selectedVariationIds, setSelectedVariationIds] = useState<string[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [generating, setGenerating] = useState(false);
-
-  // UI state
   const [policyModalVisible, setPolicyModalVisible] = useState(false);
   const [policyMessage, setPolicyMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +61,6 @@ export function useHairAndMakeup() {
     customDescription: '',
   });
 
-  // Derived state
   const presets = useMemo<PresetCategory[]>(
     () => (activeTab === 'hair' ? hairPresets : makeupPresets),
     [activeTab]
@@ -87,30 +80,17 @@ export function useHairAndMakeup() {
   const selectedIds = activeTab === 'hair' ? selectedHair : selectedMakeup;
   const setSelectedIds = activeTab === 'hair' ? setSelectedHair : setSelectedMakeup;
 
-  const baseHeadshotId = selectedHeadshotId || activeHeadshotId || null;
-  const baseHeadshotUrl = selectedHeadshotUrl || headshotImageUrl || null;
-
-  const isDirty = useMemo(() => {
-    const sortIds = (ids: string[]) => [...ids].sort().join(',');
-    return (
-      sortIds(selectedHair) !== sortIds(baselineInput.hairPresetIds) ||
-      sortIds(selectedMakeup) !== sortIds(baselineInput.makeupPresetIds) ||
-      (customDescription || '') !== (baselineInput.customDescription || '')
-    );
-  }, [selectedHair, selectedMakeup, customDescription, baselineInput]);
-
-  // Handlers
-  const toggleSelection = useCallback((optionId: string) => {
+  const toggleSelection = (optionId: string) => {
     setSelectedIds((prev) =>
       prev.includes(optionId) ? prev.filter((id) => id !== optionId) : [...prev, optionId]
     );
-  }, [setSelectedIds]);
+  };
 
-  const handleInfoPress = useCallback((option: PresetOption) => {
+  const handleInfoPress = (option: PresetOption) => {
     Alert.alert(option.title, option.description);
-  }, []);
+  };
 
-  const loadVariations = useCallback(async (currentSessionId: string | null) => {
+  const loadVariations = async (currentSessionId: string | null) => {
     if (!currentSessionId) {
       setVariations([]);
       setVariationUrls(new Map());
@@ -140,9 +120,12 @@ export function useHairAndMakeup() {
     } finally {
       setLoadingHistory(false);
     }
-  }, []);
+  };
 
-  const loadSession = useCallback(async () => {
+  const baseHeadshotId = selectedHeadshotId || activeHeadshotId || null;
+  const baseHeadshotUrl = selectedHeadshotUrl || headshotImageUrl || null;
+
+  const loadSession = async () => {
     if (!user?.id || !baseHeadshotId) {
       setSessionId(null);
       setVariations([]);
@@ -189,13 +172,13 @@ export function useHairAndMakeup() {
       setVariationUrls(new Map());
       setSelectedVariationIds([]);
     }
-  }, [user?.id, baseHeadshotId, loadVariations]);
+  };
 
-  useEffect(() => {
+  React.useEffect(() => {
     loadSession();
   }, [user?.id, baseHeadshotId]);
 
-  const handleGenerateVariation = useCallback(async () => {
+  const handleGenerateVariation = async () => {
     if (!user?.id) return;
     if (!baseHeadshotId) {
       Alert.alert('Headshot Required', 'Generate a headshot before creating variations.');
@@ -299,17 +282,17 @@ export function useHairAndMakeup() {
     } finally {
       setGenerating(false);
     }
-  }, [user?.id, baseHeadshotId, selectedHair, selectedMakeup, customDescription, sessionId, loadVariations]);
+  };
 
-  const toggleVariationSelection = useCallback((variationId: string) => {
+  const toggleVariationSelection = (variationId: string) => {
     setSelectedVariationIds((prev) =>
       prev.includes(variationId)
         ? prev.filter((id) => id !== variationId)
         : [...prev, variationId]
     );
-  }, []);
+  };
 
-  const handleSaveSelected = useCallback(async () => {
+  const handleSaveSelected = async () => {
     if (selectedVariationIds.length === 0) return;
     try {
       await Promise.all(
@@ -323,32 +306,35 @@ export function useHairAndMakeup() {
     } finally {
       setSelectedVariationIds([]);
     }
-  }, [selectedVariationIds, sessionId, loadVariations]);
+  };
 
-  const handleOpenHeadshotDetail = useCallback((id: string, url: string | null) => {
+  const isDirty = useMemo(() => {
+    const sortIds = (ids: string[]) => [...ids].sort().join(',');
+    return (
+      sortIds(selectedHair) !== sortIds(baselineInput.hairPresetIds) ||
+      sortIds(selectedMakeup) !== sortIds(baselineInput.makeupPresetIds) ||
+      (customDescription || '') !== (baselineInput.customDescription || '')
+    );
+  }, [selectedHair, selectedMakeup, customDescription, baselineInput]);
+
+  const handleOpenHeadshotDetail = (id: string, url: string | null) => {
     setSelectedHeadshotId(id);
     setSelectedHeadshotUrl(url);
     setScreenMode('detail');
-  }, []);
+  };
 
-  const handleEditHeadshot = useCallback(() => {
+  const handleEditHeadshot = () => {
     if (!selectedHeadshotId) return;
     setScreenMode('editor');
-  }, [selectedHeadshotId]);
+  };
 
   return {
-    // Navigation
     router,
     screenMode,
     setScreenMode,
-
-    // User & headshots
     allHeadshots,
-    selectedHeadshotId,
     selectedHeadshotUrl,
     baseHeadshotUrl,
-
-    // Tab & preset selection
     activeTab,
     setActiveTab,
     presets,
@@ -360,23 +346,17 @@ export function useHairAndMakeup() {
     setCustomDescription,
     toggleSelection,
     handleInfoPress,
-
-    // Session & generation
     variations,
     variationUrls,
     selectedVariationIds,
     loadingHistory,
     generating,
     isDirty,
-
-    // Handlers
     handleGenerateVariation,
     toggleVariationSelection,
     handleSaveSelected,
     handleOpenHeadshotDetail,
     handleEditHeadshot,
-
-    // Modal state
     policyModalVisible,
     policyMessage,
     setPolicyModalVisible,
