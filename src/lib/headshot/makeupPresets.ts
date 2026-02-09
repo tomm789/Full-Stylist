@@ -182,6 +182,72 @@ export const makeupPresets: PresetCategory[] = [
           },
         ],
       },
+      {
+        id: 'eyeshadow-colors',
+        title: 'Colors',
+        options: [
+          {
+            id: 'eyeshadow-warm-neutrals',
+            title: 'Warm Neutrals',
+            description: 'Soft browns, tans, and golden tones.',
+          },
+          {
+            id: 'eyeshadow-cool-neutrals',
+            title: 'Cool Neutrals',
+            description: 'Taupes, greys, and muted mauves.',
+          },
+          {
+            id: 'eyeshadow-warm-bronze',
+            title: 'Bronze / Copper',
+            description: 'Warm metallic bronze and copper shimmers.',
+          },
+          {
+            id: 'eyeshadow-gold',
+            title: 'Gold',
+            description: 'Rich gold and champagne tones.',
+          },
+          {
+            id: 'eyeshadow-rose-pink',
+            title: 'Rose / Pink',
+            description: 'Soft pinks, dusty roses, and blush tones.',
+          },
+          {
+            id: 'eyeshadow-berry-plum',
+            title: 'Berry / Plum',
+            description: 'Deep berries, plums, and burgundy shades.',
+          },
+          {
+            id: 'eyeshadow-smokey-black',
+            title: 'Smokey Black',
+            description: 'Deep black and charcoal tones.',
+          },
+          {
+            id: 'eyeshadow-olive-green',
+            title: 'Olive / Green',
+            description: 'Earthy greens, olives, and khaki tones.',
+          },
+          {
+            id: 'eyeshadow-blue-navy',
+            title: 'Blue / Navy',
+            description: 'Cool blues from navy to cobalt.',
+          },
+          {
+            id: 'eyeshadow-purple',
+            title: 'Purple / Violet',
+            description: 'Vibrant purples and deep violets.',
+          },
+          {
+            id: 'eyeshadow-orange-coral',
+            title: 'Orange / Coral',
+            description: 'Warm oranges, corals, and peach tones.',
+          },
+          {
+            id: 'eyeshadow-silver',
+            title: 'Silver',
+            description: 'Cool metallic silver and pewter shimmers.',
+          },
+        ],
+      },
     ],
   },
   {
@@ -235,6 +301,64 @@ export const makeupPresets: PresetCategory[] = [
           },
         ],
       },
+      {
+        id: 'eyeliner-colors',
+        title: 'Colors',
+        options: [
+          {
+            id: 'eyeliner-black',
+            title: 'Black',
+            description: 'Classic jet-black liner.',
+          },
+          {
+            id: 'eyeliner-dark-brown',
+            title: 'Dark Brown',
+            description: 'A softer, warm alternative to black.',
+          },
+          {
+            id: 'eyeliner-grey',
+            title: 'Grey / Charcoal',
+            description: 'Muted cool-toned liner.',
+          },
+          {
+            id: 'eyeliner-navy',
+            title: 'Navy',
+            description: 'A deep blue-black with a subtle blue undertone.',
+          },
+          {
+            id: 'eyeliner-forest-green',
+            title: 'Forest Green',
+            description: 'A deep, rich green.',
+          },
+          {
+            id: 'eyeliner-plum',
+            title: 'Plum / Burgundy',
+            description: 'Deep wine-toned liner.',
+          },
+          {
+            id: 'eyeliner-white',
+            title: 'White / Nude',
+            description:
+              'Used on the waterline to brighten and open eyes.',
+          },
+          {
+            id: 'eyeliner-metallic-gold',
+            title: 'Metallic Gold',
+            description: 'Warm, shimmery gold liner.',
+          },
+          {
+            id: 'eyeliner-metallic-silver',
+            title: 'Metallic Silver',
+            description: 'Cool, shimmery silver liner.',
+          },
+          {
+            id: 'eyeliner-bright-color',
+            title: 'Bright / Electric',
+            description:
+              'Vivid colored liner (blue, teal, violet, etc.).',
+          },
+        ],
+      },
     ],
   },
   {
@@ -274,6 +398,54 @@ export const makeupPresets: PresetCategory[] = [
             title: 'Contour Blush',
             description:
               'Neutral or brown-toned blush in the hollows instead of bronzer.',
+          },
+        ],
+      },
+      {
+        id: 'blush-colors',
+        title: 'Colors',
+        options: [
+          {
+            id: 'blush-soft-pink',
+            title: 'Soft Pink',
+            description: 'A light, cool-toned pink.',
+          },
+          {
+            id: 'blush-peach',
+            title: 'Peach',
+            description: 'A warm, orange-tinged pink.',
+          },
+          {
+            id: 'blush-coral',
+            title: 'Coral',
+            description:
+              'A vibrant warm pink with orange undertones.',
+          },
+          {
+            id: 'blush-rose',
+            title: 'Rose / Dusty Rose',
+            description: 'A muted, mid-tone mauve-pink.',
+          },
+          {
+            id: 'blush-berry',
+            title: 'Berry',
+            description: 'A deep, cool-toned reddish-purple.',
+          },
+          {
+            id: 'blush-mauve',
+            title: 'Mauve',
+            description: 'A soft, muted purple-pink.',
+          },
+          {
+            id: 'blush-warm-nude',
+            title: 'Warm Nude / Bronze',
+            description:
+              'A subtle, skin-tone warmth (bronzy blush).',
+          },
+          {
+            id: 'blush-apricot',
+            title: 'Apricot',
+            description: 'A warm, soft orange-peach.',
           },
         ],
       },
@@ -324,6 +496,88 @@ export const makeupPresets: PresetCategory[] = [
           },
         ],
       },
+      {
+        id: 'lip-colors',
+        title: 'Colors',
+        options: [
+          {
+            id: 'lip-classic-red',
+            title: 'Classic Red',
+            description: 'A true, balanced red.',
+          },
+          {
+            id: 'lip-deep-red',
+            title: 'Deep Red / Crimson',
+            description: 'A darker, dramatic red.',
+          },
+          {
+            id: 'lip-berry',
+            title: 'Berry',
+            description: 'A cool-toned, reddish-purple.',
+          },
+          {
+            id: 'lip-wine',
+            title: 'Wine / Burgundy',
+            description: 'A deep, dark berry-red.',
+          },
+          {
+            id: 'lip-mauve',
+            title: 'Mauve',
+            description: 'A muted, dusty pink-purple.',
+          },
+          {
+            id: 'lip-nude-pink',
+            title: 'Nude Pink',
+            description: 'A natural pink close to skin tone.',
+          },
+          {
+            id: 'lip-warm-nude',
+            title: 'Warm Nude',
+            description: 'A peachy or brown-toned nude.',
+          },
+          {
+            id: 'lip-coral',
+            title: 'Coral',
+            description: 'A warm, orange-tinged pink.',
+          },
+          {
+            id: 'lip-peach',
+            title: 'Peach',
+            description: 'A soft, warm light orange-pink.',
+          },
+          {
+            id: 'lip-rose',
+            title: 'Rose',
+            description: 'A mid-tone, classic rosy pink.',
+          },
+          {
+            id: 'lip-hot-pink',
+            title: 'Hot Pink / Fuchsia',
+            description: 'A bright, vibrant cool pink.',
+          },
+          {
+            id: 'lip-plum',
+            title: 'Plum',
+            description: 'A dark, muted purple.',
+          },
+          {
+            id: 'lip-brown',
+            title: 'Brown / 90s Brown',
+            description: 'A warm or cool-toned brown lip.',
+          },
+          {
+            id: 'lip-orange',
+            title: 'Orange',
+            description: 'A bold, warm true orange.',
+          },
+          {
+            id: 'lip-clear-gloss',
+            title: 'Clear / No Tint',
+            description:
+              'Transparent gloss or balm with no color pigment.',
+          },
+        ],
+      },
     ],
   },
   {
@@ -369,6 +623,50 @@ export const makeupPresets: PresetCategory[] = [
             title: 'Bleached',
             description:
               'Lightened to match the skin tone for an editorial look.',
+          },
+        ],
+      },
+      {
+        id: 'eyebrow-colors',
+        title: 'Colors',
+        options: [
+          {
+            id: 'brow-black',
+            title: 'Black',
+            description:
+              'A strong, dark brow matching deep hair tones.',
+          },
+          {
+            id: 'brow-dark-brown',
+            title: 'Dark Brown',
+            description: 'A rich brown for medium-to-dark hair.',
+          },
+          {
+            id: 'brow-medium-brown',
+            title: 'Medium Brown',
+            description: 'A soft, neutral brown.',
+          },
+          {
+            id: 'brow-taupe',
+            title: 'Taupe',
+            description:
+              'A cool, ashy light brown for fair hair.',
+          },
+          {
+            id: 'brow-blonde',
+            title: 'Blonde',
+            description: 'A light, warm tone for blonde hair.',
+          },
+          {
+            id: 'brow-auburn',
+            title: 'Auburn / Red',
+            description:
+              'A warm, reddish-brown for red hair.',
+          },
+          {
+            id: 'brow-grey',
+            title: 'Grey',
+            description: 'A cool, silver-toned brow.',
           },
         ],
       },

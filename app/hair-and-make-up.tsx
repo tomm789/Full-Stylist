@@ -127,27 +127,29 @@ export default function HairAndMakeUpScreen() {
       return;
     }
     setLoadingHistory(true);
-    const data = await listHeadshotGenerationVariations(currentSessionId);
-    setVariations(data);
+    try {
+      const data = await listHeadshotGenerationVariations(currentSessionId);
+      setVariations(data);
 
-    const imageIds = data.map((item) => item.image_id).filter(Boolean) as string[];
-    if (imageIds.length === 0) {
-      setVariationUrls(new Map());
+      const imageIds = data.map((item) => item.image_id).filter(Boolean) as string[];
+      if (imageIds.length === 0) {
+        setVariationUrls(new Map());
+        return;
+      }
+
+      const { data: images } = await supabase
+        .from('images')
+        .select('id, storage_bucket, storage_key')
+        .in('id', imageIds);
+
+      const urlMap = new Map<string, string | null>();
+      images?.forEach((image) => {
+        urlMap.set(image.id, getPublicImageUrl(image));
+      });
+      setVariationUrls(urlMap);
+    } finally {
       setLoadingHistory(false);
-      return;
     }
-
-    const { data: images } = await supabase
-      .from('images')
-      .select('id, storage_bucket, storage_key')
-      .in('id', imageIds);
-
-    const urlMap = new Map<string, string | null>();
-    images?.forEach((image) => {
-      urlMap.set(image.id, getPublicImageUrl(image));
-    });
-    setVariationUrls(urlMap);
-    setLoadingHistory(false);
   };
 
   const baseHeadshotId = selectedHeadshotId || activeHeadshotId || null;
@@ -172,6 +174,7 @@ export default function HairAndMakeUpScreen() {
     const session = await getLatestHeadshotGenerationSession(user.id, baseHeadshotId);
     if (session) {
       setSessionId(session.id);
+      setSelectedVariationIds([]);
       const input = session.input_json || {};
       const hairPresetIds = input.hairPresetIds || [];
       const makeupPresetIds = input.makeupPresetIds || [];
@@ -288,6 +291,7 @@ export default function HairAndMakeUpScreen() {
           );
           setPolicyModalVisible(true);
           await updateHeadshotGenerationVariation(variation.id, { status: 'failed' });
+          await loadVariations(activeSessionId);
           return;
         }
         await updateHeadshotGenerationVariation(variation.id, { status: 'failed' });
@@ -320,13 +324,18 @@ export default function HairAndMakeUpScreen() {
 
   const handleSaveSelected = async () => {
     if (selectedVariationIds.length === 0) return;
-    await Promise.all(
-      selectedVariationIds.map((id) =>
-        updateHeadshotGenerationVariation(id, { is_saved: true })
-      )
-    );
-    setSelectedVariationIds([]);
-    await loadVariations(sessionId);
+    try {
+      await Promise.all(
+        selectedVariationIds.map((id) =>
+          updateHeadshotGenerationVariation(id, { is_saved: true })
+        )
+      );
+      await loadVariations(sessionId);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to save selected variations');
+    } finally {
+      setSelectedVariationIds([]);
+    }
   };
 
   const isDirty = useMemo(() => {
@@ -342,11 +351,6 @@ export default function HairAndMakeUpScreen() {
     setSelectedHeadshotId(id);
     setSelectedHeadshotUrl(url);
     setScreenMode('detail');
-  };
-
-  const handleStartNewLook = () => {
-    if (!selectedHeadshotId) return;
-    setScreenMode('editor');
   };
 
   const handleEditHeadshot = () => {
@@ -419,7 +423,7 @@ export default function HairAndMakeUpScreen() {
             <Ionicons name="create-outline" size={20} color={colors.textLight} />
             <Text style={styles.detailActionButtonText}>Edit This Headshot</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.detailSecondaryButton} onPress={handleStartNewLook}>
+          <TouchableOpacity style={styles.detailSecondaryButton} onPress={handleEditHeadshot}>
             <Ionicons name="sparkles-outline" size={20} color={colors.textPrimary} />
             <Text style={styles.detailSecondaryButtonText}>
               Create New Look From This Headshot
@@ -435,37 +439,35 @@ export default function HairAndMakeUpScreen() {
       <Header
         showBack
         onBack={() => setScreenMode('detail')}
-        leftContent={<Text style={styles.headerTitle}>Hair & Make-Up</Text>}
+        title="Hair & Make-Up"
         rightContent={
-          isDirty ? (
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={styles.infoIconButton}
-                onPress={() => setInfoModalVisible(true)}
-              >
-                <Ionicons
-                  name="information-circle-outline"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.headerGenerateButton,
-                  (!isDirty || generating) && styles.headerGenerateButtonDisabled,
-                ]}
-                onPress={handleGenerateVariation}
-                disabled={!isDirty || generating}
-              >
-                {generating ? (
-                  <ActivityIndicator color={colors.textLight} />
-                ) : (
-                  <Ionicons name="sparkles-outline" size={18} color={colors.textLight} />
-                )}
-                <Text style={styles.headerGenerateButtonText}>Generate</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.infoIconButton}
+              onPress={() => setInfoModalVisible(true)}
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={20}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.headerGenerateButton,
+                (!isDirty || generating) && styles.headerGenerateButtonDisabled,
+              ]}
+              onPress={handleGenerateVariation}
+              disabled={!isDirty || generating}
+            >
+              {generating ? (
+                <ActivityIndicator color={colors.textLight} />
+              ) : (
+                <Ionicons name="sparkles-outline" size={18} color={colors.textLight} />
+              )}
+              <Text style={styles.headerGenerateButtonText}>Generate</Text>
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -499,12 +501,15 @@ export default function HairAndMakeUpScreen() {
                     onPress={() => toggleVariationSelection(variation.id)}
                     activeOpacity={0.85}
                   >
-                    {variation.status !== 'complete' ? (
+                    {variation.status === 'failed' ? (
+                      <View style={styles.variationPending}>
+                        <Ionicons name="close-circle" size={24} color={colors.error} />
+                        <Text style={styles.variationStatusText}>Failed</Text>
+                      </View>
+                    ) : variation.status !== 'complete' ? (
                       <View style={styles.variationPending}>
                         <ActivityIndicator color={colors.textSecondary} />
-                        <Text style={styles.variationStatusText}>
-                          {variation.status === 'failed' ? 'Failed' : 'Generating'}
-                        </Text>
+                        <Text style={styles.variationStatusText}>Generating</Text>
                       </View>
                     ) : imageUrl ? (
                       <ExpoImage
@@ -752,11 +757,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   previewPlaceholderText: {
     color: colors.textSecondary,
     fontSize: typography.fontSize.sm,
-  },
-  headerTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
   },
   headerActions: {
     flexDirection: 'row',
