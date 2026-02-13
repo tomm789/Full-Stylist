@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
+import { useCalendarPanel } from '@/contexts/CalendarPanelContext';
 import type { ThemeColors } from '@/styles/themes';
 
 const { typography, spacing } = theme;
@@ -26,6 +27,7 @@ export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const router = useRouter();
+  const { showCalendar, toggleCalendar } = useCalendarPanel();
 
   const action = title.toLowerCase();
   const hasPrimaryAction = ['outfits', 'calendar', 'wardrobe', 'lookbooks'].includes(action);
@@ -51,6 +53,13 @@ export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
 
   return (
     <View style={styles.headerTitleContainer}>
+      <TouchableOpacity style={styles.calendarButton} onPress={toggleCalendar}>
+        <Ionicons
+          name={showCalendar ? 'chevron-back' : 'calendar-outline'}
+          size={22}
+          color={showCalendar ? colors.primary : colors.textPrimary}
+        />
+      </TouchableOpacity>
       <Text style={styles.headerTitleText}>{title}</Text>
       {hasPrimaryAction && (
         <TouchableOpacity
@@ -76,6 +85,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.textPrimary,
   },
   addButton: {
+    padding: spacing.xs,
+  },
+  calendarButton: {
     padding: spacing.xs,
   },
 });

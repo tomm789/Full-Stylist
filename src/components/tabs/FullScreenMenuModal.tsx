@@ -1,13 +1,15 @@
 /**
  * FullScreenMenuModal Component
- * Full-screen navigation menu with search and card-style links.
- * Header matches the standard tab header pattern:
- *   title - add new ----- search - notifications - close
+ * Slide-in navigation menu panel from the right edge.
+ * Header layout: title - add new ----- search - notifications
+ * No close button — closed by tapping the menu icon in the floating pill.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
-  Modal,
+  Animated,
+  Dimensions,
+  PanResponder,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -22,6 +24,9 @@ import { useNotifications } from '@/contexts/NotificationsContext';
 import { borderRadius, spacing, typography, shadows } from '@/styles/theme';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SWIPE_THRESHOLD = 80;
 
 export type MenuItem = {
   key: string;
@@ -55,6 +60,43 @@ export function FullScreenMenuModal({
   const router = useRouter();
   const { unreadCount } = useNotifications();
   const [query, setQuery] = useState('');
+  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+  const [rendered, setRendered] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setRendered(true);
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 280,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: SCREEN_WIDTH,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) {
+          setRendered(false);
+          setQuery('');
+        }
+      });
+    }
+  }, [visible]);
+
+  // Swipe right to dismiss menu
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gestureState) =>
+        Math.abs(gestureState.dx) > 10 && gestureState.dx > 0,
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dx > SWIPE_THRESHOLD) {
+          onClose();
+        }
+      },
+    })
+  ).current;
 
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -89,10 +131,18 @@ export function FullScreenMenuModal({
     router.push('/notifications' as any);
   };
 
+  if (!rendered) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Animated.View
+      style={[
+        styles.overlay,
+        { transform: [{ translateX: slideAnim }] },
+      ]}
+      {...panResponder.panHandlers}
+    >
       <SafeAreaView style={styles.container}>
-        {/* Header — matches Calendar page header layout */}
+        {/* Header — title + actions */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <RNText style={styles.title}>Menu</RNText>
@@ -115,9 +165,6 @@ export function FullScreenMenuModal({
                   </RNText>
                 </View>
               )}
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerIcon} onPress={onClose}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -210,14 +257,22 @@ export function FullScreenMenuModal({
           )}
         </ScrollView>
       </SafeAreaView>
-    </Modal>
+    </Animated.View>
   );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.backgroundSecondary,
+    zIndex: 50,
+  },
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -267,6 +322,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    paddingBottom: spacing.massive + spacing.huge,
     gap: spacing.lg,
   },
   searchWrap: {

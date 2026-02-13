@@ -186,6 +186,15 @@ export const createCommonStyles = (themeColors: ThemeColors) => StyleSheet.creat
   listContainer: {
     padding: spacing.sm,
   },
+  sectionTopPadding: {
+    paddingTop: spacing.sm,
+  },
+  sectionHorizontalPadding: {
+    paddingHorizontal: spacing.sm,
+  },
+  stackGapSm: {
+    gap: spacing.sm,
+  },
   listItem: {
     padding: spacing.md,
     borderBottomWidth: 1,

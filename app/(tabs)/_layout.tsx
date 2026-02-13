@@ -1,22 +1,192 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { Animated, Dimensions, PanResponder, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { HeaderAddMenu, HeaderRightMenu, ConnectedHeaderSearchTitle, ConnectedHeaderSearchRight, FullScreenMenuModal } from '@/components/tabs';
 import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { HeaderSearchProvider, useHeaderSearch } from '@/contexts/HeaderSearchContext';
-import { borderRadius, spacing } from '@/styles/theme';
+import { HeaderSearchProvider } from '@/contexts/HeaderSearchContext';
+import { CalendarPanelProvider, useCalendarPanel } from '@/contexts/CalendarPanelContext';
+import { useNotifications } from '@/contexts/NotificationsContext';
+import { borderRadius, shadows, spacing, typography } from '@/styles/theme';
 import type { ThemeColors } from '@/styles/themes';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import CalendarScreen from './calendar';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SWIPE_THRESHOLD = 80;
+
+function FloatingTabBar(props: BottomTabBarProps) {
+  const colors = useThemeColors();
+
+  return (
+    <View
+      style={[
+        floatingTabBarStyles.container,
+        {
+          backgroundColor: colors.backgroundSecondary,
+          ...shadows.lg,
+        },
+      ]}
+    >
+      <View style={floatingTabBarStyles.inner}>
+        {props.state.routes.map((route, index) => {
+          const { options } = props.descriptors[route.key];
+
+          // Skip hidden tabs (create, social)
+          const flatItemStyle = options.tabBarItemStyle
+            ? StyleSheet.flatten(options.tabBarItemStyle)
+            : null;
+          if (flatItemStyle && (flatItemStyle as any).display === 'none') {
+            return null;
+          }
+
+          const focused = props.state.index === index;
+          const color = focused ? colors.primary : colors.textTertiary;
+          const label = options.tabBarLabel ?? options.title ?? route.name;
+
+          const onPress = () => {
+            const event = props.navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!focused && !event.defaultPrevented) {
+              props.navigation.navigate(route.name, route.params);
+            }
+          };
+
+          const iconNode = options.tabBarIcon?.({ focused, color, size: 22 });
+          const labelText = typeof label === 'string' ? label : '';
+
+          // Use custom tabBarButton if provided (e.g. the Menu/profile tab)
+          const ButtonComponent = options.tabBarButton;
+          if (ButtonComponent) {
+            return (
+              <ButtonComponent
+                key={route.key}
+                style={floatingTabBarStyles.tab}
+                accessibilityRole="button"
+                accessibilityState={{ selected: focused }}
+                accessibilityLabel={labelText || undefined}
+              >
+                {iconNode}
+                {labelText ? (
+                  <Text style={[floatingTabBarStyles.label, { color }]}>{labelText}</Text>
+                ) : null}
+              </ButtonComponent>
+            );
+          }
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={onPress}
+              style={floatingTabBarStyles.tab}
+              accessibilityRole="button"
+              accessibilityState={{ selected: focused }}
+              accessibilityLabel={labelText || undefined}
+            >
+              {iconNode}
+              {labelText ? (
+                <Text style={[floatingTabBarStyles.label, { color }]}>{labelText}</Text>
+              ) : null}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const floatingTabBarStyles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: spacing.xl,
+    left: spacing.lg,
+    right: spacing.lg,
+    borderRadius: borderRadius.round,
+    overflow: 'hidden',
+  },
+  inner: {
+    flexDirection: 'row',
+    height: 60,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+});
 
 export default function TabsLayout() {
+  return (
+    <CalendarPanelProvider>
+      <HeaderSearchProvider>
+        <TabsLayoutInner />
+      </HeaderSearchProvider>
+    </CalendarPanelProvider>
+  );
+}
+
+function TabsLayoutInner() {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { session, loading, signOut } = useAuth();
+  const { unreadCount } = useNotifications();
+  const { showCalendar, closeCalendar } = useCalendarPanel();
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [tabBarProps, setTabBarProps] = useState<BottomTabBarProps | null>(null);
+
+  // Auth guard — redirect to login when session is lost
+  useEffect(() => {
+    if (!loading && !session) {
+      router.replace('/auth/login' as any);
+    }
+  }, [session, loading, router]);
+
+  // Calendar slide-in animation (from the left)
+  const calendarAnim = useRef(new Animated.Value(-SCREEN_WIDTH)).current;
+  const [calendarRendered, setCalendarRendered] = useState(false);
+
+  useEffect(() => {
+    if (showCalendar) {
+      setCalendarRendered(true);
+      Animated.timing(calendarAnim, {
+        toValue: 0,
+        duration: 280,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(calendarAnim, {
+        toValue: -SCREEN_WIDTH,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setCalendarRendered(false);
+      });
+    }
+  }, [showCalendar]);
+
+  // Swipe-left to dismiss calendar
+  const calendarPanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gestureState) =>
+        Math.abs(gestureState.dx) > 10 && gestureState.dx < 0,
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dx < -SWIPE_THRESHOLD) {
+          closeCalendar();
+        }
+      },
+    })
+  ).current;
 
   const handleCreateOption = (type: string) => {
     setShowCreateMenu(false);
@@ -81,7 +251,7 @@ export default function TabsLayout() {
         router.push('/feedback' as any);
         break;
       case 'hair_makeup':
-        router.push('/hair-and-make-up' as any);
+        router.push('/(tabs)/hair-and-make-up' as any);
         break;
       case 'outfit_archive':
         router.push('/archive' as any);
@@ -96,36 +266,12 @@ export default function TabsLayout() {
   const gridItems = useMemo(
     () => [
       {
-        key: 'outfits_explore',
-        label: 'Explore',
-        icon: 'compass-outline' as const,
-        description: 'Discover new looks',
-        keywords: ['discover', 'trending', 'inspire'],
-        onPress: () => handleMenuOption('outfits_explore'),
-      },
-      {
-        key: 'outfits_following',
-        label: 'Following',
-        icon: 'people-outline' as const,
-        description: 'Outfits from people you follow',
-        keywords: ['feed', 'friends', 'social'],
-        onPress: () => handleMenuOption('outfits_following'),
-      },
-      {
         key: 'profile',
         label: 'Profile',
         icon: 'person-outline' as const,
         description: 'Your account and stats',
         keywords: ['account', 'stats', 'bio'],
         onPress: () => handleMenuOption('profile'),
-      },
-      {
-        key: 'headshots',
-        label: 'Headshots',
-        icon: 'camera-outline' as const,
-        description: 'Generate a new headshot',
-        keywords: ['model', 'studio', 'selfie', 'portrait'],
-        onPress: () => handleMenuOption('profile_headshots'),
       },
       {
         key: 'lookbooks',
@@ -136,28 +282,20 @@ export default function TabsLayout() {
         onPress: () => handleMenuOption('lookbooks'),
       },
       {
-        key: 'outfits',
-        label: 'Outfits',
-        icon: 'sparkles-outline' as const,
-        description: 'Your saved and created outfits',
-        keywords: ['looks', 'styling', 'saved'],
-        onPress: () => handleMenuOption('outfits'),
+        key: 'outfits_explore',
+        label: 'Explore',
+        icon: 'compass-outline' as const,
+        description: 'Discover new looks',
+        keywords: ['discover', 'trending', 'inspire'],
+        onPress: () => handleMenuOption('outfits_explore'),
       },
       {
-        key: 'wardrobe',
-        label: 'Wardrobe',
-        icon: 'shirt-outline' as const,
-        description: 'Browse items and collections',
-        keywords: ['closet', 'items', 'clothes', 'collection'],
-        onPress: () => handleMenuOption('wardrobe'),
-      },
-      {
-        key: 'calendar',
-        label: 'Calendar',
-        icon: 'calendar-outline' as const,
-        description: 'Plan and schedule outfits',
-        keywords: ['schedule', 'plan', 'events', 'dates'],
-        onPress: () => handleMenuOption('calendar'),
+        key: 'outfits_following',
+        label: 'Followers',
+        icon: 'people-outline' as const,
+        description: 'Outfits from people you follow',
+        keywords: ['feed', 'friends', 'social'],
+        onPress: () => handleMenuOption('outfits_following'),
       },
     ],
     [handleMenuOption]
@@ -165,6 +303,14 @@ export default function TabsLayout() {
 
   const actionItems = useMemo(
     () => [
+      {
+        key: 'search',
+        label: 'Search',
+        icon: 'search-outline' as const,
+        description: 'Find outfits, people, and more',
+        keywords: ['discover', 'find', 'browse', 'query'],
+        onPress: () => handleMenuOption('search'),
+      },
       {
         key: 'feedback',
         label: 'Feedback',
@@ -182,20 +328,20 @@ export default function TabsLayout() {
         onPress: () => handleMenuOption('hair_makeup'),
       },
       {
-        key: 'outfit_archive',
-        label: 'Archive',
-        icon: 'archive-outline' as const,
-        description: 'View archived items',
-        keywords: ['archive', 'hidden', 'storage', 'past'],
-        onPress: () => handleMenuOption('outfit_archive'),
-      },
-      {
         key: 'notifications',
         label: 'Notifications',
         icon: 'notifications-outline' as const,
         description: 'Mentions, likes, and comments',
         keywords: ['alerts', 'mentions', 'likes', 'comments'],
         onPress: () => handleMenuOption('notifications'),
+      },
+      {
+        key: 'outfit_archive',
+        label: 'Archive',
+        icon: 'archive-outline' as const,
+        description: 'View archived items',
+        keywords: ['archive', 'hidden', 'storage', 'past'],
+        onPress: () => handleMenuOption('outfit_archive'),
       },
       {
         key: 'settings',
@@ -225,9 +371,14 @@ export default function TabsLayout() {
   );
 
   return (
-    <HeaderSearchProvider>
     <>
       <Tabs
+        tabBar={(props) => {
+          // Store props so we can render the pill outside the Tabs tree
+          // to keep it above the menu/calendar panels.
+          if (props !== tabBarProps) setTabBarProps(props);
+          return null;
+        }}
         screenOptions={{
           headerShown: true,
           headerRight: () => <HeaderRightMenu />,
@@ -236,10 +387,6 @@ export default function TabsLayout() {
             backgroundColor: colors.background,
           },
           headerShadowVisible: true,
-          tabBarStyle: {
-            backgroundColor: colors.background,
-            borderTopColor: colors.border,
-          },
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textTertiary,
         }}
@@ -247,40 +394,19 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="calendar"
           options={{
-            headerTitle: () => <HeaderAddMenu title="Calendar" />,
-            tabBarLabel: 'Calendar',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="calendar-outline" size={size} color={color} />
-            ),
+            headerShown: false,
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' },
           }}
         />
         <Tabs.Screen
           name="wardrobe"
           options={{
-            headerTitle: () => <ConnectedHeaderSearchTitle fallbackTitle="Wardrobe" />,
+            headerTitle: () => <ConnectedHeaderSearchTitle />,
             headerRight: () => <ConnectedHeaderSearchRight />,
             tabBarLabel: 'Wardrobe',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="shirt-outline" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="create"
-          options={{
-            headerShown: false,
-            tabBarLabel: '',
-            tabBarButton: () => (
-              <TouchableOpacity
-                style={styles.createButtonContainer}
-                onPress={() => setShowCreateMenu(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Create"
-              >
-                <View style={styles.createButton}>
-                  <Ionicons name="add" size={28} color={colors.white} />
-                </View>
-              </TouchableOpacity>
             ),
           }}
         />
@@ -295,6 +421,24 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
+          name="create"
+          options={{
+            headerShown: false,
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' },
+          }}
+        />
+        <Tabs.Screen
+          name="hair-and-make-up"
+          options={{
+            headerTitle: () => <HeaderAddMenu title="Hair & Make-Up" />,
+            tabBarLabel: 'Hair & Make-Up',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="cut-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="profile"
           options={{
             headerTitle: () => <HeaderAddMenu title="Profile" />,
@@ -305,7 +449,7 @@ export default function TabsLayout() {
             tabBarButton: ({ onPress: _nav, onLongPress: _long, onPressIn: _in, onPressOut: _out, href: _href, ...rest }) => (
               <TouchableOpacity
                 {...rest}
-                onPress={() => setShowMenu(true)}
+                onPress={() => setShowMenu((prev) => !prev)}
                 accessibilityRole="button"
                 accessibilityLabel="Menu"
               />
@@ -374,8 +518,59 @@ export default function TabsLayout() {
           <Text style={styles.menuItemText}>Headshot</Text>
         </TouchableOpacity>
       </DropdownMenuModal>
+
+      {calendarRendered && (
+        <Animated.View
+          style={[
+            styles.calendarPanel,
+            { transform: [{ translateX: calendarAnim }] },
+          ]}
+          {...calendarPanResponder.panHandlers}
+        >
+          <SafeAreaView style={styles.calendarPanelInner}>
+            <View style={styles.calendarHeader}>
+              <View style={styles.calendarHeaderLeft}>
+                <TouchableOpacity style={styles.calendarCollapseButton} onPress={closeCalendar}>
+                  <Ionicons name="chevron-back" size={22} color={colors.primary} />
+                </TouchableOpacity>
+                <Text style={styles.calendarTitle}>Calendar</Text>
+              </View>
+              <View style={styles.calendarHeaderRight}>
+                <TouchableOpacity
+                  style={styles.calendarHeaderIcon}
+                  onPress={() => {
+                    closeCalendar();
+                    router.push('/notifications' as any);
+                  }}
+                >
+                  <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
+                  {unreadCount > 0 && (
+                    <View style={styles.calendarBadge}>
+                      <Text style={styles.calendarBadgeText}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.calendarHeaderIcon}
+                  onPress={() => {
+                    closeCalendar();
+                    router.push('/search' as any);
+                  }}
+                >
+                  <Ionicons name="search-outline" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <CalendarScreen />
+          </SafeAreaView>
+        </Animated.View>
+      )}
+
+      {/* Floating pill rendered last so it stacks above menu & calendar panels */}
+      {tabBarProps && <FloatingTabBar {...tabBarProps} />}
     </>
-    </HeaderSearchProvider>
   );
 }
 
@@ -415,5 +610,66 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
     fontWeight: '500',
+  },
+  calendarPanel: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.background,
+    zIndex: 49,
+  },
+  calendarPanelInner: {
+    flex: 1,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.background,
+  },
+  calendarHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  calendarCollapseButton: {
+    padding: spacing.xs,
+  },
+  calendarTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  calendarHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  calendarHeaderIcon: {
+    position: 'relative',
+    padding: spacing.sm,
+    marginHorizontal: spacing.xs,
+  },
+  calendarBadge: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.round,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+  },
+  calendarBadgeText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
   },
 });

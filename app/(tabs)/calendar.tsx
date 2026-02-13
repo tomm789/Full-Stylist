@@ -57,6 +57,8 @@ export default function CalendarScreen() {
   const isExtendingRef = useRef(false);
   const pendingPrependAdjustRef = useRef<{ prevHeight: number; scrollY: number } | null>(null);
   const suppressScrollUpdateRef = useRef(false);
+  const programmaticScrollInProgressRef = useRef(false);
+  const hasScrolledToInitialMonthRef = useRef(false);
 
   const year = activeMonthDate.getFullYear();
   const month = activeMonthDate.getMonth();
@@ -102,6 +104,27 @@ export default function CalendarScreen() {
     () => getEndOfMonth(months[months.length - 1]),
     [months]
   );
+
+  const scrollToTodayRow = (animated = false) => {
+    const today = new Date();
+    const targetIndex = getDayIndex(windowStartDate, today);
+    const y = getRowOffset(targetIndex);
+    scrollRef.current?.scrollTo({ y, animated });
+    if (!animated) {
+      scrollYRef.current = y;
+      scrollY.setValue(y);
+    }
+  };
+
+  // #region agent log
+  const didLogInitialRef = useRef(false);
+  useEffect(() => {
+    if (didLogInitialRef.current) return;
+    didLogInitialRef.current = true;
+    const m0 = months[0];
+    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'calendar.tsx:initial',message:'calendar initial state',data:{activeMonthDate: activeMonthDate.toISOString(), firstMonthKey: m0 ? getMonthKey(m0) : null, monthsLength: months.length, windowStart: windowStartDate.toISOString(), windowEnd: windowEndDate.toISOString()},timestamp:Date.now(),hypothesisId:'H1,H2,H4'})}).catch(()=>{});
+  }, [months, activeMonthDate, windowStartDate, windowEndDate]);
+  // #endregion
 
   // Auto-open add picker if parameter is set
   useEffect(() => {
@@ -185,11 +208,14 @@ export default function CalendarScreen() {
     const targetDate = new Date(year, month + direction, 1);
     const targetKey = getMonthKey(targetDate);
     const didExtend = ensureMonthsContain(targetDate);
-
+    const targetIndex = getDayIndex(windowStartDate, targetDate);
+    const y = getRowOffset(targetIndex);
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'calendar.tsx:handleMonthNavigate',message:'month nav',data:{direction,fromKey: getMonthKey(activeMonthDate),targetKey,didExtend,targetIndex,y,windowStart: windowStartDate.toISOString()},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
     suppressScrollUpdateRef.current = true;
+    programmaticScrollInProgressRef.current = true;
     if (!didExtend) {
-      const targetIndex = getDayIndex(windowStartDate, targetDate);
-      const y = getRowOffset(targetIndex);
       scrollRef.current?.scrollTo({ y, animated: true });
       pendingScrollKeyRef.current = null;
     } else {
@@ -207,10 +233,9 @@ export default function CalendarScreen() {
     const didExtend = ensureMonthsContain(targetDate);
 
     suppressScrollUpdateRef.current = true;
+    programmaticScrollInProgressRef.current = true;
     if (!didExtend) {
-      const targetIndex = getDayIndex(windowStartDate, today);
-      const y = getRowOffset(targetIndex);
-      scrollRef.current?.scrollTo({ y, animated: true });
+      scrollToTodayRow(true);
       pendingScrollKeyRef.current = null;
     } else {
       pendingScrollKeyRef.current = targetKey;
@@ -238,6 +263,11 @@ export default function CalendarScreen() {
     const currentKey = getMonthKey(activeMonthDate);
     const nextKey = getMonthKey(nextActive);
 
+    // #region agent log
+    if (currentKey !== nextKey) {
+      fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'calendar.tsx:updateActiveMonthFromScroll',message:'scroll drove header update',data:{scrollY,rowIndex,dateIndex,dateAtTop: dateAtTop.toISOString(),nextKey,prevKey: currentKey},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+    }
+    // #endregion
     if (currentKey !== nextKey) {
       setActiveMonthDate(nextActive);
       updateRangeCenter(nextActive);
@@ -250,6 +280,9 @@ export default function CalendarScreen() {
 
     updateActiveMonthFromScroll();
 
+    if (programmaticScrollInProgressRef.current) {
+      return;
+    }
     const viewportHeight = viewportHeightRef.current;
     const contentHeight = contentHeightRef.current;
     const threshold = 400;
@@ -267,6 +300,7 @@ export default function CalendarScreen() {
 
   const handleScrollEnd = () => {
     suppressScrollUpdateRef.current = false;
+    programmaticScrollInProgressRef.current = false;
     updateActiveMonthFromScroll();
   };
 
@@ -345,6 +379,29 @@ export default function CalendarScreen() {
         }}
         onContentSizeChange={(_, height) => {
           contentHeightRef.current = height;
+          // #region agent log
+          if (height > 0 && scrollYRef.current === 0) {
+            fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'calendar.tsx:onContentSizeChange',message:'content size set, scroll still 0',data:{contentHeight: height, scrollY: scrollYRef.current, activeMonthKey: getMonthKey(activeMonthDate)},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+          }
+          // #endregion
+          if (!hasScrolledToInitialMonthRef.current && height > 0) {
+            hasScrolledToInitialMonthRef.current = true;
+            programmaticScrollInProgressRef.current = true;
+            const winStart = windowStartDate;
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                const today = new Date();
+                const targetIndex = getDayIndex(winStart, today);
+                const y = getRowOffset(targetIndex);
+                scrollRef.current?.scrollTo({ y, animated: false });
+                scrollYRef.current = y;
+                scrollY.setValue(y);
+                setTimeout(() => {
+                  programmaticScrollInProgressRef.current = false;
+                }, 400);
+              });
+            });
+          }
           const pending = pendingPrependAdjustRef.current;
           if (pending && height > pending.prevHeight) {
             const delta = height - pending.prevHeight;

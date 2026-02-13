@@ -21,7 +21,7 @@ export default function OutfitsLayout() {
       <Stack.Screen
         name="index"
         options={{
-          headerTitle: () => <ConnectedHeaderSearchTitle fallbackTitle="Outfits" />,
+          headerTitle: () => <ConnectedHeaderSearchTitle />,
           headerRight: () => <ConnectedHeaderSearchRight />,
         }}
       />

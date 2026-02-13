@@ -155,6 +155,8 @@ export default function WardrobeScreen() {
       onAdd: () => router.push('/wardrobe/add' as any),
       hasActiveFilters,
       placeholder: 'Search wardrobe...',
+      rightActionIcon: 'camera-outline',
+      onRightAction: () => router.push('/wardrobe/add?action=photo' as any),
     });
     return () => clearHeaderSearch();
   }, [searchQuery, hasActiveFilters]);
@@ -529,6 +531,7 @@ export default function WardrobeScreen() {
           <CategoryPills
             subcategories={subcategories}
             selectedSubcategoryId={filters.subcategoryId}
+            selectedCategoryLabel={getCategoryById(selectedCategoryId)?.name}
             onSelectSubcategory={(id) => updateFilter('subcategoryId', id)}
             variant="subcategory"
           />

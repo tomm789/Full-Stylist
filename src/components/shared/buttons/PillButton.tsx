@@ -26,6 +26,8 @@ interface PillButtonProps extends TouchableOpacityProps {
   selected?: boolean;
   onRemove?: () => void;
   icon?: keyof typeof Ionicons.glyphMap;
+  leading?: React.ReactNode;
+  layout?: 'horizontal' | 'vertical';
   size?: 'small' | 'medium' | 'large';
   variant?: 'default' | 'primary' | 'secondary';
   style?: ViewStyle;
@@ -38,6 +40,8 @@ export default function PillButton({
   selected = false,
   onRemove,
   icon,
+  leading,
+  layout = 'horizontal',
   size = 'medium',
   variant = 'default',
   disabled,
@@ -48,9 +52,12 @@ export default function PillButton({
   const colors = useThemeColors();
   const styles = createStyles(colors);
 
+  const isVertical = layout === 'vertical';
+
   const pillStyle = [
     styles.pill,
     styles[size],
+    isVertical && styles.pillVertical,
     selected && styles[`${variant}Selected`],
     disabled && styles.disabled,
     style,
@@ -59,6 +66,7 @@ export default function PillButton({
   const pillTextStyle = [
     styles.pillText,
     styles[`${size}Text`],
+    isVertical && styles.pillTextVertical,
     selected && styles[`${variant}SelectedText`],
     textStyle,
   ];
@@ -71,7 +79,8 @@ export default function PillButton({
       activeOpacity={0.7}
       {...props}
     >
-      {icon && (
+      {leading}
+      {!leading && icon && (
         <Ionicons
           name={icon}
           size={size === 'small' ? 14 : size === 'medium' ? 16 : 18}
@@ -79,7 +88,11 @@ export default function PillButton({
           style={styles.icon}
         />
       )}
-      <Text style={pillTextStyle}>{label}</Text>
+      {label ? (
+        <Text style={pillTextStyle} numberOfLines={1} ellipsizeMode="tail">
+          {label}
+        </Text>
+      ) : null}
       {onRemove && (
         <TouchableOpacity
           onPress={(e) => {
@@ -121,6 +134,23 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     gap: spacing.sm,
+  },
+
+  // Vertical layout
+  pillVertical: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    gap: 2,
+    minWidth: 72,
+    maxWidth: 80,
+  },
+  pillTextVertical: {
+    fontSize: 10,
+    textAlign: 'center',
+    maxWidth: 68,
   },
 
   // Selected states

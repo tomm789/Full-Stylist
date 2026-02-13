@@ -13,6 +13,8 @@ interface HeaderSearchState {
   onAdd: () => void;
   hasActiveFilters: boolean;
   placeholder?: string;
+  rightActionIcon?: string;
+  onRightAction?: () => void;
 }
 
 interface HeaderSearchContextType {
