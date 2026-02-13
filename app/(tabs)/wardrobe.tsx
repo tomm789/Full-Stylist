@@ -4,10 +4,12 @@
  */
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { View, StyleSheet, Alert, Platform, Animated, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Alert, Platform, Animated, Text, TouchableOpacity, FlatList } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import FollowingWardrobesScreen from '@/app/social/following-wardrobes';
 
 // Hooks - Business logic separated
 import {
@@ -18,7 +20,7 @@ import {
 import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits';
 
 // Shared Components
-import { LoadingOverlay, LoadingSpinner } from '@/components/shared';
+import { EmptyState, LoadingOverlay, LoadingSpinner, PillButton } from '@/components/shared';
 
 // Wardrobe Components
 import {
@@ -57,6 +59,7 @@ export default function WardrobeScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { addItemId } = useLocalSearchParams<{ addItemId?: string }>();
+  const [activeTab, setActiveTab] = useState<'my' | 'following' | 'discover'>('my');
 
   // === State Management via Hooks ===
   
@@ -148,6 +151,11 @@ export default function WardrobeScreen() {
   // Register search/filter state for the native header bar
   const { registerHeaderSearch, clearHeaderSearch } = useHeaderSearch();
   useEffect(() => {
+    if (activeTab !== 'my') {
+      clearHeaderSearch();
+      return;
+    }
+
     registerHeaderSearch({
       searchQuery,
       onSearchChange: setSearchQuery,
@@ -157,7 +165,7 @@ export default function WardrobeScreen() {
       placeholder: 'Search wardrobe...',
     });
     return () => clearHeaderSearch();
-  }, [searchQuery, hasActiveFilters]);
+  }, [activeTab, searchQuery, hasActiveFilters]);
 
   // Load subcategories when category changes; clear subcategory filter
   useEffect(() => {
@@ -431,7 +439,7 @@ export default function WardrobeScreen() {
 
   // === Render ===
 
-  if ((wardrobeLoading || loading || (!hasLoaded && user?.id)) && filteredItems.length === 0) {
+  if ((wardrobeLoading || loading || (!hasLoaded && user?.id)) && filteredItems.length === 0 && activeTab === 'my') {
     return (
       <View style={commonStyles.loadingContainer}>
         <LoadingSpinner text="Loading wardrobe..." />
@@ -503,8 +511,32 @@ export default function WardrobeScreen() {
         pointerEvents={uiHidden ? 'none' : 'auto'}
       >
         <View onLayout={handleHeaderLayout}>
+        <View style={styles.pillRow}>
+          <FlatList
+            horizontal
+            data={[
+              { id: 'my', label: 'My Wardrobe', icon: 'shirt-outline' as const },
+              { id: 'following', label: 'Following', icon: 'people-outline' as const },
+              { id: 'discover', label: 'Discover', icon: 'compass-outline' as const },
+            ]}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <PillButton
+                label={item.label}
+                icon={item.icon}
+                selected={activeTab === item.id}
+                onPress={() => setActiveTab(item.id as 'my' | 'following' | 'discover')}
+                variant="default"
+                size="medium"
+              />
+            )}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.pillList}
+            style={styles.pillFlatList}
+          />
+        </View>
         {/* Outfit Creator Bar */}
-        {outfitCreatorMode && (
+        {activeTab === 'my' && outfitCreatorMode && (
           <OutfitCreatorBar
             selectedItems={selectedItemsForBar}
             onRemoveItem={(id) => setSelectedOutfitItems((prev) => prev.filter((i) => i !== id))}
@@ -517,15 +549,17 @@ export default function WardrobeScreen() {
         )}
 
         {/* Category Pills */}
-        <CategoryPills
-          categories={categories}
-          selectedCategoryId={selectedCategoryId}
-          onSelectCategory={setSelectedCategoryId}
-          variant="category"
-        />
+        {activeTab === 'my' && (
+          <CategoryPills
+            categories={categories}
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={setSelectedCategoryId}
+            variant="category"
+          />
+        )}
 
         {/* Subcategory Pills - shown when a category is selected and has subcategories */}
-        {selectedCategoryId && subcategories.length > 0 && (
+        {activeTab === 'my' && selectedCategoryId && subcategories.length > 0 && (
           <CategoryPills
             subcategories={subcategories}
             selectedSubcategoryId={filters.subcategoryId}
@@ -540,59 +574,79 @@ export default function WardrobeScreen() {
       </Animated.View>
 
       {/* Items Grid */}
-      <ItemGrid
-        items={filteredItems}
-        imageCache={imageCache}
-        selectedItems={selectedOutfitItems}
-        dimmedItems={dimmedItemIds}
-        onItemPress={handleItemPress}
-        onItemLongPress={handleItemLongPress}
-        onFavoritePress={handleToggleFavorite}
-        onRefresh={refresh}
-        refreshing={refreshing}
-        emptyTitle={searchQuery || selectedCategoryId || hasActiveFilters ? 'No items found' : 'Your wardrobe is empty'}
-        emptyActionLabel="Add your first item"
-        onEmptyAction={() => router.push('/wardrobe/add')}
-        onScroll={handleGridScroll}
-        scrollEventThrottle={16}
-      />
+      {activeTab === 'my' ? (
+        <ItemGrid
+          items={filteredItems}
+          imageCache={imageCache}
+          selectedItems={selectedOutfitItems}
+          dimmedItems={dimmedItemIds}
+          onItemPress={handleItemPress}
+          onItemLongPress={handleItemLongPress}
+          onFavoritePress={handleToggleFavorite}
+          onRefresh={refresh}
+          refreshing={refreshing}
+          emptyTitle={searchQuery || selectedCategoryId || hasActiveFilters ? 'No items found' : 'Your wardrobe is empty'}
+          emptyActionLabel="Add your first item"
+          onEmptyAction={() => router.push('/wardrobe/add')}
+          onScroll={handleGridScroll}
+          scrollEventThrottle={16}
+        />
+      ) : activeTab === 'following' ? (
+        <FollowingWardrobesScreen />
+      ) : (
+        <View style={styles.placeholderContainer}>
+          <EmptyState
+            icon={activeTab === 'discover' ? 'search-outline' : 'people-outline'}
+            title={activeTab === 'discover' ? 'Discover coming soon' : 'Following coming soon'}
+            message={
+              activeTab === 'discover'
+                ? 'We are working on a wardrobe discovery feed.'
+                : 'We are working on a feed of wardrobes from people you follow.'
+            }
+          />
+        </View>
+      )}
 
       {/* Filter Drawer */}
-      <FilterDrawer
-        visible={showFilterDrawer}
-        onClose={() => setShowFilterDrawer(false)}
-        filters={filters}
-        onUpdateFilter={updateFilter}
-        onClearAll={clearFilters}
-        subcategories={subcategories}
-        availableColors={availableColors}
-        availableMaterials={availableMaterials}
-        availableSizes={availableSizes}
-        availableSeasons={availableSeasons}
-        availableBrands={availableBrands}
-        availableConditions={availableConditions}
-        availableEntityAttributes={availableEntityAttributes}
-        availableTags={availableTags}
-      />
+      {activeTab === 'my' && (
+        <FilterDrawer
+          visible={showFilterDrawer}
+          onClose={() => setShowFilterDrawer(false)}
+          filters={filters}
+          onUpdateFilter={updateFilter}
+          onClearAll={clearFilters}
+          subcategories={subcategories}
+          availableColors={availableColors}
+          availableMaterials={availableMaterials}
+          availableSizes={availableSizes}
+          availableSeasons={availableSeasons}
+          availableBrands={availableBrands}
+          availableConditions={availableConditions}
+          availableEntityAttributes={availableEntityAttributes}
+          availableTags={availableTags}
+        />
+      )}
 
       {/* Item Detail Modal */}
-      <ItemDetailModal
-        visible={showItemModal}
-        onClose={() => setShowItemModal(false)}
-        item={selectedItem}
-        imageUrl={selectedItem ? imageCache.get(selectedItem.id) || null : null}
-        isOwner={Boolean(user && selectedItem && selectedItem.owner_user_id === user.id)}
-        onAddToOutfit={() => {
-          if (selectedItem) {
-            handleOutfitSelectionAttempt(selectedItem, false);
-            setShowItemModal(false);
-            Alert.alert('Added to outfit', 'Tip: Long hold an item to add it to your outfit.');
-          }
-        }}
-        onOpenDetail={handleModalOpenDetail}
-        onEdit={handleModalEdit}
-        onDelete={handleModalDelete}
-      />
+      {activeTab === 'my' && (
+        <ItemDetailModal
+          visible={showItemModal}
+          onClose={() => setShowItemModal(false)}
+          item={selectedItem}
+          imageUrl={selectedItem ? imageCache.get(selectedItem.id) || null : null}
+          isOwner={Boolean(user && selectedItem && selectedItem.owner_user_id === user.id)}
+          onAddToOutfit={() => {
+            if (selectedItem) {
+              handleOutfitSelectionAttempt(selectedItem, false);
+              setShowItemModal(false);
+              Alert.alert('Added to outfit', 'Tip: Long hold an item to add it to your outfit.');
+            }
+          }}
+          onOpenDetail={handleModalOpenDetail}
+          onEdit={handleModalEdit}
+          onDelete={handleModalDelete}
+        />
+      )}
     </View>
   );
 }
@@ -601,6 +655,24 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   // Minimal styles - most come from theme and commonStyles
   headerContainer: {
     overflow: 'hidden',
+    backgroundColor: colors.background,
+  },
+  pillRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.backgroundDark,
+  },
+  pillFlatList: {
+    flexGrow: 0,
+  },
+  pillList: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    gap: theme.spacing.xs,
+    alignItems: 'center',
+  },
+  placeholderContainer: {
+    flex: 1,
     backgroundColor: colors.background,
   },
   tutorialContainer: {

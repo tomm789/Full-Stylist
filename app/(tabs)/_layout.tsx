@@ -368,7 +368,7 @@ export default function TabsLayout() {
           name="hair-and-make-up"
           options={{
             headerTitle: () => <HeaderAddMenu title="Hair & Make-Up" />,
-            tabBarLabel: 'Hair & Make-Up',
+            tabBarLabel: 'Hair/Makeup',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="cut-outline" size={size} color={color} />
             ),
