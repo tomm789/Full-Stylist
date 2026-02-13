@@ -7,8 +7,116 @@ import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal'
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { HeaderSearchProvider, useHeaderSearch } from '@/contexts/HeaderSearchContext';
-import { borderRadius, spacing } from '@/styles/theme';
+import { borderRadius, shadows, spacing } from '@/styles/theme';
 import type { ThemeColors } from '@/styles/themes';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+
+function FloatingTabBar(props: BottomTabBarProps) {
+  const colors = useThemeColors();
+
+  return (
+    <View
+      style={[
+        floatingTabBarStyles.container,
+        {
+          backgroundColor: colors.backgroundSecondary,
+          ...shadows.lg,
+        },
+      ]}
+    >
+      <View style={floatingTabBarStyles.inner}>
+        {props.state.routes.map((route, index) => {
+          const { options } = props.descriptors[route.key];
+
+          // Skip hidden tabs (create, social)
+          const flatItemStyle = options.tabBarItemStyle
+            ? StyleSheet.flatten(options.tabBarItemStyle)
+            : null;
+          if (flatItemStyle && (flatItemStyle as any).display === 'none') {
+            return null;
+          }
+
+          const focused = props.state.index === index;
+          const color = focused ? colors.primary : colors.textTertiary;
+          const label = options.tabBarLabel ?? options.title ?? route.name;
+
+          const onPress = () => {
+            const event = props.navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!focused && !event.defaultPrevented) {
+              props.navigation.navigate(route.name, route.params);
+            }
+          };
+
+          const iconNode = options.tabBarIcon?.({ focused, color, size: 22 });
+          const labelText = typeof label === 'string' ? label : '';
+
+          // Use custom tabBarButton if provided (e.g. the Menu/profile tab)
+          const ButtonComponent = options.tabBarButton;
+          if (ButtonComponent) {
+            return (
+              <ButtonComponent
+                key={route.key}
+                style={floatingTabBarStyles.tab}
+                accessibilityRole="button"
+                accessibilityState={{ selected: focused }}
+                accessibilityLabel={labelText || undefined}
+              >
+                {iconNode}
+                {labelText ? (
+                  <Text style={[floatingTabBarStyles.label, { color }]}>{labelText}</Text>
+                ) : null}
+              </ButtonComponent>
+            );
+          }
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={onPress}
+              style={floatingTabBarStyles.tab}
+              accessibilityRole="button"
+              accessibilityState={{ selected: focused }}
+              accessibilityLabel={labelText || undefined}
+            >
+              {iconNode}
+              {labelText ? (
+                <Text style={[floatingTabBarStyles.label, { color }]}>{labelText}</Text>
+              ) : null}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const floatingTabBarStyles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: spacing.xl,
+    left: spacing.lg,
+    right: spacing.lg,
+    borderRadius: borderRadius.round,
+    overflow: 'hidden',
+  },
+  inner: {
+    flexDirection: 'row',
+    height: 60,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+});
 
 export default function TabsLayout() {
   const colors = useThemeColors();
@@ -204,6 +312,7 @@ export default function TabsLayout() {
     <HeaderSearchProvider>
     <>
       <Tabs
+        tabBar={(props) => <FloatingTabBar {...props} />}
         screenOptions={{
           headerShown: true,
           headerRight: () => <HeaderRightMenu />,
@@ -212,10 +321,6 @@ export default function TabsLayout() {
             backgroundColor: colors.background,
           },
           headerShadowVisible: true,
-          tabBarStyle: {
-            backgroundColor: colors.background,
-            borderTopColor: colors.border,
-          },
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textTertiary,
         }}
