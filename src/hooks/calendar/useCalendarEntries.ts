@@ -1,11 +1,13 @@
 /**
  * useCalendarEntries Hook
  * Manages calendar entries and outfit images for a date range
+ * Includes retry logic with exponential backoff for resilience
  */
 
 import { useState, useEffect, useRef } from 'react';
 import { getCalendarEntries, CalendarEntry } from '@/lib/calendar';
 import { supabase } from '@/lib/supabase';
+import { CALENDAR_CONFIG } from '@/lib/calendar/config';
 
 interface UseCalendarEntriesProps {
   userId: string | undefined;
@@ -17,6 +19,7 @@ interface UseCalendarEntriesReturn {
   entries: Map<string, CalendarEntry[]>;
   outfitImages: Map<string, string | null>;
   loading: boolean;
+  error: Error | null;
   refresh: () => Promise<void>;
 }
 
@@ -28,9 +31,10 @@ export function useCalendarEntries({
   const [entries, setEntries] = useState<Map<string, CalendarEntry[]>>(new Map());
   const [outfitImages, setOutfitImages] = useState<Map<string, string | null>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const hasLoadedOnceRef = useRef(false);
 
-  const loadEntries = async () => {
+  const loadEntries = async (retryAttempt = 0): Promise<void> => {
     if (!userId) {
       setLoading(false);
       return;
@@ -43,7 +47,19 @@ export function useCalendarEntries({
 
     try {
       // Load all entries for the date range
-      const { data: monthEntries } = await getCalendarEntries(userId, startDate, endDate);
+      const { data: monthEntries, error: fetchError } = await getCalendarEntries(userId, startDate, endDate);
+
+      // If there's an error and we haven't exceeded retries, retry with exponential backoff
+      if (fetchError) {
+        if (retryAttempt < CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS) {
+          const delayMs = CALENDAR_CONFIG.INITIAL_RETRY_DELAY_MS * Math.pow(2, retryAttempt);
+          console.warn(`Calendar entries load failed, retrying in ${delayMs}ms (attempt ${retryAttempt + 1}/${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS}):`, fetchError);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+          return loadEntries(retryAttempt + 1);
+        } else {
+          throw new Error(`Failed to load calendar entries after ${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS} retries: ${fetchError.message}`);
+        }
+      }
 
       // Group entries by date
       const entriesMap = new Map<string, CalendarEntry[]>();
@@ -59,6 +75,7 @@ export function useCalendarEntries({
       }
 
       setEntries(entriesMap);
+      setError(null); // Clear error on success
       if (shouldShowLoading) {
         setLoading(false);
       }
@@ -68,8 +85,13 @@ export function useCalendarEntries({
       if (monthEntries) {
         loadOutfitImages(monthEntries);
       }
-    } catch (error) {
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
       console.error('Error loading calendar entries:', error);
+      setError(error);
+      if (shouldShowLoading) {
+        setLoading(false);
+      }
     } finally {
       if (shouldShowLoading) {
         setLoading(false);
@@ -132,6 +154,7 @@ export function useCalendarEntries({
     entries,
     outfitImages,
     loading,
+    error,
     refresh,
   };
 }
