@@ -79,6 +79,8 @@ export function HeaderSearchMenu({
           hasActiveFilters && styles.iconButtonActive,
         ]}
         onPress={onFilter}
+        accessibilityRole="button"
+        accessibilityLabel="Filter options"
       >
         <Ionicons
           name="options-outline"
@@ -90,6 +92,8 @@ export function HeaderSearchMenu({
       <TouchableOpacity
         style={styles.addButton}
         onPress={onAdd}
+        accessibilityRole="button"
+        accessibilityLabel="Add item"
       >
         <Ionicons name="add-circle-outline" size={24} color={colors.textPrimary} />
       </TouchableOpacity>
@@ -141,6 +145,8 @@ export function ConnectedHeaderSearchTitle() {
       <TouchableOpacity
         style={styles.calendarButton}
         onPress={toggleCalendar}
+        accessibilityRole="button"
+        accessibilityLabel={showCalendar ? 'Close calendar' : 'Open calendar'}
       >
         <Ionicons
           name={showCalendar ? 'chevron-back' : 'calendar-outline'}
@@ -173,6 +179,8 @@ export function ConnectedHeaderSearchTitle() {
         ]}
         onPress={headerSearch?.onFilter}
         disabled={!headerSearch}
+        accessibilityRole="button"
+        accessibilityLabel="Filter options"
       >
         <Ionicons
           name="options-outline"

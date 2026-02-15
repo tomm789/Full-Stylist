@@ -30,3 +30,7 @@ export { useAddToHomeScreenDetection } from './useAddToHomeScreenDetection';
 export { useFindSimilar } from './useFindSimilar';
 export { useHideHeaderOnScroll } from './useHideHeaderOnScroll';
 export { useLookbookSelection } from './lookbooks/useLookbookSelection';
+
+// Gestures
+export { useEdgeSwipe } from './useEdgeSwipe';
+export type { EdgeSwipeDirection } from './useEdgeSwipe';
