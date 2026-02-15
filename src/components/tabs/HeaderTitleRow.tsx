@@ -40,6 +40,8 @@ export default function HeaderTitleRow({
         style={[styles.calendarButton, hideCalendar && styles.calendarButtonHidden]}
         onPress={() => router.push('/calendar' as any)}
         disabled={hideCalendar}
+        accessibilityRole="button"
+        accessibilityLabel="Open calendar"
       >
         <Ionicons
           name="calendar-outline"

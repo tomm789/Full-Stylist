@@ -60,16 +60,31 @@ export default function HeaderSearchPill({
       widthAnim.setValue(0);
       return;
     }
-    Animated.timing(widthAnim, {
+    const animation = Animated.timing(widthAnim, {
       toValue: expanded ? 1 : 0,
       duration: 180,
       useNativeDriver: false,
-    }).start(() => {
+    });
+
+    animation.start(() => {
       if (expanded) {
         inputRef.current?.focus();
       }
     });
-  }, [expanded, inlineSearchEnabled, widthAnim]);
+
+    // Cleanup: Stop animation on unmount or when dependencies change
+    return () => {
+      animation.stop();
+    };
+  }, [expanded, inlineSearchEnabled]);
+
+  // Separate effect for animation listener cleanup
+  useEffect(() => {
+    return () => {
+      widthAnim.stopAnimation();
+      widthAnim.removeAllListeners();
+    };
+  }, [widthAnim]);
 
   const searchFieldStyle = useMemo(
     () => ({

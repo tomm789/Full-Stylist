@@ -53,6 +53,7 @@ export default function SearchHeaderRow({
         <TouchableOpacity
           style={styles.calendarButton}
           onPress={() => onSearchToggle(false)}
+          accessibilityRole="button"
           accessibilityLabel="Close search"
         >
           <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
@@ -61,6 +62,7 @@ export default function SearchHeaderRow({
         <TouchableOpacity
           style={styles.calendarButton}
           onPress={() => router.push('/calendar' as any)}
+          accessibilityRole="button"
           accessibilityLabel="Open calendar"
         >
           <Ionicons

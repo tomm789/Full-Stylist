@@ -31,14 +31,29 @@ export default function HeaderActionIcons({
   return (
     <View style={styles.container}>
       {onAdd && (
-        <TouchableOpacity style={styles.iconButton} onPress={onAdd}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={onAdd}
+          accessibilityRole="button"
+          accessibilityLabel="Add item"
+        >
           <Ionicons name="add-circle-outline" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       )}
-      <TouchableOpacity style={styles.iconButton} onPress={onSearch}>
+      <TouchableOpacity
+        style={styles.iconButton}
+        onPress={onSearch}
+        accessibilityRole="button"
+        accessibilityLabel="Search"
+      >
         <Ionicons name="search-outline" size={24} color={colors.textPrimary} />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.iconButton} onPress={onNotifications}>
+      <TouchableOpacity
+        style={styles.iconButton}
+        onPress={onNotifications}
+        accessibilityRole="button"
+        accessibilityLabel={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+      >
         <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
         {unreadCount > 0 && (
           <View style={styles.badge}>

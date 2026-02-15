@@ -38,11 +38,20 @@ export default function SearchOverlay({
   const anim = useRef(new Animated.Value(open ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.timing(anim, {
+    const animation = Animated.timing(anim, {
       toValue: open ? 1 : 0,
       duration: 180,
       useNativeDriver: false,
-    }).start();
+    });
+
+    animation.start();
+
+    // Cleanup: Stop animation and remove listeners on unmount or when dependencies change
+    return () => {
+      animation.stop();
+      anim.stopAnimation();
+      anim.removeAllListeners();
+    };
   }, [anim, open]);
 
   return (

@@ -3,7 +3,7 @@
  * Circular avatar button for header actions.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { TouchableOpacity, StyleSheet, Text, View, Image } from 'react-native';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -31,6 +31,7 @@ export default function HeaderAvatarButton({
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const label = initials.slice(0, 2).toUpperCase();
+  const [imageError, setImageError] = useState(false);
 
   return (
     <TouchableOpacity
@@ -42,8 +43,12 @@ export default function HeaderAvatarButton({
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
     >
-      {uri ? (
-        <Image source={{ uri }} style={styles.avatar} />
+      {uri && !imageError ? (
+        <Image
+          source={{ uri }}
+          style={styles.avatar}
+          onError={() => setImageError(true)}
+        />
       ) : (
         <View style={styles.fallback}>
           <Text style={styles.initials}>{label}</Text>
