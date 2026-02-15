@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent } from 'react-native';
 
 type HideHeaderOptions = {
@@ -137,6 +137,18 @@ export function useHideHeaderOnScroll(
   const resetScroll = useCallback(() => {
     lastScrollY.current = 0;
   }, []);
+
+  // Cleanup all animation listeners on unmount
+  useEffect(() => {
+    return () => {
+      headerHeight.stopAnimation();
+      headerHeight.removeAllListeners();
+      headerOpacity.stopAnimation();
+      headerOpacity.removeAllListeners();
+      headerTranslate.stopAnimation();
+      headerTranslate.removeAllListeners();
+    };
+  }, [headerHeight, headerOpacity, headerTranslate]);
 
   return {
     headerHeight,

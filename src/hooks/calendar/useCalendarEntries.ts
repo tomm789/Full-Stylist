@@ -34,7 +34,7 @@ export function useCalendarEntries({
   const [error, setError] = useState<Error | null>(null);
   const hasLoadedOnceRef = useRef(false);
 
-  const loadEntries = async (retryAttempt = 0): Promise<void> => {
+  const loadEntriesInternal = async (isMounted: { current: boolean }, retryAttempt = 0): Promise<void> => {
     if (!userId) {
       setLoading(false);
       return;
@@ -46,22 +46,23 @@ export function useCalendarEntries({
     }
 
     try {
-      // Load all entries for the date range
       const { data: monthEntries, error: fetchError } = await getCalendarEntries(userId, startDate, endDate);
 
-      // If there's an error and we haven't exceeded retries, retry with exponential backoff
       if (fetchError) {
         if (retryAttempt < CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS) {
           const delayMs = CALENDAR_CONFIG.INITIAL_RETRY_DELAY_MS * Math.pow(2, retryAttempt);
           console.warn(`Calendar entries load failed, retrying in ${delayMs}ms (attempt ${retryAttempt + 1}/${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS}):`, fetchError);
           await new Promise(resolve => setTimeout(resolve, delayMs));
-          return loadEntries(retryAttempt + 1);
+          if (isMounted.current) {
+            return loadEntriesInternal(isMounted, retryAttempt + 1);
+          }
         } else {
           throw new Error(`Failed to load calendar entries after ${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS} retries: ${fetchError.message}`);
         }
       }
 
-      // Group entries by date
+      if (!isMounted.current) return;
+
       const entriesMap = new Map<string, CalendarEntry[]>();
       if (monthEntries) {
         monthEntries.forEach((entry) => {
@@ -75,17 +76,17 @@ export function useCalendarEntries({
       }
 
       setEntries(entriesMap);
-      setError(null); // Clear error on success
+      setError(null);
       if (shouldShowLoading) {
         setLoading(false);
       }
       hasLoadedOnceRef.current = true;
 
-      // Load outfit images without blocking scroll/navigation
       if (monthEntries) {
-        loadOutfitImages(monthEntries);
+        loadOutfitImages(monthEntries, isMounted.current);
       }
     } catch (err) {
+      if (!isMounted.current) return;
       const error = err instanceof Error ? err : new Error(String(err));
       console.error('Error loading calendar entries:', error);
       setError(error);
@@ -93,14 +94,21 @@ export function useCalendarEntries({
         setLoading(false);
       }
     } finally {
-      if (shouldShowLoading) {
+      if (isMounted.current && shouldShowLoading) {
         setLoading(false);
       }
-      hasLoadedOnceRef.current = true;
+      if (isMounted.current) {
+        hasLoadedOnceRef.current = true;
+      }
     }
   };
 
-  const loadOutfitImages = async (entries: CalendarEntry[]) => {
+  const refresh = async (): Promise<void> => {
+    const isMounted = { current: true };
+    await loadEntriesInternal(isMounted);
+  };
+
+  const loadOutfitImages = async (entries: CalendarEntry[], isMounted: boolean) => {
     const imagesMap = new Map<string, string | null>();
 
     // Get unique outfit IDs
@@ -119,6 +127,9 @@ export function useCalendarEntries({
 
     const outfitResults = await Promise.all(outfitPromises);
 
+    // Cancel if component unmounted while promises were pending
+    if (!isMounted) return;
+
     for (const { data: outfit } of outfitResults) {
       const coverImage = Array.isArray(outfit?.cover_image) ? outfit?.cover_image?.[0] : outfit?.cover_image;
       if (coverImage?.storage_key) {
@@ -133,21 +144,25 @@ export function useCalendarEntries({
       }
     }
 
-    setOutfitImages((prev) => {
-      const next = new Map(prev);
-      imagesMap.forEach((value, key) => {
-        next.set(key, value);
+    // Only update state if component is still mounted
+    if (isMounted) {
+      setOutfitImages((prev) => {
+        const next = new Map(prev);
+        imagesMap.forEach((value, key) => {
+          next.set(key, value);
+        });
+        return next;
       });
-      return next;
-    });
-  };
-
-  const refresh = async () => {
-    await loadEntries();
+    }
   };
 
   useEffect(() => {
-    loadEntries();
+    const isMounted = { current: true };
+    loadEntriesInternal(isMounted);
+
+    return () => {
+      isMounted.current = false;
+    };
   }, [userId, startDate, endDate]);
 
   return {
