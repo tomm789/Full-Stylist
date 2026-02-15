@@ -49,17 +49,7 @@ export default function CalendarContinuousGrid({
     return list;
   }, [startDate, endDate]);
 
-  // #region agent log
-  const lastLoggedRangeRef = useRef<string | null>(null);
-  const rangeKey = `${startDate.toISOString().split('T')[0]}-${endDate.toISOString().split('T')[0]}`;
-  useEffect(() => {
-    if (lastLoggedRangeRef.current === rangeKey || days.length === 0) return;
-    lastLoggedRangeRef.current = rangeKey;
-    const firstDay = days[0];
-    const lastDay = days[days.length - 1];
-    fetch('http://127.0.0.1:7243/ingest/3a269559-16ce-41e5-879a-1155393947c5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CalendarContinuousGrid.tsx:days',message:'grid date range',data:{startISO: firstDay?.toISOString?.()?.split('T')[0], endISO: lastDay?.toISOString?.()?.split('T')[0], dayCount: days.length},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
-  }, [days, rangeKey]);
-  // #endregion
+  // Debug: grid date range (telemetry removed - use console only if needed)
 
   const getDayEntries = (date: Date): CalendarEntry[] => {
     const dateKey = date.toISOString().split('T')[0];
@@ -86,7 +76,11 @@ export default function CalendarContinuousGrid({
   const prevScrollRef = useRef(0);
   const directionOffsetRef = useRef(new Animated.Value(0));
 
+  // Initialize/update bounce values for pills, cleanup removed ones
   useEffect(() => {
+    const currentKeys = new Set(pillConfigs.map((p) => p.key));
+
+    // Add new ones
     pillConfigs.forEach((pill) => {
       if (!bounceValuesRef.current.has(pill.key)) {
         bounceValuesRef.current.set(pill.key, new Animated.Value(0));
@@ -95,8 +89,18 @@ export default function CalendarContinuousGrid({
         prevRatioRef.current.set(pill.key, 1);
       }
     });
+
+    // Clean up removed ones
+    bounceValuesRef.current.forEach((value, key) => {
+      if (!currentKeys.has(key)) {
+        value.stopAnimation();
+        bounceValuesRef.current.delete(key);
+        prevRatioRef.current.delete(key);
+      }
+    });
   }, [pillConfigs]);
 
+  // Update scroll listener only when scrollY changes, not when pillConfigs changes
   useEffect(() => {
     if (!scrollY) return;
 
@@ -109,6 +113,7 @@ export default function CalendarContinuousGrid({
 
       const triggerRatio = 0.3;
 
+      // Use current pillConfigs from closure
       pillConfigs.forEach((pill) => {
         const position = pill.top - value;
         const ratio = position / effectiveViewport;
@@ -145,6 +150,17 @@ export default function CalendarContinuousGrid({
       scrollY.removeListener(id);
     };
   }, [scrollY, viewportHeight, pillConfigs]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      bounceValuesRef.current.forEach((value) => {
+        value.stopAnimation();
+      });
+      bounceValuesRef.current.clear();
+      prevRatioRef.current.clear();
+    };
+  }, []);
 
   return (
     <View style={styles.container}>
