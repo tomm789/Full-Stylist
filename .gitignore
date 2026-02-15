@@ -30,3 +30,27 @@ yarn-error.log
 
 # TypeScript
 *.tsbuildinfo*.swp
+
+# AI session artifacts
+SESSION_*.md
+PHASE_*.md
+OPTIMIZATION_*.md
+*_ANALYSIS.md
+*_IMPLEMENTATION.md
+*_SUMMARY.md
+*_STATUS.md
+*_COMPLETE*.md
+*_HANDOFF*.md
+*_GUIDE.md
+*_STRATEGY*.md
+ADDITIONAL_*.md
+EDGE_SWIPE_*.md
+CAMERA_*.md
+CALENDAR_ANALYSIS.md
+HEADER_*.md
+archive/
+
+# Context dumps
+*.txt
+!LICENSE*.txt
+ignore text files/

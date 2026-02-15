@@ -71,6 +71,8 @@ export function HeaderSearchMenu({
       <TouchableOpacity
         style={styles.addButton}
         onPress={onAdd}
+        accessibilityRole="button"
+        accessibilityLabel="Add item"
       >
         <Ionicons name="add-circle-outline" size={24} color={colors.textPrimary} />
       </TouchableOpacity>

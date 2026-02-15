@@ -4,7 +4,7 @@
  * Includes retry logic with exponential backoff for resilience
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { getCalendarEntries, CalendarEntry } from '@/lib/calendar';
 import { supabase } from '@/lib/supabase';
 import { CALENDAR_CONFIG } from '@/lib/calendar/config';
@@ -23,6 +23,11 @@ interface UseCalendarEntriesReturn {
   refresh: () => Promise<void>;
 }
 
+interface CoverImageData {
+  storage_key: string;
+  storage_bucket: string;
+}
+
 export function useCalendarEntries({
   userId,
   startDate,
@@ -33,6 +38,7 @@ export function useCalendarEntries({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const hasLoadedOnceRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   const loadEntriesInternal = async (isMounted: { current: boolean }, retryAttempt = 0): Promise<void> => {
     if (!userId) {
@@ -66,7 +72,8 @@ export function useCalendarEntries({
       const entriesMap = new Map<string, CalendarEntry[]>();
       if (monthEntries) {
         monthEntries.forEach((entry) => {
-          const date = entry.calendar_day?.date || (entry as any).calendar_days?.date;
+          const entryWithJoins = entry as CalendarEntry & { calendar_days?: { date: string } };
+          const date = entryWithJoins.calendar_days?.date;
           if (date) {
             const existing = entriesMap.get(date) || [];
             existing.push(entry);
