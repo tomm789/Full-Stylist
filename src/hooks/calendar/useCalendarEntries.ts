@@ -114,15 +114,20 @@ export function useCalendarEntries({
     // Get unique outfit IDs
     const outfitIds = [...new Set(entries.filter((e) => e.outfit_id).map((e) => e.outfit_id!))];
 
-    // Load cover images for all outfits in parallel
+    // Load cover images for all outfits in parallel with timeout
     const outfitPromises = outfitIds.map((outfitId) =>
-      supabase
-        .from('outfits')
-        .select(
-          'id, cover_image_id, cover_image:images!cover_image_id(storage_key, storage_bucket)'
-        )
-        .eq('id', outfitId)
-        .single()
+      Promise.race([
+        supabase
+          .from('outfits')
+          .select(
+            'id, cover_image_id, cover_image:images!cover_image_id(storage_key, storage_bucket)'
+          )
+          .eq('id', outfitId)
+          .single(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`Outfit ${outfitId} load timeout after ${CALENDAR_CONFIG.OUTFIT_LOAD_TIMEOUT_MS}ms`)), CALENDAR_CONFIG.OUTFIT_LOAD_TIMEOUT_MS)
+        ),
+      ]).catch(() => ({ data: null, error: 'timeout' })) // Graceful fallback if timeout occurs
     );
 
     const outfitResults = await Promise.all(outfitPromises);

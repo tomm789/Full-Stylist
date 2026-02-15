@@ -61,6 +61,7 @@ export default function SearchOverlay({
         styles.container,
         { top: topOffset },
         {
+          opacity: anim,
           transform: [
             {
               translateX: anim.interpolate({

@@ -39,13 +39,28 @@ export function getDayIndex(startDate: Date, targetDate: Date): number {
 
 /**
  * Get a date by adding dayIndex days to startDate
+ * Validates that index is within reasonable bounds (-100000 to +100000 days ≈ 273 years)
  */
 export function getDateAtIndex(startDate: Date, index: number): Date | null {
-  if (index < 0) {
+  // Validate index is a finite number
+  if (!Number.isFinite(index)) {
+    console.warn(`[Calendar] Invalid index: ${index}, must be a finite number`);
     return null;
   }
+
+  // Clamp index to reasonable bounds (-100000 to +100000 days ≈ ±273 years)
+  // This prevents creating dates in year 9999 or similar edge cases
+  const MAX_INDEX = 100000;
+  const clampedIndex = Math.max(-MAX_INDEX, Math.min(MAX_INDEX, index));
+
+  if (Math.abs(clampedIndex) !== Math.abs(index)) {
+    console.warn(
+      `[Calendar] Index ${index} clamped to ${clampedIndex} (max ±${MAX_INDEX} days)`
+    );
+  }
+
   const date = new Date(startDate);
-  date.setDate(date.getDate() + index);
+  date.setDate(date.getDate() + clampedIndex);
   return date;
 }
 
