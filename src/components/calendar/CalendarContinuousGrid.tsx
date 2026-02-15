@@ -9,6 +9,7 @@ import CalendarDayCell from './CalendarDayCell';
 import { CalendarEntry } from '@/lib/calendar';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
+import { CALENDAR_CONFIG } from '@/lib/calendar/config';
 import type { ThemeColors } from '@/styles/themes';
 
 const { spacing } = theme;
@@ -107,11 +108,11 @@ export default function CalendarContinuousGrid({
     const id = scrollY.addListener(({ value }) => {
       const effectiveViewport = viewportHeight || 600;
       const scrollingUp = value < prevScrollRef.current;
-      const offset = scrollingUp ? effectiveViewport * 0.15 : 0;
+      const offset = scrollingUp ? effectiveViewport * CALENDAR_CONFIG.DIRECTION_OFFSET_RATIO : 0;
       directionOffsetRef.current.setValue(offset);
       prevScrollRef.current = value;
 
-      const triggerRatio = 0.3;
+      const triggerRatio = CALENDAR_CONFIG.PILL_TRIGGER_RATIO;
 
       // Use current pillConfigs from closure
       pillConfigs.forEach((pill) => {
@@ -129,13 +130,13 @@ export default function CalendarContinuousGrid({
             bounceValue.setValue(0);
             Animated.sequence([
               Animated.timing(bounceValue, {
-                toValue: -10,
-                duration: 150,
+                toValue: -CALENDAR_CONFIG.BOUNCE_DISTANCE,
+                duration: CALENDAR_CONFIG.BOUNCE_ANIMATION_DURATION,
                 useNativeDriver: true,
               }),
               Animated.timing(bounceValue, {
                 toValue: 0,
-                duration: 150,
+                duration: CALENDAR_CONFIG.BOUNCE_ANIMATION_DURATION,
                 useNativeDriver: true,
               }),
             ]).start();
@@ -190,13 +191,12 @@ export default function CalendarContinuousGrid({
 
       {pillConfigs.map((pill) => {
         const effectiveViewport = viewportHeight || 600;
-        const offRight = 120;
         const midPoint = pill.top - effectiveViewport * 0.5;
         const exitPoint = pill.top - effectiveViewport * 0.25;
         const adjustedScrollY = Animated.add(scrollY, directionOffsetRef.current);
         const slideOut = adjustedScrollY.interpolate({
           inputRange: [midPoint, exitPoint],
-          outputRange: [0, offRight],
+          outputRange: [0, CALENDAR_CONFIG.PILL_SLIDE_DISTANCE],
           extrapolate: 'clamp',
         });
         const bounceValue = bounceValuesRef.current.get(pill.key) ?? new Animated.Value(0);
@@ -224,8 +224,9 @@ function isToday(date: Date): boolean {
   );
 }
 
-const ROW_HEIGHT = 120;
-const PILL_HEIGHT = 24;
+// Use CALENDAR_CONFIG for dimensions
+const ROW_HEIGHT = CALENDAR_CONFIG.ROW_HEIGHT;
+const PILL_HEIGHT = CALENDAR_CONFIG.PILL_HEIGHT;
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {

@@ -37,6 +37,7 @@ import {
   buildMonthWindow,
   getRowOffset,
 } from '@/lib/calendar/dateUtils';
+import { CALENDAR_CONFIG } from '@/lib/calendar/config';
 import { MonthNavigator } from '@/components/calendar';
 import CalendarDaySheet from '@/components/calendar/CalendarDaySheet';
 import CalendarWeekHeader from '@/components/calendar/CalendarWeekHeader';
@@ -68,7 +69,7 @@ export default function CalendarScreen() {
   const [error, setError] = useState<Error | null>(null);
   const [months, setMonths] = useState<Date[]>(() => {
     const today = new Date();
-    return buildMonthWindow(today, 6, 6);
+    return buildMonthWindow(today, CALENDAR_CONFIG.PAST_MONTHS, CALENDAR_CONFIG.FUTURE_MONTHS);
   });
 
   const scrollRef = useRef<ScrollView>(null);
@@ -132,7 +133,7 @@ export default function CalendarScreen() {
   }, [params.openAddPicker, loading, openDateSelector, router]);
 
   const updateRangeCenter = (newDate: Date) => {
-    if (!isWithinMonthWindow(newDate, rangeCenterDate, 2, 4)) {
+    if (!isWithinMonthWindow(newDate, rangeCenterDate, CALENDAR_CONFIG.PAST_MONTHS - 4, CALENDAR_CONFIG.FUTURE_MONTHS - 2)) {
       setRangeCenterDate(newDate);
     }
   };
@@ -243,8 +244,7 @@ export default function CalendarScreen() {
       return;
     }
     const scrollY = scrollYRef.current;
-    const rowHeight = 120;
-    const rowIndex = Math.floor(scrollY / rowHeight);
+    const rowIndex = Math.floor(scrollY / CALENDAR_CONFIG.ROW_HEIGHT);
     const dateIndex = rowIndex * 7;
     const dateAtTop = getDateAtIndex(windowStartDate, dateIndex);
 
@@ -273,13 +273,12 @@ export default function CalendarScreen() {
     }
     const viewportHeight = viewportHeightRef.current;
     const contentHeight = contentHeightRef.current;
-    const threshold = 400;
 
-    if (contentOffset.y < threshold && !isExtendingRef.current) {
+    if (contentOffset.y < CALENDAR_CONFIG.INFINITE_SCROLL_THRESHOLD && !isExtendingRef.current) {
       pendingScrollKeyRef.current = getMonthKey(activeMonthDate);
       extendMonths('past');
     } else if (
-      contentOffset.y + viewportHeight > contentHeight - threshold &&
+      contentOffset.y + viewportHeight > contentHeight - CALENDAR_CONFIG.INFINITE_SCROLL_THRESHOLD &&
       !isExtendingRef.current
     ) {
       extendMonths('future');
@@ -394,7 +393,7 @@ export default function CalendarScreen() {
         )}
         onMomentumScrollEnd={handleScrollEnd}
         onScrollEndDrag={handleScrollEnd}
-        scrollEventThrottle={16}
+        scrollEventThrottle={CALENDAR_CONFIG.EVENT_THROTTLE_MS}
         onLayout={(event) => {
           const height = event.nativeEvent.layout.height;
           viewportHeightRef.current = height;
