@@ -1,45 +1,81 @@
 /**
  * Hair & Make-Up Presets Screen
- * Orchestrates three screen modes: library, detail, and editor.
+ * Single-page flow with preview, inline editor, and lightbox.
  * All state and business logic lives in useHairAndMakeup hook.
  */
 
 import React from 'react';
 import {
-  ActivityIndicator,
-  Modal,
+  Animated,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
-import { Header } from '@/components/shared/layout';
+import {
+  PillButton,
+  HeaderIconButton,
+  DropdownMenuModal,
+  DropdownMenuItem,
+  dropdownMenuStyles,
+} from '@/components/shared';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import ErrorModal from '@/components/ErrorModal';
-import VariationsSection from '@/components/headshot/VariationsSection';
-import HeadshotPreview from '@/components/headshot/HeadshotPreview';
-import PresetEditor from '@/components/headshot/PresetEditor';
 import { useHairAndMakeup } from '@/hooks/headshot';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 import { theme } from '@/styles';
+import { createCommonStyles } from '@/styles/commonStyles';
 
 const { spacing, borderRadius, typography, shadows } = theme;
+const INFO_ICON_SIZE = 16;
 
 export default function HairAndMakeUpScreen() {
   const colors = useThemeColors();
   const styles = createStyles(colors);
+  const commonStyles = createCommonStyles(colors);
   const state = useHairAndMakeup();
+
+  React.useLayoutEffect(() => {
+    state.navigation.setOptions({
+      headerRight: () => (
+        <View style={styles.headerRightButtons}>
+          <HeaderIconButton
+            icon="sparkles-outline"
+            onPress={state.handleGenerateVariation}
+            disabled={state.isGenerateDisabled || !state.previewHasImage}
+            accessibilityLabel="Generate"
+          />
+          <HeaderIconButton
+            icon="camera-outline"
+            onPress={state.handlePickCamera}
+            disabled={state.isStyleDisabled}
+            accessibilityLabel="Open camera"
+          />
+        </View>
+      ),
+    });
+  }, [
+    state.navigation,
+    styles.headerRightButtons,
+    state.isGenerateDisabled,
+    state.previewHasImage,
+    state.isStyleDisabled,
+    state.handleGenerateVariation,
+    state.handlePickCamera,
+  ]);
 
   const renderHeadshotGridItem = ({ item }: { item: { id: string; url: string | null } }) => (
     <TouchableOpacity
       style={postGridStyles.gridItem}
-      onPress={() => state.handleOpenHeadshotDetail(item.id, item.url)}
+      onPress={() => state.handleHeadshotSelect(item)}
       activeOpacity={0.85}
     >
       {item.url ? (
@@ -56,125 +92,270 @@ export default function HairAndMakeUpScreen() {
     </TouchableOpacity>
   );
 
-  if (state.screenMode === 'library') {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Header title="Hair & Make-Up" showBack />
-        <View style={styles.libraryContainer}>
-          <TouchableOpacity
-            style={styles.newHeadshotButton}
-            onPress={() => state.router.push('/headshot/new' as any)}
-          >
-            <Ionicons name="camera-outline" size={20} color={colors.textLight} />
-            <Text style={styles.newHeadshotButtonText}>Create New Headshot</Text>
-          </TouchableOpacity>
+  return (
+    <SafeAreaView style={commonStyles.container}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={commonStyles.sectionTopPadding}>
+          <View style={styles.pillRowStack}>
+            <View style={styles.tabPills}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.tabPillsRow}>
+                  <PillButton
+                    label="Grid"
+                    icon="grid-outline"
+                    selected={state.showHeadshotGrid}
+                    onPress={() => state.setActiveView('grid')}
+                    size="medium"
+                    variant="default"
+                  />
+                  <PillButton
+                    label="Hair"
+                    icon="cut-outline"
+                    selected={state.activeView === 'hair'}
+                    onPress={() => {
+                      state.setLastPresetTab('hair');
+                      state.setActiveView('hair');
+                    }}
+                    size="medium"
+                    variant="default"
+                  />
+                  <PillButton
+                    label="Make-Up"
+                    icon="color-palette-outline"
+                    selected={state.activeView === 'makeup'}
+                    onPress={() => {
+                      state.setLastPresetTab('makeup');
+                      state.setActiveView('makeup');
+                    }}
+                    size="medium"
+                    variant="default"
+                  />
+                  <PillButton
+                    label="Face"
+                    icon="person-circle-outline"
+                    selected={state.activeView === 'face'}
+                    onPress={() => state.setActiveView('face')}
+                    size="medium"
+                    variant="default"
+                  />
+                </View>
+              </ScrollView>
+            </View>
 
+            {state.isPresetView && state.presets.length > 0 && (
+              <View style={styles.categoryPills}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.categoryPillsRow}>
+                    <PillButton
+                      label="Custom"
+                      selected={state.isCustomCategory}
+                      onPress={() => state.setActiveCategoryId('custom')}
+                      size="medium"
+                      variant="default"
+                    />
+                    {state.categoryPills.map((category) => (
+                      <PillButton
+                        key={category.id}
+                        label={state.formatCategoryLabel(category.title)}
+                        selected={state.activeCategory?.id === category.id}
+                        onPress={() => state.setActiveCategoryId(category.id)}
+                        size="medium"
+                        variant="default"
+                      />
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {state.showFacePreview && (
+          <View
+            style={[
+              styles.facePreviewSection,
+              commonStyles.sectionHorizontalPadding,
+              commonStyles.sectionTopPadding,
+            ]}
+          >
+            <View style={styles.imagePreviewContainer}>
+              {state.previewHasImage ? (
+                <TouchableOpacity
+                  style={styles.previewImageButton}
+                  onPress={state.handlePreviewPress}
+                  activeOpacity={0.9}
+                >
+                  <ExpoImage
+                    source={{ uri: state.previewImageUrl || undefined }}
+                    style={styles.imagePreview}
+                    contentFit="cover"
+                  />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.placeholder}
+                  onPress={state.handlePickCamera}
+                  disabled={state.isStyleDisabled}
+                >
+                  <Ionicons name="camera-outline" size={42} color={colors.textSecondary} />
+                  <Text style={styles.placeholderText}>Tap to open camera</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={[
+                  styles.faceMenuButton,
+                  !state.previewHasImage && styles.faceMenuButtonDisabled,
+                ]}
+                onPress={() => state.setShowFaceMenu(true)}
+                disabled={!state.previewHasImage}
+                accessibilityLabel="Open menu"
+              >
+                <Ionicons name="ellipsis-vertical" size={18} color={colors.textLight} />
+              </TouchableOpacity>
+
+              {state.generating && state.previewHasImage && (
+                <Animated.View
+                  style={[styles.generateOverlay, { opacity: state.generateOverlayOpacity }]}
+                  pointerEvents="none"
+                />
+              )}
+
+              {state.previewIsGenerated && (
+                <TouchableOpacity
+                  style={styles.restoreButton}
+                  onPress={state.handleRestoreSelfie}
+                  disabled={state.isStyleDisabled}
+                  accessibilityLabel="Restore selfie"
+                >
+                  <Ionicons name="person-circle-outline" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
+        {state.showHeadshotGrid && (
           <PostGrid
             data={state.allHeadshots}
             keyExtractor={(item) => item.id}
             renderItem={renderHeadshotGridItem}
+            scrollEnabled={false}
           />
-        </View>
-      </SafeAreaView>
-    );
-  }
+        )}
 
-  if (state.screenMode === 'detail') {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Header
-          title="Headshot"
-          showBack
-          onBack={() => state.setScreenMode('library')}
-        />
-        <View style={styles.detailContainer}>
-          <View style={styles.detailImageWrap}>
-            {state.selectedHeadshotUrl ? (
-              <ExpoImage source={{ uri: state.selectedHeadshotUrl }} style={styles.detailImage} contentFit="cover" />
-            ) : (
-              <View style={styles.detailImagePlaceholder}>
-                <Ionicons name="image-outline" size={32} color={colors.textTertiary} />
+        {state.isPresetView && (
+          <>
+            {(state.isCustomCategory || state.activeCategory) && (
+              <View
+                style={[
+                  styles.categoryCard,
+                  commonStyles.sectionHorizontalPadding,
+                  commonStyles.sectionTopPadding,
+                ]}
+              >
+                {state.isCustomCategory ? (
+                  <>
+                    <View style={styles.customHeader}>
+                      <Text style={styles.customHint}>{state.customDescriptionCopy}</Text>
+                      <TouchableOpacity
+                        style={styles.infoIconButton}
+                        onPress={() => state.setInfoModalVisible(true)}
+                      >
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={18}
+                          color={colors.textSecondary}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    <TextInput
+                      style={styles.customInput}
+                      placeholder={state.customPlaceholder}
+                      placeholderTextColor={colors.textTertiary}
+                      multiline
+                      value={state.customDescription}
+                      onChangeText={state.setCustomDescription}
+                    />
+                  </>
+                ) : (
+                  state.activeCategory?.sections.map((section) => (
+                    <View key={section.id} style={styles.sectionBlock}>
+                      {state.activeCategory!.sections.length > 1 && (
+                        <Text style={styles.sectionLabel}>{section.title}</Text>
+                      )}
+                      <View style={styles.pillRow}>
+                        {section.options.map((option) => {
+                          const isSelected = state.selectedIds.includes(option.id);
+                          return (
+                            <TouchableOpacity
+                              key={option.id}
+                              style={[styles.pill, isSelected && styles.pillSelected]}
+                              onPress={() => state.toggleSelection(option.id)}
+                              activeOpacity={0.85}
+                            >
+                              <Text
+                                style={[
+                                  styles.pillText,
+                                  isSelected && styles.pillTextSelected,
+                                ]}
+                              >
+                                {option.title}
+                              </Text>
+                              <TouchableOpacity
+                                style={styles.infoButton}
+                                onPress={(event) => {
+                                  event.stopPropagation?.();
+                                  state.handleInfoPress(option);
+                                }}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              >
+                                <Ionicons
+                                  name="information-circle-outline"
+                                  size={INFO_ICON_SIZE}
+                                  color={isSelected ? colors.textLight : colors.textSecondary}
+                                />
+                              </TouchableOpacity>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ))
+                )}
               </View>
             )}
-          </View>
-          <TouchableOpacity style={styles.detailActionButton} onPress={state.handleEditHeadshot}>
-            <Ionicons name="create-outline" size={20} color={colors.textLight} />
-            <Text style={styles.detailActionButtonText}>Edit This Headshot</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.detailSecondaryButton} onPress={state.handleEditHeadshot}>
-            <Ionicons name="sparkles-outline" size={20} color={colors.textPrimary} />
-            <Text style={styles.detailSecondaryButtonText}>
-              Create New Look From This Headshot
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <Header
-        showBack
-        onBack={() => state.setScreenMode('detail')}
-        title="Hair & Make-Up"
-        rightContent={
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.infoIconButton}
-              onPress={() => state.setInfoModalVisible(true)}
-            >
-              <Ionicons
-                name="information-circle-outline"
-                size={20}
-                color={colors.textSecondary}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.headerGenerateButton,
-                (!state.isDirty || state.generating) && styles.headerGenerateButtonDisabled,
-              ]}
-              onPress={state.handleGenerateVariation}
-              disabled={!state.isDirty || state.generating}
-            >
-              {state.generating ? (
-                <ActivityIndicator color={colors.textLight} />
-              ) : (
-                <Ionicons name="sparkles-outline" size={18} color={colors.textLight} />
-              )}
-              <Text style={styles.headerGenerateButtonText}>Generate</Text>
-            </TouchableOpacity>
-          </View>
-        }
-      />
-
-      <ScrollView contentContainerStyle={styles.content}>
-        <VariationsSection
-          variations={state.variations}
-          variationUrls={state.variationUrls}
-          selectedVariationIds={state.selectedVariationIds}
-          loadingHistory={state.loadingHistory}
-          onToggleSelection={state.toggleVariationSelection}
-          onSaveSelected={state.handleSaveSelected}
-        />
-
-        <HeadshotPreview imageUrl={state.baseHeadshotUrl} />
-
-        <PresetEditor
-          activeTab={state.activeTab}
-          onTabChange={state.setActiveTab}
-          presets={state.presets}
-          activeCategory={state.activeCategory}
-          activeCategoryId={state.activeCategoryId}
-          onCategoryChange={state.setActiveCategoryId}
-          selectedIds={state.selectedIds}
-          onToggleSelection={state.toggleSelection}
-          onInfoPress={state.handleInfoPress}
-          customDescription={state.customDescription}
-          onCustomDescriptionChange={state.setCustomDescription}
-        />
+          </>
+        )}
       </ScrollView>
+
+      <DropdownMenuModal
+        visible={state.showFaceMenu}
+        onClose={() => state.setShowFaceMenu(false)}
+        topOffset={120}
+        align="right"
+      >
+        <DropdownMenuItem
+          label="Share"
+          icon="share-outline"
+          onPress={() => {
+            state.setShowFaceMenu(false);
+            state.handleSharePreview();
+          }}
+          disabled={!state.canShare}
+        />
+        <View style={dropdownMenuStyles.menuDivider} />
+        <DropdownMenuItem
+          label="Delete"
+          icon="trash-outline"
+          onPress={() => {
+            state.setShowFaceMenu(false);
+            state.handleDeletePreviewImage();
+          }}
+          danger
+          disabled={!state.showDeletePreview}
+        />
+      </DropdownMenuModal>
 
       <PolicyBlockModal
         visible={state.policyModalVisible}
@@ -208,117 +389,320 @@ export default function HairAndMakeUpScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={state.lightboxVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => state.setLightboxVisible(false)}
+      >
+        <View style={styles.lightboxOverlay}>
+          <TouchableOpacity
+            style={styles.lightboxCloseButton}
+            onPress={() => state.setLightboxVisible(false)}
+          >
+            <Ionicons name="close" size={22} color={colors.textLight} />
+          </TouchableOpacity>
+          {state.lightboxUrl && (
+            <ExpoImage
+              source={{ uri: state.lightboxUrl }}
+              style={styles.lightboxImage}
+              contentFit="contain"
+            />
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   content: {
-    padding: spacing.lg,
     paddingBottom: spacing.massive,
-    gap: spacing.lg,
   },
-  headerActions: {
+  historyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  historyActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  headerRightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginRight: spacing.xs,
+  },
+  facePreviewSection: {
+    width: '100%',
+    gap: spacing.md,
+  },
+  previewSection: {
+    alignSelf: 'center',
+    width: '100%',
+    gap: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  previewNavRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  previewNavButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  previewNavButtonDisabled: {
+    opacity: 0.4,
+  },
+  previewRailRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    width: '100%',
+  },
+  previewCore: {
+    flex: 1,
+    minWidth: 0,
+  },
+  railColumnLeft: {
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+  },
+  railStack: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  railColumnRight: {
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+  },
+  railSlot: {
+    minHeight: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imagePreviewContainer: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: colors.backgroundTertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewImageButton: {
+    width: '100%',
+    height: '100%',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  generateOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.gray200,
+  },
+  railButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  placeholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+  },
+  placeholderText: {
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  mediaButton: {
+    position: 'absolute',
+    right: spacing.md,
+    bottom: spacing.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  restoreButton: {
+    position: 'absolute',
+    left: spacing.md,
+    bottom: spacing.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  faceMenuButton: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  faceMenuButtonDisabled: {
+    opacity: 0.5,
+  },
+  generateButton: {
+    position: 'absolute',
+    bottom: spacing.md,
+    alignSelf: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  generateButtonDisabled: {
+    opacity: 0.6,
+  },
+  sectionTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
   },
   infoIconButton: {
     padding: spacing.xs,
   },
-  headerGenerateButton: {
+  tabPills: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.backgroundDark,
+  },
+  pillRowStack: {
+    gap: 0,
+  },
+  tabPillsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.round,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
   },
-  headerGenerateButtonDisabled: {
-    opacity: 0.6,
+  categoryPills: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.backgroundDark,
   },
-  headerGenerateButtonText: {
-    color: colors.textLight,
+  categoryPillsRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  categoryCard: {
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    padding: 0,
+    gap: spacing.md,
+  },
+  sectionBlock: {
+    gap: spacing.sm,
+  },
+  sectionLabel: {
     fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semibold,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
-  libraryContainer: {
-    flex: 1,
-    padding: spacing.lg,
-    gap: spacing.lg,
+  pillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
-  newHeadshotButton: {
+  pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.md,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.xs * 2 + INFO_ICON_SIZE,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.round,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
+    position: 'relative',
   },
-  newHeadshotButtonText: {
+  pillSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  pillText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+  },
+  pillTextSelected: {
     color: colors.textLight,
-    fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semibold,
+  },
+  infoButton: {
+    position: 'absolute',
+    right: spacing.xs,
+    top: '50%',
+    transform: [{ translateY: -INFO_ICON_SIZE / 2 }],
   },
   headshotGridPlaceholder: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  detailContainer: {
+  customHint: {
+    color: colors.textSecondary,
+    fontSize: typography.fontSize.sm,
     flex: 1,
-    padding: spacing.lg,
-    gap: spacing.lg,
   },
-  detailImageWrap: {
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-    backgroundColor: colors.gray100,
-  },
-  detailImage: {
-    width: '100%',
-    height: 320,
-  },
-  detailImagePlaceholder: {
-    height: 320,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  detailActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.md,
-  },
-  detailActionButtonText: {
-    color: colors.textLight,
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-  },
-  detailSecondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.md,
+  customInput: {
+    minHeight: 90,
     borderWidth: 1,
     borderColor: colors.borderLight,
-  },
-  detailSecondaryButtonText: {
-    color: colors.textPrimary,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
+    textAlignVertical: 'top',
   },
   infoModalOverlay: {
     flex: 1,
@@ -348,5 +732,163 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   infoModalText: {
     fontSize: typography.fontSize.base,
     color: colors.textSecondary,
+  },
+  historySection: {
+    gap: spacing.md,
+  },
+  historyLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  historyLoadingText: {
+    color: colors.textSecondary,
+  },
+  variationRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+  },
+  variationCard: {
+    width: 86,
+    aspectRatio: 3 / 4,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  variationCardSelected: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
+  variationImage: {
+    width: '100%',
+    height: '100%',
+  },
+  variationPending: {
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  variationStatusText: {
+    color: colors.textSecondary,
+    fontSize: typography.fontSize.sm,
+  },
+  savedBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.round,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs / 2,
+  },
+  savedBadgeText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  variationMenuTrigger: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  variationMenuOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlayLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  variationMenuCard: {
+    width: '100%',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+    ...shadows.md,
+  },
+  variationMenuTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  variationMenuAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  variationMenuButtonDestructive: {
+    backgroundColor: colors.backgroundSecondary,
+  },
+  variationMenuButtonCancel: {
+    justifyContent: 'center',
+  },
+  variationMenuButtonDisabled: {
+    opacity: 0.5,
+  },
+  variationMenuButtonText: {
+    fontSize: typography.fontSize.base,
+    color: colors.textPrimary,
+    fontWeight: typography.fontWeight.medium,
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.black,
+    borderRadius: borderRadius.round,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  lightboxOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lightboxCloseButton: {
+    position: 'absolute',
+    top: spacing.xl,
+    right: spacing.lg,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  lightboxImage: {
+    width: '100%',
+    height: '80%',
   },
 });

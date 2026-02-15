@@ -14,6 +14,23 @@ import WardrobeCategoryIcon from '@/components/shared/WardrobeCategoryIcon';
 
 const { spacing, typography } = theme;
 
+const DEFAULT_CATEGORY_ORDER = [
+  'tops',
+  'bottoms',
+  'dresses',
+  'shoes',
+  'outerwear',
+  'bags',
+  'accessories',
+  'jumpsuits & rompers',
+  'knitwear',
+  'activewear',
+  'swimwear',
+  'jewellery',
+  'sleepwear & loungewear',
+  'intimates',
+];
+
 interface CategoryPillsProps {
   categories?: WardrobeCategory[];
   subcategories?: WardrobeSubcategory[];
@@ -41,7 +58,17 @@ export default function CategoryPills({
   const styles = createStyles(colors);
 
   const isCategory = variant === 'category';
-  const items = isCategory ? categories : subcategories;
+  const sortedCategories = React.useMemo(() => {
+    if (!isCategory) return categories;
+    return [...categories].sort((a, b) => {
+      const aIndex = DEFAULT_CATEGORY_ORDER.indexOf(a.name.toLowerCase());
+      const bIndex = DEFAULT_CATEGORY_ORDER.indexOf(b.name.toLowerCase());
+      const aPos = aIndex === -1 ? DEFAULT_CATEGORY_ORDER.length : aIndex;
+      const bPos = bIndex === -1 ? DEFAULT_CATEGORY_ORDER.length : bIndex;
+      return aPos - bPos;
+    });
+  }, [categories, isCategory]);
+  const items = isCategory ? sortedCategories : subcategories;
   const selectedId = isCategory ? selectedCategoryId : selectedSubcategoryId;
   const onSelect = isCategory ? onSelectCategory : onSelectSubcategory;
 
@@ -63,16 +90,17 @@ export default function CategoryPills({
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
         <PillButton
-          label={isCategory ? '' : item.name}
+          label={item.name}
           leading={
             isCategory ? (
               <WardrobeCategoryIcon
                 categoryName={item.name}
-                size={24}
+                size={28}
                 color={selectedId === item.id ? colors.white : colors.textSecondary}
               />
             ) : undefined
           }
+          layout={isCategory ? 'vertical' : 'horizontal'}
           selected={selectedId === item.id}
           onPress={() => handlePress(item.id)}
           variant={isCategory ? 'default' : 'primary'}

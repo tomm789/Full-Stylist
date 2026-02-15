@@ -165,6 +165,8 @@ export default function OutfitsScreen() {
       onAdd: () => router.push('/outfits/new' as any),
       hasActiveFilters: filters.showFavoritesOnly,
       placeholder: 'Search outfits...',
+      rightActionIcon: 'notifications-outline',
+      onRightAction: () => router.push('/notifications' as any),
     });
     return () => clearHeaderSearch();
   }, [filters.searchQuery, filters.showFavoritesOnly]);

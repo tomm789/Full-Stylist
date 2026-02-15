@@ -1,17 +1,25 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { Animated, Dimensions, PanResponder, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { HeaderAddMenu, HeaderRightMenu, ConnectedHeaderSearchTitle, ConnectedHeaderSearchRight, FullScreenMenuModal } from '@/components/tabs';
 import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { HeaderSearchProvider, useHeaderSearch } from '@/contexts/HeaderSearchContext';
-import { borderRadius, shadows, spacing } from '@/styles/theme';
+import { HeaderSearchProvider } from '@/contexts/HeaderSearchContext';
+import { CalendarPanelProvider, useCalendarPanel } from '@/contexts/CalendarPanelContext';
+import { useNotifications } from '@/contexts/NotificationsContext';
+import { borderRadius, shadows, spacing, typography } from '@/styles/theme';
 import type { ThemeColors } from '@/styles/themes';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import CalendarScreen from './calendar';
 
-function FloatingTabBar(props: BottomTabBarProps) {
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SWIPE_THRESHOLD = 80;
+
+function FloatingTabBar(
+  props: BottomTabBarProps & { onMenuPress?: () => void }
+) {
   const colors = useThemeColors();
 
   return (
@@ -53,6 +61,24 @@ function FloatingTabBar(props: BottomTabBarProps) {
 
           const iconNode = options.tabBarIcon?.({ focused, color, size: 22 });
           const labelText = typeof label === 'string' ? label : '';
+
+          if (route.name === 'profile' && props.onMenuPress) {
+            return (
+              <TouchableOpacity
+                key={route.key}
+                onPress={props.onMenuPress}
+                style={floatingTabBarStyles.tab}
+                accessibilityRole="button"
+                accessibilityState={{ selected: focused }}
+                accessibilityLabel={labelText || 'Menu'}
+              >
+                {iconNode}
+                {labelText ? (
+                  <Text style={[floatingTabBarStyles.label, { color }]}>{labelText}</Text>
+                ) : null}
+              </TouchableOpacity>
+            );
+          }
 
           // Use custom tabBarButton if provided (e.g. the Menu/profile tab)
           const ButtonComponent = options.tabBarButton;
@@ -119,12 +145,70 @@ const floatingTabBarStyles = StyleSheet.create({
 });
 
 export default function TabsLayout() {
+  return (
+    <CalendarPanelProvider>
+      <HeaderSearchProvider>
+        <TabsLayoutInner />
+      </HeaderSearchProvider>
+    </CalendarPanelProvider>
+  );
+}
+
+function TabsLayoutInner() {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { session, loading, signOut } = useAuth();
+  const { unreadCount } = useNotifications();
+  const { showCalendar, closeCalendar } = useCalendarPanel();
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const tabBarPropsRef = useRef<BottomTabBarProps | null>(null);
+  const tabBarUpdateScheduled = useRef(false);
+  const [, forceTabBarRender] = useState(0);
+
+  // Auth guard — redirect to login when session is lost
+  useEffect(() => {
+    if (!loading && !session) {
+      router.replace('/auth/login' as any);
+    }
+  }, [session, loading, router]);
+
+  // Calendar slide-in animation (from the left)
+  const calendarAnim = useRef(new Animated.Value(-SCREEN_WIDTH)).current;
+  const [calendarRendered, setCalendarRendered] = useState(false);
+
+  useEffect(() => {
+    if (showCalendar) {
+      setCalendarRendered(true);
+      Animated.timing(calendarAnim, {
+        toValue: 0,
+        duration: 280,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(calendarAnim, {
+        toValue: -SCREEN_WIDTH,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setCalendarRendered(false);
+      });
+    }
+  }, [showCalendar]);
+
+  // Swipe-left to dismiss calendar
+  const calendarPanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gestureState) =>
+        Math.abs(gestureState.dx) > 10 && gestureState.dx < 0,
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dx < -SWIPE_THRESHOLD) {
+          closeCalendar();
+        }
+      },
+    })
+  ).current;
 
   const handleCreateOption = (type: string) => {
     setShowCreateMenu(false);
@@ -309,10 +393,23 @@ export default function TabsLayout() {
   );
 
   return (
-    <HeaderSearchProvider>
     <>
       <Tabs
-        tabBar={(props) => <FloatingTabBar {...props} />}
+        tabBar={(props) => {
+          // Store props so we can render the pill outside the Tabs tree
+          // to keep it above the menu/calendar panels.
+          if (tabBarPropsRef.current !== props) {
+            tabBarPropsRef.current = props;
+            if (!tabBarUpdateScheduled.current) {
+              tabBarUpdateScheduled.current = true;
+              requestAnimationFrame(() => {
+                tabBarUpdateScheduled.current = false;
+                forceTabBarRender((tick) => tick + 1);
+              });
+            }
+          }
+          return null;
+        }}
         screenOptions={{
           headerShown: true,
           headerRight: () => <HeaderRightMenu />,
@@ -328,17 +425,15 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="calendar"
           options={{
-            headerTitle: () => <HeaderAddMenu title="Calendar" />,
-            tabBarLabel: 'Calendar',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="calendar-outline" size={size} color={color} />
-            ),
+            headerShown: false,
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' },
           }}
         />
         <Tabs.Screen
           name="wardrobe"
           options={{
-            headerTitle: () => <ConnectedHeaderSearchTitle fallbackTitle="Wardrobe" />,
+            headerTitle: () => <ConnectedHeaderSearchTitle />,
             headerRight: () => <ConnectedHeaderSearchRight />,
             tabBarLabel: 'Wardrobe',
             tabBarIcon: ({ color, size }) => (
@@ -368,7 +463,7 @@ export default function TabsLayout() {
           name="hair-and-make-up"
           options={{
             headerTitle: () => <HeaderAddMenu title="Hair & Make-Up" />,
-            tabBarLabel: 'Hair/Makeup',
+            tabBarLabel: 'Hair & Make-Up',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="cut-outline" size={size} color={color} />
             ),
@@ -382,13 +477,15 @@ export default function TabsLayout() {
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="menu-outline" size={size} color={color} />
             ),
-            tabBarButton: ({ onPress: _nav, onLongPress: _long, onPressIn: _in, onPressOut: _out, href: _href, ...rest }) => (
+            tabBarButton: ({ onPress: _nav, onLongPress: _long, onPressIn: _in, onPressOut: _out, href: _href, children, ...rest }) => (
               <TouchableOpacity
                 {...rest}
-                onPress={() => setShowMenu(true)}
+                onPress={() => setShowMenu((prev) => !prev)}
                 accessibilityRole="button"
                 accessibilityLabel="Menu"
-              />
+              >
+                {children}
+              </TouchableOpacity>
             ),
           }}
         />
@@ -454,8 +551,64 @@ export default function TabsLayout() {
           <Text style={styles.menuItemText}>Headshot</Text>
         </TouchableOpacity>
       </DropdownMenuModal>
+
+      {calendarRendered && (
+        <Animated.View
+          style={[
+            styles.calendarPanel,
+            { transform: [{ translateX: calendarAnim }] },
+          ]}
+          {...calendarPanResponder.panHandlers}
+        >
+          <SafeAreaView style={styles.calendarPanelInner}>
+            <View style={styles.calendarHeader}>
+              <View style={styles.calendarHeaderLeft}>
+                <TouchableOpacity style={styles.calendarCollapseButton} onPress={closeCalendar}>
+                  <Ionicons name="chevron-back" size={22} color={colors.primary} />
+                </TouchableOpacity>
+                <Text style={styles.calendarTitle}>Calendar</Text>
+              </View>
+              <View style={styles.calendarHeaderRight}>
+                <TouchableOpacity
+                  style={styles.calendarHeaderIcon}
+                  onPress={() => {
+                    closeCalendar();
+                    router.push('/notifications' as any);
+                  }}
+                >
+                  <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
+                  {unreadCount > 0 && (
+                    <View style={styles.calendarBadge}>
+                      <Text style={styles.calendarBadgeText}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.calendarHeaderIcon}
+                  onPress={() => {
+                    closeCalendar();
+                    router.push('/search' as any);
+                  }}
+                >
+                  <Ionicons name="search-outline" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <CalendarScreen />
+          </SafeAreaView>
+        </Animated.View>
+      )}
+
+      {/* Floating pill rendered last so it stacks above menu & calendar panels */}
+      {tabBarPropsRef.current && (
+        <FloatingTabBar
+          {...tabBarPropsRef.current}
+          onMenuPress={() => setShowMenu((prev) => !prev)}
+        />
+      )}
     </>
-    </HeaderSearchProvider>
   );
 }
 
@@ -495,5 +648,66 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
     fontWeight: '500',
+  },
+  calendarPanel: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.background,
+    zIndex: 49,
+  },
+  calendarPanelInner: {
+    flex: 1,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.background,
+  },
+  calendarHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  calendarCollapseButton: {
+    padding: spacing.xs,
+  },
+  calendarTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  calendarHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  calendarHeaderIcon: {
+    position: 'relative',
+    padding: spacing.sm,
+    marginHorizontal: spacing.xs,
+  },
+  calendarBadge: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.round,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+  },
+  calendarBadgeText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
   },
 });

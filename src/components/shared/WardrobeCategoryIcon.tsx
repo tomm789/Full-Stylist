@@ -12,13 +12,22 @@ interface WardrobeCategoryIconProps {
 
 const fallbackIcon = '👔';
 
+const normalize = (s: string) => s.toLowerCase().replace(/[&\s]+/g, ' ').trim();
+
+const normalizedIconMap = Object.entries(wardrobeCategoryIconComponents).reduce<
+  Record<string, React.ComponentType<SvgProps>>
+>((acc, [key, component]) => {
+  acc[normalize(key)] = component as React.ComponentType<SvgProps>;
+  return acc;
+}, {});
+
 export default function WardrobeCategoryIcon({
   categoryName,
   size = 20,
   color,
 }: WardrobeCategoryIconProps) {
   const colors = useThemeColors();
-  const Icon = wardrobeCategoryIconComponents[categoryName] as React.ComponentType<SvgProps> | undefined;
+  const Icon = normalizedIconMap[normalize(categoryName)];
   const iconColor = color ?? colors.textPrimary;
 
   if (!Icon) {
@@ -31,7 +40,7 @@ export default function WardrobeCategoryIcon({
     );
   }
 
-  return <Icon width={size} height={size} color={iconColor} />;
+  return <Icon width={size} height={size} fill={iconColor} color={iconColor} />;
 }
 
 const styles = StyleSheet.create({

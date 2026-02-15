@@ -132,9 +132,9 @@ export default function ProfileScreen() {
         onTabChange={setActiveTab}
         headshotImages={headshotImages}
         bodyShotImages={bodyShotImages}
-        onHeadshotPress={(id) => router.push(`/headshot/${id}` as any)}
+        onHeadshotPress={() => router.push('/(tabs)/hair-and-make-up' as any)}
         onBodyShotPress={(id) => router.push(`/bodyshot/${id}` as any)}
-        onNewHeadshot={() => router.push('/headshot/new' as any)}
+        onNewHeadshot={() => router.push('/(tabs)/hair-and-make-up' as any)}
         onNewBodyShot={() => router.push('/bodyshot/new' as any)}
       />
 
@@ -151,7 +151,7 @@ export default function ProfileScreen() {
         onDisplayNameChange={setDisplayName}
         onSelectAvatar={setSelectedAvatarUrl}
         onClearAvatar={() => setSelectedAvatarUrl(null)}
-        onCreateHeadshot={() => router.push('/headshot/new' as any)}
+        onCreateHeadshot={() => router.push('/(tabs)/hair-and-make-up' as any)}
         onSave={handleSave}
         saving={savingProfile}
       />

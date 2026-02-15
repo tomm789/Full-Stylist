@@ -1,0 +1,15 @@
+node_modules/
+.expo/
+.expo-shared/
+android/
+ios/
+dist/
+build/
+.next/
+coverage/
+.git/
+yarn.lock
+package-lock.json
+*.log
+*.map
+.DS_Store

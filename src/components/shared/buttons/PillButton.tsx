@@ -27,6 +27,7 @@ interface PillButtonProps extends TouchableOpacityProps {
   onRemove?: () => void;
   icon?: keyof typeof Ionicons.glyphMap;
   leading?: React.ReactNode;
+  layout?: 'horizontal' | 'vertical';
   size?: 'small' | 'medium' | 'large';
   variant?: 'default' | 'primary' | 'secondary';
   style?: ViewStyle;
@@ -40,6 +41,7 @@ export default function PillButton({
   onRemove,
   icon,
   leading,
+  layout = 'horizontal',
   size = 'medium',
   variant = 'default',
   disabled,
@@ -49,11 +51,13 @@ export default function PillButton({
 }: PillButtonProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
-  const hasLabel = Boolean(label);
+
+  const isVertical = layout === 'vertical';
 
   const pillStyle = [
     styles.pill,
     styles[size],
+    isVertical && styles.pillVertical,
     selected && styles[`${variant}Selected`],
     disabled && styles.disabled,
     style,
@@ -62,6 +66,7 @@ export default function PillButton({
   const pillTextStyle = [
     styles.pillText,
     styles[`${size}Text`],
+    isVertical && styles.pillTextVertical,
     selected && styles[`${variant}SelectedText`],
     textStyle,
   ];
@@ -74,12 +79,8 @@ export default function PillButton({
       activeOpacity={0.7}
       {...props}
     >
-      {leading && (
-        <View style={[styles.leading, hasLabel && styles.leadingWithLabel]}>
-          {leading}
-        </View>
-      )}
-      {icon && (
+      {leading}
+      {!leading && icon && (
         <Ionicons
           name={icon}
           size={size === 'small' ? 14 : size === 'medium' ? 16 : 18}
@@ -87,7 +88,11 @@ export default function PillButton({
           style={styles.icon}
         />
       )}
-      {hasLabel && <Text style={pillTextStyle}>{label}</Text>}
+      {label ? (
+        <Text style={pillTextStyle} numberOfLines={1} ellipsizeMode="tail">
+          {label}
+        </Text>
+      ) : null}
       {onRemove && (
         <TouchableOpacity
           onPress={(e) => {
@@ -129,6 +134,23 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     gap: spacing.sm,
+  },
+
+  // Vertical layout
+  pillVertical: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    gap: 2,
+    minWidth: 72,
+    maxWidth: 80,
+  },
+  pillTextVertical: {
+    fontSize: 10,
+    textAlign: 'center',
+    maxWidth: 68,
   },
 
   // Selected states
@@ -174,13 +196,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
 
   // Icon and remove button
   icon: {
-    marginRight: spacing.xs / 2,
-  },
-  leading: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  leadingWithLabel: {
     marginRight: spacing.xs / 2,
   },
   removeButton: {
