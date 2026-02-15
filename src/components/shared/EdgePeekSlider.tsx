@@ -6,6 +6,7 @@
 import React from 'react';
 import { FlatList, Platform, StyleSheet, useWindowDimensions, View, ViewStyle } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
 
 type RenderItemProps<T> = {
   item: T;
@@ -57,7 +58,23 @@ export default function EdgePeekSlider<T>({
   const snapInterval = itemWidth + gap;
   const listRef = React.useRef<FlatList<T>>(null);
   const lastIndexRef = React.useRef<number>(-1);
-  const edgeTriggerRef = React.useRef<number>(0);
+
+  // Use proper gesture handler for edge swipe detection
+  const { GestureView } = useEdgeSwipe({
+    direction: 'left',
+    onSwipe: () => {
+      if (onEdgeSwipeStart && activeIndex === 0) {
+        onEdgeSwipeStart();
+      }
+    },
+    enabled: edgeSwipeEnabled && activeIndex === 0,
+    edgeThreshold: edgeSwipeThreshold,
+    swipeDistance: 50,
+    minVelocity: 0.15, // Lower threshold for better UX
+    haptic: enableHaptics,
+    debounceMs: 500,
+    style,
+  });
 
   React.useEffect(() => {
     if (activeIndex === undefined || activeIndex === null) return;
@@ -65,14 +82,6 @@ export default function EdgePeekSlider<T>({
     lastIndexRef.current = activeIndex;
     listRef.current?.scrollToIndex({ index: activeIndex, animated: true });
   }, [activeIndex]);
-
-  const triggerEdge = () => {
-    if (!edgeSwipeEnabled || !onEdgeSwipeStart) return;
-    const now = Date.now();
-    if (now - edgeTriggerRef.current < 800) return;
-    edgeTriggerRef.current = now;
-    onEdgeSwipeStart();
-  };
 
   const handleScroll = (event: any) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -84,55 +93,44 @@ export default function EdgePeekSlider<T>({
     if (enableHaptics && Platform.OS !== 'web') {
       void Haptics.selectionAsync().catch(() => undefined);
     }
-
-    if (edgeSwipeEnabled && nextIndex === 0 && offsetX < -edgeSwipeThreshold) {
-      triggerEdge();
-    }
-  };
-
-  const handleScrollEndDrag = (event: any) => {
-    if (!edgeSwipeEnabled || lastIndexRef.current !== 0) return;
-    const velocityX = event.nativeEvent.velocity?.x ?? 0;
-    if (velocityX > 0.35) {
-      triggerEdge();
-    }
   };
 
   return (
-    <FlatList
-      ref={listRef}
-      horizontal
-      data={data}
-      keyExtractor={keyExtractor}
-      showsHorizontalScrollIndicator={false}
-      decelerationRate="fast"
-      snapToInterval={snapInterval}
-      snapToAlignment="center"
-      initialScrollIndex={Math.max(0, Math.min(data.length - 1, initialIndex))}
-      onScroll={handleScroll}
-      scrollEventThrottle={16}
-      onScrollEndDrag={handleScrollEndDrag}
-      getItemLayout={(_, index) => ({
-        length: snapInterval,
-        offset: snapInterval * index,
-        index,
-      })}
-      renderItem={({ item, index }) => (
-        <View style={[styles.itemWrap, { width: itemWidth, height: itemHeight, marginHorizontal: gap / 2 }]}>
-          {renderItem({ item, index, width: itemWidth, height: itemHeight })}
-        </View>
-      )}
-      contentContainerStyle={[
-        styles.content,
-        { paddingHorizontal: sidePadding },
-        contentContainerStyle,
-      ]}
-      style={style}
-      onScrollToIndexFailed={() => {
-        if (activeIndex === undefined || activeIndex === null) return;
-        listRef.current?.scrollToIndex({ index: activeIndex, animated: true });
-      }}
-    />
+    <GestureView>
+      <FlatList
+        ref={listRef}
+        horizontal
+        data={data}
+        keyExtractor={keyExtractor}
+        showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        snapToInterval={snapInterval}
+        snapToAlignment="center"
+        initialScrollIndex={Math.max(0, Math.min(data.length - 1, initialIndex))}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        getItemLayout={(_, index) => ({
+          length: snapInterval,
+          offset: snapInterval * index,
+          index,
+        })}
+        renderItem={({ item, index }) => (
+          <View style={[styles.itemWrap, { width: itemWidth, height: itemHeight, marginHorizontal: gap / 2 }]}>
+            {renderItem({ item, index, width: itemWidth, height: itemHeight })}
+          </View>
+        )}
+        contentContainerStyle={[
+          styles.content,
+          { paddingHorizontal: sidePadding },
+          contentContainerStyle,
+        ]}
+        style={style}
+        onScrollToIndexFailed={() => {
+          if (activeIndex === undefined || activeIndex === null) return;
+          listRef.current?.scrollToIndex({ index: activeIndex, animated: true });
+        }}
+      />
+    </GestureView>
   );
 }
 
