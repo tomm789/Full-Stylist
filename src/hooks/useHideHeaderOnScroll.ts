@@ -9,6 +9,7 @@ type HideHeaderOptions = {
   translateAmount?: number;
   hideDuration?: number;
   showDuration?: number;
+  onVisibilityChange?: (visible: boolean, timing: { hideDuration: number; showDuration: number }) => void;
 };
 
 type HideHeaderResult = {
@@ -52,6 +53,10 @@ export function useHideHeaderOnScroll(
       if (!visible && uiHiddenRef.current) return;
       uiHiddenRef.current = !visible;
       setUiHidden(!visible);
+      options.onVisibilityChange?.(visible, {
+        hideDuration: config.hideDuration,
+        showDuration: config.showDuration,
+      });
 
       const heightDuration = visible ? config.showDuration : config.hideDuration;
       const fadeDuration = visible ? config.showDuration : config.hideDuration;
@@ -73,7 +78,15 @@ export function useHideHeaderOnScroll(
         }),
       ]).start();
     },
-    [config.hideDuration, config.showDuration, config.translateAmount, headerHeight, headerOpacity, headerTranslate]
+    [
+      config.hideDuration,
+      config.showDuration,
+      config.translateAmount,
+      headerHeight,
+      headerOpacity,
+      headerTranslate,
+      options.onVisibilityChange,
+    ]
   );
 
   const handleHeaderLayout = useCallback(

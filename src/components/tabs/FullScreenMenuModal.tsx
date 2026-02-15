@@ -8,13 +8,13 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   Animated,
+  DevSettings,
   Dimensions,
   PanResponder,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text as RNText,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { borderRadius, spacing, typography, shadows } from '@/styles/theme';
 import { useThemeColors } from '@/contexts/ThemeContext';
+import { HeaderActionIcons } from '@/components/shared';
 import type { ThemeColors } from '@/styles/themes';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -45,6 +46,7 @@ type FullScreenMenuModalProps = {
   gridTitle: string;
   gridItems: MenuItem[];
   actionItems: MenuItem[];
+  query: string;
 };
 
 export function FullScreenMenuModal({
@@ -54,12 +56,12 @@ export function FullScreenMenuModal({
   gridTitle,
   gridItems,
   actionItems,
+  query,
 }: FullScreenMenuModalProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const router = useRouter();
   const { unreadCount } = useNotifications();
-  const [query, setQuery] = useState('');
   const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
   const [rendered, setRendered] = useState(false);
 
@@ -79,7 +81,6 @@ export function FullScreenMenuModal({
       }).start(({ finished }) => {
         if (finished) {
           setRendered(false);
-          setQuery('');
         }
       });
     }
@@ -145,44 +146,48 @@ export function FullScreenMenuModal({
         {/* Header — title + actions */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
+            <TouchableOpacity style={styles.menuCollapseButton} onPress={onClose}>
+              <Ionicons name="chevron-back" size={22} color={colors.primary} />
+            </TouchableOpacity>
             <RNText style={styles.title}>Menu</RNText>
-            {onAdd && (
-              <TouchableOpacity style={styles.headerIcon} onPress={onAdd}>
-                <Ionicons name="add-circle-outline" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            )}
           </View>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.headerIcon} onPress={handleSearch}>
-              <Ionicons name="search-outline" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerIcon} onPress={handleNotifications}>
-              <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
-              {unreadCount > 0 && (
-                <View style={styles.badge}>
-                  <RNText style={styles.badgeText}>
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </RNText>
-                </View>
-              )}
-            </TouchableOpacity>
+            <HeaderActionIcons
+              onAdd={onAdd}
+              onSearch={handleSearch}
+              onNotifications={handleNotifications}
+              unreadCount={unreadCount}
+            />
           </View>
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
-          {/* Inline menu search */}
-          <View style={styles.searchWrap}>
-            <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search menu"
-              placeholderTextColor={colors.textTertiary}
-              style={styles.searchInput}
-              autoCorrect={false}
-              returnKeyType="search"
-            />
-          </View>
+          <TouchableOpacity
+            style={styles.refreshRow}
+            onPress={async () => {
+              try {
+                // Expo Go may not include expo-updates in some setups.
+                // Use DevSettings reload as a safe fallback.
+                const Updates = require('expo-updates');
+                await Updates.reloadAsync();
+              } catch (error) {
+                DevSettings.reload();
+              }
+            }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Hard reload app"
+          >
+            <View style={styles.refreshIconWrap}>
+              <Ionicons name="refresh" size={20} color={colors.textPrimary} />
+            </View>
+            <View style={styles.refreshTextWrap}>
+              <RNText style={styles.refreshTitle}>Refresh</RNText>
+              <RNText style={styles.refreshDescription}>
+                Hard reload the Expo Go page
+              </RNText>
+            </View>
+          </TouchableOpacity>
 
           {filteredGridItems.length > 0 && (
             <View style={styles.section}>
@@ -289,6 +294,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  menuCollapseButton: {
+    padding: spacing.xs,
+  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -325,22 +333,36 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingBottom: spacing.massive + spacing.huge,
     gap: spacing.lg,
   },
-  searchWrap: {
+  refreshRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background,
     borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    ...shadows.sm,
   },
-  searchInput: {
+  refreshIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.round,
+    backgroundColor: colors.backgroundTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  refreshTextWrap: {
     flex: 1,
+    gap: spacing.xs,
+  },
+  refreshTitle: {
     fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
-    paddingVertical: 0,
+  },
+  refreshDescription: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
   },
   section: {
     gap: spacing.sm,

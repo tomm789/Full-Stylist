@@ -4,20 +4,16 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { useCalendarPanel } from '@/contexts/CalendarPanelContext';
+import { useCalendarEntryFlow } from '@/contexts/CalendarEntryFlowContext';
+import HeaderTitleRow from './HeaderTitleRow';
 import type { ThemeColors } from '@/styles/themes';
 
-const { typography, spacing } = theme;
+const { spacing } = theme;
 
 interface HeaderAddMenuProps {
   title: string;
@@ -27,7 +23,7 @@ export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const router = useRouter();
-  const { showCalendar, toggleCalendar } = useCalendarPanel();
+  const { openDateSelector } = useCalendarEntryFlow();
 
   const action = title.toLowerCase();
   const hasPrimaryAction = ['outfits', 'calendar', 'wardrobe', 'lookbooks'].includes(action);
@@ -38,7 +34,7 @@ export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
         router.push('/outfits/new' as any);
         break;
       case 'calendar':
-        router.push('/(tabs)/calendar?openAddPicker=true' as any);
+        openDateSelector(new Date());
         break;
       case 'wardrobe':
         router.push('/wardrobe/add' as any);
@@ -52,42 +48,24 @@ export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
   };
 
   return (
-    <View style={styles.headerTitleContainer}>
-      <TouchableOpacity style={styles.calendarButton} onPress={toggleCalendar}>
-        <Ionicons
-          name={showCalendar ? 'chevron-back' : 'calendar-outline'}
-          size={22}
-          color={showCalendar ? colors.primary : colors.textPrimary}
-        />
-      </TouchableOpacity>
-      <Text style={styles.headerTitleText}>{title}</Text>
-      {hasPrimaryAction && (
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={handlePrimaryAction}
-        >
-          <Ionicons name="add-circle-outline" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-      )}
-    </View>
+    <HeaderTitleRow
+      title={title}
+      rightSlot={
+        hasPrimaryAction ? (
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={handlePrimaryAction}
+          >
+            <Ionicons name="add-circle-outline" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+        ) : null
+      }
+    />
   );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  headerTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  headerTitleText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-  },
   addButton: {
-    padding: spacing.xs,
-  },
-  calendarButton: {
     padding: spacing.xs,
   },
 });

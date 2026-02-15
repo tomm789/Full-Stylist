@@ -27,3 +27,5 @@ export * from './filters';
 // Search
 export { SearchResultItem } from './SearchResultItem';
 export { SearchFilterBar } from './SearchFilterBar';
+export { default as TabPillsRow } from './TabPillsRow';
+export { default as EdgePeekSlider } from './EdgePeekSlider';

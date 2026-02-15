@@ -16,6 +16,7 @@ import { Image } from 'expo-image';
 import SocialActionBar from '@/components/outfits/SocialActionBar';
 import CommentSection from '@/components/outfits/CommentSection';
 import { AIGenerationFeedback } from '@/components/ai';
+import { normalizeLabelList } from '@/lib/outfits/normalizeLabels';
 import { supabase } from '@/lib/supabase';
 import { continueTimeline } from '@/lib/perf/timeline';
 
@@ -234,13 +235,17 @@ export function OutfitViewContent({
               {!!outfit?.occasions?.length && (
                 <View style={styles.aiRow}>
                   <Text style={styles.aiLabel}>Occasions</Text>
-                  <Text style={styles.aiText}>{outfit.occasions.join(', ')}</Text>
+                  <Text style={styles.aiText}>
+                    {normalizeLabelList(outfit.occasions).join(', ')}
+                  </Text>
                 </View>
               )}
               {!!outfit?.style_tags?.length && (
                 <View style={styles.aiRow}>
                   <Text style={styles.aiLabel}>Style Tags</Text>
-                  <Text style={styles.aiText}>{outfit.style_tags.join(', ')}</Text>
+                  <Text style={styles.aiText}>
+                    {normalizeLabelList(outfit.style_tags).join(', ')}
+                  </Text>
                 </View>
               )}
               {!!outfit?.season && outfit.season !== 'all-season' && (

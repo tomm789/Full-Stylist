@@ -40,6 +40,7 @@ export function useHairAndMakeup() {
   const navigation = useNavigation();
   const {
     allHeadshots,
+    headshotImageUrl,
     refreshImages,
   } = useProfileImages({ userId: user?.id });
   const selfieUpload = useImageGeneration();
@@ -72,6 +73,16 @@ export function useHairAndMakeup() {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [showFaceMenu, setShowFaceMenu] = useState(false);
+  const profileInitials = useMemo(() => {
+    const raw =
+      (user?.user_metadata as { full_name?: string })?.full_name ||
+      user?.email ||
+      '';
+    const parts = raw.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+  }, [user]);
   const showHeadshotGrid = activeView === 'grid';
   const showFacePreview = activeView === 'face';
   const isPresetView = activeView === 'hair' || activeView === 'makeup';
@@ -738,9 +749,14 @@ export function useHairAndMakeup() {
     handleInfoPress,
     // Data
     allHeadshots,
+    headshotImageUrl,
+    profileInitials,
     selfieUpload,
+    selfieImageId,
+    selfieImageUrl,
     // Preview
     previewImageUrl,
+    previewImageId,
     previewHasImage,
     previewIsGenerated,
     previewSource,

@@ -1,34 +1,83 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { Animated, Dimensions, PanResponder, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { HeaderAddMenu, HeaderRightMenu, ConnectedHeaderSearchTitle, ConnectedHeaderSearchRight, FullScreenMenuModal } from '@/components/tabs';
+import { HeaderAddMenu, HeaderRightMenu, FullScreenMenuModal } from '@/components/tabs';
 import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { FloatingTabBarProvider, useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { HeaderSearchProvider } from '@/contexts/HeaderSearchContext';
-import { CalendarPanelProvider, useCalendarPanel } from '@/contexts/CalendarPanelContext';
-import { useNotifications } from '@/contexts/NotificationsContext';
+import { useCalendarEntryFlow } from '@/contexts/CalendarEntryFlowContext';
 import { borderRadius, shadows, spacing, typography } from '@/styles/theme';
 import type { ThemeColors } from '@/styles/themes';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import CalendarScreen from './calendar';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const SWIPE_THRESHOLD = 80;
 
 function FloatingTabBar(
-  props: BottomTabBarProps & { onMenuPress?: () => void }
+  props: BottomTabBarProps & {
+    onMenuPress?: () => void;
+    menuActive?: boolean;
+    menuQuery?: string;
+    onMenuQueryChange?: (value: string) => void;
+    onMenuQueryClear?: () => void;
+  }
 ) {
   const colors = useThemeColors();
+  const { tabBarOpacity } = useFloatingTabBar();
+  const menuQuery = props.menuQuery ?? '';
+  const hasMenuQuery = menuQuery.trim().length > 0;
+  const menuButtonIcon = props.menuActive && hasMenuQuery ? 'close' : 'menu-outline';
+  const containerZIndex = props.menuActive ? 60 : 40;
+  const containerOpacity = props.menuActive ? 1 : tabBarOpacity;
+
+  if (props.menuActive) {
+    return (
+      <Animated.View
+        style={[
+          floatingTabBarStyles.container,
+          {
+            backgroundColor: colors.backgroundSecondary,
+            zIndex: containerZIndex,
+            ...shadows.lg,
+            opacity: containerOpacity,
+          },
+        ]}
+      >
+        <View style={floatingTabBarStyles.inner}>
+          <View style={[floatingTabBarStyles.searchWrap, { borderColor: colors.borderLight, backgroundColor: colors.background }]}>
+            <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
+            <TextInput
+              value={menuQuery}
+              onChangeText={props.onMenuQueryChange}
+              placeholder="Search menu"
+              placeholderTextColor={colors.textTertiary}
+              style={[floatingTabBarStyles.searchInput, { color: colors.textPrimary }]}
+              autoCorrect={false}
+              returnKeyType="search"
+            />
+          </View>
+          <TouchableOpacity
+            onPress={props.menuActive && hasMenuQuery ? props.onMenuQueryClear : props.onMenuPress}
+            style={floatingTabBarStyles.menuButton}
+            accessibilityRole="button"
+            accessibilityLabel={props.menuActive && hasMenuQuery ? 'Clear search' : 'Menu'}
+          >
+            <Ionicons name={menuButtonIcon} size={22} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    );
+  }
 
   return (
-    <View
+    <Animated.View
       style={[
         floatingTabBarStyles.container,
         {
           backgroundColor: colors.backgroundSecondary,
+          zIndex: containerZIndex,
           ...shadows.lg,
+          opacity: containerOpacity,
         },
       ]}
     >
@@ -116,7 +165,7 @@ function FloatingTabBar(
           );
         })}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -142,15 +191,36 @@ const floatingTabBarStyles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
+  searchWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.round,
+    paddingHorizontal: spacing.md,
+    marginLeft: 0,
+    marginRight: spacing.md,
+    borderWidth: 1,
+    gap: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: typography.fontSize.sm,
+    paddingVertical: 0,
+  },
+  menuButton: {
+    width: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 export default function TabsLayout() {
   return (
-    <CalendarPanelProvider>
+    <FloatingTabBarProvider>
       <HeaderSearchProvider>
         <TabsLayoutInner />
       </HeaderSearchProvider>
-    </CalendarPanelProvider>
+    </FloatingTabBarProvider>
   );
 }
 
@@ -159,10 +229,10 @@ function TabsLayoutInner() {
   const styles = createStyles(colors);
   const router = useRouter();
   const { session, loading, signOut } = useAuth();
-  const { unreadCount } = useNotifications();
-  const { showCalendar, closeCalendar } = useCalendarPanel();
+  const { openDateSelector } = useCalendarEntryFlow();
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [menuQuery, setMenuQuery] = useState('');
   const tabBarPropsRef = useRef<BottomTabBarProps | null>(null);
   const tabBarUpdateScheduled = useRef(false);
   const [, forceTabBarRender] = useState(0);
@@ -174,41 +244,11 @@ function TabsLayoutInner() {
     }
   }, [session, loading, router]);
 
-  // Calendar slide-in animation (from the left)
-  const calendarAnim = useRef(new Animated.Value(-SCREEN_WIDTH)).current;
-  const [calendarRendered, setCalendarRendered] = useState(false);
-
   useEffect(() => {
-    if (showCalendar) {
-      setCalendarRendered(true);
-      Animated.timing(calendarAnim, {
-        toValue: 0,
-        duration: 280,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(calendarAnim, {
-        toValue: -SCREEN_WIDTH,
-        duration: 250,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) setCalendarRendered(false);
-      });
+    if (!showMenu && menuQuery) {
+      setMenuQuery('');
     }
-  }, [showCalendar]);
-
-  // Swipe-left to dismiss calendar
-  const calendarPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_evt, gestureState) =>
-        Math.abs(gestureState.dx) > 10 && gestureState.dx < 0,
-      onPanResponderRelease: (_evt, gestureState) => {
-        if (gestureState.dx < -SWIPE_THRESHOLD) {
-          closeCalendar();
-        }
-      },
-    })
-  ).current;
+  }, [showMenu, menuQuery]);
 
   const handleCreateOption = (type: string) => {
     setShowCreateMenu(false);
@@ -218,7 +258,7 @@ function TabsLayoutInner() {
         router.push('/outfits/new' as any);
         break;
       case 'calendar':
-        router.push('/(tabs)/calendar?openAddPicker=true' as any);
+        openDateSelector(new Date());
         break;
       case 'wardrobe':
         router.push('/wardrobe/add' as any);
@@ -252,7 +292,7 @@ function TabsLayoutInner() {
         router.push('/(tabs)/outfits/lookbooks' as any);
         break;
       case 'calendar':
-        router.push('/(tabs)/calendar' as any);
+        router.push('/calendar' as any);
         break;
       case 'wardrobe':
         router.push('/(tabs)/wardrobe' as any);
@@ -433,8 +473,7 @@ function TabsLayoutInner() {
         <Tabs.Screen
           name="wardrobe"
           options={{
-            headerTitle: () => <ConnectedHeaderSearchTitle />,
-            headerRight: () => <ConnectedHeaderSearchRight />,
+            headerShown: false,
             tabBarLabel: 'Wardrobe',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="shirt-outline" size={size} color={color} />
@@ -462,7 +501,7 @@ function TabsLayoutInner() {
         <Tabs.Screen
           name="hair-and-make-up"
           options={{
-            headerTitle: () => <HeaderAddMenu title="Hair & Make-Up" />,
+            headerShown: false,
             tabBarLabel: 'Hair & Make-Up',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="cut-outline" size={size} color={color} />
@@ -506,6 +545,7 @@ function TabsLayoutInner() {
         gridTitle=""
         gridItems={gridItems}
         actionItems={actionItems}
+        query={menuQuery}
       />
 
       <DropdownMenuModal
@@ -552,60 +592,15 @@ function TabsLayoutInner() {
         </TouchableOpacity>
       </DropdownMenuModal>
 
-      {calendarRendered && (
-        <Animated.View
-          style={[
-            styles.calendarPanel,
-            { transform: [{ translateX: calendarAnim }] },
-          ]}
-          {...calendarPanResponder.panHandlers}
-        >
-          <SafeAreaView style={styles.calendarPanelInner}>
-            <View style={styles.calendarHeader}>
-              <View style={styles.calendarHeaderLeft}>
-                <TouchableOpacity style={styles.calendarCollapseButton} onPress={closeCalendar}>
-                  <Ionicons name="chevron-back" size={22} color={colors.primary} />
-                </TouchableOpacity>
-                <Text style={styles.calendarTitle}>Calendar</Text>
-              </View>
-              <View style={styles.calendarHeaderRight}>
-                <TouchableOpacity
-                  style={styles.calendarHeaderIcon}
-                  onPress={() => {
-                    closeCalendar();
-                    router.push('/notifications' as any);
-                  }}
-                >
-                  <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
-                  {unreadCount > 0 && (
-                    <View style={styles.calendarBadge}>
-                      <Text style={styles.calendarBadgeText}>
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.calendarHeaderIcon}
-                  onPress={() => {
-                    closeCalendar();
-                    router.push('/search' as any);
-                  }}
-                >
-                  <Ionicons name="search-outline" size={24} color={colors.textPrimary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <CalendarScreen />
-          </SafeAreaView>
-        </Animated.View>
-      )}
-
-      {/* Floating pill rendered last so it stacks above menu & calendar panels */}
+      {/* Floating pill rendered last so it stacks above menu panels */}
       {tabBarPropsRef.current && (
         <FloatingTabBar
           {...tabBarPropsRef.current}
           onMenuPress={() => setShowMenu((prev) => !prev)}
+          menuActive={showMenu}
+          menuQuery={menuQuery}
+          onMenuQueryChange={setMenuQuery}
+          onMenuQueryClear={() => setMenuQuery('')}
         />
       )}
     </>
@@ -648,66 +643,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
     fontWeight: '500',
-  },
-  calendarPanel: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.background,
-    zIndex: 49,
-  },
-  calendarPanelInner: {
-    flex: 1,
-  },
-  calendarHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.background,
-  },
-  calendarHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  calendarCollapseButton: {
-    padding: spacing.xs,
-  },
-  calendarTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  calendarHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  calendarHeaderIcon: {
-    position: 'relative',
-    padding: spacing.sm,
-    marginHorizontal: spacing.xs,
-  },
-  calendarBadge: {
-    position: 'absolute',
-    top: spacing.xs,
-    right: spacing.xs,
-    backgroundColor: colors.error,
-    borderRadius: borderRadius.round,
-    minWidth: 18,
-    height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xs,
-  },
-  calendarBadgeText: {
-    color: colors.textLight,
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.bold,
   },
 });

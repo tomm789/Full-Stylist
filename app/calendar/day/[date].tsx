@@ -3,14 +3,14 @@
  * View and manage calendar entries for a specific day
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Modal,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,13 +18,10 @@ import {
   useDayEntries,
   useSlotPresets,
   useUserOutfits,
-  useCalendarDayForm,
 } from '@/hooks/calendar';
 import {
   EntryCard,
   CalendarDayHeader,
-  CalendarDayEntryForm,
-  CreatePresetModal,
 } from '@/components/calendar';
 import { LoadingSpinner } from '@/components/shared';
 import { theme } from '@/styles';
@@ -38,9 +35,8 @@ export default function CalendarDayScreen() {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
   const styles = createStyles(colors);
-  const { date, autoAdd } = useLocalSearchParams<{
+  const { date } = useLocalSearchParams<{
     date: string | string[];
-    autoAdd?: string | string[];
   }>();
 
   const router = useRouter();
@@ -48,45 +44,19 @@ export default function CalendarDayScreen() {
 
   const userId = user?.id;
   const dateKey = Array.isArray(date) ? date[0] : date;
-  const autoAddKey = Array.isArray(autoAdd) ? autoAdd[0] : autoAdd;
 
   // Data hooks
   const {
     entries,
     loading,
     refresh,
-    addEntry,
     updateEntry,
     deleteEntry,
     reorderEntries,
   } = useDayEntries({ userId, date: dateKey });
 
-  const { presets, createPreset } = useSlotPresets({ userId });
+  const { presets } = useSlotPresets({ userId });
   const { outfits, outfitImages } = useUserOutfits({ userId });
-
-  // Form hook
-  const form = useCalendarDayForm({
-    entries,
-    addEntry,
-    updateEntry,
-    deleteEntry,
-    reorderEntries,
-  });
-
-  const { showAddModal, setShowAddModal } = form;
-
-  // Auto-open add modal if autoAdd parameter is present
-  useEffect(() => {
-    if (autoAddKey === 'true' && !loading && !showAddModal) {
-      const timeoutId = setTimeout(() => {
-        setShowAddModal(true);
-      }, 100);
-
-      return () => clearTimeout(timeoutId);
-    }
-
-    return undefined;
-  }, [autoAddKey, loading, showAddModal, setShowAddModal]);
 
   // Reload data when screen comes into focus
   useFocusEffect(
@@ -150,91 +120,37 @@ export default function CalendarDayScreen() {
                 outfitImages={outfitImages}
                 canMoveUp={index > 0}
                 canMoveDown={index < entries.length - 1}
-                onMoveUp={() => form.handleMoveEntry(entry.id, 'up')}
-                onMoveDown={() => form.handleMoveEntry(entry.id, 'down')}
-                onEdit={() => form.handleEditEntry(entry)}
-                onDelete={() => form.handleDeleteEntry(entry.id)}
+                onMoveUp={() => {
+                  if (index > 0) {
+                    reorderEntries(index, index - 1);
+                  }
+                }}
+                onMoveDown={() => {
+                  if (index < entries.length - 1) {
+                    reorderEntries(index, index + 1);
+                  }
+                }}
+                onEdit={() => router.push(`/calendar/entry/${dateKey}?entryId=${entry.id}` as any)}
+                onDelete={() => {
+                  Alert.alert('Delete entry?', 'This cannot be undone.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: () => deleteEntry(entry.id) },
+                  ]);
+                }}
                 onViewOutfit={(outfitId) => router.push(`/outfits/${outfitId}/view`)}
-                onStatusChange={(status) => form.handleStatusChange(entry.id, status)}
+                onStatusChange={(status) => updateEntry(entry.id, { status })}
               />
             ))}
           </View>
         )}
 
-        <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => router.push(`/calendar/entry/${dateKey}` as any)}
+        >
           <Text style={styles.addButtonText}>+ Add Entry</Text>
         </TouchableOpacity>
       </ScrollView>
-
-      {/* Add/Edit Entry Modal */}
-      <CalendarDayEntryForm
-        visible={form.showAddModal}
-        editingEntry={form.editingEntry}
-        presets={presets}
-        outfits={outfits}
-        outfitImages={outfitImages}
-        selectedPreset={form.selectedPreset}
-        selectedOutfit={form.selectedOutfit}
-        entryStatus={form.entryStatus}
-        editNotes={form.editNotes}
-        saving={form.saving}
-        onClose={form.handleCloseModal}
-        onSelectPreset={form.setSelectedPreset}
-        onSelectOutfit={form.setSelectedOutfit}
-        onStatusChange={form.setEntryStatus}
-        onNotesChange={form.setEditNotes}
-        onSubmit={form.editingEntry ? form.handleUpdateEntry : form.handleAddEntry}
-        onCreatePreset={() => form.setShowCreatePresetModal(true)}
-      />
-
-      {/* Create Preset Modal */}
-      <CreatePresetModal
-        visible={form.showCreatePresetModal}
-        presetName={form.newPresetName}
-        onPresetNameChange={form.setNewPresetName}
-        onCreate={() => form.handleCreatePreset(createPreset)}
-        onClose={() => {
-          form.setShowCreatePresetModal(false);
-          form.setNewPresetName('');
-        }}
-      />
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        visible={form.showDeleteConfirm}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => {
-          form.setShowDeleteConfirm(false);
-          form.setEntryToDelete(null);
-        }}
-      >
-        <View style={styles.deleteModalContainer}>
-          <View style={styles.deleteModalContent}>
-            <Text style={styles.deleteModalTitle}>Delete Entry</Text>
-            <Text style={styles.deleteModalMessage}>
-              Are you sure you want to delete this entry?
-            </Text>
-            <View style={styles.deleteModalButtons}>
-              <TouchableOpacity
-                style={[styles.deleteModalButton, styles.cancelButton]}
-                onPress={() => {
-                  form.setShowDeleteConfirm(false);
-                  form.setEntryToDelete(null);
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.deleteModalButton, styles.confirmDeleteButton]}
-                onPress={form.confirmDelete}
-              >
-                <Text style={styles.confirmDeleteButtonText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -277,58 +193,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: '600',
-  },
-  deleteModalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  deleteModalContent: {
-    backgroundColor: colors.white,
-    borderRadius: spacing.sm + spacing.xs / 2,
-    padding: spacing.lg + spacing.md,
-    width: '100%',
-    maxWidth: 400,
-  },
-  deleteModalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: spacing.sm + spacing.xs / 2,
-    textAlign: 'center',
-    color: colors.textPrimary,
-  },
-  deleteModalMessage: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg + spacing.md,
-    textAlign: 'center',
-  },
-  deleteModalButtons: {
-    flexDirection: 'row',
-    gap: spacing.sm + spacing.xs / 2,
-  },
-  deleteModalButton: {
-    flex: 1,
-    padding: spacing.sm + spacing.xs / 2,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: colors.gray100,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  confirmDeleteButton: {
-    backgroundColor: colors.error,
-  },
-  confirmDeleteButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.white,
   },
 });

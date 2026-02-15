@@ -33,6 +33,7 @@ import { PERF_MODE } from '@/lib/perf/perfMode';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
 import type { ThemeColors } from '@/styles/themes';
+import { normalizeLabelList } from '@/lib/outfits/normalizeLabels';
 
 const { spacing } = theme;
 
@@ -151,13 +152,17 @@ export default function OutfitEditorScreen() {
               {!!outfit?.occasions?.length && (
                 <View style={styles.aiRow}>
                   <Text style={styles.aiLabel}>Occasions</Text>
-                  <Text style={styles.aiText}>{outfit.occasions.join(', ')}</Text>
+                  <Text style={styles.aiText}>
+                    {normalizeLabelList(outfit.occasions).join(', ')}
+                  </Text>
                 </View>
               )}
               {!!outfit?.style_tags?.length && (
                 <View style={styles.aiRow}>
                   <Text style={styles.aiLabel}>Style Tags</Text>
-                  <Text style={styles.aiText}>{outfit.style_tags.join(', ')}</Text>
+                  <Text style={styles.aiText}>
+                    {normalizeLabelList(outfit.style_tags).join(', ')}
+                  </Text>
                 </View>
               )}
               {!!outfit?.season && outfit.season !== 'all-season' && (

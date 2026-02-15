@@ -2,6 +2,7 @@ import React from 'react';
 import { Animated, View } from 'react-native';
 import LookbookSelectionBar from './LookbookSelectionBar';
 import OutfitsHeaderBar from './OutfitsHeaderBar';
+import OccasionPills from './OccasionPills';
 import type { OutfitsTab } from './OutfitsHeaderBar';
 
 export type OutfitsHeaderSectionProps = {
@@ -36,6 +37,13 @@ export type OutfitsHeaderSectionProps = {
   onAddLookbookTab?: () => void;
   onRemoveLookbookTab?: (id: string) => void;
   hintMessage?: string;
+  occasionOptions?: string[];
+  selectedOccasions?: string[];
+  onToggleOccasion?: (occasion: string) => void;
+  onClearOccasions?: () => void;
+  showOccasionPills?: boolean;
+  searchHeader?: React.ReactNode;
+  hideTabs?: boolean;
 };
 
 export default function OutfitsHeaderSection({
@@ -68,6 +76,13 @@ export default function OutfitsHeaderSection({
   onAddLookbookTab,
   onRemoveLookbookTab,
   hintMessage,
+  occasionOptions = [],
+  selectedOccasions = [],
+  onToggleOccasion,
+  onClearOccasions,
+  showOccasionPills = true,
+  searchHeader,
+  hideTabs = false,
 }: OutfitsHeaderSectionProps) {
   return (
     <Animated.View
@@ -82,6 +97,7 @@ export default function OutfitsHeaderSection({
       pointerEvents={uiHidden ? 'none' : 'auto'}
     >
       <View onLayout={onHeaderLayout}>
+        {searchHeader}
         {selectionMode && (
           <LookbookSelectionBar
             selectedOutfits={selectedOutfits}
@@ -93,22 +109,37 @@ export default function OutfitsHeaderSection({
             hintMessage={hintMessage}
           />
         )}
-        <OutfitsHeaderBar
-          activeTab={activeTab}
-          showTabLabels={showTabLabels}
-          activeView={activeView}
-          onChangeTab={onChangeTab}
-          onChangeView={onChangeView}
-          showViewToggle={showViewToggle}
-          searchQuery={searchQuery}
-          onSearchChange={onSearchChange}
-          onOpenSort={onOpenSort}
-          hasActiveFilters={hasActiveFilters}
-          showSearch={showSearch}
-          pinnedLookbooks={pinnedLookbooks}
-          onAddLookbookTab={onAddLookbookTab}
-          onRemoveLookbookTab={onRemoveLookbookTab}
-        />
+        {!hideTabs && (
+          <>
+            <OutfitsHeaderBar
+              activeTab={activeTab}
+              showTabLabels={showTabLabels}
+              activeView={activeView}
+              onChangeTab={onChangeTab}
+              onChangeView={onChangeView}
+              showViewToggle={showViewToggle}
+              searchQuery={searchQuery}
+              onSearchChange={onSearchChange}
+              onOpenSort={onOpenSort}
+              hasActiveFilters={hasActiveFilters}
+              showSearch={showSearch}
+              pinnedLookbooks={pinnedLookbooks}
+              onAddLookbookTab={onAddLookbookTab}
+              onRemoveLookbookTab={onRemoveLookbookTab}
+            />
+            {showOccasionPills &&
+              occasionOptions.length > 0 &&
+              onToggleOccasion &&
+              onClearOccasions && (
+                <OccasionPills
+                  occasions={occasionOptions}
+                  selectedOccasions={selectedOccasions}
+                  onToggleOccasion={onToggleOccasion}
+                  onClear={onClearOccasions}
+                />
+              )}
+          </>
+        )}
       </View>
     </Animated.View>
   );

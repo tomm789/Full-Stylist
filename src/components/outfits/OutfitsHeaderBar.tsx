@@ -4,10 +4,10 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, typography, spacing } from '@/styles';
-import { PillButton, SearchBar } from '@/components/shared';
+import { SearchBar, TabPillsRow } from '@/components/shared';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 
@@ -74,38 +74,18 @@ export default function OutfitsHeaderBar({
 
   return (
     <View style={styles.container}>
-      <View style={styles.pillRow}>
-        <FlatList
-          horizontal
-          data={allPills}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <PillButton
-              label={item.label}
-              icon={item.icon}
-              selected={activeTab === item.id}
-              onPress={() => onChangeTab(item.id as OutfitsTab)}
-              onRemove={
-                item.removable && onRemoveLookbookTab
-                  ? () => onRemoveLookbookTab(item.id.replace('lookbook_', ''))
-                  : undefined
-              }
-              variant="default"
-              size="medium"
-            />
-          )}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.pillList}
-          style={styles.pillFlatList}
-          ListFooterComponent={
-            onAddLookbookTab ? (
-              <TouchableOpacity style={styles.addButton} onPress={onAddLookbookTab}>
-                <Ionicons name="add-circle-outline" size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
-            ) : null
-          }
-        />
-      </View>
+      <TabPillsRow
+        pills={allPills}
+        activeId={activeTab}
+        onPress={(id) => onChangeTab(id as OutfitsTab)}
+        onRemove={
+          onRemoveLookbookTab
+            ? (id) => onRemoveLookbookTab(id.replace('lookbook_', ''))
+            : undefined
+        }
+        onAdd={onAddLookbookTab}
+        showFilter={false}
+      />
 
       {showViewToggle && (
         <View style={styles.viewToggle}>
@@ -170,25 +150,6 @@ export default function OutfitsHeaderBar({
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     backgroundColor: colors.background,
-  },
-  pillRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.backgroundDark,
-  },
-  pillFlatList: {
-    flexGrow: 0,
-  },
-  pillList: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    gap: spacing.xs,
-    alignItems: 'center',
-  },
-  addButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xs,
   },
   viewToggle: {
     flexDirection: 'row',

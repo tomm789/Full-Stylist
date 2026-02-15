@@ -1,6 +1,6 @@
 import React from 'react';
 import { Stack } from 'expo-router';
-import { HeaderAddMenu, HeaderRightMenu, ConnectedHeaderSearchTitle, ConnectedHeaderSearchRight } from '@/components/tabs';
+import { HeaderAddMenu, HeaderRightMenu } from '@/components/tabs';
 import { useThemeColors } from '@/contexts/ThemeContext';
 
 export default function OutfitsLayout() {
@@ -21,8 +21,7 @@ export default function OutfitsLayout() {
       <Stack.Screen
         name="index"
         options={{
-          headerTitle: () => <ConnectedHeaderSearchTitle />,
-          headerRight: () => <ConnectedHeaderSearchRight />,
+          headerShown: false,
         }}
       />
       <Stack.Screen

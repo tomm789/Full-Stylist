@@ -32,6 +32,8 @@ interface UserWardrobeScreenProps {
   showAddButton?: boolean;
   onGridScroll?: (event: any) => void;
   scrollEventThrottle?: number;
+  listHeader?: React.ReactElement | null;
+  onExternalRefresh?: () => Promise<void>;
 }
 
 export default function UserWardrobeScreen({
@@ -40,6 +42,8 @@ export default function UserWardrobeScreen({
   showAddButton = false,
   onGridScroll,
   scrollEventThrottle,
+  listHeader,
+  onExternalRefresh,
 }: UserWardrobeScreenProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
@@ -146,7 +150,7 @@ export default function UserWardrobeScreen({
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadWardrobe();
+    await Promise.all([loadWardrobe(), onExternalRefresh?.()]);
     setRefreshing(false);
   };
 
@@ -222,19 +226,7 @@ export default function UserWardrobeScreen({
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading wardrobe...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  const shouldShowEmptyState =
-    filteredItems.length === 0;
+  const shouldShowEmptyState = !loading && filteredItems.length === 0;
   const emptyMessage =
     searchQuery || selectedCategoryId || hasActiveFilters
       ? 'No items found'
@@ -242,43 +234,53 @@ export default function UserWardrobeScreen({
 
   return (
     <View style={styles.container}>
-      {showSearchControls && (
-        <>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onFilter={() => setShowFilterDrawer(true)}
-            onAdd={showAddButton ? () => router.push('/wardrobe/add') : undefined}
-            hasActiveFilters={hasActiveFilters}
-            showAdd={showAddButton}
-          />
-          <CategoryPills
-            categories={categoryOptions}
-            selectedCategoryId={selectedCategoryId}
-            onSelectCategory={setSelectedCategoryId}
-            variant="category"
-          />
-        </>
-      )}
-
-      {shouldShowEmptyState ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="shirt-outline" size={48} color={colors.gray400} />
-          <Text style={styles.emptyText}>{emptyMessage}</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredItems}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          numColumns={3}
-          contentContainerStyle={styles.itemsList}
-          columnWrapperStyle={styles.itemsRow}
-          onScroll={onGridScroll}
-          scrollEventThrottle={scrollEventThrottle}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        />
-      )}
+      <FlatList
+        data={filteredItems}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        numColumns={3}
+        contentContainerStyle={styles.itemsList}
+        columnWrapperStyle={styles.itemsRow}
+        onScroll={onGridScroll}
+        scrollEventThrottle={scrollEventThrottle}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListHeaderComponent={
+          <>
+            {listHeader}
+            {showSearchControls && (
+              <>
+                <SearchBar
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  onFilter={() => setShowFilterDrawer(true)}
+                  onAdd={showAddButton ? () => router.push('/wardrobe/add') : undefined}
+                  hasActiveFilters={hasActiveFilters}
+                  showAdd={showAddButton}
+                />
+                <CategoryPills
+                  categories={categoryOptions}
+                  selectedCategoryId={selectedCategoryId}
+                  onSelectCategory={setSelectedCategoryId}
+                  variant="category"
+                />
+              </>
+            )}
+          </>
+        }
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Loading wardrobe...</Text>
+            </View>
+          ) : shouldShowEmptyState ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="shirt-outline" size={48} color={colors.gray400} />
+              <Text style={styles.emptyText}>{emptyMessage}</Text>
+            </View>
+          ) : null
+        }
+      />
 
       {showSearchControls && (
         <FilterDrawer

@@ -10,24 +10,26 @@
  * new code should use the split pair above.
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { useHeaderSearch } from '@/contexts/HeaderSearchContext';
-import { useCalendarPanel } from '@/contexts/CalendarPanelContext';
 import { HeaderRightMenu } from './HeaderRightMenu';
 import HeaderIconButton from '@/components/shared/layout/HeaderIconButton';
+import HeaderTitleRow from './HeaderTitleRow';
+import HeaderSearchPill from './HeaderSearchPill';
 import type { ThemeColors } from '@/styles/themes';
+import { usePathname } from 'expo-router';
+import { useNotifications } from '@/contexts/NotificationsContext';
 
-const { spacing, borderRadius, typography } = theme;
+const { spacing } = theme;
 
 // ---------------------------------------------------------------------------
 // Full combined component (search + filter + add in one row)
@@ -52,40 +54,19 @@ export function HeaderSearchMenu({
 }: HeaderSearchMenuProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   return (
     <View style={styles.container}>
-      <View style={styles.searchInputContainer}>
-        <Ionicons
-          name="search-outline"
-          size={16}
-          color={colors.textPlaceholder}
-          style={styles.searchIcon}
-        />
-        <TextInput
-          style={styles.searchInput}
-          placeholder={placeholder}
-          value={searchQuery}
-          onChangeText={onSearchChange}
-          placeholderTextColor={colors.textPlaceholder}
-          autoCapitalize="none"
-          returnKeyType="search"
-        />
-      </View>
-
-      <TouchableOpacity
-        style={[
-          styles.iconButton,
-          hasActiveFilters && styles.iconButtonActive,
-        ]}
-        onPress={onFilter}
-      >
-        <Ionicons
-          name="options-outline"
-          size={18}
-          color={hasActiveFilters ? colors.white : colors.textSecondary}
-        />
-      </TouchableOpacity>
+      <HeaderSearchPill
+        searchQuery={searchQuery}
+        onSearchChange={onSearchChange}
+        onFilter={onFilter}
+        hasActiveFilters={hasActiveFilters}
+        placeholder={placeholder}
+        expanded={isSearchExpanded}
+        onToggleExpanded={() => setIsSearchExpanded((prev) => !prev)}
+      />
 
       <TouchableOpacity
         style={styles.addButton}
@@ -102,7 +83,10 @@ export function HeaderSearchMenu({
  * Shows HeaderSearchMenu when a page has registered, otherwise HeaderRightMenu.
  */
 export function ConnectedHeaderSearchMenu() {
-  const { headerSearch } = useHeaderSearch();
+  const { getHeaderSearch, headerSearchVersion } = useHeaderSearch();
+  const pathname = usePathname();
+  const headerSearch = getHeaderSearch(pathname);
+  void headerSearchVersion;
 
   if (!headerSearch) {
     return <HeaderRightMenu />;
@@ -127,60 +111,141 @@ export function ConnectedHeaderSearchMenu() {
 /**
  * For headerTitle — renders calendar icon + wide centred search input + filter icon.
  * Layout: [calendar] [══ search ══] [filter]
- * Calendar icon toggles the left-sliding calendar panel; switches to
- * a back-chevron when the calendar is open.
+ * Calendar icon opens the calendar page.
  */
 export function ConnectedHeaderSearchTitle() {
+  const { getHeaderSearch, headerSearchVersion } = useHeaderSearch();
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const pathname = usePathname();
+  const { unreadCount } = useNotifications();
   const colors = useThemeColors();
   const styles = createStyles(colors);
-  const { headerSearch } = useHeaderSearch();
-  const { showCalendar, toggleCalendar } = useCalendarPanel();
+  const transition = useState(new Animated.Value(1))[0];
+  const headerSearch = getHeaderSearch(pathname);
+  void headerSearchVersion;
+  const fallbackTitle =
+    pathname?.includes('/wardrobe')
+      ? 'Wardrobe'
+      : pathname?.includes('/outfits')
+        ? 'Outfits'
+        : '';
+
+  useEffect(() => {
+    if (!headerSearch || headerSearch.inlineSearchEnabled === false) {
+      if (isSearchExpanded) {
+        headerSearch?.onSearchToggle?.(false);
+      }
+      setIsSearchExpanded(false);
+    }
+  }, [headerSearch, isSearchExpanded]);
+
+  useEffect(() => {
+    transition.setValue(0);
+    Animated.timing(transition, {
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [pathname, transition]);
 
   return (
-    <View style={styles.titleContainer}>
-      <TouchableOpacity
-        style={styles.calendarButton}
-        onPress={toggleCalendar}
-      >
-        <Ionicons
-          name={showCalendar ? 'chevron-back' : 'calendar-outline'}
-          size={22}
-          color={showCalendar ? colors.primary : colors.textPrimary}
+    <Animated.View
+      style={{
+        opacity: transition,
+        transform: [
+          {
+            translateY: transition.interpolate({
+              inputRange: [0, 1],
+              outputRange: [6, 0],
+            }),
+          },
+        ],
+      }}
+    >
+      {headerSearch && isSearchExpanded ? (
+        <View style={styles.expandedRow}>
+          <TouchableOpacity
+            onPress={() => {
+              headerSearch.onSearchToggle?.(false);
+              setIsSearchExpanded(false);
+            }}
+            style={styles.expandedBackButton}
+            accessibilityLabel="Close search"
+          >
+            <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.expandedPillWrap}>
+            <HeaderSearchPill
+              searchQuery={headerSearch.searchQuery}
+              onSearchChange={headerSearch.onSearchChange}
+              onSearchPress={headerSearch.onSearchPress}
+              onFilter={headerSearch.onFilter}
+              hasActiveFilters={headerSearch.hasActiveFilters}
+              placeholder={headerSearch.placeholder}
+              showFilter={headerSearch.showFilter !== false}
+              inlineSearchEnabled={headerSearch.inlineSearchEnabled}
+              expanded={isSearchExpanded}
+              onToggleExpanded={() =>
+                setIsSearchExpanded((prev) => {
+                  const next = !prev;
+                  headerSearch.onSearchToggle?.(next);
+                  return next;
+                })
+              }
+              rightIcon={
+                headerSearch.rightActionInPill === false
+                  ? undefined
+                  : (headerSearch.rightActionIcon as any)
+              }
+              onRightAction={headerSearch.onRightAction}
+              rightBadgeCount={
+                headerSearch.rightActionIcon === 'notifications-outline'
+                  ? unreadCount
+                  : 0
+              }
+            />
+          </View>
+        </View>
+      ) : (
+        <HeaderTitleRow
+          title={headerSearch?.title ?? fallbackTitle}
+          hideCalendar={isSearchExpanded}
+          rightSlot={
+            headerSearch ? (
+              <HeaderSearchPill
+                searchQuery={headerSearch.searchQuery}
+                onSearchChange={headerSearch.onSearchChange}
+                onSearchPress={headerSearch.onSearchPress}
+                onFilter={headerSearch.onFilter}
+                hasActiveFilters={headerSearch.hasActiveFilters}
+                placeholder={headerSearch.placeholder}
+                showFilter={headerSearch.showFilter !== false}
+                inlineSearchEnabled={headerSearch.inlineSearchEnabled}
+                expanded={isSearchExpanded}
+                onToggleExpanded={() =>
+                  setIsSearchExpanded((prev) => {
+                    const next = !prev;
+                    headerSearch.onSearchToggle?.(next);
+                    return next;
+                  })
+                }
+                rightIcon={
+                  headerSearch.rightActionInPill === false
+                    ? undefined
+                    : (headerSearch.rightActionIcon as any)
+                }
+                onRightAction={headerSearch.onRightAction}
+                rightBadgeCount={
+                  headerSearch.rightActionIcon === 'notifications-outline'
+                    ? unreadCount
+                    : 0
+                }
+              />
+            ) : null
+          }
         />
-      </TouchableOpacity>
-      <View style={styles.searchInputContainerWide}>
-        <Ionicons
-          name="search-outline"
-          size={16}
-          color={colors.textPlaceholder}
-          style={styles.searchIcon}
-        />
-        <TextInput
-          style={styles.searchInput}
-          placeholder={headerSearch?.placeholder ?? 'Search...'}
-          value={headerSearch?.searchQuery ?? ''}
-          onChangeText={headerSearch?.onSearchChange}
-          placeholderTextColor={colors.textPlaceholder}
-          autoCapitalize="none"
-          returnKeyType="search"
-          editable={!!headerSearch}
-        />
-      </View>
-      <TouchableOpacity
-        style={[
-          styles.iconButton,
-          headerSearch?.hasActiveFilters && styles.iconButtonActive,
-        ]}
-        onPress={headerSearch?.onFilter}
-        disabled={!headerSearch}
-      >
-        <Ionicons
-          name="options-outline"
-          size={18}
-          color={headerSearch?.hasActiveFilters ? colors.white : colors.textSecondary}
-        />
-      </TouchableOpacity>
-    </View>
+      )}
+    </Animated.View>
   );
 }
 
@@ -192,10 +257,17 @@ export function ConnectedHeaderSearchTitle() {
 export function ConnectedHeaderSearchRight() {
   const colors = useThemeColors();
   const styles = createStyles(colors);
-  const { headerSearch } = useHeaderSearch();
+  const { getHeaderSearch, headerSearchVersion } = useHeaderSearch();
+  const pathname = usePathname();
+  const headerSearch = getHeaderSearch(pathname);
+  void headerSearchVersion;
 
   if (!headerSearch || !headerSearch.rightActionIcon) {
     return <HeaderRightMenu />;
+  }
+
+  if (headerSearch.rightActionInPill) {
+    return null;
   }
 
   const iconName = headerSearch.rightActionIcon as keyof typeof Ionicons.glyphMap;
@@ -224,72 +296,26 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginRight: spacing.sm,
   },
 
-  /* Title area (split) — filter + wide search */
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flex: 1,
-  },
-
   /* Right area (split) */
   rightContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: spacing.sm,
   },
-  /* Shared */
-  searchInputContainer: {
+  expandedRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.round,
-    paddingHorizontal: spacing.sm,
-    height: 34,
-    minWidth: 120,
     flex: 1,
-    maxWidth: 200,
+    gap: spacing.sm,
   },
-  searchInputContainerWide: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.round,
-    paddingHorizontal: spacing.sm,
-    height: 34,
-    flex: 1,
-  },
-  searchIcon: {
-    marginRight: spacing.xs,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: typography.fontSize.sm,
-    color: colors.textPrimary,
-    paddingVertical: 0,
-  },
-  iconButton: {
-    width: 34,
-    height: 34,
-    borderRadius: borderRadius.round,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  iconButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  addButton: {
+  expandedBackButton: {
     padding: spacing.xs,
   },
-  calendarButton: {
+  expandedPillWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  addButton: {
     padding: spacing.xs,
   },
 });

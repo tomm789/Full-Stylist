@@ -39,6 +39,7 @@ interface DiscoverGridProps {
   onScroll?: (event: any) => void;
   scrollEventThrottle?: number;
   scrollEnabled?: boolean;
+  ListHeaderComponent?: React.ReactElement | null;
   emptyTitle?: string;
   emptyMessage?: string;
   emptyIcon?: keyof typeof Ionicons.glyphMap;
@@ -61,6 +62,7 @@ export function DiscoverGrid({
   onScroll,
   scrollEventThrottle,
   scrollEnabled = true,
+  ListHeaderComponent,
   emptyTitle = 'No public posts yet',
   emptyMessage = 'Check back later for new content from the community',
   emptyIcon = 'globe-outline',
@@ -183,6 +185,7 @@ export function DiscoverGrid({
       onRefresh={onRefresh}
       onEndReached={hasMore ? onLoadMore : undefined}
       onEndReachedThreshold={0.5}
+      ListHeaderComponent={ListHeaderComponent}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
           <Ionicons name={emptyIcon} size={48} color={colors.gray400} />

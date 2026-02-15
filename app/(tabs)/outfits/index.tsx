@@ -2,7 +2,7 @@
  * Outfits Screen (Refactored)
  * Main outfits screen with grid, explore, and scheduling flows.
  */
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   ActivityIndicator,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import type { FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useOutfits,
@@ -48,8 +49,12 @@ import { useSlotPresets } from '@/hooks/calendar';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 import createOutfitStyles from './styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { useHeaderSearch } from '@/contexts/HeaderSearchContext';
+import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
 import { createCommonStyles } from '@/styles/commonStyles';
+import { useSearch } from '@/hooks';
+import SearchOverlay from '@/components/search/SearchOverlay';
+import SearchHeaderRow from '@/components/search/SearchHeaderRow';
+import { useNotifications } from '@/contexts/NotificationsContext';
 type OutfitsTab = 'my_outfits' | 'explore' | 'following' | `lookbook_${string}`;
 type ViewMode = 'grid' | 'feed';
 const SHOW_VIEW_TOGGLE = false;
@@ -65,9 +70,22 @@ export default function OutfitsScreen() {
   const styles = createOutfitStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
+  const { setTabBarDimmed } = useFloatingTabBar();
+  const isFocused = useIsFocused();
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const { width: windowWidth } = useWindowDimensions();
   const showTabLabels = windowWidth >= layout.containerMaxWidth;
+  const { unreadCount } = useNotifications();
+  const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
+  const searchOpenRef = useRef(false);
+  const {
+    searchQuery: globalSearchQuery,
+    setSearchQuery: setGlobalSearchQuery,
+    selectedFilter: searchSelectedFilter,
+    setSelectedFilter: setSearchSelectedFilter,
+    filteredResults: searchFilteredResults,
+    loading: searchLoading,
+  } = useSearch({ userId: user?.id });
   const [showSortModal, setShowSortModal] = useState(false);
   const [activeTab, setActiveTab] = useState<OutfitsTab>('my_outfits');
   const [tabViews, setTabViews] = useState<Record<OutfitsTab, ViewMode>>({
@@ -86,7 +104,17 @@ export default function OutfitsScreen() {
     handleScroll: handleGridScroll,
     setHeaderVisible,
     resetScroll,
-  } = useHideHeaderOnScroll();
+  } = useHideHeaderOnScroll({
+    onVisibilityChange: (visible, timing) => {
+      setTabBarDimmed(!visible, timing);
+    },
+  });
+
+  useEffect(() => {
+    if (!isFocused) {
+      setTabBarDimmed(false);
+    }
+  }, [isFocused, setTabBarDimmed]);
   const {
     selectionMode,
     setSelectionMode,
@@ -155,21 +183,14 @@ export default function OutfitsScreen() {
     getSortLabel,
   } = useOutfitFilters([]);
 
-  // Register search/filter state for the native header bar
-  const { registerHeaderSearch, clearHeaderSearch } = useHeaderSearch();
-  React.useEffect(() => {
-    registerHeaderSearch({
-      searchQuery: filters.searchQuery,
-      onSearchChange: (text) => updateFilter('searchQuery', text),
-      onFilter: () => setShowSortModal(true),
-      onAdd: () => router.push('/outfits/new' as any),
-      hasActiveFilters: filters.showFavoritesOnly,
-      placeholder: 'Search outfits...',
-      rightActionIcon: 'notifications-outline',
-      onRightAction: () => router.push('/notifications' as any),
-    });
-    return () => clearHeaderSearch();
-  }, [filters.searchQuery, filters.showFavoritesOnly]);
+  useEffect(() => {
+    if (!searchOpenRef.current && searchOverlayOpen) {
+      setSearchSelectedFilter('outfit');
+    }
+    searchOpenRef.current = searchOverlayOpen;
+  }, [searchOverlayOpen, setSearchSelectedFilter]);
+
+  // Search overlay is driven by local header state
 
   const { presets, createPreset } = useSlotPresets({ userId: user?.id });
 
@@ -354,6 +375,7 @@ export default function OutfitsScreen() {
   const { availableOccasions, toggleOccasion, filteredOutfitsWithOccasions } =
     useOutfitsDerivedFilters({
       activeTab: coreTab,
+      allOutfits: outfits,
       filteredOutfits,
       exploreOutfitFeed,
       followingOutfitFeed,
@@ -550,6 +572,23 @@ export default function OutfitsScreen() {
     );
   }
 
+  const handleSearchResultPress = (result: (typeof searchFilteredResults)[0]) => {
+    switch (result.type) {
+      case 'user':
+        router.push(`/users/${result.id}`);
+        break;
+      case 'outfit':
+        router.push(`/outfits/${result.id}`);
+        break;
+      case 'lookbook':
+        router.push(`/lookbooks/${result.id}`);
+        break;
+      case 'wardrobe_item':
+        router.push(`/wardrobe/item/${result.id}`);
+        break;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <OutfitsHeaderSection
@@ -582,8 +621,40 @@ export default function OutfitsScreen() {
         onAddLookbookTab={() => setShowLookbookAddModal(true)}
         onRemoveLookbookTab={handleRemoveLookbookTab}
         hintMessage={selectionMode && selectedOutfitIds.size === 0 ? 'Long press on an outfit to add it to your lookbook' : undefined}
+        occasionOptions={availableOccasions}
+        selectedOccasions={selectedOccasions}
+        onToggleOccasion={toggleOccasion}
+        onClearOccasions={() => setSelectedOccasions([])}
+        showOccasionPills={!activeTab.startsWith('lookbook_')}
+        hideTabs={searchOverlayOpen}
+        searchHeader={
+          <SearchHeaderRow
+            title="Outfits"
+            searchQuery={globalSearchQuery}
+            onSearchChange={setGlobalSearchQuery}
+            onSearchToggle={setSearchOverlayOpen}
+            onFilter={() => setShowSortModal(true)}
+            hasActiveFilters={filters.showFavoritesOnly}
+            placeholder="Search outfits..."
+            rightIcon="notifications-outline"
+            onRightAction={() => router.push('/notifications' as any)}
+            rightBadgeCount={unreadCount}
+            searchOpen={searchOverlayOpen}
+          />
+        }
       />
 
+      <SearchOverlay
+        open={searchOverlayOpen}
+        width={windowWidth}
+        topOffset={headerHeight}
+        searchQuery={globalSearchQuery}
+        loading={searchLoading}
+        selectedFilter={searchSelectedFilter}
+        filteredResults={searchFilteredResults}
+        onFilterChange={setSearchSelectedFilter}
+        onResultPress={handleSearchResultPress}
+      />
 
       {activeTab.startsWith('lookbook_') ? (
         <View style={commonStyles.container}>

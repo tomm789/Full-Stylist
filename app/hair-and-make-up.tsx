@@ -7,7 +7,6 @@
 import React from 'react';
 import {
   Animated,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,16 +19,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import {
   PillButton,
-  HeaderIconButton,
+  EdgePeekSlider,
   DropdownMenuModal,
   DropdownMenuItem,
   dropdownMenuStyles,
 } from '@/components/shared';
+import { HeaderTitlePillRow } from '@/components/shared/layout';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import ErrorModal from '@/components/ErrorModal';
 import { useHairAndMakeup } from '@/hooks/headshot';
 import { useThemeColors } from '@/contexts/ThemeContext';
+import { useNotifications } from '@/contexts/NotificationsContext';
+import { useRouter } from 'expo-router';
 import type { ThemeColors } from '@/styles/themes';
 import { theme } from '@/styles';
 import { createCommonStyles } from '@/styles/commonStyles';
@@ -42,40 +44,37 @@ export default function HairAndMakeUpScreen() {
   const styles = createStyles(colors);
   const commonStyles = createCommonStyles(colors);
   const state = useHairAndMakeup();
-
-  React.useLayoutEffect(() => {
-    state.navigation.setOptions({
-      headerRight: () => (
-        <View style={styles.headerRightButtons}>
-          <HeaderIconButton
-            icon="sparkles-outline"
-            onPress={state.handleGenerateVariation}
-            disabled={state.isGenerateDisabled || !state.previewHasImage}
-            accessibilityLabel="Generate"
-          />
-          <HeaderIconButton
-            icon="camera-outline"
-            onPress={state.handlePickCamera}
-            disabled={state.isStyleDisabled}
-            accessibilityLabel="Open camera"
-          />
-        </View>
+  const { unreadCount } = useNotifications();
+  const router = useRouter();
+  const baseHeadshots = React.useMemo(
+    () =>
+      [...state.allHeadshots].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       ),
-    });
-  }, [
-    state.navigation,
-    styles.headerRightButtons,
-    state.isGenerateDisabled,
-    state.previewHasImage,
-    state.isStyleDisabled,
-    state.handleGenerateVariation,
-    state.handlePickCamera,
-  ]);
+    [state.allHeadshots]
+  );
+  const selfieItem = state.selfieImageId
+    ? { id: state.selfieImageId, url: state.selfieImageUrl || null }
+    : null;
+  const headshots = React.useMemo(() => {
+    const filtered = baseHeadshots.filter((item) => item.id !== state.selfieImageId);
+    return selfieItem ? [selfieItem, ...filtered] : filtered;
+  }, [baseHeadshots, selfieItem, state.selfieImageId]);
+
+  const handleHeadshotPress = (item: { id: string; url: string | null }) => {
+    state.handleHeadshotSelect(item);
+    state.setActiveView('face');
+  };
+  const activeFaceIndex = React.useMemo(() => {
+    if (headshots.length === 0) return 0;
+    const index = headshots.findIndex((item) => item.id === state.previewImageId);
+    return index >= 0 ? index : 0;
+  }, [headshots, state.previewImageId]);
 
   const renderHeadshotGridItem = ({ item }: { item: { id: string; url: string | null } }) => (
     <TouchableOpacity
       style={postGridStyles.gridItem}
-      onPress={() => state.handleHeadshotSelect(item)}
+      onPress={() => handleHeadshotPress(item)}
       activeOpacity={0.85}
     >
       {item.url ? (
@@ -93,53 +92,84 @@ export default function HairAndMakeUpScreen() {
   );
 
   return (
-    <SafeAreaView style={commonStyles.container}>
+    <View style={commonStyles.container}>
+      <HeaderTitlePillRow
+        title="Hair & Make-Up"
+        onCamera={state.handlePickCamera}
+        onNotifications={() => router.push('/notifications' as any)}
+        onProfile={() => router.push('/profile' as any)}
+        avatarUri={state.headshotImageUrl}
+        avatarInitials={state.profileInitials}
+        unreadCount={unreadCount}
+        cameraDisabled={state.isStyleDisabled}
+      />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={commonStyles.sectionTopPadding}>
+        <View>
           <View style={styles.pillRowStack}>
             <View style={styles.tabPills}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.tabPillsRow}>
-                  <PillButton
-                    label="Grid"
-                    icon="grid-outline"
-                    selected={state.showHeadshotGrid}
+              <View style={styles.tabRow}>
+                <View style={styles.viewToggle}>
+                  <TouchableOpacity
+                    style={[
+                      styles.viewToggleButton,
+                      state.showHeadshotGrid && styles.viewToggleButtonActive,
+                    ]}
                     onPress={() => state.setActiveView('grid')}
-                    size="medium"
-                    variant="default"
-                  />
-                  <PillButton
-                    label="Hair"
-                    icon="cut-outline"
-                    selected={state.activeView === 'hair'}
+                    accessibilityLabel="Show grid view"
+                  >
+                    <Ionicons
+                      name="grid-outline"
+                      size={16}
+                      color={state.showHeadshotGrid ? colors.textLight : colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.viewToggleButton,
+                      state.showFacePreview && styles.viewToggleButtonActive,
+                    ]}
                     onPress={() => {
-                      state.setLastPresetTab('hair');
-                      state.setActiveView('hair');
+                      if (state.previewSource !== 'headshot' && state.previewSource !== 'variation') {
+                        state.handleRestoreSelfie();
+                      }
+                      state.setActiveView('face');
                     }}
-                    size="medium"
-                    variant="default"
-                  />
-                  <PillButton
-                    label="Make-Up"
-                    icon="color-palette-outline"
-                    selected={state.activeView === 'makeup'}
-                    onPress={() => {
-                      state.setLastPresetTab('makeup');
-                      state.setActiveView('makeup');
-                    }}
-                    size="medium"
-                    variant="default"
-                  />
-                  <PillButton
-                    label="Face"
-                    icon="person-circle-outline"
-                    selected={state.activeView === 'face'}
-                    onPress={() => state.setActiveView('face')}
-                    size="medium"
-                    variant="default"
-                  />
+                    accessibilityLabel="Show face view"
+                  >
+                    <Ionicons
+                      name="person-circle-outline"
+                      size={18}
+                      color={state.showFacePreview ? colors.textLight : colors.textSecondary}
+                    />
+                  </TouchableOpacity>
                 </View>
-              </ScrollView>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.tabPillsRow}>
+                    <PillButton
+                      label="Hair"
+                      icon="cut-outline"
+                      selected={state.activeView === 'hair'}
+                      onPress={() => {
+                        state.setLastPresetTab('hair');
+                        state.setActiveView('hair');
+                      }}
+                      size="medium"
+                      variant="default"
+                    />
+                    <PillButton
+                      label="Make-Up"
+                      icon="color-palette-outline"
+                      selected={state.activeView === 'makeup'}
+                      onPress={() => {
+                        state.setLastPresetTab('makeup');
+                        state.setActiveView('makeup');
+                      }}
+                      size="medium"
+                      variant="default"
+                    />
+                  </View>
+                </ScrollView>
+              </View>
             </View>
 
             {state.isPresetView && state.presets.length > 0 && (
@@ -174,24 +204,95 @@ export default function HairAndMakeUpScreen() {
           <View
             style={[
               styles.facePreviewSection,
-              commonStyles.sectionHorizontalPadding,
               commonStyles.sectionTopPadding,
             ]}
           >
-            <View style={styles.imagePreviewContainer}>
-              {state.previewHasImage ? (
-                <TouchableOpacity
-                  style={styles.previewImageButton}
-                  onPress={state.handlePreviewPress}
-                  activeOpacity={0.9}
-                >
-                  <ExpoImage
-                    source={{ uri: state.previewImageUrl || undefined }}
-                    style={styles.imagePreview}
-                    contentFit="cover"
-                  />
-                </TouchableOpacity>
-              ) : (
+            {headshots.length > 0 ? (
+              <EdgePeekSlider
+                data={headshots}
+                keyExtractor={(item) => item.id}
+                itemWidthRatio={0.78}
+                aspectRatio={3 / 4}
+                gap={2}
+                initialIndex={activeFaceIndex}
+                activeIndex={activeFaceIndex}
+                enableHaptics
+                edgeSwipeEnabled={Boolean(state.selfieImageId) && activeFaceIndex === 0}
+                onEdgeSwipeStart={() => {
+                  if (!state.isStyleDisabled) {
+                    state.handlePickCamera();
+                  }
+                }}
+                onIndexChange={(nextIndex) => {
+                  const next = headshots[nextIndex];
+                  if (next) {
+                    state.handleHeadshotSelect(next);
+                  }
+                }}
+                renderItem={({ item, index }) => {
+                  const isActive = index === activeFaceIndex;
+                  return (
+                    <View style={styles.faceSlideCard}>
+                      <TouchableOpacity
+                        style={styles.faceSlideButton}
+                        onPress={state.handlePreviewPress}
+                        activeOpacity={0.9}
+                        disabled={!item.url}
+                      >
+                        {item.url ? (
+                          <ExpoImage
+                            source={{ uri: item.url }}
+                            style={styles.faceSlideImage}
+                            contentFit="cover"
+                          />
+                        ) : (
+                          <View style={styles.faceSlideImage} />
+                        )}
+                      </TouchableOpacity>
+
+                      {isActive && (
+                        <>
+                          <TouchableOpacity
+                            style={[
+                              styles.faceMenuButton,
+                              !item.url && styles.faceMenuButtonDisabled,
+                            ]}
+                            onPress={() => state.setShowFaceMenu(true)}
+                            disabled={!item.url}
+                            accessibilityLabel="Open menu"
+                          >
+                            <Ionicons name="ellipsis-vertical" size={18} color={colors.textLight} />
+                          </TouchableOpacity>
+
+                          {state.generating && item.url && (
+                            <Animated.View
+                              style={[styles.generateOverlay, { opacity: state.generateOverlayOpacity }]}
+                              pointerEvents="none"
+                            />
+                          )}
+
+                          {state.previewIsGenerated && (
+                            <TouchableOpacity
+                              style={styles.restoreButton}
+                              onPress={state.handleRestoreSelfie}
+                              disabled={state.isStyleDisabled}
+                              accessibilityLabel="Restore selfie"
+                            >
+                              <Ionicons
+                                name="person-circle-outline"
+                                size={20}
+                                color={colors.textSecondary}
+                              />
+                            </TouchableOpacity>
+                          )}
+                        </>
+                      )}
+                    </View>
+                  );
+                }}
+              />
+            ) : (
+              <View style={styles.faceEmptyCard}>
                 <TouchableOpacity
                   style={styles.placeholder}
                   onPress={state.handlePickCamera}
@@ -200,38 +301,8 @@ export default function HairAndMakeUpScreen() {
                   <Ionicons name="camera-outline" size={42} color={colors.textSecondary} />
                   <Text style={styles.placeholderText}>Tap to open camera</Text>
                 </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={[
-                  styles.faceMenuButton,
-                  !state.previewHasImage && styles.faceMenuButtonDisabled,
-                ]}
-                onPress={() => state.setShowFaceMenu(true)}
-                disabled={!state.previewHasImage}
-                accessibilityLabel="Open menu"
-              >
-                <Ionicons name="ellipsis-vertical" size={18} color={colors.textLight} />
-              </TouchableOpacity>
-
-              {state.generating && state.previewHasImage && (
-                <Animated.View
-                  style={[styles.generateOverlay, { opacity: state.generateOverlayOpacity }]}
-                  pointerEvents="none"
-                />
-              )}
-
-              {state.previewIsGenerated && (
-                <TouchableOpacity
-                  style={styles.restoreButton}
-                  onPress={state.handleRestoreSelfie}
-                  disabled={state.isStyleDisabled}
-                  accessibilityLabel="Restore selfie"
-                >
-                  <Ionicons name="person-circle-outline" size={20} color={colors.textSecondary} />
-                </TouchableOpacity>
-              )}
-            </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -412,7 +483,7 @@ export default function HairAndMakeUpScreen() {
           )}
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -431,15 +502,36 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  headerRightButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginRight: spacing.xs,
-  },
   facePreviewSection: {
     width: '100%',
     gap: spacing.md,
+  },
+  faceSlideCard: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+    borderWidth: 0.5,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  faceSlideButton: {
+    width: '100%',
+    height: '100%',
+  },
+  faceSlideImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.backgroundTertiary,
+  },
+  faceEmptyCard: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    alignSelf: 'center',
+    borderWidth: 0.5,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.backgroundTertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   previewSection: {
     alignSelf: 'center',
@@ -610,6 +702,29 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
     backgroundColor: colors.backgroundDark,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    marginLeft: spacing.sm,
+    marginRight: spacing.xs,
+    borderRadius: borderRadius.round,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.backgroundSecondary,
+    overflow: 'hidden',
+  },
+  viewToggleButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewToggleButtonActive: {
+    backgroundColor: colors.primary,
   },
   pillRowStack: {
     gap: 0,

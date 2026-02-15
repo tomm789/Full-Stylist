@@ -3,10 +3,10 @@
  * Main wardrobe screen using modular architecture.
  */
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { View, StyleSheet, Alert, Platform, Animated, Text, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { View, StyleSheet, Alert, Platform, Animated, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FollowingWardrobesScreen from '@/app/social/following-wardrobes';
@@ -20,7 +20,7 @@ import {
 import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits';
 
 // Shared Components
-import { EmptyState, LoadingOverlay, LoadingSpinner, PillButton } from '@/components/shared';
+import { EmptyState, LoadingOverlay, LoadingSpinner, TabPillsRow } from '@/components/shared';
 
 // Wardrobe Components
 import {
@@ -47,9 +47,12 @@ import { logClientTiming } from '@/lib/perf/logClientTiming';
 import { PERF_MODE } from '@/lib/perf/perfMode';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { useHeaderSearch } from '@/contexts/HeaderSearchContext';
+import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
 import { createCommonStyles } from '@/styles/commonStyles';
 import type { ThemeColors } from '@/styles/themes';
+import { useSearch } from '@/hooks';
+import SearchOverlay from '@/components/search/SearchOverlay';
+import SearchHeaderRow from '@/components/search/SearchHeaderRow';
 
 
 export default function WardrobeScreen() {
@@ -58,6 +61,8 @@ export default function WardrobeScreen() {
   const styles = createStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
+  const { setTabBarDimmed } = useFloatingTabBar();
+  const isFocused = useIsFocused();
   const { addItemId } = useLocalSearchParams<{ addItemId?: string }>();
   const [activeTab, setActiveTab] = useState<'my' | 'following' | 'discover'>('my');
 
@@ -68,7 +73,7 @@ export default function WardrobeScreen() {
 
   // Local UI state (must be before useMemo/backgroundGrid that depend on selectedOutfitItems + allItems)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const wardrobeSearchQuery = '';
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [outfitCreatorMode, setOutfitCreatorMode] = useState(false);
   const [selectedOutfitItems, setSelectedOutfitItems] = useState<string[]>([]);
@@ -77,6 +82,17 @@ export default function WardrobeScreen() {
   const [showFirstTimeTutorial, setShowFirstTimeTutorial] = useState(false);
   const [tutorialChecked, setTutorialChecked] = useState(false);
   const [showOutfitTipOnClose, setShowOutfitTipOnClose] = useState(false);
+  const { width: searchOverlayWidth } = useWindowDimensions();
+  const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
+  const searchOpenRef = useRef(false);
+  const {
+    searchQuery: globalSearchQuery,
+    setSearchQuery: setGlobalSearchQuery,
+    selectedFilter: searchSelectedFilter,
+    setSelectedFilter: setSearchSelectedFilter,
+    filteredResults: searchFilteredResults,
+    loading: searchLoading,
+  } = useSearch({ userId: user?.id });
   const {
     headerHeight,
     headerOpacity,
@@ -85,7 +101,17 @@ export default function WardrobeScreen() {
     uiHidden,
     handleHeaderLayout,
     handleScroll: handleGridScroll,
-  } = useHideHeaderOnScroll();
+  } = useHideHeaderOnScroll({
+    onVisibilityChange: (visible, timing) => {
+      setTabBarDimmed(!visible, timing);
+    },
+  });
+
+  useEffect(() => {
+    if (!isFocused) {
+      setTabBarDimmed(false);
+    }
+  }, [isFocused, setTabBarDimmed]);
 
   // Items data with caching (allItems required for selectedItemsForGeneration)
   const {
@@ -101,7 +127,7 @@ export default function WardrobeScreen() {
     wardrobeId,
     userId: user?.id,
     categoryId: selectedCategoryId,
-    searchQuery,
+    searchQuery: wardrobeSearchQuery,
   });
 
   // Selected items as WardrobeItem[] (for background grid + generate); memoized so background hook debounce is stable
@@ -148,26 +174,12 @@ export default function WardrobeScreen() {
     availableTags,
   } = useFilters(allItems, user?.id, entityAttributesMap, tagsMap);
 
-  // Register search/filter state for the native header bar
-  const { registerHeaderSearch, clearHeaderSearch } = useHeaderSearch();
   useEffect(() => {
-    if (activeTab !== 'my') {
-      clearHeaderSearch();
-      return;
+    if (!searchOpenRef.current && searchOverlayOpen) {
+      setSearchSelectedFilter('wardrobe_item');
     }
-
-    registerHeaderSearch({
-      searchQuery,
-      onSearchChange: setSearchQuery,
-      onFilter: () => setShowFilterDrawer(true),
-      onAdd: () => router.push('/wardrobe/add' as any),
-      hasActiveFilters,
-      placeholder: 'Search wardrobe...',
-      rightActionIcon: 'camera-outline',
-      onRightAction: () => router.push('/wardrobe/add?action=photo' as any),
-    });
-    return () => clearHeaderSearch();
-  }, [activeTab, searchQuery, hasActiveFilters]);
+    searchOpenRef.current = searchOverlayOpen;
+  }, [searchOverlayOpen, setSearchSelectedFilter]);
 
   // Load subcategories when category changes; clear subcategory filter
   useEffect(() => {
@@ -492,6 +504,23 @@ export default function WardrobeScreen() {
     );
   }
 
+  const handleSearchResultPress = (result: (typeof searchFilteredResults)[0]) => {
+    switch (result.type) {
+      case 'user':
+        router.push(`/users/${result.id}`);
+        break;
+      case 'outfit':
+        router.push(`/outfits/${result.id}`);
+        break;
+      case 'lookbook':
+        router.push(`/lookbooks/${result.id}`);
+        break;
+      case 'wardrobe_item':
+        router.push(`/wardrobe/item/${result.id}`);
+        break;
+    }
+  };
+
   return (
     <View style={commonStyles.container}>
 
@@ -513,32 +542,32 @@ export default function WardrobeScreen() {
         pointerEvents={uiHidden ? 'none' : 'auto'}
       >
         <View onLayout={handleHeaderLayout}>
-        <View style={styles.pillRow}>
-          <FlatList
-            horizontal
-            data={[
-              { id: 'my', label: 'My Wardrobe', icon: 'shirt-outline' as const },
-              { id: 'following', label: 'Following', icon: 'people-outline' as const },
-              { id: 'discover', label: 'Discover', icon: 'compass-outline' as const },
+        <SearchHeaderRow
+          title="Wardrobe"
+          searchQuery={globalSearchQuery}
+          onSearchChange={setGlobalSearchQuery}
+          onSearchToggle={setSearchOverlayOpen}
+          onFilter={() => setShowFilterDrawer(true)}
+          hasActiveFilters={hasActiveFilters}
+          placeholder="Search wardrobe..."
+          rightIcon="camera-outline"
+          onRightAction={() => router.push('/wardrobe/add?action=photo' as any)}
+          searchOpen={searchOverlayOpen}
+        />
+        {!searchOverlayOpen && (
+          <TabPillsRow
+            pills={[
+              { id: 'my', label: 'My Wardrobe', icon: 'shirt-outline' },
+              { id: 'following', label: 'Following', icon: 'people-outline' },
+              { id: 'discover', label: 'Discover', icon: 'compass-outline' },
             ]}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <PillButton
-                label={item.label}
-                icon={item.icon}
-                selected={activeTab === item.id}
-                onPress={() => setActiveTab(item.id as 'my' | 'following' | 'discover')}
-                variant="default"
-                size="medium"
-              />
-            )}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.pillList}
-            style={styles.pillFlatList}
+            activeId={activeTab}
+            onPress={(id) => setActiveTab(id as 'my' | 'following' | 'discover')}
+            showFilter={false}
           />
-        </View>
+        )}
         {/* Outfit Creator Bar */}
-        {activeTab === 'my' && outfitCreatorMode && (
+        {!searchOverlayOpen && activeTab === 'my' && outfitCreatorMode && (
           <OutfitCreatorBar
             selectedItems={selectedItemsForBar}
             onRemoveItem={(id) => setSelectedOutfitItems((prev) => prev.filter((i) => i !== id))}
@@ -551,7 +580,7 @@ export default function WardrobeScreen() {
         )}
 
         {/* Category Pills */}
-        {activeTab === 'my' && (
+        {!searchOverlayOpen && activeTab === 'my' && (
           <CategoryPills
             categories={categories}
             selectedCategoryId={selectedCategoryId}
@@ -561,7 +590,7 @@ export default function WardrobeScreen() {
         )}
 
         {/* Subcategory Pills - shown when a category is selected and has subcategories */}
-        {activeTab === 'my' && selectedCategoryId && subcategories.length > 0 && (
+        {!searchOverlayOpen && activeTab === 'my' && selectedCategoryId && subcategories.length > 0 && (
           <CategoryPills
             subcategories={subcategories}
             selectedSubcategoryId={filters.subcategoryId}
@@ -576,6 +605,18 @@ export default function WardrobeScreen() {
         </View>
       </Animated.View>
 
+      <SearchOverlay
+        open={searchOverlayOpen}
+        width={searchOverlayWidth}
+        topOffset={headerHeight}
+        searchQuery={globalSearchQuery}
+        loading={searchLoading}
+        selectedFilter={searchSelectedFilter}
+        filteredResults={searchFilteredResults}
+        onFilterChange={setSearchSelectedFilter}
+        onResultPress={handleSearchResultPress}
+      />
+
       {/* Items Grid */}
       {activeTab === 'my' ? (
         <ItemGrid
@@ -588,7 +629,7 @@ export default function WardrobeScreen() {
           onFavoritePress={handleToggleFavorite}
           onRefresh={refresh}
           refreshing={refreshing}
-          emptyTitle={searchQuery || selectedCategoryId || hasActiveFilters ? 'No items found' : 'Your wardrobe is empty'}
+          emptyTitle={wardrobeSearchQuery || selectedCategoryId || hasActiveFilters ? 'No items found' : 'Your wardrobe is empty'}
           emptyActionLabel="Add your first item"
           onEmptyAction={() => router.push('/wardrobe/add')}
           onScroll={handleGridScroll}
@@ -659,20 +700,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   headerContainer: {
     overflow: 'hidden',
     backgroundColor: colors.background,
-  },
-  pillRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.backgroundDark,
-  },
-  pillFlatList: {
-    flexGrow: 0,
-  },
-  pillList: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
-    gap: theme.spacing.xs,
-    alignItems: 'center',
   },
   placeholderContainer: {
     flex: 1,

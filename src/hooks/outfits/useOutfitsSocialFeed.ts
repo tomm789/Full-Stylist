@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FeedItem } from '@/lib/posts';
 import { getUserSaves } from '@/lib/engagement/saves';
+import { normalizeLabelKey } from '@/lib/outfits/normalizeLabels';
 
 type UseOutfitsSocialFeedParams = {
   userId?: string;
@@ -78,8 +79,12 @@ export function useOutfitsSocialFeed({
   );
 
   const applyGridFilters = useCallback(
-    (items: FeedItem[]) =>
-      applySavedFilter(items).filter((item) => {
+    (items: FeedItem[]) => {
+      const selectedKeys =
+        selectedOccasions.length > 0
+          ? new Set(selectedOccasions.map(normalizeLabelKey).filter(Boolean))
+          : null;
+      return applySavedFilter(items).filter((item) => {
         const post = item.type === 'post' ? item.post : item.repost?.original_post;
         if (!post) return false;
         if (post.entity_type === 'outfit') {
@@ -87,7 +92,9 @@ export function useOutfitsSocialFeed({
           if (selectedOccasions.length === 0) return true;
           const outfit = item.entity?.outfit as { occasions?: string[] } | undefined;
           return Boolean(
-            outfit?.occasions?.some((occasion) => selectedOccasions.includes(occasion))
+            outfit?.occasions?.some(
+              (occasion) => selectedKeys?.has(normalizeLabelKey(occasion))
+            )
           );
         }
         if (post.entity_type === 'lookbook') {
@@ -95,7 +102,8 @@ export function useOutfitsSocialFeed({
           return selectedOccasions.length === 0;
         }
         return false;
-      }),
+      });
+    },
     [applySavedFilter, showGridOutfits, showGridLookbooks, selectedOccasions]
   );
 

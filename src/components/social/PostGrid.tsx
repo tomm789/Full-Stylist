@@ -78,6 +78,7 @@ type PostGridProps<T> = {
   onRefresh?: () => void;
   onEndReached?: () => void;
   onEndReachedThreshold?: number;
+  ListHeaderComponent?: React.ReactElement | null;
   ListEmptyComponent?: React.ReactElement | null;
   ListFooterComponent?: React.ReactElement | null;
 };
@@ -96,6 +97,7 @@ export default function PostGrid<T>({
   onRefresh,
   onEndReached,
   onEndReachedThreshold,
+  ListHeaderComponent,
   ListEmptyComponent,
   ListFooterComponent,
 }: PostGridProps<T>) {
@@ -118,6 +120,7 @@ export default function PostGrid<T>({
       }
       onEndReached={onEndReached}
       onEndReachedThreshold={onEndReachedThreshold}
+      ListHeaderComponent={ListHeaderComponent}
       ListEmptyComponent={ListEmptyComponent}
       ListFooterComponent={ListFooterComponent}
     />

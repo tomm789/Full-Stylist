@@ -53,8 +53,10 @@ Guidelines:
 - Description should be engaging and highlight how the pieces work together
 - Occasions should be specific (e.g., "casual brunch", "business meeting", "date night")
 - Provide exactly 3 occasions
+- Use Title Case for occasions (e.g., "Casual Brunch")
 - Style tags should describe the overall vibe (e.g., "minimalist", "preppy", "streetwear")
 - Provide exactly 3 style tags
+- Use Title Case for style tags (e.g., "Minimalist")
 - Keep it concise and actionable
 
 Respond with ONLY the JSON object, no additional text.`;
@@ -141,8 +143,8 @@ function parseDescriptionResponse(apiResponse) {
     return {
       title: safeTitle,
       description: parsed.description || '',
-      occasions: Array.isArray(parsed.occasions) ? parsed.occasions.slice(0, 3) : [],
-      styleTags: Array.isArray(parsed.style_tags) ? parsed.style_tags.slice(0, 3) : [],
+      occasions: normalizeLabelList(parsed.occasions).slice(0, 3),
+      styleTags: normalizeLabelList(parsed.style_tags).slice(0, 3),
       season: parsed.season || 'all-season',
     };
   } catch (error) {
@@ -156,6 +158,31 @@ function parseDescriptionResponse(apiResponse) {
       season: 'all-season',
     };
   }
+}
+
+function normalizeLabel(value) {
+  if (typeof value !== 'string') return '';
+  const collapsed = value.trim().replace(/\s+/g, ' ');
+  if (!collapsed) return '';
+  const lower = collapsed.toLowerCase();
+  return lower.replace(/\b[a-z]/g, (char) => char.toUpperCase());
+}
+
+function normalizeLabelList(values) {
+  if (!Array.isArray(values)) return [];
+  const seen = new Set();
+  const normalized = [];
+
+  for (const value of values) {
+    const label = normalizeLabel(value);
+    if (!label) continue;
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(label);
+  }
+
+  return normalized;
 }
 
 /**

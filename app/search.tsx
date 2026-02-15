@@ -1,23 +1,22 @@
 import React from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   TextInput,
   SafeAreaView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearch } from '@/hooks';
-import { SearchResultItem, SearchFilterBar, LoadingSpinner } from '@/components/shared';
+import SearchResultsPanel from '@/components/search/SearchResultsPanel';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
 
 export default function SearchScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { filter } = useLocalSearchParams<{ filter?: string | string[] }>();
 
   const {
     searchQuery,
@@ -27,6 +26,20 @@ export default function SearchScreen() {
     setSearchQuery,
     setSelectedFilter,
   } = useSearch({ userId: user?.id });
+
+  React.useEffect(() => {
+    const filterParam = Array.isArray(filter) ? filter[0] : filter;
+    if (!filterParam) return;
+    if (
+      filterParam === 'all' ||
+      filterParam === 'user' ||
+      filterParam === 'outfit' ||
+      filterParam === 'lookbook' ||
+      filterParam === 'wardrobe_item'
+    ) {
+      setSelectedFilter(filterParam);
+    }
+  }, [filter, setSelectedFilter]);
 
   const handleResultPress = (result: typeof filteredResults[0]) => {
     switch (result.type) {
@@ -72,44 +85,14 @@ export default function SearchScreen() {
         )}
       </View>
 
-      {/* Filter Chips */}
-      <SearchFilterBar
+      <SearchResultsPanel
+        searchQuery={searchQuery}
+        loading={loading}
         selectedFilter={selectedFilter}
+        filteredResults={filteredResults}
         onFilterChange={setSelectedFilter}
+        onResultPress={handleResultPress}
       />
-
-      {/* Results */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <LoadingSpinner size="large" />
-        </View>
-      ) : (
-        <FlatList
-          data={filteredResults}
-          renderItem={({ item }) => (
-            <SearchResultItem result={item} onPress={handleResultPress} />
-          )}
-          keyExtractor={(item) => `${item.type}-${item.id}`}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            searchQuery.trim().length > 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyText}>No results found</Text>
-                <Text style={styles.emptySubtext}>Try a different search term</Text>
-              </View>
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyText}>Search everything</Text>
-                <Text style={styles.emptySubtext}>
-                  Find users, outfits, lookbooks, and items
-                </Text>
-              </View>
-            )
-          }
-        />
-      )}
     </SafeAreaView>
   );
 }
@@ -140,32 +123,5 @@ const styles = StyleSheet.create({
   clearButton: {
     padding: 4,
   },
-  listContent: {
-    paddingBottom: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 100,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 100,
-    paddingHorizontal: 40,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
+  // Results UI extracted to SearchResultsPanel
 });
