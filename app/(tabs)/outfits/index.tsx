@@ -636,6 +636,8 @@ export default function OutfitsScreen() {
             onFilter={() => setShowSortModal(true)}
             hasActiveFilters={filters.showFavoritesOnly}
             placeholder="Search outfits..."
+            leftIcon="calendar-outline"
+            onLeftAction={() => router.push('/calendar' as any)}
             rightIcon="notifications-outline"
             onRightAction={() => router.push('/notifications' as any)}
             rightBadgeCount={unreadCount}

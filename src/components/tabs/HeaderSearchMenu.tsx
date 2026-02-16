@@ -211,7 +211,7 @@ export function ConnectedHeaderSearchTitle() {
       ) : (
         <HeaderTitleRow
           title={headerSearch?.title ?? fallbackTitle}
-          hideCalendar={isSearchExpanded}
+          hideLeftIcon={isSearchExpanded}
           rightSlot={
             headerSearch ? (
               <HeaderSearchPill

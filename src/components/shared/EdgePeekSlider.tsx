@@ -58,6 +58,9 @@ export default function EdgePeekSlider<T>({
   const snapInterval = itemWidth + gap;
   const listRef = React.useRef<FlatList<T>>(null);
   const lastIndexRef = React.useRef<number>(-1);
+  // Track whether the last index change came from user scrolling so the
+  // activeIndex useEffect doesn't fight the gesture by calling scrollToIndex.
+  const scrollOriginRef = React.useRef<'user' | 'external'>('external');
 
   // Use proper gesture handler for edge swipe detection
   const { GestureView } = useEdgeSwipe({
@@ -70,15 +73,27 @@ export default function EdgePeekSlider<T>({
     enabled: edgeSwipeEnabled && activeIndex === 0,
     edgeThreshold: edgeSwipeThreshold,
     swipeDistance: 50,
-    minVelocity: 0.15, // Lower threshold for better UX
-    haptic: enableHaptics,
+    minVelocity: 0.15,
     debounceMs: 500,
     style,
   });
 
+  // Only programmatically scroll when the index change came from an external
+  // source (e.g. tapping a grid thumbnail). When the user is swiping, the
+  // FlatList already handles positioning — calling scrollToIndex on top of
+  // that causes jank and "reload" flashes.
   React.useEffect(() => {
     if (activeIndex === undefined || activeIndex === null) return;
     if (activeIndex === lastIndexRef.current) return;
+
+    if (scrollOriginRef.current === 'user') {
+      // Index change originated from our own scroll handler — just sync the
+      // ref so next external change is detected, but don't scroll.
+      lastIndexRef.current = activeIndex;
+      scrollOriginRef.current = 'external';
+      return;
+    }
+
     lastIndexRef.current = activeIndex;
     listRef.current?.scrollToIndex({ index: activeIndex, animated: true });
   }, [activeIndex]);
@@ -89,6 +104,7 @@ export default function EdgePeekSlider<T>({
     const nextIndex = Math.max(0, Math.min(data.length - 1, rawIndex));
     if (nextIndex === lastIndexRef.current) return;
     lastIndexRef.current = nextIndex;
+    scrollOriginRef.current = 'user';
     onIndexChange?.(nextIndex);
     if (enableHaptics && Platform.OS !== 'web') {
       void Haptics.selectionAsync().catch(() => undefined);

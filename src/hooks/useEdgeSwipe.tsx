@@ -5,9 +5,8 @@
  */
 
 import React, { useRef, useCallback } from 'react';
-import { Dimensions } from 'react-native';
+import { Dimensions, View } from 'react-native';
 import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
-import Animated from 'react-native-reanimated';
 import type { ViewStyle } from 'react-native';
 
 export type EdgeSwipeDirection = 'left' | 'right' | 'top' | 'bottom';
@@ -87,7 +86,7 @@ export function useEdgeSwipe({
   const GestureView = useCallback(
     ({ children }: { children: React.ReactNode }) => (
       <PanGestureHandler enabled={enabled} onGestureEvent={handleGestureEvent}>
-        <Animated.View style={style}>{children}</Animated.View>
+        <View style={[{ flex: 1 }, style]}>{children}</View>
       </PanGestureHandler>
     ),
     [handleGestureEvent, enabled, style]

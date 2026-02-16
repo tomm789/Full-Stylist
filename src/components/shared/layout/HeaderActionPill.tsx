@@ -14,37 +14,25 @@ import type { ThemeColors } from '@/styles/themes';
 const { spacing, borderRadius, typography } = theme;
 
 type HeaderActionPillProps = {
-  onCamera: () => void;
   onNotifications: () => void;
   onProfile: () => void;
   avatarUri?: string | null;
   avatarInitials?: string;
   unreadCount?: number;
-  disabled?: boolean;
 };
 
 export default function HeaderActionPill({
-  onCamera,
   onNotifications,
   onProfile,
   avatarUri,
   avatarInitials,
   unreadCount = 0,
-  disabled = false,
 }: HeaderActionPillProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={[styles.iconButton, disabled && styles.iconButtonDisabled]}
-        onPress={onCamera}
-        accessibilityLabel="Open camera"
-        disabled={disabled}
-      >
-        <Ionicons name="camera-outline" size={22} color={colors.textPrimary} />
-      </TouchableOpacity>
       <TouchableOpacity
         style={styles.iconButton}
         onPress={onNotifications}
@@ -89,9 +77,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: borderRadius.round,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconButtonDisabled: {
-    opacity: 0.6,
   },
   badge: {
     position: 'absolute',

@@ -1,6 +1,9 @@
 /**
  * HeaderTitleRow Component
- * Calendar icon + page title + optional right-side accessory.
+ * Configurable left icon + page title + optional right-side accessory.
+ *
+ * The left button defaults to a calendar icon that navigates to /calendar,
+ * but callers can override it with any Ionicon via leftIcon / onLeftAction.
  */
 
 import React from 'react';
@@ -15,36 +18,55 @@ const { spacing, typography } = theme;
 
 type HeaderTitleRowProps = {
   title: string;
+  /** Override the default calendar icon shown on the left. */
+  leftIcon?: keyof typeof Ionicons.glyphMap;
+  /** Handler for the left icon button. Defaults to navigating to /calendar. */
+  onLeftAction?: () => void;
   leftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
-  hideCalendar?: boolean;
+  hideLeftIcon?: boolean;
   rightSlotExpand?: boolean;
   collapseTitle?: boolean;
+  /** @deprecated Use hideLeftIcon instead. */
+  hideCalendar?: boolean;
 };
 
 export default function HeaderTitleRow({
   title,
+  leftIcon = 'calendar-outline',
+  onLeftAction,
   leftSlot,
   rightSlot,
-  hideCalendar = false,
+  hideLeftIcon,
   rightSlotExpand = false,
   collapseTitle = false,
+  hideCalendar,
 }: HeaderTitleRowProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const router = useRouter();
 
+  const isHidden = hideLeftIcon ?? hideCalendar ?? false;
+
+  const handleLeftPress = () => {
+    if (onLeftAction) {
+      onLeftAction();
+    } else {
+      router.push('/calendar' as any);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <TouchableOpacity
-        style={[styles.calendarButton, hideCalendar && styles.calendarButtonHidden]}
-        onPress={() => router.push('/calendar' as any)}
-        disabled={hideCalendar}
+        style={[styles.leftIconButton, isHidden && styles.leftIconButtonHidden]}
+        onPress={handleLeftPress}
+        disabled={isHidden}
         accessibilityRole="button"
-        accessibilityLabel="Open calendar"
+        accessibilityLabel={onLeftAction ? leftIcon.replace(/-outline$/, '').replace(/-/g, ' ') : 'Open calendar'}
       >
         <Ionicons
-          name="calendar-outline"
+          name={leftIcon}
           size={22}
           color={colors.textPrimary}
         />
@@ -53,7 +75,7 @@ export default function HeaderTitleRow({
       <Text
         style={[
           styles.titleText,
-          hideCalendar && styles.titleTextCompressed,
+          isHidden && styles.titleTextCompressed,
           collapseTitle && styles.titleTextCollapsed,
         ]}
         numberOfLines={1}
@@ -77,10 +99,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
   },
-  calendarButton: {
+  leftIconButton: {
     padding: spacing.xs,
   },
-  calendarButtonHidden: {
+  leftIconButtonHidden: {
     opacity: 0,
     width: 0,
     paddingHorizontal: 0,

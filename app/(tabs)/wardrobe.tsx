@@ -53,6 +53,7 @@ import type { ThemeColors } from '@/styles/themes';
 import { useSearch } from '@/hooks';
 import SearchOverlay from '@/components/search/SearchOverlay';
 import SearchHeaderRow from '@/components/search/SearchHeaderRow';
+import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
 
 
 export default function WardrobeScreen() {
@@ -105,6 +106,17 @@ export default function WardrobeScreen() {
     onVisibilityChange: (visible, timing) => {
       setTabBarDimmed(!visible, timing);
     },
+  });
+
+  const handleOpenCamera = useCallback(() => {
+    router.push('/wardrobe/add?action=photo' as any);
+  }, [router]);
+
+  // Edge swipe: swipe from left edge to open camera
+  const { GestureView: CameraSwipeView } = useEdgeSwipe({
+    direction: 'left',
+    onSwipe: handleOpenCamera,
+    enabled: isFocused && !searchOverlayOpen,
   });
 
   useEffect(() => {
@@ -522,6 +534,7 @@ export default function WardrobeScreen() {
   };
 
   return (
+    <CameraSwipeView>
     <View style={commonStyles.container}>
 
       {/* Generation Progress Modal (hidden in PERF_MODE to measure UI overhead) */}
@@ -550,8 +563,8 @@ export default function WardrobeScreen() {
           onFilter={() => setShowFilterDrawer(true)}
           hasActiveFilters={hasActiveFilters}
           placeholder="Search wardrobe..."
-          rightIcon="camera-outline"
-          onRightAction={() => router.push('/wardrobe/add?action=photo' as any)}
+          leftIcon="camera-outline"
+          onLeftAction={handleOpenCamera}
           searchOpen={searchOverlayOpen}
         />
         {!searchOverlayOpen && (
@@ -597,9 +610,6 @@ export default function WardrobeScreen() {
             selectedCategoryLabel={getCategoryById(selectedCategoryId)?.name}
             onSelectSubcategory={(id) => updateFilter('subcategoryId', id)}
             variant="subcategory"
-            selectedCategoryLabel={
-              categories.find((category) => category.id === selectedCategoryId)?.name
-            }
           />
         )}
         </View>
@@ -692,6 +702,7 @@ export default function WardrobeScreen() {
         />
       )}
     </View>
+    </CameraSwipeView>
   );
 }
 

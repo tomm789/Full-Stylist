@@ -11,7 +11,6 @@ import { useThemeColors } from '@/contexts/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HeaderSearchPill from '@/components/tabs/HeaderSearchPill';
 import type { ThemeColors } from '@/styles/themes';
-import { useRouter } from 'expo-router';
 
 const { spacing, typography } = theme;
 
@@ -23,6 +22,10 @@ type SearchHeaderRowProps = {
   onFilter: () => void;
   hasActiveFilters: boolean;
   placeholder?: string;
+  /** Icon shown on the left when search is collapsed (defaults to camera). */
+  leftIcon?: keyof typeof Ionicons.glyphMap;
+  /** Handler for the left icon tap. */
+  onLeftAction?: () => void;
   rightIcon?: keyof typeof Ionicons.glyphMap;
   onRightAction?: () => void;
   rightBadgeCount?: number;
@@ -37,6 +40,8 @@ export default function SearchHeaderRow({
   onFilter,
   hasActiveFilters,
   placeholder = 'Search...',
+  leftIcon = 'camera-outline',
+  onLeftAction,
   rightIcon,
   onRightAction,
   rightBadgeCount = 0,
@@ -45,13 +50,12 @@ export default function SearchHeaderRow({
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const insets = useSafeAreaInsets();
-  const router = useRouter();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.sm }]}>
       {searchOpen ? (
         <TouchableOpacity
-          style={styles.calendarButton}
+          style={styles.leftButton}
           onPress={() => onSearchToggle(false)}
           accessibilityRole="button"
           accessibilityLabel="Close search"
@@ -60,13 +64,14 @@ export default function SearchHeaderRow({
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
-          style={styles.calendarButton}
-          onPress={() => router.push('/calendar' as any)}
+          style={styles.leftButton}
+          onPress={onLeftAction}
+          disabled={!onLeftAction}
           accessibilityRole="button"
-          accessibilityLabel="Open calendar"
+          accessibilityLabel={leftIcon.replace(/-outline$/, '').replace(/-/g, ' ')}
         >
           <Ionicons
-            name="calendar-outline"
+            name={leftIcon}
             size={22}
             color={colors.textPrimary}
           />
@@ -108,10 +113,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingBottom: spacing.sm,
     backgroundColor: colors.background,
   },
-  calendarButton: {
-    padding: spacing.xs,
-  },
-  backButton: {
+  leftButton: {
     padding: spacing.xs,
   },
   titleText: {

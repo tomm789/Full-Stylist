@@ -43,15 +43,15 @@ export default function HeaderTitlePillRow({
     <View style={[styles.container, { paddingTop: insets.top + spacing.sm }]}>
       <HeaderTitleRow
         title={title}
+        leftIcon="camera-outline"
+        onLeftAction={cameraDisabled ? undefined : onCamera}
         rightSlot={
           <HeaderActionPill
-            onCamera={onCamera}
             onNotifications={onNotifications}
             onProfile={onProfile}
             avatarUri={avatarUri ?? undefined}
             avatarInitials={avatarInitials}
             unreadCount={unreadCount}
-            disabled={cameraDisabled}
           />
         }
       />
@@ -61,6 +61,7 @@ export default function HeaderTitlePillRow({
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
+    flexDirection: 'row',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
     backgroundColor: colors.background,
