@@ -5,14 +5,13 @@
  * a gallery thumbnail in the bottom-left that opens the photo library.
  */
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   Animated,
-  Dimensions,
-  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { CameraView } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
@@ -53,7 +52,26 @@ export default function WardrobeCameraOverlay({
   lastPhotoUri,
 }: WardrobeCameraOverlayProps) {
   const insets = useSafeAreaInsets();
-  const screenHeight = Dimensions.get('window').height;
+  const [selectedLens, setSelectedLens] = React.useState<string | null>(null);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const topBarHeight = insets.top + 8 + 40;
+  const bottomBarHeight = insets.bottom + 24 + CAPTURE_BUTTON_SIZE;
+  const availableHeight = Math.max(0, screenHeight - topBarHeight - bottomBarHeight);
+  const cropGuideSize = Math.max(120, Math.min(screenWidth - 32, availableHeight - 24));
+  const cropGuideTop = topBarHeight + Math.max(0, (availableHeight - cropGuideSize) / 2);
+
+  const handleAvailableLensesChanged = React.useCallback((event: { lenses: string[] }) => {
+    const lenses = event?.lenses ?? [];
+    if (lenses.length === 0) return;
+
+    const standard =
+      lenses.find((lens) => {
+        const value = lens.toLowerCase();
+        return !value.includes('tele') && !value.includes('ultra');
+      }) || lenses[0];
+
+    setSelectedLens(standard);
+  }, []);
 
   // Don't render CameraView when closed to save resources
   if (!isOpen) return null;
@@ -69,7 +87,22 @@ export default function WardrobeCameraOverlay({
         ref={cameraRef}
         style={styles.camera}
         facing="back"
+        selectedLens={selectedLens || undefined}
+        onAvailableLensesChanged={handleAvailableLensesChanged}
         onCameraReady={onCameraReady}
+      />
+
+      <View
+        pointerEvents="none"
+        style={[
+          styles.cropGuide,
+          {
+            width: cropGuideSize,
+            height: cropGuideSize,
+            top: cropGuideTop,
+            left: (screenWidth - cropGuideSize) / 2,
+          },
+        ]}
       />
 
       {/* Top bar with close button */}
@@ -128,6 +161,13 @@ const styles = StyleSheet.create({
   },
   camera: {
     flex: 1,
+  },
+  cropGuide: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'transparent',
+    borderRadius: 4,
   },
   topBar: {
     position: 'absolute',

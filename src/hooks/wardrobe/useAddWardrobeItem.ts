@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWardrobe } from './useWardrobe';
 import { useAIJobPolling } from '@/hooks/ai';
@@ -32,7 +33,7 @@ interface UseAddWardrobeItemReturn {
   setSelectedImages: (images: SelectedImage[]) => void;
   handleTakePhoto: () => Promise<void>;
   handleUploadPhoto: () => Promise<void>;
-  addImageFromUri: (uri: string) => void;
+  addImageFromUri: (uri: string) => Promise<void>;
   removeImage: (index: number) => void;
 
   // Cropper
@@ -73,6 +74,28 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
   // Store image ids for tagging follow-up when render succeeds (non-blocking)
   const pendingImageIdsRef = useRef<string[]>([]);
   const timelineRef = useRef<ReturnType<typeof startTimeline> | null>(null);
+
+  const centerCropToSquare = useCallback(async (uri: string): Promise<string> => {
+    if (Platform.OS === 'web') return uri;
+    try {
+      const source = await ImageManipulator.manipulateAsync(uri, [], {
+        compress: 1,
+        format: ImageManipulator.SaveFormat.JPEG,
+      });
+      if (source.width === source.height) return uri;
+      const side = Math.min(source.width, source.height);
+      const originX = Math.floor((source.width - side) / 2);
+      const originY = Math.floor((source.height - side) / 2);
+      const cropped = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ crop: { originX, originY, width: side, height: side } }],
+        { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      return cropped.uri;
+    } catch {
+      return uri;
+    }
+  }, []);
 
   const onComplete = useCallback(
     (job: import('@/lib/ai-jobs').AIJob) => {
@@ -260,7 +283,8 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes,
-      allowsEditing: false, // We'll handle cropping in our cropper
+      allowsEditing: Platform.OS !== 'web',
+      ...(Platform.OS !== 'web' ? { aspect: [1, 1] as [number, number] } : {}),
       quality: 0.8,
     });
 
@@ -270,7 +294,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
         setCropperImageUri(result.assets[0].uri);
         setCropperVisible(true);
       } else {
-        // On native, add directly (cropper not available)
+        // On native, ImagePicker editor enforces 1:1.
         const newImage = {
           uri: result.assets[0].uri,
           type: result.assets[0].type || 'image/jpeg',
@@ -292,7 +316,9 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes,
-      allowsMultipleSelection: Platform.OS !== 'web', // Single selection on web to show cropper
+      allowsMultipleSelection: Platform.OS === 'web',
+      allowsEditing: Platform.OS !== 'web',
+      ...(Platform.OS !== 'web' ? { aspect: [1, 1] as [number, number] } : {}),
       quality: 0.8,
     });
 
@@ -303,7 +329,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
         setCropperImageUri(result.assets[0].uri);
         setCropperVisible(true);
       } else {
-        // On native or if multiple selection, add directly
+        // On native, ImagePicker editor enforces 1:1.
         const newImages = result.assets.map((asset) => ({
           uri: asset.uri,
           type: asset.type || 'image/jpeg',
@@ -318,14 +344,22 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const addImageFromUri = useCallback((uri: string) => {
+  const addImageFromUri = useCallback(async (uri: string) => {
+    if (Platform.OS === 'web') {
+      setCropperImageUri(uri);
+      setCropperVisible(true);
+      return;
+    }
+
+    // Inline camera captures are auto-centered to 1:1 based on the guide.
+    const croppedUri = await centerCropToSquare(uri);
     const newImage: SelectedImage = {
-      uri,
+      uri: croppedUri,
       type: 'image/jpeg',
       name: `photo-${Date.now()}.jpg`,
     };
     setSelectedImages((prev) => [...prev, newImage]);
-  }, []);
+  }, [centerCropToSquare]);
 
   const handleCropperCancel = useCallback(() => {
     setCropperVisible(false);

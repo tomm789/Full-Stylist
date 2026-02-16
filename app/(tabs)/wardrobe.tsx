@@ -21,6 +21,7 @@ import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits
 
 // Shared Components
 import { EmptyState, LoadingOverlay, LoadingSpinner, TabPillsRow } from '@/components/shared';
+import { WardrobeTabIcon } from '@/components/icons/tabs';
 
 // Wardrobe Components
 import {
@@ -133,8 +134,6 @@ export default function WardrobeScreen() {
       router.push(`/wardrobe/add?imageUri=${encodeURIComponent(image.uri)}` as any);
     }
   }, [wardrobeCamera.pickFromLibrary, wardrobeCamera.close, router]);
-
-  const [cameraReady, setCameraReady] = useState(false);
 
   // Edge swipe: swipe from left edge to open camera
   const cameraSwipe = useEdgeSwipe({
@@ -601,7 +600,14 @@ export default function WardrobeScreen() {
           {!searchOverlayOpen && (
             <TabPillsRow
               pills={[
-                { id: 'my', label: 'My Wardrobe', icon: 'shirt-outline' },
+                {
+                  id: 'my',
+                  label: 'My Wardrobe',
+                  icon: 'shirt-outline',
+                  iconComponent: ({ size, color }) => (
+                    <WardrobeTabIcon width={size} height={size} color={color} fill={color} />
+                  ),
+                },
                 { id: 'following', label: 'Following', icon: 'people-outline' },
                 { id: 'discover', label: 'Discover', icon: 'compass-outline' },
               ]}
@@ -739,7 +745,7 @@ export default function WardrobeScreen() {
         translateX={wardrobeCamera.cameraTranslateX}
         isOpen={wardrobeCamera.isOpen}
         cameraRef={wardrobeCamera.cameraRef}
-        onCameraReady={() => setCameraReady(true)}
+        onCameraReady={wardrobeCamera.onCameraReady}
         onCapture={handleCameraCapture}
         onClose={wardrobeCamera.close}
         onPickFromLibrary={handleCameraPickLibrary}

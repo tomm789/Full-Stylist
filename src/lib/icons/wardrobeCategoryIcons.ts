@@ -41,7 +41,7 @@ export const wardrobeCategoryIconMap: Record<string, WardrobeCategoryIcon> = {
     category: 'Dresses',
     iconName: 'dress',
     source: 'phosphor',
-    file: 'assets/icons/wardrobe/dresses.svg',
+    file: 'assets/icons/wardrobe/dress-stylish-svgrepo-com.svg',
   },
   'Jumpsuits & Rompers': {
     category: 'Jumpsuits & Rompers',
@@ -53,13 +53,13 @@ export const wardrobeCategoryIconMap: Record<string, WardrobeCategoryIcon> = {
     category: 'Outerwear',
     iconName: 'hoodie',
     source: 'phosphor',
-    file: 'assets/icons/wardrobe/outerwear.svg',
+    file: 'assets/icons/wardrobe/jacket-coat-svgrepo-com.svg',
   },
   'Knitwear': {
     category: 'Knitwear',
     iconName: 'sweater',
     source: 'lucide-lab',
-    file: 'assets/icons/wardrobe/knitwear.svg',
+    file: 'assets/icons/wardrobe/sweater-svgrepo-com.svg',
   },
   'Activewear': {
     category: 'Activewear',

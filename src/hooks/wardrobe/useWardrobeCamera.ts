@@ -34,6 +34,7 @@ interface UseWardrobeCameraReturn {
   // Actions
   open: () => void;
   close: () => void;
+  onCameraReady: () => void;
   capture: () => Promise<CapturedImage | null>;
   pickFromLibrary: () => Promise<CapturedImage | null>;
 
@@ -140,6 +141,10 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
     });
   }, [isOpen, gridTranslateX, cameraTranslateX, screenWidth]);
 
+  const onCameraReady = useCallback(() => {
+    setCameraReady(true);
+  }, []);
+
   const capture = useCallback(async (): Promise<CapturedImage | null> => {
     if (!cameraRef.current || !cameraReady) return null;
 
@@ -193,6 +198,7 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
     cameraRef,
     open,
     close,
+    onCameraReady,
     capture,
     pickFromLibrary,
     lastPhotoUri,

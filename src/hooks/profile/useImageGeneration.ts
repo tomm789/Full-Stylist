@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { uploadAndCreateImage, uploadImageToStorage, uriToBlob } from '@/lib/utils/image-helpers';
 import { supabase } from '@/lib/supabase';
 import { updateUserProfile } from '@/lib/user';
@@ -27,7 +28,16 @@ interface UseImageGenerationReturn {
   policyMessage: string;
   error: string | null;
   clearError: () => void;
-  pickImage: (useCamera?: boolean) => Promise<void>;
+  pickImage: (
+    useCamera?: boolean,
+    options?: {
+      cameraType?: 'front' | 'back';
+      allowsEditing?: boolean;
+      aspect?: [number, number];
+    }
+  ) => Promise<void>;
+  pickHeadshotCameraImage: () => Promise<void>;
+  pickHeadshotLibraryImage: () => Promise<void>;
   clearImage: () => void;
   generateHeadshot: (
     userId: string,
@@ -66,16 +76,63 @@ export function useImageGeneration(): UseImageGenerationReturn {
 
   const clearError = () => setError(null);
 
-  const pickImage = async (useCamera = false) => {
-    console.log('[pickImage] Starting, useCamera:', useCamera);
-    
+  const applyPickedAsset = async (asset: ImagePicker.ImagePickerAsset) => {
+    setUploadedUri(asset.uri);
+    if (Platform.OS === 'web') {
+      const blob = await uriToBlob(asset.uri, 'image/jpeg');
+      setUploadedBlob(blob);
+      return;
+    }
+    setUploadedBlob(null);
+  };
+
+  const isPortraitFourByThree = (width?: number, height?: number, tolerance = 0.02) => {
+    if (!width || !height || height === 0) return false;
+    const ratio = width / height;
+    return Math.abs(ratio - 0.75) <= tolerance;
+  };
+
+  const centerCropToAspect = async (
+    uri: string,
+    width: number,
+    height: number,
+    targetAspect: number
+  ): Promise<string> => {
+    const currentAspect = width / height;
+    let cropWidth = width;
+    let cropHeight = height;
+
+    if (currentAspect > targetAspect) {
+      cropWidth = Math.floor(height * targetAspect);
+    } else if (currentAspect < targetAspect) {
+      cropHeight = Math.floor(width / targetAspect);
+    }
+
+    const originX = Math.floor((width - cropWidth) / 2);
+    const originY = Math.floor((height - cropHeight) / 2);
+
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ crop: { originX, originY, width: cropWidth, height: cropHeight } }],
+      { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    return result.uri;
+  };
+
+  const pickImage = async (
+    useCamera = false,
+    options?: {
+      cameraType?: 'front' | 'back';
+      allowsEditing?: boolean;
+      aspect?: [number, number];
+    }
+  ) => {
     const permissionFn = useCamera
       ? ImagePicker.requestCameraPermissionsAsync
       : ImagePicker.requestMediaLibraryPermissionsAsync;
 
     const { status } = await permissionFn();
     if (status !== 'granted') {
-      console.log('[pickImage] Permission denied');
       Alert.alert(
         'Permission Required',
         'Please grant ' + (useCamera ? 'camera' : 'camera roll') + ' permissions'
@@ -83,40 +140,64 @@ export function useImageGeneration(): UseImageGenerationReturn {
       return;
     }
 
-    console.log('[pickImage] Permission granted');
     const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
-    const launchFn = useCamera
-      ? ImagePicker.launchCameraAsync
-      : ImagePicker.launchImageLibraryAsync;
-
-    console.log('[pickImage] Launching picker...');
-    const result = await launchFn({
+    const commonOptions = {
       mediaTypes,
-      allowsEditing: true,
-      aspect: [3, 4],
+      allowsEditing: options?.allowsEditing ?? true,
+      ...(options?.aspect ? { aspect: options.aspect } : {}),
       quality: 0.8,
-    });
-
-    console.log('[pickImage] Picker result:', {
-      canceled: result.canceled,
-      hasAssets: !!(result.assets && result.assets[0])
-    });
+    };
+    const result = useCamera
+      ? await ImagePicker.launchCameraAsync({
+          ...commonOptions,
+          ...(options?.cameraType ? { cameraType: options.cameraType } : {}),
+        } as any)
+      : await ImagePicker.launchImageLibraryAsync(commonOptions as any);
 
     if (result.canceled || !result.assets[0]) {
-      console.log('[pickImage] User canceled or no assets');
       return;
     }
 
-    setUploadedUri(result.assets[0].uri);
-    if (Platform.OS === 'web') {
-      console.log('[pickImage] Converting to blob...');
-      const blob = await uriToBlob(result.assets[0].uri, 'image/jpeg');
-      console.log('[pickImage] Blob created, size:', blob.size);
-      setUploadedBlob(blob);
-    } else {
-      setUploadedBlob(null);
+    await applyPickedAsset(result.assets[0]);
+  };
+
+  const pickHeadshotCameraImage = async () => {
+    await pickImage(true, { cameraType: 'front', allowsEditing: false });
+  };
+
+  const pickHeadshotLibraryImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant camera roll permissions');
+      return;
     }
-    console.log('[pickImage] Done!');
+
+    const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes,
+      allowsEditing: false,
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    if (isPortraitFourByThree(asset.width, asset.height)) {
+      await applyPickedAsset(asset);
+      return;
+    }
+
+    if (
+      Platform.OS !== 'web' &&
+      typeof asset.width === 'number' &&
+      typeof asset.height === 'number'
+    ) {
+      const croppedUri = await centerCropToAspect(asset.uri, asset.width, asset.height, 3 / 4);
+      await applyPickedAsset({ ...asset, uri: croppedUri });
+      return;
+    }
+
+    await pickImage(false, { allowsEditing: true, aspect: [3, 4] });
   };
 
   const clearImage = () => {
@@ -528,6 +609,8 @@ export function useImageGeneration(): UseImageGenerationReturn {
     error,
     clearError,
     pickImage,
+    pickHeadshotCameraImage,
+    pickHeadshotLibraryImage,
     clearImage,
     generateHeadshot,
     generateBodyShot,

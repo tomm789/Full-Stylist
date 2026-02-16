@@ -13,10 +13,19 @@ import type { ThemeColors } from '@/styles/themes';
 
 const { spacing } = theme;
 
+export type TabPillIconRenderProps = {
+  size: number;
+  color: string;
+  selected: boolean;
+};
+
 export type TabPillItem = {
   id: string;
   label: string;
+  /** Ionicons name when iconComponent is not used */
   icon: keyof typeof Ionicons.glyphMap;
+  /** When set, renders this instead of icon (e.g. to match tab bar custom SVG) */
+  iconComponent?: (props: TabPillIconRenderProps) => React.ReactNode;
   removable?: boolean;
 };
 
@@ -60,19 +69,28 @@ export default function TabPillsRow({
           horizontal
           data={pills}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <PillButton
-              label={item.label}
-              icon={item.icon}
-              selected={activeId === item.id}
-              onPress={() => onPress(item.id)}
-              onRemove={
-                item.removable && onRemove ? () => onRemove(item.id) : undefined
-              }
-              variant="default"
-              size="medium"
-            />
-          )}
+          renderItem={({ item }) => {
+            const selected = activeId === item.id;
+            const iconColor = selected ? colors.primary : colors.textSecondary;
+            const iconSize = 16;
+            const leading = item.iconComponent
+              ? item.iconComponent({ size: iconSize, color: iconColor, selected })
+              : undefined;
+            return (
+              <PillButton
+                label={item.label}
+                icon={leading ? undefined : item.icon}
+                leading={leading}
+                selected={selected}
+                onPress={() => onPress(item.id)}
+                onRemove={
+                  item.removable && onRemove ? () => onRemove(item.id) : undefined
+                }
+                variant="default"
+                size="medium"
+              />
+            );
+          }}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.pillList}
           style={styles.pillFlatList}

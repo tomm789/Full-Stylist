@@ -6,13 +6,33 @@
 // public configuration if necessary. The client created here does not
 // automatically refresh tokens or persist sessions.
 
-// Load local .env for Netlify function development (no-op in production).
-require("dotenv").config();
+const fs = require("fs");
+const path = require("path");
+const dotenv = require("dotenv");
+
+// Load env files from the project root, not from Netlify's internal serve cwd.
+const projectRoot = path.resolve(__dirname, "..", "..");
+const envFiles = [".env.local", ".env"];
+for (const fileName of envFiles) {
+  const fullPath = path.join(projectRoot, fileName);
+  if (fs.existsSync(fullPath)) {
+    dotenv.config({ path: fullPath, override: true });
+  }
+}
 
 const { createClient } = require("@supabase/supabase-js");
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+if (!SUPABASE_URL) {
+  throw new Error(
+    "Missing Supabase URL. Set SUPABASE_URL (recommended) or EXPO_PUBLIC_SUPABASE_URL in server env."
+  );
+}
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY in server env.");
+}
 
 // Create a single Supabase client instance to be reused throughout the
 // application. Using one shared client avoids unnecessary re-instantiation

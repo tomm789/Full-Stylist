@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { Animated, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { WardrobeTabIcon, OutfitsTabIcon, HairMakeupTabIcon } from '@/components/icons/tabs';
 import { HeaderAddMenu, HeaderRightMenu, FullScreenMenuModal } from '@/components/tabs';
 import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,9 +11,10 @@ import { useThemeColors } from '@/contexts/ThemeContext';
 import { HeaderSearchProvider } from '@/contexts/HeaderSearchContext';
 import { useCalendarEntryFlow } from '@/contexts/CalendarEntryFlowContext';
 import { borderRadius, shadows, spacing, typography } from '@/styles/theme';
-import { SEARCH_EXPAND_DURATION_MS } from '@/constants/searchMotion';
 import type { ThemeColors } from '@/styles/themes';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarProps } from '-navigation/bottom-tabs';
+
+const SEARCH_EXPAND_DURATION_MS = 180;
 
 function FloatingTabBar(
   props: BottomTabBarProps & {
@@ -613,7 +615,7 @@ function TabsLayoutInner() {
             headerShown: false,
             tabBarLabel: 'Wardrobe',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="shirt-outline" size={size} color={color} />
+              <WardrobeTabIcon width={size} height={size} color={color} fill={color} />
             ),
           }}
         />
@@ -623,7 +625,7 @@ function TabsLayoutInner() {
             headerShown: false,
             tabBarLabel: 'Outfits',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="sparkles-outline" size={size} color={color} />
+              <OutfitsTabIcon width={size} height={size} color={color} fill={color} />
             ),
           }}
         />
@@ -641,7 +643,7 @@ function TabsLayoutInner() {
             headerShown: false,
             tabBarLabel: 'Hair & Make-Up',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="cut-outline" size={size} color={color} />
+              <HairMakeupTabIcon width={size} height={size} color={color} fill={color} />
             ),
           }}
         />

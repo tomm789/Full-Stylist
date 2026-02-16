@@ -60,7 +60,7 @@ export default function AddItemScreen() {
 
     // If a pre-captured image URI was passed (from inline camera), add it directly
     if (imageUri) {
-      addImageFromUri(decodeURIComponent(imageUri));
+      void addImageFromUri(decodeURIComponent(imageUri));
       return;
     }
 

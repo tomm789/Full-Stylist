@@ -8,20 +8,22 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, typography, spacing } from '@/styles';
 import { SearchBar, TabPillsRow } from '@/components/shared';
+import type { TabPillItem } from '@/components/shared/TabPillsRow';
+import { OutfitsTabIcon } from '@/components/icons/tabs';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 
 export type OutfitsTab = 'my_outfits' | 'explore' | 'following' | `lookbook_${string}`;
 
-type PillItem = {
-  id: string;
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  removable?: boolean;
-};
-
-const FIXED_TABS: PillItem[] = [
-  { id: 'my_outfits', label: 'My Outfits', icon: 'shirt-outline' },
+const FIXED_TABS: TabPillItem[] = [
+  {
+    id: 'my_outfits',
+    label: 'My Outfits',
+    icon: 'shirt-outline',
+    iconComponent: ({ size, color }) => (
+      <OutfitsTabIcon width={size} height={size} color={color} fill={color} />
+    ),
+  },
   { id: 'explore', label: 'Explore', icon: 'compass-outline' },
   { id: 'following', label: 'Following', icon: 'people-outline' },
 ];
@@ -62,7 +64,7 @@ export default function OutfitsHeaderBar({
   const colors = useThemeColors();
   const styles = createStyles(colors);
 
-  const allPills: PillItem[] = [
+  const allPills: TabPillItem[] = [
     ...FIXED_TABS,
     ...pinnedLookbooks.map((lb) => ({
       id: `lookbook_${lb.id}`,

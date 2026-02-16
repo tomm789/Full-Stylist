@@ -16,6 +16,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
+import { PanGestureHandler } from 'react-native-gesture-handler';
+import { useIsFocused } from '@react-navigation/native';
 import {
   PillButton,
   EdgePeekSlider,
@@ -35,6 +37,7 @@ import { useRouter } from 'expo-router';
 import type { ThemeColors } from '@/styles/themes';
 import { theme } from '@/styles';
 import { createCommonStyles } from '@/styles/commonStyles';
+import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
 
 const { spacing, borderRadius, typography, shadows } = theme;
 const INFO_ICON_SIZE = 16;
@@ -44,6 +47,7 @@ export default function HairAndMakeUpScreen() {
   const styles = createStyles(colors);
   const commonStyles = createCommonStyles(colors);
   const state = useHairAndMakeup();
+  const isFocused = useIsFocused();
   const { unreadCount } = useNotifications();
   const router = useRouter();
   const baseHeadshots = React.useMemo(
@@ -102,6 +106,18 @@ export default function HairAndMakeUpScreen() {
     }
   }, [state.isStyleDisabled, state.handlePickCamera]);
 
+  const cameraSwipe = useEdgeSwipe({
+    direction: 'left',
+    onSwipe: handleEdgeSwipeStart,
+    enabled:
+      isFocused &&
+      !state.isStyleDisabled &&
+      !state.lightboxVisible &&
+      !state.infoModalVisible &&
+      !state.policyModalVisible &&
+      !state.showFaceMenu,
+  });
+
   const renderSliderItem = React.useCallback(
     ({ item, index }: { item: { id: string; url: string | null }; index: number }) => (
       <HeadshotSlideItem
@@ -140,7 +156,8 @@ export default function HairAndMakeUpScreen() {
   );
 
   return (
-    <View style={commonStyles.container}>
+    <PanGestureHandler enabled={cameraSwipe.enabled} onGestureEvent={cameraSwipe.onGestureEvent}>
+      <View style={commonStyles.container}>
       <HeaderTitlePillRow
         title="Hair & Make-Up"
         onCamera={state.handlePickCamera}
@@ -266,8 +283,7 @@ export default function HairAndMakeUpScreen() {
                 activeIndex={activeFaceIndex}
                 extraData={activeFaceIndex}
                 enableHaptics
-                edgeSwipeEnabled={Boolean(state.selfieImageId) && activeFaceIndex === 0}
-                onEdgeSwipeStart={handleEdgeSwipeStart}
+                edgeSwipeEnabled={false}
                 onIndexChange={handleSliderIndexChange}
                 renderItem={renderSliderItem}
               />
@@ -463,7 +479,8 @@ export default function HairAndMakeUpScreen() {
           )}
         </View>
       </Modal>
-    </View>
+      </View>
+    </PanGestureHandler>
   );
 }
 

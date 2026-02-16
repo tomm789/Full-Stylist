@@ -15,6 +15,10 @@
   # Serve public directory for static files
   publish = "public"
 
+[dev.environment]
+  SUPABASE_URL = "https://earlhvpckbcpvppvmxsd.supabase.co"
+  SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhcmxodnBja2JjcHZwcHZteHNkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODcxOTMxNCwiZXhwIjoyMDg0Mjk1MzE0fQ.c3-6P6c0lXmbjbozv2VGEXsGE9AB3JQ_cQEMQbvyeck"
+
 [functions]
   # Ensure TypeScript functions are included and compiled
   node_bundler = "esbuild"

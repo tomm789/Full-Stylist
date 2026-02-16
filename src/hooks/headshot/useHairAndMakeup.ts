@@ -547,12 +547,12 @@ export function useHairAndMakeup() {
 
   const handlePickCamera = () => {
     if (selfieUpload.generating) return;
-    selfieUpload.pickImage(true);
+    selfieUpload.pickHeadshotCameraImage();
   };
 
   const handlePickLibrary = () => {
     if (selfieUpload.generating) return;
-    selfieUpload.pickImage(false);
+    selfieUpload.pickHeadshotLibraryImage();
   };
 
   const handleUndo = () => {

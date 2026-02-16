@@ -15,10 +15,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { SEARCH_EXPAND_DURATION_MS } from '@/constants/searchMotion';
 import type { ThemeColors } from '@/styles/themes';
 
 const { spacing, borderRadius, typography } = theme;
+
+const SEARCH_EXPAND_DURATION_MS = 180;
 
 type HeaderSearchPillProps = {
   searchQuery: string;
