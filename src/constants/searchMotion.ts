@@ -1,0 +1,1 @@
+export const SEARCH_EXPAND_DURATION_MS = 180;
