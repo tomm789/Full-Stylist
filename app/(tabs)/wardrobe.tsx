@@ -53,6 +53,7 @@ import type { ThemeColors } from '@/styles/themes';
 import { useSearch } from '@/hooks';
 import SearchOverlay from '@/components/search/SearchOverlay';
 import SearchHeaderRow from '@/components/search/SearchHeaderRow';
+import { PanGestureHandler } from 'react-native-gesture-handler';
 import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
 
 
@@ -113,7 +114,7 @@ export default function WardrobeScreen() {
   }, [router]);
 
   // Edge swipe: swipe from left edge to open camera
-  const { GestureView: CameraSwipeView } = useEdgeSwipe({
+  const cameraSwipe = useEdgeSwipe({
     direction: 'left',
     onSwipe: handleOpenCamera,
     enabled: isFocused && !searchOverlayOpen,
@@ -534,7 +535,7 @@ export default function WardrobeScreen() {
   };
 
   return (
-    <CameraSwipeView>
+    <PanGestureHandler enabled={cameraSwipe.enabled} onGestureEvent={cameraSwipe.onGestureEvent}>
     <View style={commonStyles.container}>
 
       {/* Generation Progress Modal (hidden in PERF_MODE to measure UI overhead) */}
@@ -702,7 +703,7 @@ export default function WardrobeScreen() {
         />
       )}
     </View>
-    </CameraSwipeView>
+    </PanGestureHandler>
   );
 }
 

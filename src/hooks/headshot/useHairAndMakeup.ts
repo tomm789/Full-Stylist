@@ -704,6 +704,16 @@ export function useHairAndMakeup() {
     setEditorOpen(false);
   };
 
+  /** Lightweight index change for swipe gestures — only updates the visual
+   *  preview without resetting variation/editor/selfie-upload state. */
+  const handleSwipeIndexChange = React.useCallback(
+    (item: { id: string; url: string | null }) => {
+      setPreviewImageId(item.id);
+      setPreviewImageUrl(item.url || null);
+    },
+    [],
+  );
+
   const handleNavigateGeneration = (direction: 'back' | 'forward') => {
     if (completedVariations.length === 0) return;
     if (previewGenerationIndex === -1) {
@@ -789,6 +799,7 @@ export function useHairAndMakeup() {
     handleDeletePreviewImage,
     handlePreviewPress,
     handleHeadshotSelect,
+    handleSwipeIndexChange,
     // Modals
     policyModalVisible,
     policyMessage,

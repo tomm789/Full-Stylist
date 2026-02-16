@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { FlatList, Platform, StyleSheet, useWindowDimensions, View, ViewStyle } from 'react-native';
+import { PanGestureHandler } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
 
@@ -25,6 +26,7 @@ type EdgePeekSliderProps<T> = {
   initialIndex?: number;
   activeIndex?: number;
   onIndexChange?: (index: number) => void;
+  extraData?: unknown;
   edgeSwipeEnabled?: boolean;
   edgeSwipeThreshold?: number;
   onEdgeSwipeStart?: () => void;
@@ -33,7 +35,7 @@ type EdgePeekSliderProps<T> = {
   contentContainerStyle?: ViewStyle;
 };
 
-export default function EdgePeekSlider<T>({
+function EdgePeekSliderInner<T>({
   data,
   keyExtractor,
   renderItem,
@@ -43,6 +45,7 @@ export default function EdgePeekSlider<T>({
   initialIndex = 0,
   activeIndex,
   onIndexChange,
+  extraData,
   edgeSwipeEnabled = false,
   edgeSwipeThreshold = 24,
   onEdgeSwipeStart,
@@ -62,8 +65,8 @@ export default function EdgePeekSlider<T>({
   // activeIndex useEffect doesn't fight the gesture by calling scrollToIndex.
   const scrollOriginRef = React.useRef<'user' | 'external'>('external');
 
-  // Use proper gesture handler for edge swipe detection
-  const { GestureView } = useEdgeSwipe({
+  // Edge swipe detection — returns stable handler props, not a component
+  const edgeSwipe = useEdgeSwipe({
     direction: 'left',
     onSwipe: () => {
       if (onEdgeSwipeStart && activeIndex === 0) {
@@ -75,7 +78,6 @@ export default function EdgePeekSlider<T>({
     swipeDistance: 50,
     minVelocity: 0.15,
     debounceMs: 500,
-    style,
   });
 
   // Only programmatically scroll when the index change came from an external
@@ -98,59 +100,103 @@ export default function EdgePeekSlider<T>({
     listRef.current?.scrollToIndex({ index: activeIndex, animated: true });
   }, [activeIndex]);
 
-  const handleScroll = (event: any) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const rawIndex = Math.round((offsetX + sidePadding) / snapInterval);
-    const nextIndex = Math.max(0, Math.min(data.length - 1, rawIndex));
-    if (nextIndex === lastIndexRef.current) return;
-    lastIndexRef.current = nextIndex;
-    scrollOriginRef.current = 'user';
-    onIndexChange?.(nextIndex);
-    if (enableHaptics && Platform.OS !== 'web') {
-      void Haptics.selectionAsync().catch(() => undefined);
+  // Track the visually-snapped index during scroll for haptics, but defer
+  // the onIndexChange callback until momentum ends so state updates don't
+  // cause re-renders while the FlatList is still animating.
+  const pendingIndexRef = React.useRef<number | null>(null);
+
+  const handleScroll = React.useCallback(
+    (event: any) => {
+      const offsetX = event.nativeEvent.contentOffset.x;
+      const rawIndex = Math.round((offsetX + sidePadding) / snapInterval);
+      const nextIndex = Math.max(0, Math.min(data.length - 1, rawIndex));
+      if (nextIndex === lastIndexRef.current) return;
+      lastIndexRef.current = nextIndex;
+      pendingIndexRef.current = nextIndex;
+      if (enableHaptics && Platform.OS !== 'web') {
+        void Haptics.selectionAsync().catch(() => undefined);
+      }
+    },
+    [sidePadding, snapInterval, data.length, enableHaptics],
+  );
+
+  const handleMomentumEnd = React.useCallback(() => {
+    const idx = pendingIndexRef.current;
+    if (idx !== null) {
+      pendingIndexRef.current = null;
+      scrollOriginRef.current = 'user';
+      onIndexChange?.(idx);
     }
-  };
+  }, [onIndexChange]);
+
+  const itemStyle = React.useMemo(
+    () => [staticStyles.itemWrap, { width: itemWidth, height: itemHeight, marginHorizontal: gap / 2 }],
+    [itemWidth, itemHeight, gap],
+  );
+
+  const internalRenderItem = React.useCallback(
+    ({ item, index }: { item: T; index: number }) => (
+      <View style={itemStyle}>
+        {renderItem({ item, index, width: itemWidth, height: itemHeight })}
+      </View>
+    ),
+    [renderItem, itemStyle, itemWidth, itemHeight],
+  );
+
+  const getItemLayout = React.useCallback(
+    (_: any, index: number) => ({
+      length: snapInterval,
+      offset: snapInterval * index,
+      index,
+    }),
+    [snapInterval],
+  );
+
+  const handleScrollToIndexFailed = React.useCallback(() => {
+    if (activeIndex === undefined || activeIndex === null) return;
+    listRef.current?.scrollToIndex({ index: activeIndex, animated: true });
+  }, [activeIndex]);
+
+  const contentStyle = React.useMemo(
+    () => [staticStyles.content, { paddingHorizontal: sidePadding }, contentContainerStyle],
+    [sidePadding, contentContainerStyle],
+  );
 
   return (
-    <GestureView>
-      <FlatList
-        ref={listRef}
-        horizontal
-        data={data}
-        keyExtractor={keyExtractor}
-        showsHorizontalScrollIndicator={false}
-        decelerationRate="fast"
-        snapToInterval={snapInterval}
-        snapToAlignment="center"
-        initialScrollIndex={Math.max(0, Math.min(data.length - 1, initialIndex))}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        getItemLayout={(_, index) => ({
-          length: snapInterval,
-          offset: snapInterval * index,
-          index,
-        })}
-        renderItem={({ item, index }) => (
-          <View style={[styles.itemWrap, { width: itemWidth, height: itemHeight, marginHorizontal: gap / 2 }]}>
-            {renderItem({ item, index, width: itemWidth, height: itemHeight })}
-          </View>
-        )}
-        contentContainerStyle={[
-          styles.content,
-          { paddingHorizontal: sidePadding },
-          contentContainerStyle,
-        ]}
-        style={style}
-        onScrollToIndexFailed={() => {
-          if (activeIndex === undefined || activeIndex === null) return;
-          listRef.current?.scrollToIndex({ index: activeIndex, animated: true });
-        }}
-      />
-    </GestureView>
+    <PanGestureHandler enabled={edgeSwipe.enabled} onGestureEvent={edgeSwipe.onGestureEvent}>
+      <View style={[{ width: '100%' }, style]}>
+        <FlatList
+          ref={listRef}
+          horizontal
+          data={data}
+          extraData={extraData}
+          keyExtractor={keyExtractor}
+          showsHorizontalScrollIndicator={false}
+          decelerationRate="fast"
+          snapToInterval={snapInterval}
+          snapToAlignment="center"
+          initialScrollIndex={Math.max(0, Math.min(data.length - 1, initialIndex))}
+          onScroll={handleScroll}
+          onMomentumScrollEnd={handleMomentumEnd}
+          scrollEventThrottle={16}
+          getItemLayout={getItemLayout}
+          renderItem={internalRenderItem}
+          contentContainerStyle={contentStyle}
+          style={style}
+          onScrollToIndexFailed={handleScrollToIndexFailed}
+        />
+      </View>
+    </PanGestureHandler>
   );
 }
 
-const styles = StyleSheet.create({
+const EdgePeekSlider = React.memo(EdgePeekSliderInner) as <T>(
+  props: EdgePeekSliderProps<T>,
+) => React.ReactElement;
+
+export default EdgePeekSlider;
+
+const staticStyles = StyleSheet.create({
   content: {
     alignItems: 'center',
   },

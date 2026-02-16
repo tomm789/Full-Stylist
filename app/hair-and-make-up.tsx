@@ -6,7 +6,6 @@
 
 import React from 'react';
 import {
-  Animated,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,6 +23,7 @@ import {
   DropdownMenuItem,
   dropdownMenuStyles,
 } from '@/components/shared';
+import HeadshotSlideItem from '@/components/headshots/HeadshotSlideItem';
 import { HeaderTitlePillRow } from '@/components/shared/layout';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
@@ -53,13 +53,13 @@ export default function HairAndMakeUpScreen() {
       ),
     [state.allHeadshots]
   );
-  const selfieItem = state.selfieImageId
-    ? { id: state.selfieImageId, url: state.selfieImageUrl || null }
-    : null;
   const headshots = React.useMemo(() => {
+    const selfieItem = state.selfieImageId
+      ? { id: state.selfieImageId, url: state.selfieImageUrl || null }
+      : null;
     const filtered = baseHeadshots.filter((item) => item.id !== state.selfieImageId);
     return selfieItem ? [selfieItem, ...filtered] : filtered;
-  }, [baseHeadshots, selfieItem, state.selfieImageId]);
+  }, [baseHeadshots, state.selfieImageId, state.selfieImageUrl]);
 
   const handleHeadshotPress = (item: { id: string; url: string | null }) => {
     state.handleHeadshotSelect(item);
@@ -70,6 +70,54 @@ export default function HairAndMakeUpScreen() {
     const index = headshots.findIndex((item) => item.id === state.previewImageId);
     return index >= 0 ? index : 0;
   }, [headshots, state.previewImageId]);
+
+  // Keep a ref for activeFaceIndex so renderSliderItem stays referentially
+  // stable across swipes. FlatList re-renders items via extraData instead.
+  const activeFaceIndexRef = React.useRef(activeFaceIndex);
+  activeFaceIndexRef.current = activeFaceIndex;
+
+  const headshotKeyExtractor = React.useCallback(
+    (item: { id: string; url: string | null }) => item.id,
+    [],
+  );
+
+  const handleSliderIndexChange = React.useCallback(
+    (nextIndex: number) => {
+      const next = headshots[nextIndex];
+      if (next) {
+        state.handleSwipeIndexChange(next);
+      }
+    },
+    [headshots, state.handleSwipeIndexChange],
+  );
+
+  const handleMenuPress = React.useCallback(
+    () => state.setShowFaceMenu(true),
+    [state.setShowFaceMenu],
+  );
+
+  const handleEdgeSwipeStart = React.useCallback(() => {
+    if (!state.isStyleDisabled) {
+      state.handlePickCamera();
+    }
+  }, [state.isStyleDisabled, state.handlePickCamera]);
+
+  const renderSliderItem = React.useCallback(
+    ({ item, index }: { item: { id: string; url: string | null }; index: number }) => (
+      <HeadshotSlideItem
+        item={item}
+        isActive={index === activeFaceIndexRef.current}
+        onPreviewPress={state.handlePreviewPress}
+        onMenuPress={handleMenuPress}
+        generating={state.generating}
+        generateOverlayOpacity={state.generateOverlayOpacity}
+        previewIsGenerated={state.previewIsGenerated}
+        onRestoreSelfie={state.handleRestoreSelfie}
+        isStyleDisabled={state.isStyleDisabled}
+      />
+    ),
+    [state.handlePreviewPress, handleMenuPress, state.generating, state.generateOverlayOpacity, state.previewIsGenerated, state.handleRestoreSelfie, state.isStyleDisabled],
+  );
 
   const renderHeadshotGridItem = ({ item }: { item: { id: string; url: string | null } }) => (
     <TouchableOpacity
@@ -210,86 +258,18 @@ export default function HairAndMakeUpScreen() {
             {headshots.length > 0 ? (
               <EdgePeekSlider
                 data={headshots}
-                keyExtractor={(item) => item.id}
+                keyExtractor={headshotKeyExtractor}
                 itemWidthRatio={0.78}
                 aspectRatio={3 / 4}
                 gap={2}
                 initialIndex={activeFaceIndex}
                 activeIndex={activeFaceIndex}
+                extraData={activeFaceIndex}
                 enableHaptics
                 edgeSwipeEnabled={Boolean(state.selfieImageId) && activeFaceIndex === 0}
-                onEdgeSwipeStart={() => {
-                  if (!state.isStyleDisabled) {
-                    state.handlePickCamera();
-                  }
-                }}
-                onIndexChange={(nextIndex) => {
-                  const next = headshots[nextIndex];
-                  if (next) {
-                    state.handleHeadshotSelect(next);
-                  }
-                }}
-                renderItem={({ item, index }) => {
-                  const isActive = index === activeFaceIndex;
-                  return (
-                    <View style={styles.faceSlideCard}>
-                      <TouchableOpacity
-                        style={styles.faceSlideButton}
-                        onPress={state.handlePreviewPress}
-                        activeOpacity={0.9}
-                        disabled={!item.url}
-                      >
-                        {item.url ? (
-                          <ExpoImage
-                            source={{ uri: item.url }}
-                            style={styles.faceSlideImage}
-                            contentFit="cover"
-                          />
-                        ) : (
-                          <View style={styles.faceSlideImage} />
-                        )}
-                      </TouchableOpacity>
-
-                      {isActive && (
-                        <>
-                          <TouchableOpacity
-                            style={[
-                              styles.faceMenuButton,
-                              !item.url && styles.faceMenuButtonDisabled,
-                            ]}
-                            onPress={() => state.setShowFaceMenu(true)}
-                            disabled={!item.url}
-                            accessibilityLabel="Open menu"
-                          >
-                            <Ionicons name="ellipsis-vertical" size={18} color={colors.textLight} />
-                          </TouchableOpacity>
-
-                          {state.generating && item.url && (
-                            <Animated.View
-                              style={[styles.generateOverlay, { opacity: state.generateOverlayOpacity }]}
-                              pointerEvents="none"
-                            />
-                          )}
-
-                          {state.previewIsGenerated && (
-                            <TouchableOpacity
-                              style={styles.restoreButton}
-                              onPress={state.handleRestoreSelfie}
-                              disabled={state.isStyleDisabled}
-                              accessibilityLabel="Restore selfie"
-                            >
-                              <Ionicons
-                                name="person-circle-outline"
-                                size={20}
-                                color={colors.textSecondary}
-                              />
-                            </TouchableOpacity>
-                          )}
-                        </>
-                      )}
-                    </View>
-                  );
-                }}
+                onEdgeSwipeStart={handleEdgeSwipeStart}
+                onIndexChange={handleSliderIndexChange}
+                renderItem={renderSliderItem}
               />
             ) : (
               <View style={styles.faceEmptyCard}>
@@ -506,23 +486,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: '100%',
     gap: spacing.md,
   },
-  faceSlideCard: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-    borderWidth: 0.5,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.backgroundTertiary,
-  },
-  faceSlideButton: {
-    width: '100%',
-    height: '100%',
-  },
-  faceSlideImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: colors.backgroundTertiary,
-  },
   faceEmptyCard: {
     width: '100%',
     aspectRatio: 3 / 4,
@@ -607,14 +570,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  generateOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.gray200,
-  },
   railButton: {
     width: 36,
     height: 36,
@@ -648,33 +603,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.borderLight,
-  },
-  restoreButton: {
-    position: 'absolute',
-    left: spacing.md,
-    bottom: spacing.md,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  faceMenuButton: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-  },
-  faceMenuButtonDisabled: {
-    opacity: 0.5,
   },
   generateButton: {
     position: 'absolute',

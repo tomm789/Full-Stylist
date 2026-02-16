@@ -2,12 +2,14 @@
  * useEdgeSwipe Hook
  * Detects swipe gestures from screen edges for actions like opening camera or navigation.
  * Uses react-native-gesture-handler for reliable gesture detection.
+ *
+ * Returns a stable `gestureHandler` prop object to spread onto a PanGestureHandler,
+ * rather than returning a component (which would cause remounts when callbacks change).
  */
 
-import React, { useRef, useCallback } from 'react';
-import { Dimensions, View } from 'react-native';
-import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
-import type { ViewStyle } from 'react-native';
+import { useRef, useCallback } from 'react';
+import { Dimensions } from 'react-native';
+import { PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 
 export type EdgeSwipeDirection = 'left' | 'right' | 'top' | 'bottom';
 
@@ -18,12 +20,12 @@ interface UseEdgeSwipeProps {
   swipeDistance?: number;
   minVelocity?: number;
   debounceMs?: number;
-  style?: ViewStyle;
   enabled?: boolean;
 }
 
 interface UseEdgeSwipeReturn {
-  GestureView: React.ComponentType<{ children: React.ReactNode }>;
+  enabled: boolean;
+  onGestureEvent: (event: PanGestureHandlerGestureEvent) => void;
 }
 
 export function useEdgeSwipe({
@@ -33,18 +35,14 @@ export function useEdgeSwipe({
   swipeDistance = 50,
   minVelocity = 0.15,
   debounceMs = 500,
-  style,
   enabled = true,
 }: UseEdgeSwipeProps): UseEdgeSwipeReturn {
   const lastTriggerRef = useRef<number>(0);
   const gestureContext = useRef<{ startX: number; startY: number }>({ startX: 0, startY: 0 });
 
-  const handleSwipe = useCallback(() => {
-    const now = Date.now();
-    if (now - lastTriggerRef.current < debounceMs) return;
-    lastTriggerRef.current = now;
-    onSwipe();
-  }, [onSwipe, debounceMs]);
+  // Use a ref for onSwipe so the gesture handler callback stays stable
+  const onSwipeRef = useRef(onSwipe);
+  onSwipeRef.current = onSwipe;
 
   const handleGestureEvent = useCallback(
     (event: PanGestureHandlerGestureEvent) => {
@@ -62,35 +60,35 @@ export function useEdgeSwipe({
       const isHorizontalDominant = Math.abs(velocityX) > Math.abs(velocityY);
       const isVerticalDominant = Math.abs(velocityY) > Math.abs(velocityX);
 
+      let triggered = false;
+
       if (direction === 'left') {
         const isFromEdge = startX < edgeThreshold;
         const isSwiping = translationX > swipeDistance && velocityX > minVelocity;
-        if (isFromEdge && isSwiping && isHorizontalDominant) handleSwipe();
+        triggered = isFromEdge && isSwiping && isHorizontalDominant;
       } else if (direction === 'right') {
         const isFromEdge = startX > screenWidth - edgeThreshold;
         const isSwiping = translationX < -swipeDistance && velocityX < -minVelocity;
-        if (isFromEdge && isSwiping && isHorizontalDominant) handleSwipe();
+        triggered = isFromEdge && isSwiping && isHorizontalDominant;
       } else if (direction === 'top') {
         const isFromEdge = startY < edgeThreshold;
         const isSwiping = translationY > swipeDistance && velocityY > minVelocity;
-        if (isFromEdge && isSwiping && isVerticalDominant) handleSwipe();
+        triggered = isFromEdge && isSwiping && isVerticalDominant;
       } else if (direction === 'bottom') {
         const isFromEdge = startY > screenHeight - edgeThreshold;
         const isSwiping = translationY < -swipeDistance && velocityY < -minVelocity;
-        if (isFromEdge && isSwiping && isVerticalDominant) handleSwipe();
+        triggered = isFromEdge && isSwiping && isVerticalDominant;
+      }
+
+      if (triggered) {
+        const now = Date.now();
+        if (now - lastTriggerRef.current < debounceMs) return;
+        lastTriggerRef.current = now;
+        onSwipeRef.current();
       }
     },
-    [direction, edgeThreshold, swipeDistance, minVelocity, handleSwipe]
+    [direction, edgeThreshold, swipeDistance, minVelocity, debounceMs],
   );
 
-  const GestureView = useCallback(
-    ({ children }: { children: React.ReactNode }) => (
-      <PanGestureHandler enabled={enabled} onGestureEvent={handleGestureEvent}>
-        <View style={[{ flex: 1 }, style]}>{children}</View>
-      </PanGestureHandler>
-    ),
-    [handleGestureEvent, enabled, style]
-  );
-
-  return { GestureView };
+  return { enabled, onGestureEvent: handleGestureEvent };
 }
