@@ -10,9 +10,10 @@ import { useThemeColors } from '@/contexts/ThemeContext';
 import { HeaderSearchProvider } from '@/contexts/HeaderSearchContext';
 import { useCalendarEntryFlow } from '@/contexts/CalendarEntryFlowContext';
 import { borderRadius, shadows, spacing, typography } from '@/styles/theme';
-import { SEARCH_EXPAND_DURATION_MS } from '@/constants/searchMotion';
 import type { ThemeColors } from '@/styles/themes';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarProps } from '-navigation/bottom-tabs';
+
+const SEARCH_EXPAND_DURATION_MS = 180;
 
 function FloatingTabBar(
   props: BottomTabBarProps & {
