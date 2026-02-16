@@ -9,6 +9,7 @@ import { FloatingTabBarProvider, useFloatingTabBar } from '@/contexts/FloatingTa
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { HeaderSearchProvider } from '@/contexts/HeaderSearchContext';
 import { useCalendarEntryFlow } from '@/contexts/CalendarEntryFlowContext';
+import { useProfileImages } from '@/hooks/profile';
 import { borderRadius, shadows, spacing, typography } from '@/styles/theme';
 import type { ThemeColors } from '@/styles/themes';
 import type { BottomTabBarProps } from '-navigation/bottom-tabs';
@@ -348,6 +349,7 @@ function TabsLayoutInner() {
   const styles = createStyles(colors);
   const router = useRouter();
   const { session, loading, signOut } = useAuth();
+  const { headshotImageUrl } = useProfileImages({ userId: session?.user?.id });
   const { openDateSelector } = useCalendarEntryFlow();
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -555,6 +557,17 @@ function TabsLayoutInner() {
     [handleMenuOption]
   );
 
+  const profileInitials = useMemo(() => {
+    const raw =
+      (session?.user?.user_metadata as { full_name?: string })?.full_name ||
+      session?.user?.email ||
+      '';
+    const parts = raw.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+  }, [session?.user]);
+
   const handleBottomPillCreate = useCallback(() => {
     setShowMenu(false);
     setShowCreateMenu(true);
@@ -680,6 +693,9 @@ function TabsLayoutInner() {
         visible={showMenu}
         onClose={() => setShowMenu(false)}
         onAdd={() => { setShowMenu(false); setShowCreateMenu(true); }}
+        onProfile={() => handleMenuOption('profile')}
+        avatarUri={headshotImageUrl}
+        avatarInitials={profileInitials}
         gridTitle=""
         gridItems={gridItems}
         actionItems={actionItems}

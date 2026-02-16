@@ -43,6 +43,9 @@ type FullScreenMenuModalProps = {
   visible: boolean;
   onClose: () => void;
   onAdd?: () => void;
+  onProfile?: () => void;
+  avatarUri?: string | null;
+  avatarInitials?: string;
   gridTitle: string;
   gridItems: MenuItem[];
   actionItems: MenuItem[];
@@ -53,6 +56,9 @@ export function FullScreenMenuModal({
   visible,
   onClose,
   onAdd,
+  onProfile,
+  avatarUri,
+  avatarInitials,
   gridTitle,
   gridItems,
   actionItems,
@@ -156,6 +162,9 @@ export function FullScreenMenuModal({
               onAdd={onAdd}
               onSearch={handleSearch}
               onNotifications={handleNotifications}
+              onProfile={onProfile}
+              avatarUri={avatarUri}
+              avatarInitials={avatarInitials}
               unreadCount={unreadCount}
             />
           </View>
