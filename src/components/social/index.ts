@@ -15,3 +15,5 @@ export { PostMenuModal } from './PostMenuModal';
 export { UserProfileHeader } from './UserProfileHeader';
 export { FeedItemComponent } from './FeedItem';
 export { DiscoverGrid } from './DiscoverGrid';
+export { default as PostGrid } from './PostGrid';
+export { postGridStyles } from './PostGrid';

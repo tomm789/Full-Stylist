@@ -11,8 +11,10 @@ import {
   StyleSheet,
 } from 'react-native';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface ScheduleCalendarProps {
   selectedDate: Date | null;
@@ -25,6 +27,8 @@ export default function ScheduleCalendar({
   onSelectDate,
   scheduledDates = [],
 }: ScheduleCalendarProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
@@ -36,12 +40,12 @@ export default function ScheduleCalendar({
   const startingDayOfWeek = firstDay.getDay();
 
   const days: (Date | null)[] = [];
-  
+
   // Add empty slots for days before month starts
   for (let i = 0; i < startingDayOfWeek; i++) {
     days.push(null);
   }
-  
+
   // Add actual days
   for (let day = 1; day <= daysInMonth; day++) {
     days.push(new Date(currentYear, currentMonth, day));
@@ -120,7 +124,7 @@ export default function ScheduleCalendar({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     backgroundColor: colors.white,
     borderRadius: borderRadius.lg,

@@ -8,8 +8,11 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import CalendarDayCell from './CalendarDayCell';
 import { CalendarEntry } from '@/lib/calendar';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { CALENDAR_CONFIG } from '@/lib/calendar/config';
+import type { ThemeColors } from '@/styles/themes';
 
-const { spacing, colors } = theme;
+const { spacing } = theme;
 
 interface CalendarContinuousGridProps {
   startDate: Date;
@@ -30,6 +33,8 @@ export default function CalendarContinuousGrid({
   scrollY,
   viewportHeight,
 }: CalendarContinuousGridProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const days = useMemo(() => {
     const list: Date[] = [];
     const cursor = new Date(startDate);
@@ -42,9 +47,10 @@ export default function CalendarContinuousGrid({
       list.push(new Date(cursor));
       cursor.setDate(cursor.getDate() + 1);
     }
-
     return list;
   }, [startDate, endDate]);
+
+  // Debug: grid date range (telemetry removed - use console only if needed)
 
   const getDayEntries = (date: Date): CalendarEntry[] => {
     const dateKey = date.toISOString().split('T')[0];
@@ -71,7 +77,11 @@ export default function CalendarContinuousGrid({
   const prevScrollRef = useRef(0);
   const directionOffsetRef = useRef(new Animated.Value(0));
 
+  // Initialize/update bounce values for pills, cleanup removed ones
   useEffect(() => {
+    const currentKeys = new Set(pillConfigs.map((p) => p.key));
+
+    // Add new ones
     pillConfigs.forEach((pill) => {
       if (!bounceValuesRef.current.has(pill.key)) {
         bounceValuesRef.current.set(pill.key, new Animated.Value(0));
@@ -80,20 +90,31 @@ export default function CalendarContinuousGrid({
         prevRatioRef.current.set(pill.key, 1);
       }
     });
+
+    // Clean up removed ones
+    bounceValuesRef.current.forEach((value, key) => {
+      if (!currentKeys.has(key)) {
+        value.stopAnimation();
+        bounceValuesRef.current.delete(key);
+        prevRatioRef.current.delete(key);
+      }
+    });
   }, [pillConfigs]);
 
+  // Update scroll listener only when scrollY changes, not when pillConfigs changes
   useEffect(() => {
     if (!scrollY) return;
 
     const id = scrollY.addListener(({ value }) => {
       const effectiveViewport = viewportHeight || 600;
       const scrollingUp = value < prevScrollRef.current;
-      const offset = scrollingUp ? effectiveViewport * 0.15 : 0;
+      const offset = scrollingUp ? effectiveViewport * CALENDAR_CONFIG.DIRECTION_OFFSET_RATIO : 0;
       directionOffsetRef.current.setValue(offset);
       prevScrollRef.current = value;
 
-      const triggerRatio = 0.3;
+      const triggerRatio = CALENDAR_CONFIG.PILL_TRIGGER_RATIO;
 
+      // Use current pillConfigs from closure
       pillConfigs.forEach((pill) => {
         const position = pill.top - value;
         const ratio = position / effectiveViewport;
@@ -109,13 +130,13 @@ export default function CalendarContinuousGrid({
             bounceValue.setValue(0);
             Animated.sequence([
               Animated.timing(bounceValue, {
-                toValue: -10,
-                duration: 150,
+                toValue: -CALENDAR_CONFIG.BOUNCE_DISTANCE,
+                duration: CALENDAR_CONFIG.BOUNCE_ANIMATION_DURATION,
                 useNativeDriver: true,
               }),
               Animated.timing(bounceValue, {
                 toValue: 0,
-                duration: 150,
+                duration: CALENDAR_CONFIG.BOUNCE_ANIMATION_DURATION,
                 useNativeDriver: true,
               }),
             ]).start();
@@ -130,6 +151,17 @@ export default function CalendarContinuousGrid({
       scrollY.removeListener(id);
     };
   }, [scrollY, viewportHeight, pillConfigs]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      bounceValuesRef.current.forEach((value) => {
+        value.stopAnimation();
+      });
+      bounceValuesRef.current.clear();
+      prevRatioRef.current.clear();
+    };
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -159,13 +191,12 @@ export default function CalendarContinuousGrid({
 
       {pillConfigs.map((pill) => {
         const effectiveViewport = viewportHeight || 600;
-        const offRight = 120;
         const midPoint = pill.top - effectiveViewport * 0.5;
         const exitPoint = pill.top - effectiveViewport * 0.25;
         const adjustedScrollY = Animated.add(scrollY, directionOffsetRef.current);
         const slideOut = adjustedScrollY.interpolate({
           inputRange: [midPoint, exitPoint],
-          outputRange: [0, offRight],
+          outputRange: [0, CALENDAR_CONFIG.PILL_SLIDE_DISTANCE],
           extrapolate: 'clamp',
         });
         const bounceValue = bounceValuesRef.current.get(pill.key) ?? new Animated.Value(0);
@@ -193,10 +224,11 @@ function isToday(date: Date): boolean {
   );
 }
 
-const ROW_HEIGHT = 120;
-const PILL_HEIGHT = 24;
+// Use CALENDAR_CONFIG for dimensions
+const ROW_HEIGHT = CALENDAR_CONFIG.ROW_HEIGHT;
+const PILL_HEIGHT = CALENDAR_CONFIG.PILL_HEIGHT;
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     position: 'relative',
     paddingBottom: spacing.md,

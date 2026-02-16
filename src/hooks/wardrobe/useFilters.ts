@@ -6,12 +6,17 @@
 import { useState, useMemo } from 'react';
 import { WardrobeItem } from '@/lib/wardrobe';
 
+// --- Types ---
+
 export interface FilterState {
   subcategoryId: string | null;
   color: string | null;
   material: string | null;
   size: string | null;
   season: string | null;
+  brand: string | null;
+  condition: string | null;
+  entityAttributes: Record<string, string | null>;
   tagIds: string[];
   favorites: boolean | null;
   showSavedItemsOnly: boolean | null;
@@ -23,12 +28,59 @@ const initialFilterState: FilterState = {
   material: null,
   size: null,
   season: null,
+  brand: null,
+  condition: null,
+  entityAttributes: {},
   tagIds: [],
   favorites: null,
   showSavedItemsOnly: null,
 };
 
-export function useFilters(allItems: WardrobeItem[], userId: string | null) {
+export interface AvailableEntityAttribute {
+  key: string;
+  name: string;
+  values: string[];
+}
+
+const CONDITION_LABELS: Record<string, string> = {
+  new: 'New',
+  like_new: 'Like New',
+  good: 'Good',
+  worn: 'Worn',
+};
+
+// --- Utilities ---
+
+/**
+ * Extract individual string values from a JSONB field.
+ * Handles: string, string[], object with string values, nested arrays.
+ */
+function extractJsonbValues(field: any): string[] {
+  if (!field) return [];
+  if (typeof field === 'string') return [field];
+  if (Array.isArray(field)) {
+    return field.flatMap((item) => {
+      if (typeof item === 'string') return [item];
+      if (typeof item === 'object' && item !== null) {
+        return Object.values(item).filter((v): v is string => typeof v === 'string');
+      }
+      return [];
+    });
+  }
+  if (typeof field === 'object') {
+    return Object.values(field).filter((v): v is string => typeof v === 'string');
+  }
+  return [String(field)];
+}
+
+// --- Hook ---
+
+export function useFilters(
+  allItems: WardrobeItem[],
+  userId: string | null,
+  entityAttributesMap?: Map<string, any[]>,
+  tagsMap?: Map<string, Array<{ id: string; name: string }>>,
+) {
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
 
   // Apply filters to items
@@ -54,35 +106,39 @@ export function useFilters(allItems: WardrobeItem[], userId: string | null) {
 
     // Material filter
     if (filters.material) {
+      const filterMaterial = filters.material.toLowerCase();
       filtered = filtered.filter((item) => {
-        if (!item.material) return false;
-        const materialStr =
-          typeof item.material === 'string'
-            ? item.material
-            : JSON.stringify(item.material);
-        return materialStr.toLowerCase().includes(filters.material!.toLowerCase());
+        const values = extractJsonbValues(item.material);
+        return values.some((v) => v.toLowerCase() === filterMaterial);
       });
     }
 
     // Size filter
     if (filters.size) {
+      const filterSize = filters.size.toLowerCase();
       filtered = filtered.filter((item) => {
-        if (!item.size) return false;
-        const sizeStr = typeof item.size === 'string' ? item.size : JSON.stringify(item.size);
-        return sizeStr.toLowerCase().includes(filters.size!.toLowerCase());
+        const values = extractJsonbValues(item.size);
+        return values.some((v) => v.toLowerCase() === filterSize);
       });
     }
 
     // Season filter
     if (filters.season) {
+      const filterSeason = filters.season.toLowerCase();
       filtered = filtered.filter((item) => {
-        if (!item.seasonality) return false;
-        const seasonStr =
-          typeof item.seasonality === 'string'
-            ? item.seasonality
-            : JSON.stringify(item.seasonality);
-        return seasonStr.toLowerCase().includes(filters.season!.toLowerCase());
+        const values = extractJsonbValues(item.seasonality);
+        return values.some((v) => v.toLowerCase() === filterSeason);
       });
+    }
+
+    // Brand filter
+    if (filters.brand) {
+      filtered = filtered.filter((item) => item.brand === filters.brand);
+    }
+
+    // Condition filter
+    if (filters.condition) {
+      filtered = filtered.filter((item) => item.condition === filters.condition);
     }
 
     // Favorites filter
@@ -95,16 +151,37 @@ export function useFilters(allItems: WardrobeItem[], userId: string | null) {
       filtered = filtered.filter((item) => item.owner_user_id !== userId);
     }
 
-    // Tags filter (placeholder - requires additional query)
-    if (filters.tagIds.length > 0) {
-      // Would need to implement tag link checking
-      filtered = filtered.filter((item) => true);
+    // Entity attribute filters
+    const activeEntityFilters = Object.entries(filters.entityAttributes)
+      .filter(([_, value]) => value !== null);
+
+    if (activeEntityFilters.length > 0 && entityAttributesMap) {
+      filtered = filtered.filter((item) => {
+        const itemAttrs = entityAttributesMap.get(item.id) || [];
+        return activeEntityFilters.every(([defKey, filterValue]) => {
+          return itemAttrs.some((attr: any) => {
+            const attrKey = attr.attribute_definitions?.key;
+            const attrValue = attr.raw_value || attr.attribute_values?.value;
+            return attrKey === defKey && attrValue?.toLowerCase() === filterValue?.toLowerCase();
+          });
+        });
+      });
+    }
+
+    // Tags filter
+    if (filters.tagIds.length > 0 && tagsMap) {
+      filtered = filtered.filter((item) => {
+        const itemTags = tagsMap.get(item.id) || [];
+        const itemTagIds = itemTags.map((t) => t.id);
+        return filters.tagIds.some((tagId) => itemTagIds.includes(tagId));
+      });
     }
 
     return filtered;
-  }, [allItems, filters, userId]);
+  }, [allItems, filters, userId, entityAttributesMap, tagsMap]);
 
-  // Get available filter values from items
+  // --- Extract available filter values from items ---
+
   const availableColors = useMemo(() => {
     const values = new Set<string>();
     allItems.forEach((item) => {
@@ -116,35 +193,101 @@ export function useFilters(allItems: WardrobeItem[], userId: string | null) {
   const availableMaterials = useMemo(() => {
     const values = new Set<string>();
     allItems.forEach((item) => {
-      if (item.material) {
-        const str = typeof item.material === 'string' ? item.material : JSON.stringify(item.material);
-        if (str) values.add(str);
-      }
+      extractJsonbValues(item.material).forEach((v) => {
+        if (v.trim()) values.add(v.trim());
+      });
     });
-    return Array.from(values).filter((v) => v).slice(0, 10);
+    return Array.from(values).sort().slice(0, 20);
   }, [allItems]);
 
   const availableSizes = useMemo(() => {
     const values = new Set<string>();
     allItems.forEach((item) => {
-      if (item.size) {
-        const str = typeof item.size === 'string' ? item.size : JSON.stringify(item.size);
-        if (str) values.add(str);
-      }
+      extractJsonbValues(item.size).forEach((v) => {
+        if (v.trim()) values.add(v.trim());
+      });
     });
-    return Array.from(values).filter((v) => v).slice(0, 10);
+    return Array.from(values).sort().slice(0, 20);
   }, [allItems]);
 
   const availableSeasons = useMemo(() => {
     const values = new Set<string>();
     allItems.forEach((item) => {
-      if (item.seasonality) {
-        const str = typeof item.seasonality === 'string' ? item.seasonality : JSON.stringify(item.seasonality);
-        if (str) values.add(str);
-      }
+      extractJsonbValues(item.seasonality).forEach((v) => {
+        if (v.trim()) values.add(v.trim());
+      });
     });
-    return Array.from(values).filter((v) => v).slice(0, 10);
+    return Array.from(values).sort().slice(0, 10);
   }, [allItems]);
+
+  const availableBrands = useMemo(() => {
+    const values = new Set<string>();
+    allItems.forEach((item) => {
+      if (item.brand?.trim()) values.add(item.brand.trim());
+    });
+    return Array.from(values).sort().slice(0, 20);
+  }, [allItems]);
+
+  const availableConditions = useMemo(() => {
+    const values = new Set<string>();
+    allItems.forEach((item) => {
+      if (item.condition) values.add(item.condition);
+    });
+    return Array.from(values)
+      .filter((v) => v)
+      .map((v) => ({ id: v, label: CONDITION_LABELS[v] || v }));
+  }, [allItems]);
+
+  // Entity attribute available values (pattern, style, occasion, formality, etc.)
+  const availableEntityAttributes = useMemo<AvailableEntityAttribute[]>(() => {
+    if (!entityAttributesMap || entityAttributesMap.size === 0) return [];
+
+    // Skip keys already handled as direct columns
+    const skipKeys = new Set(['color', 'material', 'season']);
+
+    const defMap = new Map<string, { name: string; values: Set<string> }>();
+
+    entityAttributesMap.forEach((attrs) => {
+      attrs.forEach((attr: any) => {
+        const def = attr.attribute_definitions;
+        if (!def) return;
+        const key = def.key;
+        if (skipKeys.has(key)) return;
+
+        if (!defMap.has(key)) {
+          defMap.set(key, { name: def.name || key, values: new Set() });
+        }
+        const rawValue = attr.raw_value || attr.attribute_values?.value;
+        if (rawValue?.trim()) {
+          defMap.get(key)!.values.add(rawValue.trim());
+        }
+      });
+    });
+
+    return Array.from(defMap.entries())
+      .map(([key, { name, values }]) => ({
+        key,
+        name,
+        values: Array.from(values).sort().slice(0, 20),
+      }))
+      .filter((attr) => attr.values.length > 0);
+  }, [entityAttributesMap]);
+
+  // Available tags
+  const availableTags = useMemo(() => {
+    if (!tagsMap || tagsMap.size === 0) return [];
+    const tagSet = new Map<string, string>();
+    tagsMap.forEach((tags) => {
+      tags.forEach((tag) => {
+        if (!tagSet.has(tag.id)) {
+          tagSet.set(tag.id, tag.name);
+        }
+      });
+    });
+    return Array.from(tagSet.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [tagsMap]);
 
   // Check if any filters are active
   const hasActiveFilters = useMemo(() => {
@@ -154,9 +297,12 @@ export function useFilters(allItems: WardrobeItem[], userId: string | null) {
       filters.material !== null ||
       filters.size !== null ||
       filters.season !== null ||
+      filters.brand !== null ||
+      filters.condition !== null ||
       filters.tagIds.length > 0 ||
       filters.favorites !== null ||
-      filters.showSavedItemsOnly === true
+      filters.showSavedItemsOnly === true ||
+      Object.values(filters.entityAttributes).some((v) => v !== null)
     );
   }, [filters]);
 
@@ -184,6 +330,10 @@ export function useFilters(allItems: WardrobeItem[], userId: string | null) {
     availableMaterials,
     availableSizes,
     availableSeasons,
+    availableBrands,
+    availableConditions,
+    availableEntityAttributes,
+    availableTags,
   };
 }
 

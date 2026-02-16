@@ -8,8 +8,10 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'rea
 import { Image } from 'expo-image';
 import { Lookbook } from '@/lib/lookbooks';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface LookbookCardProps {
   lookbook: Lookbook;
@@ -26,6 +28,8 @@ export default function LookbookCard({
   onPress,
   onPlayPress,
 }: LookbookCardProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       {loading ? (
@@ -64,7 +68,7 @@ export default function LookbookCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     width: 130,
     marginRight: spacing.sm + spacing.xs / 2,

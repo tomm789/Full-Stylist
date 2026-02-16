@@ -1,14 +1,254 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { Animated, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { HeaderAddMenu, HeaderRightMenu } from '@/components/tabs';
+import { HeaderAddMenu, HeaderRightMenu, FullScreenMenuModal } from '@/components/tabs';
 import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal';
-import { borderRadius, colors, spacing } from '@/styles/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { FloatingTabBarProvider, useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { HeaderSearchProvider } from '@/contexts/HeaderSearchContext';
+import { useCalendarEntryFlow } from '@/contexts/CalendarEntryFlowContext';
+import { borderRadius, shadows, spacing, typography } from '@/styles/theme';
+import type { ThemeColors } from '@/styles/themes';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+
+function FloatingTabBar(
+  props: BottomTabBarProps & {
+    onMenuPress?: () => void;
+    menuActive?: boolean;
+    menuQuery?: string;
+    onMenuQueryChange?: (value: string) => void;
+    onMenuQueryClear?: () => void;
+  }
+) {
+  const colors = useThemeColors();
+  const { tabBarOpacity } = useFloatingTabBar();
+  const menuQuery = props.menuQuery ?? '';
+  const hasMenuQuery = menuQuery.trim().length > 0;
+  const menuButtonIcon = props.menuActive && hasMenuQuery ? 'close' : 'menu-outline';
+  const containerZIndex = props.menuActive ? 60 : 40;
+  const containerOpacity = props.menuActive ? 1 : tabBarOpacity;
+
+  if (props.menuActive) {
+    return (
+      <Animated.View
+        style={[
+          floatingTabBarStyles.container,
+          {
+            backgroundColor: colors.backgroundSecondary,
+            zIndex: containerZIndex,
+            ...shadows.lg,
+            opacity: containerOpacity,
+          },
+        ]}
+      >
+        <View style={floatingTabBarStyles.inner}>
+          <View style={[floatingTabBarStyles.searchWrap, { borderColor: colors.borderLight, backgroundColor: colors.background }]}>
+            <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
+            <TextInput
+              value={menuQuery}
+              onChangeText={props.onMenuQueryChange}
+              placeholder="Search menu"
+              placeholderTextColor={colors.textTertiary}
+              style={[floatingTabBarStyles.searchInput, { color: colors.textPrimary }]}
+              autoCorrect={false}
+              returnKeyType="search"
+            />
+          </View>
+          <TouchableOpacity
+            onPress={props.menuActive && hasMenuQuery ? props.onMenuQueryClear : props.onMenuPress}
+            style={floatingTabBarStyles.menuButton}
+            accessibilityRole="button"
+            accessibilityLabel={props.menuActive && hasMenuQuery ? 'Clear search' : 'Menu'}
+          >
+            <Ionicons name={menuButtonIcon} size={22} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    );
+  }
+
+  return (
+    <Animated.View
+      style={[
+        floatingTabBarStyles.container,
+        {
+          backgroundColor: colors.backgroundSecondary,
+          zIndex: containerZIndex,
+          ...shadows.lg,
+          opacity: containerOpacity,
+        },
+      ]}
+    >
+      <View style={floatingTabBarStyles.inner}>
+        {props.state.routes.map((route, index) => {
+          const { options } = props.descriptors[route.key];
+
+          // Skip hidden tabs (create, social)
+          const flatItemStyle = options.tabBarItemStyle
+            ? StyleSheet.flatten(options.tabBarItemStyle)
+            : null;
+          if (flatItemStyle && (flatItemStyle as any).display === 'none') {
+            return null;
+          }
+
+          const focused = props.state.index === index;
+          const color = focused ? colors.primary : colors.textTertiary;
+          const label = options.tabBarLabel ?? options.title ?? route.name;
+
+          const onPress = () => {
+            const event = props.navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!focused && !event.defaultPrevented) {
+              props.navigation.navigate(route.name, route.params);
+            }
+          };
+
+          const iconNode = options.tabBarIcon?.({ focused, color, size: 22 });
+          const labelText = typeof label === 'string' ? label : '';
+
+          if (route.name === 'profile' && props.onMenuPress) {
+            return (
+              <TouchableOpacity
+                key={route.key}
+                onPress={props.onMenuPress}
+                style={floatingTabBarStyles.tab}
+                accessibilityRole="button"
+                accessibilityState={{ selected: focused }}
+                accessibilityLabel={labelText || 'Menu'}
+              >
+                {iconNode}
+                {labelText ? (
+                  <Text style={[floatingTabBarStyles.label, { color }]}>{labelText}</Text>
+                ) : null}
+              </TouchableOpacity>
+            );
+          }
+
+          // Use custom tabBarButton if provided (e.g. the Menu/profile tab)
+          const ButtonComponent = options.tabBarButton;
+          if (ButtonComponent) {
+            return (
+              <ButtonComponent
+                key={route.key}
+                style={floatingTabBarStyles.tab}
+                accessibilityRole="button"
+                accessibilityState={{ selected: focused }}
+                accessibilityLabel={labelText || undefined}
+              >
+                {iconNode}
+                {labelText ? (
+                  <Text style={[floatingTabBarStyles.label, { color }]}>{labelText}</Text>
+                ) : null}
+              </ButtonComponent>
+            );
+          }
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={onPress}
+              style={floatingTabBarStyles.tab}
+              accessibilityRole="button"
+              accessibilityState={{ selected: focused }}
+              accessibilityLabel={labelText || undefined}
+            >
+              {iconNode}
+              {labelText ? (
+                <Text style={[floatingTabBarStyles.label, { color }]}>{labelText}</Text>
+              ) : null}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </Animated.View>
+  );
+}
+
+const floatingTabBarStyles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: spacing.xl,
+    left: spacing.lg,
+    right: spacing.lg,
+    borderRadius: borderRadius.round,
+    overflow: 'hidden',
+  },
+  inner: {
+    flexDirection: 'row',
+    height: 60,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  searchWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.round,
+    paddingHorizontal: spacing.md,
+    marginLeft: 0,
+    marginRight: spacing.md,
+    borderWidth: 1,
+    gap: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: typography.fontSize.sm,
+    paddingVertical: 0,
+  },
+  menuButton: {
+    width: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 export default function TabsLayout() {
+  return (
+    <FloatingTabBarProvider>
+      <HeaderSearchProvider>
+        <TabsLayoutInner />
+      </HeaderSearchProvider>
+    </FloatingTabBarProvider>
+  );
+}
+
+function TabsLayoutInner() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const router = useRouter();
+  const { session, loading, signOut } = useAuth();
+  const { openDateSelector } = useCalendarEntryFlow();
   const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [menuQuery, setMenuQuery] = useState('');
+  const tabBarPropsRef = useRef<BottomTabBarProps | null>(null);
+  const tabBarUpdateScheduled = useRef(false);
+  const [, forceTabBarRender] = useState(0);
+
+  // Auth guard — redirect to login when session is lost
+  useEffect(() => {
+    if (!loading && !session) {
+      router.replace('/auth/login' as any);
+    }
+  }, [session, loading, router]);
+
+  useEffect(() => {
+    if (!showMenu && menuQuery) {
+      setMenuQuery('');
+    }
+  }, [showMenu, menuQuery]);
 
   const handleCreateOption = (type: string) => {
     setShowCreateMenu(false);
@@ -18,7 +258,7 @@ export default function TabsLayout() {
         router.push('/outfits/new' as any);
         break;
       case 'calendar':
-        router.push('/(tabs)/calendar?openAddPicker=true' as any);
+        openDateSelector(new Date());
         break;
       case 'wardrobe':
         router.push('/wardrobe/add' as any);
@@ -32,55 +272,211 @@ export default function TabsLayout() {
     }
   };
 
+  const handleMenuOption = useCallback(async (action: string) => {
+    setShowMenu(false);
+
+    switch (action) {
+      case 'profile_headshots':
+        router.push('/(tabs)/profile?tab=headshots' as any);
+        break;
+      case 'outfits':
+        router.push('/(tabs)/outfits' as any);
+        break;
+      case 'outfits_explore':
+        router.push('/(tabs)/outfits?tab=explore' as any);
+        break;
+      case 'outfits_following':
+        router.push('/(tabs)/outfits?tab=following' as any);
+        break;
+      case 'lookbooks':
+        router.push('/(tabs)/outfits/lookbooks' as any);
+        break;
+      case 'calendar':
+        router.push('/calendar' as any);
+        break;
+      case 'wardrobe':
+        router.push('/(tabs)/wardrobe' as any);
+        break;
+      case 'profile':
+        router.push('/(tabs)/profile' as any);
+        break;
+      case 'search':
+        router.push('/search' as any);
+        break;
+      case 'notifications':
+        router.push('/notifications' as any);
+        break;
+      case 'settings':
+        router.push('/account-settings' as any);
+        break;
+      case 'feedback':
+        router.push('/feedback' as any);
+        break;
+      case 'hair_makeup':
+        router.push('/(tabs)/hair-and-make-up' as any);
+        break;
+      case 'outfit_archive':
+        router.push('/archive' as any);
+        break;
+      case 'logout':
+        await signOut();
+        router.replace('/');
+        break;
+    }
+  }, [router, signOut]);
+
+  const gridItems = useMemo(
+    () => [
+      {
+        key: 'profile',
+        label: 'Profile',
+        icon: 'person-outline' as const,
+        description: 'Your account and stats',
+        keywords: ['account', 'stats', 'bio'],
+        onPress: () => handleMenuOption('profile'),
+      },
+      {
+        key: 'lookbooks',
+        label: 'Lookbooks',
+        icon: 'book-outline' as const,
+        description: 'Highlights and personal lookbooks',
+        keywords: ['highlights', 'collections'],
+        onPress: () => handleMenuOption('lookbooks'),
+      },
+      {
+        key: 'outfits_explore',
+        label: 'Explore',
+        icon: 'compass-outline' as const,
+        description: 'Discover new looks',
+        keywords: ['discover', 'trending', 'inspire'],
+        onPress: () => handleMenuOption('outfits_explore'),
+      },
+      {
+        key: 'outfits_following',
+        label: 'Followers',
+        icon: 'people-outline' as const,
+        description: 'Outfits from people you follow',
+        keywords: ['feed', 'friends', 'social'],
+        onPress: () => handleMenuOption('outfits_following'),
+      },
+    ],
+    [handleMenuOption]
+  );
+
+  const actionItems = useMemo(
+    () => [
+      {
+        key: 'search',
+        label: 'Search',
+        icon: 'search-outline' as const,
+        description: 'Find outfits, people, and more',
+        keywords: ['discover', 'find', 'browse', 'query'],
+        onPress: () => handleMenuOption('search'),
+      },
+      {
+        key: 'feedback',
+        label: 'Feedback',
+        icon: 'chatbubbles-outline' as const,
+        description: 'Share ideas and report issues',
+        keywords: ['support', 'help', 'bug', 'idea'],
+        onPress: () => handleMenuOption('feedback'),
+      },
+      {
+        key: 'hair_makeup',
+        label: 'Hair & Make-Up',
+        icon: 'cut-outline' as const,
+        description: 'Preset styles for headshots',
+        keywords: ['hair', 'makeup', 'headshot', 'preset', 'style', 'beauty'],
+        onPress: () => handleMenuOption('hair_makeup'),
+      },
+      {
+        key: 'notifications',
+        label: 'Notifications',
+        icon: 'notifications-outline' as const,
+        description: 'Mentions, likes, and comments',
+        keywords: ['alerts', 'mentions', 'likes', 'comments'],
+        onPress: () => handleMenuOption('notifications'),
+      },
+      {
+        key: 'outfit_archive',
+        label: 'Archive',
+        icon: 'archive-outline' as const,
+        description: 'View archived items',
+        keywords: ['archive', 'hidden', 'storage', 'past'],
+        onPress: () => handleMenuOption('outfit_archive'),
+      },
+      {
+        key: 'settings',
+        label: 'Account Settings',
+        icon: 'settings-outline' as const,
+        description: 'Preferences and privacy',
+        keywords: [
+          'settings',
+          'preferences',
+          'privacy',
+          'model',
+          'studio',
+          'headshot',
+          'bodyshot',
+        ],
+        onPress: () => handleMenuOption('settings'),
+      },
+      {
+        key: 'logout',
+        label: 'Log Out',
+        icon: 'log-out-outline' as const,
+        onPress: () => handleMenuOption('logout'),
+        tone: 'destructive' as const,
+      },
+    ],
+    [handleMenuOption]
+  );
+
   return (
     <>
       <Tabs
+        tabBar={(props) => {
+          // Store props so we can render the pill outside the Tabs tree
+          // to keep it above the menu/calendar panels.
+          if (tabBarPropsRef.current !== props) {
+            tabBarPropsRef.current = props;
+            if (!tabBarUpdateScheduled.current) {
+              tabBarUpdateScheduled.current = true;
+              requestAnimationFrame(() => {
+                tabBarUpdateScheduled.current = false;
+                forceTabBarRender((tick) => tick + 1);
+              });
+            }
+          }
+          return null;
+        }}
         screenOptions={{
           headerShown: true,
           headerRight: () => <HeaderRightMenu />,
           headerTitleAlign: 'left',
           headerStyle: {
-            backgroundColor: '#fff',
+            backgroundColor: colors.background,
           },
           headerShadowVisible: true,
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textTertiary,
         }}
       >
         <Tabs.Screen
           name="calendar"
           options={{
-            headerTitle: () => <HeaderAddMenu title="Calendar" />,
-            tabBarLabel: 'Calendar',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="calendar-outline" size={size} color={color} />
-            ),
+            headerShown: false,
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' },
           }}
         />
         <Tabs.Screen
           name="wardrobe"
           options={{
-            headerTitle: () => <HeaderAddMenu title="Wardrobe" />,
+            headerShown: false,
             tabBarLabel: 'Wardrobe',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="shirt-outline" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="create"
-          options={{
-            headerShown: false,
-            tabBarLabel: '',
-            tabBarButton: () => (
-              <TouchableOpacity
-                style={styles.createButtonContainer}
-                onPress={() => setShowCreateMenu(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Create"
-              >
-                <View style={styles.createButton}>
-                  <Ionicons name="add" size={28} color={colors.white} />
-                </View>
-              </TouchableOpacity>
             ),
           }}
         />
@@ -95,12 +491,40 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
+          name="create"
+          options={{
+            headerShown: false,
+            tabBarButton: () => null,
+            tabBarItemStyle: { display: 'none' },
+          }}
+        />
+        <Tabs.Screen
+          name="hair-and-make-up"
+          options={{
+            headerShown: false,
+            tabBarLabel: 'Hair & Make-Up',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="cut-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="profile"
           options={{
             headerTitle: () => <HeaderAddMenu title="Profile" />,
-            tabBarLabel: 'Profile',
+            tabBarLabel: 'Menu',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person-outline" size={size} color={color} />
+              <Ionicons name="menu-outline" size={size} color={color} />
+            ),
+            tabBarButton: ({ onPress: _nav, onLongPress: _long, onPressIn: _in, onPressOut: _out, href: _href, children, ...rest }) => (
+              <TouchableOpacity
+                {...rest}
+                onPress={() => setShowMenu((prev) => !prev)}
+                accessibilityRole="button"
+                accessibilityLabel="Menu"
+              >
+                {children}
+              </TouchableOpacity>
             ),
           }}
         />
@@ -113,6 +537,16 @@ export default function TabsLayout() {
           }}
         />
       </Tabs>
+
+      <FullScreenMenuModal
+        visible={showMenu}
+        onClose={() => setShowMenu(false)}
+        onAdd={() => { setShowMenu(false); setShowCreateMenu(true); }}
+        gridTitle=""
+        gridItems={gridItems}
+        actionItems={actionItems}
+        query={menuQuery}
+      />
 
       <DropdownMenuModal
         visible={showCreateMenu}
@@ -157,11 +591,23 @@ export default function TabsLayout() {
           <Text style={styles.menuItemText}>Headshot</Text>
         </TouchableOpacity>
       </DropdownMenuModal>
+
+      {/* Floating pill rendered last so it stacks above menu panels */}
+      {tabBarPropsRef.current && (
+        <FloatingTabBar
+          {...tabBarPropsRef.current}
+          onMenuPress={() => setShowMenu((prev) => !prev)}
+          menuActive={showMenu}
+          menuQuery={menuQuery}
+          onMenuQueryChange={setMenuQuery}
+          onMenuQueryClear={() => setMenuQuery('')}
+        />
+      )}
     </>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   createButtonContainer: {
     alignItems: 'center',
     justifyContent: 'center',

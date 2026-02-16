@@ -3,15 +3,21 @@ import { AlertModal } from '@/components/shared/modals/AlertModal';
 
 interface ErrorModalProps {
   visible: boolean;
+  title?: string;
   message?: string;
   onClose: () => void;
 }
 
-export default function ErrorModal({ visible, message, onClose }: ErrorModalProps) {
+export default function ErrorModal({
+  visible,
+  title = 'Generation Failed',
+  message,
+  onClose,
+}: ErrorModalProps) {
   return (
     <AlertModal
       visible={visible}
-      title="Generation Failed"
+      title={title}
       message={message ?? 'An error occurred during generation. Please try again.'}
       primaryText="OK"
       onPrimary={onClose}

@@ -6,12 +6,13 @@
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { uploadImageToStorage, uriToBlob } from '@/lib/utils/image-helpers';
+import { uploadAndCreateImage, uploadImageToStorage, uriToBlob } from '@/lib/utils/image-helpers';
 import { supabase } from '@/lib/supabase';
 import { updateUserProfile } from '@/lib/user';
 import {
   triggerHeadshotGenerate,
   triggerBodyShotGenerate,
+  triggerBodyShotGenerateFromSelfies,
   triggerAIJobExecution,
   waitForAIJobCompletion,
   isGeminiPolicyBlockError,
@@ -37,6 +38,20 @@ interface UseImageGenerationReturn {
     userId: string,
     headshotId: string
   ) => Promise<string | null>;
+  generateBodyShotFromSelfies: (
+    userId: string,
+    selfieImageId: string,
+    mirrorSelfieImageId: string
+  ) => Promise<{
+    imageId: string | null;
+    errorMessage?: string;
+    policyMessage?: string;
+    policyBlocked?: boolean;
+  }>;
+  saveUploadedImage: (
+    userId: string,
+    filePrefix?: string
+  ) => Promise<{ imageId: string | null; errorMessage?: string }>;
   closePolicyModal: () => void;
 }
 
@@ -107,6 +122,47 @@ export function useImageGeneration(): UseImageGenerationReturn {
   const clearImage = () => {
     setUploadedUri(null);
     setUploadedBlob(null);
+  };
+
+  const saveUploadedImage = async (
+    userId: string,
+    filePrefix: string = 'upload'
+  ): Promise<{ imageId: string | null; errorMessage?: string }> => {
+    if (!uploadedBlob && !uploadedUri) {
+      Alert.alert('Error', 'Please take or upload a photo first');
+      return { imageId: null, errorMessage: 'Please take or upload a photo first' };
+    }
+
+    setGenerating(true);
+    setLoadingMessage('Uploading photo...');
+
+    try {
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const uploadSource =
+        Platform.OS === 'web'
+          ? (uploadedBlob as Blob)
+          : { uri: uploadedUri as string, mimeType: 'image/jpeg' };
+
+      const { data, error } = await uploadAndCreateImage(
+        userId,
+        uploadSource,
+        `${filePrefix}-${stamp}.jpg`,
+        'upload'
+      );
+
+      if (error || !data) {
+        throw error || new Error('Failed to upload photo');
+      }
+
+      return { imageId: data.imageId };
+    } catch (error: any) {
+      const message = error.message || 'Failed to upload photo';
+      setError(message);
+      return { imageId: null, errorMessage: message };
+    } finally {
+      setGenerating(false);
+      setLoadingMessage('');
+    }
   };
 
   const generateHeadshot = async (
@@ -369,6 +425,94 @@ export function useImageGeneration(): UseImageGenerationReturn {
     }
   };
 
+  const generateBodyShotFromSelfies = async (
+    userId: string,
+    selfieImageId: string,
+    mirrorSelfieImageId: string
+  ): Promise<{
+    imageId: string | null;
+    errorMessage?: string;
+    policyMessage?: string;
+    policyBlocked?: boolean;
+  }> => {
+    if (!selfieImageId || !mirrorSelfieImageId) {
+      Alert.alert('Error', 'Both selfie images are required');
+      return { imageId: null, errorMessage: 'Both selfie images are required' };
+    }
+
+    setGenerating(true);
+    setLoadingMessage('Creating studio model job...');
+
+    try {
+      const { data: job, error: jobError } = await triggerBodyShotGenerateFromSelfies(
+        userId,
+        selfieImageId,
+        mirrorSelfieImageId
+      );
+
+      if (!job || jobError) {
+        throw jobError || new Error('Failed to create body shot job');
+      }
+
+      await triggerAIJobExecution(job.id);
+      setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
+
+      const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+        job.id,
+        60,
+        2000,
+        '[BodyShot]'
+      );
+
+      if (pollError || !completedJob) {
+        throw new Error(
+          'Studio model generation timed out. You can check your profile later to see if it completed.'
+        );
+      }
+
+      if (completedJob.status === 'failed') {
+        const failureMessage = completedJob.error || 'Unknown error';
+        if (isGeminiPolicyBlockError(failureMessage)) {
+          setPolicyMessage(
+            'Gemini could not generate this studio model because it conflicts with safety policy. No credits were charged.'
+          );
+          setPolicyModalVisible(true);
+          return {
+            imageId: null,
+            policyBlocked: true,
+            policyMessage:
+              'Gemini could not generate this studio model because it conflicts with safety policy. No credits were charged.',
+          };
+        }
+        throw new Error('Generation failed: ' + failureMessage);
+      }
+
+      const generatedImageId =
+        completedJob.result?.image_id || completedJob.result?.generated_image_id;
+
+      return { imageId: generatedImageId || null };
+    } catch (error: any) {
+      const message = error.message || 'Failed to generate studio model';
+      if (isGeminiPolicyBlockError(message)) {
+        setPolicyMessage(
+          'Gemini could not generate this studio model because it conflicts with safety policy. No credits were charged.'
+        );
+        setPolicyModalVisible(true);
+        return {
+          imageId: null,
+          policyBlocked: true,
+          policyMessage:
+            'Gemini could not generate this studio model because it conflicts with safety policy. No credits were charged.',
+        };
+      }
+      setError(message);
+      return { imageId: null, errorMessage: message };
+    } finally {
+      setGenerating(false);
+      setLoadingMessage('');
+    }
+  };
+
   const closePolicyModal = () => {
     setPolicyModalVisible(false);
     setPolicyMessage('');
@@ -387,6 +531,8 @@ export function useImageGeneration(): UseImageGenerationReturn {
     clearImage,
     generateHeadshot,
     generateBodyShot,
+    generateBodyShotFromSelfies,
+    saveUploadedImage,
     closePolicyModal,
   };
 }

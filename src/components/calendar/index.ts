@@ -14,3 +14,4 @@ export { CalendarDayEntryForm } from './CalendarDayEntryForm';
 export { CreatePresetModal } from './CreatePresetModal';
 export { default as CalendarDatePickerModal } from './CalendarDatePickerModal';
 export { useMonthCarousel } from './useMonthCarousel';
+export { CalendarErrorBoundary, CalendarErrorFallback } from './CalendarErrorBoundary';

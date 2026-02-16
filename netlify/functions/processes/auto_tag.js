@@ -8,7 +8,7 @@
 // allows for easier testing and maintenance.
 
 const { PROMPTS } = require("../prompts");
-const { downloadImageFromStorage, callGeminiAPI } = require("../utils");
+const { downloadImageFromStorage, callGeminiAPI, getGeminiApiVersion } = require("../utils");
 
 /**
  * Process an auto-tag job by analyzing a clothing item image and
@@ -56,7 +56,8 @@ async function processAutoTag(input, supabase, perfTracker = null, timingTracker
   // Call the Gemini API with the clothing image to extract JSON attributes
   // Pass the full result object so mime-type is included
   const model = "gemini-2.5-flash-image";
-  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
+  const apiVersion = getGeminiApiVersion(model);
+  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, apiVersion });
   const textResult = await callGeminiAPI(prompt, [imageResult], model, "TEXT", perfTracker, timingTracker);
   console.log("[Gemini] CALL COMPLETE", { job_id: jobId });
   let result;

@@ -39,7 +39,7 @@ import {
   DropdownMenuItem,
   dropdownMenuStyles,
 } from '@/components/shared/modals';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
 import { PERF_MODE } from '@/lib/perf/perfMode';
 import {
   CalendarEntry,
@@ -47,10 +47,15 @@ import {
   getCalendarEntriesForDate,
 } from '@/lib/calendar';
 import { restoreOutfit } from '@/lib/outfits';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors } = theme;
 
 export default function OutfitViewScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const {
     id,
     outfitIds,
@@ -253,19 +258,17 @@ export default function OutfitViewScreen() {
             <>
               <HeaderIconButton
                 icon="calendar-outline"
-                color={colors.textPrimary}
                 onPress={() => setShowDatePickerModal(true)}
                 accessibilityLabel="Open calendar"
               />
               <HeaderIconButton
                 icon={outfit?.is_favorite ? 'heart' : 'heart-outline'}
-                color={outfit?.is_favorite ? colors.error : colors.textPrimary}
+                color={outfit?.is_favorite ? colors.error : undefined}
                 onPress={actions.toggleFavorite}
                 accessibilityLabel="Toggle favorite"
               />
               <HeaderIconButton
                 icon="ellipsis-vertical"
-                color={colors.textPrimary}
                 onPress={() => setShowMenu(true)}
                 accessibilityLabel="Open menu"
               />
@@ -431,7 +434,7 @@ export default function OutfitViewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: {
     flex: 1,
   },
@@ -452,7 +455,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   deleteModalContent: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     borderRadius: 16,
     padding: 24,
     width: '100%',
@@ -482,7 +485,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.backgroundTertiary,
   },
   cancelButtonText: {
     fontSize: 16,

@@ -28,12 +28,19 @@ import {
 } from '@/components/shared';
 import { VisibilitySelector } from '@/components/wardrobe/VisibilitySelector';
 import { HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
 import { PERF_MODE } from '@/lib/perf/perfMode';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
+import { normalizeLabelList } from '@/lib/outfits/normalizeLabels';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 export default function OutfitEditorScreen() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+  const commonStyles = createCommonStyles(colors);
   const { id, items: itemsParam } = useLocalSearchParams<{
     id: string;
     items?: string;
@@ -118,7 +125,6 @@ export default function OutfitEditorScreen() {
           !isNew && (
             <HeaderIconButton
               icon="archive-outline"
-              color={colors.textPrimary}
               onPress={actions.handleDelete}
               disabled={actions.saving}
               accessibilityLabel="Archive outfit"
@@ -146,13 +152,17 @@ export default function OutfitEditorScreen() {
               {!!outfit?.occasions?.length && (
                 <View style={styles.aiRow}>
                   <Text style={styles.aiLabel}>Occasions</Text>
-                  <Text style={styles.aiText}>{outfit.occasions.join(', ')}</Text>
+                  <Text style={styles.aiText}>
+                    {normalizeLabelList(outfit.occasions).join(', ')}
+                  </Text>
                 </View>
               )}
               {!!outfit?.style_tags?.length && (
                 <View style={styles.aiRow}>
                   <Text style={styles.aiLabel}>Style Tags</Text>
-                  <Text style={styles.aiText}>{outfit.style_tags.join(', ')}</Text>
+                  <Text style={styles.aiText}>
+                    {normalizeLabelList(outfit.style_tags).join(', ')}
+                  </Text>
                 </View>
               )}
               {!!outfit?.season && outfit.season !== 'all-season' && (
@@ -233,7 +243,7 @@ export default function OutfitEditorScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: {
     flex: 1,
   },
@@ -257,17 +267,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    color: '#64748b',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   aiText: {
     fontSize: 15,
-    color: '#111827',
+    color: colors.textPrimary,
     lineHeight: 22,
   },
   aiEmptyText: {
     fontSize: 14,
-    color: '#6b7280',
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   aiRow: {

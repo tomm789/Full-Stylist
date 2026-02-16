@@ -3,7 +3,7 @@ import type { PresetCategory } from './presetTypes';
 export const hairPresets: PresetCategory[] = [
   {
     id: 'short-hairstyles',
-    title: 'Short Hairstyles',
+    title: 'Short',
     sections: [
       {
         id: 'short-styles',
@@ -43,7 +43,7 @@ export const hairPresets: PresetCategory[] = [
           },
           {
             id: 'inverted-bob',
-            title: 'Inverted / A-Line Bob',
+            title: 'Inverted | A-Line Bob',
             description: 'Shorter in the back, angling longer toward the front.',
           },
           {
@@ -69,7 +69,7 @@ export const hairPresets: PresetCategory[] = [
   },
   {
     id: 'medium-hairstyles',
-    title: 'Medium Hairstyles (Shoulder to Collarbone)',
+    title: 'Medium',
     sections: [
       {
         id: 'medium-styles',
@@ -111,7 +111,7 @@ export const hairPresets: PresetCategory[] = [
   },
   {
     id: 'long-hairstyles',
-    title: 'Long Hairstyles',
+    title: 'Long',
     sections: [
       {
         id: 'long-styles',
@@ -135,7 +135,7 @@ export const hairPresets: PresetCategory[] = [
           },
           {
             id: 'v-cut-u-cut',
-            title: 'V-Cut / U-Cut',
+            title: 'V-Cut | U-Cut',
             description:
               'The back perimeter is shaped into a V or U curve rather than cut straight across.',
           },
@@ -308,6 +308,250 @@ export const hairPresets: PresetCategory[] = [
             id: 'micro-bangs',
             title: 'Micro Bangs (Baby Bangs)',
             description: 'Very short fringe that sits high on the forehead.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'hair-color',
+    title: 'Hair Color',
+    sections: [
+      {
+        id: 'natural-colors',
+        title: 'Natural Colors',
+        options: [
+          {
+            id: 'color-black',
+            title: 'Black',
+            description: 'Deep, true black hair with a natural sheen.',
+          },
+          {
+            id: 'color-dark-brown',
+            title: 'Dark Brown',
+            description: 'A rich, deep brown that appears nearly black in low light.',
+          },
+          {
+            id: 'color-medium-brown',
+            title: 'Medium Brown',
+            description: 'A warm, mid-tone brown with natural depth.',
+          },
+          {
+            id: 'color-light-brown',
+            title: 'Light Brown / Chestnut',
+            description:
+              'A lighter brown with warm, reddish-golden undertones.',
+          },
+          {
+            id: 'color-dirty-blonde',
+            title: 'Dirty Blonde',
+            description:
+              'A darker, muted blonde that sits between brown and golden tones.',
+          },
+          {
+            id: 'color-golden-blonde',
+            title: 'Golden Blonde',
+            description: 'A warm, sun-kissed blonde with honey undertones.',
+          },
+          {
+            id: 'color-platinum-blonde',
+            title: 'Platinum Blonde',
+            description:
+              'A very light, cool-toned blonde that is almost white.',
+          },
+          {
+            id: 'color-strawberry-blonde',
+            title: 'Strawberry Blonde',
+            description:
+              'A blend of blonde and light red, giving a warm pinkish-golden hue.',
+          },
+          {
+            id: 'color-auburn',
+            title: 'Auburn',
+            description: 'A reddish-brown color with warm copper undertones.',
+          },
+          {
+            id: 'color-copper-red',
+            title: 'Copper / Red',
+            description:
+              'A vibrant, warm red with strong orange-copper tones.',
+          },
+          {
+            id: 'color-ginger',
+            title: 'Ginger',
+            description:
+              'A natural orange-red tone, lighter and brighter than auburn.',
+          },
+          {
+            id: 'color-silver-grey',
+            title: 'Silver / Grey',
+            description:
+              'Naturally greyed or silver hair, ranging from salt-and-pepper to fully silver.',
+          },
+          {
+            id: 'color-white',
+            title: 'White',
+            description: 'Completely white hair with no remaining pigment.',
+          },
+        ],
+      },
+      {
+        id: 'dyed-colors',
+        title: 'Dyed Colors',
+        options: [
+          {
+            id: 'dyed-jet-black',
+            title: 'Jet Black',
+            description:
+              'An intense blue-black dye that is darker and cooler than natural black.',
+          },
+          {
+            id: 'dyed-burgundy',
+            title: 'Burgundy / Wine',
+            description: 'A deep, dark red with purple undertones.',
+          },
+          {
+            id: 'dyed-cherry-red',
+            title: 'Cherry Red',
+            description: 'A bold, saturated true red.',
+          },
+          {
+            id: 'dyed-bright-red',
+            title: 'Bright Red',
+            description:
+              'A vivid, fiery red that is lighter and more intense than cherry.',
+          },
+          {
+            id: 'dyed-rose-gold',
+            title: 'Rose Gold',
+            description: 'A soft, warm pink-gold metallic tone.',
+          },
+          {
+            id: 'dyed-pastel-pink',
+            title: 'Pastel Pink',
+            description: 'A light, muted pink with a soft, dreamy quality.',
+          },
+          {
+            id: 'dyed-hot-pink',
+            title: 'Hot Pink / Magenta',
+            description: 'A bold, saturated pink with blue undertones.',
+          },
+          {
+            id: 'dyed-lavender',
+            title: 'Lavender',
+            description: 'A soft, pastel purple with cool, muted tones.',
+          },
+          {
+            id: 'dyed-purple',
+            title: 'Purple / Violet',
+            description: 'A rich, deep purple ranging from plum to electric violet.',
+          },
+          {
+            id: 'dyed-blue',
+            title: 'Blue',
+            description:
+              'Dyed blue hair, from deep navy to bright electric blue.',
+          },
+          {
+            id: 'dyed-teal-green',
+            title: 'Teal / Green',
+            description:
+              'A cool-toned color ranging from blue-green teal to emerald or forest green.',
+          },
+          {
+            id: 'dyed-peach',
+            title: 'Peach / Apricot',
+            description: 'A warm, soft orange-pink pastel tone.',
+          },
+          {
+            id: 'dyed-silver',
+            title: 'Silver (Metallic)',
+            description:
+              'A deliberately dyed, high-shine silver with a cool metallic finish.',
+          },
+          {
+            id: 'dyed-ombre',
+            title: 'Ombré',
+            description:
+              'A gradient effect with darker roots transitioning to lighter ends.',
+          },
+          {
+            id: 'dyed-balayage',
+            title: 'Balayage',
+            description:
+              'Hand-painted highlights that create a natural, sun-kissed gradient.',
+          },
+          {
+            id: 'dyed-highlights',
+            title: 'Highlights / Lowlights',
+            description:
+              'Lighter or darker streaks woven through the base color for dimension.',
+          },
+          {
+            id: 'dyed-split',
+            title: 'Split Dye',
+            description:
+              'Hair divided into two distinct colors, typically down the centre part.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'hair-length',
+    title: 'Hair Length',
+    sections: [
+      {
+        id: 'hair-lengths',
+        title: 'Lengths',
+        options: [
+          {
+            id: 'length-buzz',
+            title: 'Buzz / Shaved',
+            description:
+              'Less than an inch of length; hair is clipped very close to the scalp.',
+          },
+          {
+            id: 'length-ear',
+            title: 'Ear Length',
+            description:
+              'Hair reaches the tops of the ears, a short crop with some texture.',
+          },
+          {
+            id: 'length-chin',
+            title: 'Chin Length',
+            description:
+              'Hair falls to the jawline, typical of bobs and short styles.',
+          },
+          {
+            id: 'length-shoulder',
+            title: 'Shoulder Length',
+            description:
+              'Hair reaches the shoulders, a versatile medium length.',
+          },
+          {
+            id: 'length-collarbone',
+            title: 'Collarbone Length',
+            description:
+              'Hair falls to the collarbone, sitting between medium and long.',
+          },
+          {
+            id: 'length-mid-back',
+            title: 'Mid-Back Length',
+            description:
+              'Hair extends to the middle of the back, a classic long length.',
+          },
+          {
+            id: 'length-waist',
+            title: 'Waist Length',
+            description:
+              'Hair reaches the natural waistline, noticeably long.',
+          },
+          {
+            id: 'length-hip',
+            title: 'Hip Length & Beyond',
+            description:
+              'Very long hair that extends to the hips or further.',
           },
         ],
       },

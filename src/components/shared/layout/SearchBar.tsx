@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import IconButton from '../buttons/IconButton';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface SearchBarProps extends Omit<TextInputProps, 'style'> {
   value: string;
@@ -39,6 +41,9 @@ export default function SearchBar({
   placeholder = 'Search...',
   ...textInputProps
 }: SearchBarProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   return (
     <View style={[styles.container, containerStyle]}>
       <TextInput
@@ -50,7 +55,7 @@ export default function SearchBar({
         autoCapitalize="none"
         {...textInputProps}
       />
-      
+
       {showFilter && onFilter && (
         <View
           style={[
@@ -66,7 +71,7 @@ export default function SearchBar({
           />
         </View>
       )}
-      
+
       {showAdd && onAdd && (
         <View style={styles.addButton}>
           <IconButton
@@ -81,7 +86,7 @@ export default function SearchBar({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     padding: spacing.sm,
@@ -94,8 +99,9 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    padding: spacing.sm + spacing.xs / 2,
+    borderRadius: borderRadius.round,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + spacing.xs / 2,
     fontSize: typography.fontSize.base,
     backgroundColor: colors.backgroundSecondary,
     color: colors.textPrimary,
@@ -103,7 +109,7 @@ const styles = StyleSheet.create({
   filterButton: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.round,
     width: 40,
     height: 40,
     justifyContent: 'center',
@@ -116,7 +122,7 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: colors.black,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.round,
     width: 40,
     height: 40,
     justifyContent: 'center',

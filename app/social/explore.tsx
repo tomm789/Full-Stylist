@@ -8,9 +8,7 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
-  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
@@ -18,7 +16,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getPublicOutfits } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
-import { commonStyles, theme } from '@/styles';
+import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
 interface PublicOutfit {
   id: string;
@@ -31,6 +33,9 @@ interface PublicOutfit {
 }
 
 export default function ExploreScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
   const [outfits, setOutfits] = useState<PublicOutfit[]>([]);
@@ -92,84 +97,57 @@ export default function ExploreScreen() {
           message="Check back later for inspiration"
         />
       ) : (
-        <FlatList
+        <PostGrid
           data={outfits}
-          numColumns={2}
           renderItem={({ item }) => {
             const imageUrl = images.get(item.id);
             return (
               <TouchableOpacity
-                style={styles.outfitCard}
+                style={postGridStyles.gridItem}
                 onPress={() => router.push(`/outfits/${item.id}`)}
               >
                 {imageUrl ? (
                   <ExpoImage
                     source={{ uri: imageUrl }}
-                    style={styles.outfitImage}
+                    style={postGridStyles.gridImage}
                     contentFit="cover"
                     cachePolicy="memory-disk"
                   />
                 ) : (
-                  <View style={styles.imagePlaceholder} />
+                  <View style={postGridStyles.gridImagePlaceholder} />
                 )}
-                <View style={styles.outfitInfo}>
+                <View style={postGridStyles.infoOverlay}>
                   <Text style={styles.outfitTitle} numberOfLines={1}>
-                    {item.title}
+                    {item.title || 'Untitled Outfit'}
                   </Text>
                   <Text style={styles.userName} numberOfLines={1}>
-                    {item.user?.display_name || item.user?.handle || 'User'}
+                    @{item.user?.handle || item.user?.display_name || 'user'}
                   </Text>
                 </View>
               </TouchableOpacity>
             );
           }}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.grid}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  grid: {
-    padding: theme.spacing.sm,
-  },
-  outfitCard: {
-    flex: 1,
-    margin: theme.spacing.sm,
-    borderRadius: theme.borderRadius.lg,
-    backgroundColor: theme.colors.backgroundSecondary,
-    overflow: 'hidden',
-  },
-  outfitImage: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-    backgroundColor: theme.colors.backgroundTertiary,
-  },
-  imagePlaceholder: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-    backgroundColor: theme.colors.backgroundTertiary,
-  },
-  outfitInfo: {
-    padding: theme.spacing.md,
-  },
   outfitTitle: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.typography.fontWeight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
+    color: theme.colors.textLight,
   },
   userName: {
     fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.textSecondary,
+    color: theme.colors.textLight,
   },
 });

@@ -1,23 +1,22 @@
 /**
  * SortModal Component
- * Modal for sorting outfits by different criteria
+ * Modal for sorting and filtering outfits — uses shared filter UI components
  */
 
-import React from 'react';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  useWindowDimensions,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { BottomSheet } from '@/components/shared';
+  BottomSheet,
+  PrimaryButton,
+  FilterAccordionSection,
+  FilterPillGroup,
+} from '@/components/shared';
 import { theme } from '@/styles';
 import { SortOption, SortOrder } from '@/hooks/outfits';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, typography } = theme;
 
 interface SortModalProps {
   visible: boolean;
@@ -64,8 +63,24 @@ export default function SortModal({
   onClearOccasions,
   onResetFilters,
 }: SortModalProps) {
-  const { height } = useWindowDimensions();
-  const maxBodyHeight = Math.min(height * 0.8, 700);
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set(['sortBy', 'order'])
+  );
+
+  const toggleSection = (sectionKey: string) => {
+    setExpandedSections((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionKey)) {
+        newSet.delete(sectionKey);
+      } else {
+        newSet.add(sectionKey);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <BottomSheet
@@ -73,230 +88,145 @@ export default function SortModal({
       onClose={onClose}
       title="Sort & Filters"
       headerRight={
-        <TouchableOpacity onPress={onResetFilters} disabled={!onResetFilters}>
-          <Text style={styles.resetText}>Reset</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <PrimaryButton
+            title="Reset"
+            onPress={onResetFilters ?? (() => {})}
+            variant="outline"
+            size="small"
+            disabled={!onResetFilters}
+          />
+          <PrimaryButton
+            title="Done"
+            onPress={onClose}
+            size="small"
+          />
+        </View>
       }
     >
-      <ScrollView
-        style={[styles.body, { maxHeight: maxBodyHeight }]}
-        contentContainerStyle={styles.bodyContent}
-        showsVerticalScrollIndicator
-      >
-        <TouchableOpacity
-          style={[styles.filterRow, styles.savedFilterRow]}
-          onPress={onToggleFavoritesOnly}
-          disabled={!onToggleFavoritesOnly}
-        >
-          <Text style={styles.filterText}>Show saved only</Text>
-          <Ionicons
-            name={showFavoritesOnly ? 'bookmark' : 'bookmark-outline'}
-            size={20}
-            color={showFavoritesOnly ? colors.primary : colors.textTertiary}
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.sectionHeading}>Sort by</Text>
-        {sortOptions.map((option) => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.option,
-              sortBy === option.value && styles.optionActive,
-            ]}
-            onPress={() => onSortChange(option.value)}
-          >
-            <Text
-              style={[
-                styles.optionText,
-                sortBy === option.value && styles.optionTextActive,
-              ]}
-            >
-              {option.label}
-            </Text>
-            {sortBy === option.value && (
-              <Ionicons name="checkmark" size={20} color={colors.primary} />
-            )}
-          </TouchableOpacity>
-        ))}
-
-        <View style={styles.orderSection}>
-          <Text style={styles.orderLabel}>Order</Text>
-          <TouchableOpacity style={styles.orderButton} onPress={onOrderToggle}>
-            <Ionicons
-              name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'}
-              size={20}
-              color={colors.primary}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Show Saved Only Toggle */}
+        <View style={styles.section}>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Show saved only</Text>
+            <Switch
+              value={showFavoritesOnly}
+              onValueChange={() => onToggleFavoritesOnly?.()}
             />
-            <Text style={styles.orderText}>
-              {sortOrder === 'asc' ? 'Ascending' : 'Descending'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.filterSection}>
-          <Text style={styles.orderLabel}>Grid Filters</Text>
-          <TouchableOpacity
-            style={styles.filterRow}
-            onPress={onToggleGridOutfits}
-            disabled={!onToggleGridOutfits}
-          >
-            <Text style={styles.filterText}>Show outfits</Text>
-            <Ionicons
-              name={showGridOutfits ? 'checkbox' : 'square-outline'}
-              size={20}
-              color={showGridOutfits ? colors.primary : colors.textTertiary}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.filterRow}
-            onPress={onToggleGridLookbooks}
-            disabled={!onToggleGridLookbooks}
-          >
-            <Text style={styles.filterText}>Show lookbooks</Text>
-            <Ionicons
-              name={showGridLookbooks ? 'checkbox' : 'square-outline'}
-              size={20}
-              color={showGridLookbooks ? colors.primary : colors.textTertiary}
-            />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.filterSection}>
-          <View style={styles.filterHeader}>
-            <Text style={styles.orderLabel}>Occasions</Text>
-            {selectedOccasions.length > 0 && (
-              <TouchableOpacity onPress={onClearOccasions}>
-                <Text style={styles.clearText}>Clear</Text>
-              </TouchableOpacity>
-            )}
           </View>
-          {occasionOptions.length === 0 ? (
-            <Text style={styles.emptyText}>No occasions found</Text>
-          ) : (
-            occasionOptions.map((occasion) => {
-              const selected = selectedOccasions.includes(occasion);
-              return (
-                <TouchableOpacity
-                  key={occasion}
-                  style={styles.filterRow}
-                  onPress={() => onToggleOccasion?.(occasion)}
-                  disabled={!onToggleOccasion}
-                >
-                  <Text style={styles.filterText}>{occasion}</Text>
-                  <Ionicons
-                    name={selected ? 'checkbox' : 'square-outline'}
-                    size={20}
-                    color={selected ? colors.primary : colors.textTertiary}
-                  />
-                </TouchableOpacity>
-              );
-            })
-          )}
         </View>
+
+        {/* Sort By */}
+        <FilterAccordionSection
+          title="Sort by"
+          expanded={expandedSections.has('sortBy')}
+          onToggle={() => toggleSection('sortBy')}
+        >
+          <FilterPillGroup
+            label="Sort by"
+            pills={sortOptions.map((opt) => ({ id: opt.value, label: opt.label }))}
+            selectedId={sortBy}
+            onToggle={(id) => {
+              if (id) onSortChange(id as SortOption);
+            }}
+            showAllOption={false}
+          />
+        </FilterAccordionSection>
+
+        {/* Order */}
+        <FilterAccordionSection
+          title="Order"
+          expanded={expandedSections.has('order')}
+          onToggle={() => toggleSection('order')}
+        >
+          <FilterPillGroup
+            label="Order"
+            pills={[
+              { id: 'asc', label: 'Ascending' },
+              { id: 'desc', label: 'Descending' },
+            ]}
+            selectedId={sortOrder}
+            onToggle={(id) => {
+              if (id && id !== sortOrder) onOrderToggle();
+            }}
+            showAllOption={false}
+          />
+        </FilterAccordionSection>
+
+        {/* Grid Filters */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeading}>Grid Filters</Text>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Show outfits</Text>
+            <Switch
+              value={showGridOutfits}
+              onValueChange={() => onToggleGridOutfits?.()}
+            />
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Show lookbooks</Text>
+            <Switch
+              value={showGridLookbooks}
+              onValueChange={() => onToggleGridLookbooks?.()}
+            />
+          </View>
+        </View>
+
+        {/* Occasions */}
+        {occasionOptions.length > 0 && (
+          <FilterAccordionSection
+            title={`Occasions${selectedOccasions.length > 0 ? ` (${selectedOccasions.length})` : ''}`}
+            expanded={expandedSections.has('occasions')}
+            onToggle={() => toggleSection('occasions')}
+          >
+            <FilterPillGroup
+              label="Occasions"
+              pills={occasionOptions.map((occ) => ({ id: occ, label: occ }))}
+              selectedId={selectedOccasions}
+              onToggle={(newSelection) => {
+                const newArr = newSelection as unknown as string[];
+                if (newArr.length > selectedOccasions.length) {
+                  const added = newArr.find((o) => !selectedOccasions.includes(o));
+                  if (added) onToggleOccasion?.(added);
+                } else {
+                  const removed = selectedOccasions.find((o) => !newArr.includes(o));
+                  if (removed) onToggleOccasion?.(removed);
+                }
+              }}
+              showAllOption={false}
+            />
+          </FilterAccordionSection>
+        )}
       </ScrollView>
     </BottomSheet>
   );
 }
 
-const styles = StyleSheet.create({
-  resetText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  body: {
-    padding: spacing.md,
-  },
-  bodyContent: {
-    paddingBottom: spacing.lg,
-  },
-  option: {
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  headerActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.sm,
-    backgroundColor: colors.backgroundSecondary,
-  },
-  optionActive: {
-    backgroundColor: colors.primaryLight,
-  },
-  optionText: {
-    fontSize: typography.fontSize.base,
-    color: colors.textPrimary,
-  },
-  optionTextActive: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  orderSection: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
-  filterSection: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
-  orderLabel: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-    color: colors.textSecondary,
-  },
-  orderButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.backgroundSecondary,
     gap: spacing.sm,
   },
-  orderText: {
-    fontSize: typography.fontSize.base,
-    color: colors.textPrimary,
+  section: {
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
-  filterRow: {
+  toggleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.backgroundSecondary,
-    marginTop: spacing.sm,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
   },
-  filterText: {
-    fontSize: typography.fontSize.base,
+  toggleLabel: {
+    fontSize: 16,
     color: colors.textPrimary,
-  },
-  filterHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  clearText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  emptyText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
   },
   sectionHeading: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '600',
-    marginTop: spacing.md,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
     marginBottom: spacing.sm,
-    color: colors.textSecondary,
-  },
-  savedFilterRow: {
-    marginTop: spacing.xs,
   },
 });

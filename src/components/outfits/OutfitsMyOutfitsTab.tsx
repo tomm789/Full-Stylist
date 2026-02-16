@@ -15,9 +15,6 @@ export type OutfitsMyOutfitsTabProps = {
   onScrollToIndexFailed: (info: { index: number; averageItemLength: number }) => void;
   refreshing: boolean;
   onRefresh: () => void;
-  gridListStyle: any;
-  gridContentStyle: any;
-  gridRowStyle: any;
   feedListStyle: any;
   feedContentStyle: any;
   searchQuery: string;
@@ -36,9 +33,6 @@ export default function OutfitsMyOutfitsTab({
   onScrollToIndexFailed,
   refreshing,
   onRefresh,
-  gridListStyle,
-  gridContentStyle,
-  gridRowStyle,
   feedListStyle,
   feedContentStyle,
   searchQuery,
@@ -70,9 +64,6 @@ export default function OutfitsMyOutfitsTab({
         onScrollToIndexFailed={onScrollToIndexFailed}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        gridListStyle={gridListStyle}
-        gridContentStyle={gridContentStyle}
-        gridRowStyle={gridRowStyle}
         feedListStyle={feedListStyle}
         feedContentStyle={feedContentStyle}
         emptyTitle={emptyTitle}

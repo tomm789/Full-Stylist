@@ -12,9 +12,12 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 export interface SelectOption {
   value: string;
@@ -44,6 +47,9 @@ export default function Select({
   containerStyle,
   error,
 }: SelectProps) {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const [expanded, setExpanded] = useState(false);
 
   const selectedOption = options.find((opt) => opt.value === value);
@@ -101,7 +107,7 @@ export default function Select({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: spacing.lg,
   },

@@ -5,14 +5,14 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
-import { BottomSheet, PrimaryButton } from '@/components/shared';
+import { BottomSheet, PrimaryButton, FilterPillGroup, FilterAccordionSection } from '@/components/shared';
 import { theme } from '@/styles';
-import { FilterState } from '@/hooks/wardrobe';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
+import type { FilterState, AvailableEntityAttribute } from '@/hooks/wardrobe';
 import { WardrobeSubcategory } from '@/lib/wardrobe';
-import { FilterPillGroup } from './FilterPillGroup';
-import { FilterAccordionSection } from './FilterAccordionSection';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 interface FilterDrawerProps {
   visible: boolean;
@@ -25,6 +25,9 @@ interface FilterDrawerProps {
   availableMaterials?: string[];
   availableSizes?: string[];
   availableSeasons?: string[];
+  availableBrands?: string[];
+  availableConditions?: Array<{ id: string; label: string }>;
+  availableEntityAttributes?: AvailableEntityAttribute[];
   availableTags?: Array<{ id: string; name: string }>;
 }
 
@@ -39,8 +42,14 @@ export default function FilterDrawer({
   availableMaterials = [],
   availableSizes = [],
   availableSeasons = [],
+  availableBrands = [],
+  availableConditions = [],
+  availableEntityAttributes = [],
   availableTags = [],
 }: FilterDrawerProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   const toggleSection = (sectionKey: string) => {
@@ -64,18 +73,18 @@ export default function FilterDrawer({
       visible={visible}
       onClose={onClose}
       title="Filters"
-      footerContent={
-        <View style={styles.footer}>
+      headerRight={
+        <View style={styles.headerActions}>
           <PrimaryButton
-            title="Clear All"
+            title="Clear"
             onPress={onClearAll}
             variant="outline"
-            style={styles.footerButton}
+            size="small"
           />
           <PrimaryButton
             title="Apply"
             onPress={handleApply}
-            style={styles.footerButton}
+            size="small"
           />
         </View>
       }
@@ -119,6 +128,42 @@ export default function FilterDrawer({
               pills={subcategories.map((sub) => ({ id: sub.id, label: sub.name }))}
               selectedId={filters.subcategoryId}
               onToggle={(id) => onUpdateFilter('subcategoryId', id as any)}
+            />
+          </FilterAccordionSection>
+        )}
+
+        {/* Brand Filter */}
+        {availableBrands.length > 0 && (
+          <FilterAccordionSection
+            title="Brand"
+            expanded={expandedSections.has('brand')}
+            onToggle={() => toggleSection('brand')}
+          >
+            <FilterPillGroup
+              label="Brand"
+              pills={availableBrands.map((brand) => ({ id: brand, label: brand }))}
+              selectedId={filters.brand}
+              onToggle={(id) =>
+                onUpdateFilter('brand', filters.brand === id ? null : (id as any))
+              }
+            />
+          </FilterAccordionSection>
+        )}
+
+        {/* Condition Filter */}
+        {availableConditions.length > 0 && (
+          <FilterAccordionSection
+            title="Condition"
+            expanded={expandedSections.has('condition')}
+            onToggle={() => toggleSection('condition')}
+          >
+            <FilterPillGroup
+              label="Condition"
+              pills={availableConditions.map((c) => ({ id: c.id, label: c.label }))}
+              selectedId={filters.condition}
+              onToggle={(id) =>
+                onUpdateFilter('condition', filters.condition === id ? null : (id as any))
+              }
             />
           </FilterAccordionSection>
         )}
@@ -198,6 +243,30 @@ export default function FilterDrawer({
           </FilterAccordionSection>
         )}
 
+        {/* Dynamic Entity Attribute Filters (pattern, style, occasion, formality, etc.) */}
+        {availableEntityAttributes.map((attr) => (
+          <FilterAccordionSection
+            key={attr.key}
+            title={attr.name}
+            expanded={expandedSections.has(`entity_${attr.key}`)}
+            onToggle={() => toggleSection(`entity_${attr.key}`)}
+          >
+            <FilterPillGroup
+              label={attr.name}
+              pills={attr.values.map((v) => ({ id: v, label: v }))}
+              selectedId={filters.entityAttributes[attr.key] ?? null}
+              onToggle={(id) => {
+                const current = filters.entityAttributes[attr.key] ?? null;
+                const newValue = current === id ? null : id;
+                onUpdateFilter('entityAttributes', {
+                  ...filters.entityAttributes,
+                  [attr.key]: newValue,
+                } as any);
+              }}
+            />
+          </FilterAccordionSection>
+        ))}
+
         {/* Tags Filter */}
         {availableTags.length > 0 && (
           <FilterAccordionSection
@@ -219,7 +288,7 @@ export default function FilterDrawer({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
     paddingBottom: spacing.lg,
@@ -236,11 +305,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
   },
-  footer: {
+  headerActions: {
     flexDirection: 'row',
-    gap: spacing.md,
-  },
-  footerButton: {
-    flex: 1,
+    gap: spacing.sm,
   },
 });

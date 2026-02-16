@@ -6,9 +6,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
 
-const { colors, typography } = theme;
+const { typography } = theme;
 
 interface ImagePlaceholderProps {
   text?: string;
@@ -25,6 +27,8 @@ export default function ImagePlaceholder({
   style,
   aspectRatio = 1,
 }: ImagePlaceholderProps) {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
   return (
     <View
       style={[

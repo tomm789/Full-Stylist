@@ -30,6 +30,7 @@ type UseOutfitsFeedOrchestrationParams = {
   selectedOccasions: string[];
   showFavoritesOnly: boolean;
   onSwitchToFeed: () => void;
+  onOpenPostFeed: (postId: string, ownerUserId: string) => void;
   onOpenLookbook: (lookbookId: string) => void;
   outfitImages: Map<string, string | null>;
   lookbookImages: Map<string, any>;
@@ -63,6 +64,7 @@ export function useOutfitsFeedOrchestration({
   selectedOccasions,
   showFavoritesOnly,
   onSwitchToFeed,
+  onOpenPostFeed,
   onOpenLookbook,
   outfitImages,
   lookbookImages,
@@ -184,6 +186,11 @@ export function useOutfitsFeedOrchestration({
       const post = item.type === 'post' ? item.post : item.repost?.original_post;
       if (!post) return;
 
+      if (post.owner_user_id) {
+        onOpenPostFeed(post.id, post.owner_user_id);
+        return;
+      }
+
       if (post.entity_type === 'outfit') {
         pendingScrollRef.current = {
           itemId: item.id,
@@ -198,7 +205,7 @@ export function useOutfitsFeedOrchestration({
         onOpenLookbook(post.entity_id);
       }
     },
-    [activeTab, onOpenLookbook, onSwitchToFeed, tryScrollToPending]
+    [activeTab, onOpenLookbook, onOpenPostFeed, onSwitchToFeed, tryScrollToPending]
   );
 
   const handleScrollToIndexFailed = useCallback(

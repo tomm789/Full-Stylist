@@ -15,8 +15,11 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { WardrobeCategory, WardrobeItem } from '@/lib/wardrobe';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
+import WardrobeCategoryIcon from '@/components/shared/WardrobeCategoryIcon';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, borderRadius, typography } = theme;
 
 interface CategorySelectorProps {
   categories: WardrobeCategory[];
@@ -24,24 +27,8 @@ interface CategorySelectorProps {
   itemImages: Map<string, string>;
   onAddItem: (categoryId: string) => void;
   onRemoveItem: (categoryId: string) => void;
-  getCategoryIcon?: (categoryName: string) => string;
   style?: ViewStyle;
 }
-
-const defaultCategoryIcons: { [key: string]: string } = {
-  'Tops': '👕',
-  'Bottoms': '👖',
-  'Dresses': '👗',
-  'Outerwear': '🧥',
-  'Shoes': '👟',
-  'Accessories': '👜',
-  'Jewelry': '💍',
-  'Bags': '🎒',
-  'Hats': '🎩',
-  'Scarves': '🧣',
-  'Belts': '📿',
-  'Sunglasses': '🕶️',
-};
 
 export default function CategorySelector({
   categories,
@@ -49,10 +36,10 @@ export default function CategorySelector({
   itemImages,
   onAddItem,
   onRemoveItem,
-  getCategoryIcon,
   style,
 }: CategorySelectorProps) {
-  const getIcon = getCategoryIcon || ((name: string) => defaultCategoryIcons[name] || '👔');
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
 
   return (
     <View style={[styles.container, style]}>
@@ -64,7 +51,11 @@ export default function CategorySelector({
           <View key={category.id} style={styles.categorySlot}>
             <View style={styles.categoryHeader}>
               <View style={styles.categoryTitleRow}>
-                <Text style={styles.categoryIcon}>{getIcon(category.name)}</Text>
+                <WardrobeCategoryIcon
+                  categoryName={category.name}
+                  size={20}
+                  color={colors.textPrimary}
+                />
                 <Text style={styles.categoryName}>{category.name}</Text>
               </View>
               <View style={styles.categoryActions}>
@@ -110,7 +101,7 @@ export default function CategorySelector({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     gap: spacing.sm + spacing.xs / 2,
   },
@@ -130,9 +121,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  categoryIcon: {
-    fontSize: 20,
   },
   categoryName: {
     fontSize: typography.fontSize.base,

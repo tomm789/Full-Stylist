@@ -11,7 +11,7 @@ export const makeupPresets: PresetCategory[] = [
         options: [
           {
             id: 'no-makeup-makeup',
-            title: 'No-Makeup Makeup (Clean Girl)',
+            title: 'No Makeup',
             description:
               'Focuses on skin prep, groomed brows, and enhancing natural features undetectably.',
           },
@@ -23,37 +23,37 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'full-glam',
-            title: 'Full Glam / Insta-Glam',
+            title: 'Full Glam | Insta-Glam',
             description:
               'High coverage, sharp contour, cut-crease eyeshadow, baking, and heavy false lashes.',
           },
           {
             id: 'matte-90s',
-            title: 'Matte / 90s Supermodel',
+            title: 'Matte | 90s Supermodel',
             description:
               'Velvety skin, cool-toned brown lips, thin arched brows, and matte eyeshadows.',
           },
           {
             id: 'dewy-glass-skin',
-            title: 'Dewy / Glass Skin',
+            title: 'Dewy | Glass Skin',
             description:
               'Extreme hydration, liquid highlighters, and cream products for a wet, reflective skin finish.',
           },
           {
             id: 'grunge',
-            title: 'Grunge / Rocker Chic',
+            title: 'Grunge | Rocker Chic',
             description:
               'Smudged eyeliner, dark or messy eyeshadow, and effortless or lived-in matte lips.',
           },
           {
             id: 'editorial',
-            title: 'Editorial / Avant-Garde',
+            title: 'Editorial | Avant-Garde',
             description:
               'Artistic and experimental with graphic liners, bold colors, bleached brows, or floating creases.',
           },
           {
             id: 'vintage-pinup',
-            title: 'Vintage / Pin-Up',
+            title: 'Vintage | Pin-Up',
             description:
               'Sharp winged liner, red matte lip, and pale, matte skin.',
           },
@@ -65,13 +65,13 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'latte',
-            title: 'Latte / Monochromatic',
+            title: 'Latte | Monochromatic',
             description:
               'Shades of brown, bronze, and tan across eyes, cheeks, and lips for a warm, sun-kissed look.',
           },
           {
             id: 'coquette-cold-girl',
-            title: 'Coquette / Cold Girl',
+            title: 'Coquette | Cold Girl',
             description:
               'Heavy blush on the nose and cheeks, doll-like lashes, and glossy lips.',
           },
@@ -95,12 +95,12 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'dewy-finish',
-            title: 'Dewy / Radiant',
+            title: 'Dewy | Radiant',
             description: 'Wet-look, reflective finish. Best for dry skin.',
           },
           {
             id: 'satin-finish',
-            title: 'Satin / Natural',
+            title: 'Satin | Natural',
             description:
               'A balance between matte and dewy; mimics real skin texture.',
           },
@@ -182,6 +182,72 @@ export const makeupPresets: PresetCategory[] = [
           },
         ],
       },
+      {
+        id: 'eyeshadow-colors',
+        title: 'Colors',
+        options: [
+          {
+            id: 'eyeshadow-warm-neutrals',
+            title: 'Warm Neutrals',
+            description: 'Soft browns, tans, and golden tones.',
+          },
+          {
+            id: 'eyeshadow-cool-neutrals',
+            title: 'Cool Neutrals',
+            description: 'Taupes, greys, and muted mauves.',
+          },
+          {
+            id: 'eyeshadow-warm-bronze',
+            title: 'Bronze / Copper',
+            description: 'Warm metallic bronze and copper shimmers.',
+          },
+          {
+            id: 'eyeshadow-gold',
+            title: 'Gold',
+            description: 'Rich gold and champagne tones.',
+          },
+          {
+            id: 'eyeshadow-rose-pink',
+            title: 'Rose / Pink',
+            description: 'Soft pinks, dusty roses, and blush tones.',
+          },
+          {
+            id: 'eyeshadow-berry-plum',
+            title: 'Berry / Plum',
+            description: 'Deep berries, plums, and burgundy shades.',
+          },
+          {
+            id: 'eyeshadow-smokey-black',
+            title: 'Smokey Black',
+            description: 'Deep black and charcoal tones.',
+          },
+          {
+            id: 'eyeshadow-olive-green',
+            title: 'Olive / Green',
+            description: 'Earthy greens, olives, and khaki tones.',
+          },
+          {
+            id: 'eyeshadow-blue-navy',
+            title: 'Blue / Navy',
+            description: 'Cool blues from navy to cobalt.',
+          },
+          {
+            id: 'eyeshadow-purple',
+            title: 'Purple / Violet',
+            description: 'Vibrant purples and deep violets.',
+          },
+          {
+            id: 'eyeshadow-orange-coral',
+            title: 'Orange / Coral',
+            description: 'Warm oranges, corals, and peach tones.',
+          },
+          {
+            id: 'eyeshadow-silver',
+            title: 'Silver',
+            description: 'Cool metallic silver and pewter shimmers.',
+          },
+        ],
+      },
     ],
   },
   {
@@ -217,13 +283,13 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'smudged-liner',
-            title: 'Smudged / Blown Out',
+            title: 'Smudged | Blown Out',
             description:
               'Pencil liner is applied and buffed out for a soft, hazy edge.',
           },
           {
             id: 'graphic-liner',
-            title: 'Graphic / Floating Liner',
+            title: 'Graphic | Floating Liner',
             description:
               'Lines drawn in the crease or above the brow bone, often unconnected to the lash line.',
           },
@@ -232,6 +298,64 @@ export const makeupPresets: PresetCategory[] = [
             title: 'Reverse Cat Eye',
             description:
               'Wing is created on the lower lash line rather than the top.',
+          },
+        ],
+      },
+      {
+        id: 'eyeliner-colors',
+        title: 'Colors',
+        options: [
+          {
+            id: 'eyeliner-black',
+            title: 'Black',
+            description: 'Classic jet-black liner.',
+          },
+          {
+            id: 'eyeliner-dark-brown',
+            title: 'Dark Brown',
+            description: 'A softer, warm alternative to black.',
+          },
+          {
+            id: 'eyeliner-grey',
+            title: 'Grey / Charcoal',
+            description: 'Muted cool-toned liner.',
+          },
+          {
+            id: 'eyeliner-navy',
+            title: 'Navy',
+            description: 'A deep blue-black with a subtle blue undertone.',
+          },
+          {
+            id: 'eyeliner-forest-green',
+            title: 'Forest Green',
+            description: 'A deep, rich green.',
+          },
+          {
+            id: 'eyeliner-plum',
+            title: 'Plum / Burgundy',
+            description: 'Deep wine-toned liner.',
+          },
+          {
+            id: 'eyeliner-white',
+            title: 'White / Nude',
+            description:
+              'Used on the waterline to brighten and open eyes.',
+          },
+          {
+            id: 'eyeliner-metallic-gold',
+            title: 'Metallic Gold',
+            description: 'Warm, shimmery gold liner.',
+          },
+          {
+            id: 'eyeliner-metallic-silver',
+            title: 'Metallic Silver',
+            description: 'Cool, shimmery silver liner.',
+          },
+          {
+            id: 'eyeliner-bright-color',
+            title: 'Bright / Electric',
+            description:
+              'Vivid colored liner (blue, teal, violet, etc.).',
           },
         ],
       },
@@ -253,13 +377,13 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'lifted-draping',
-            title: 'Lifted / Draping',
+            title: 'Lifted | Draping',
             description:
               'Applied high on the cheekbones and blended into the temples.',
           },
           {
             id: 'sunburn-w',
-            title: 'Sunburn / W Shape',
+            title: 'Sunburn | W Shape',
             description:
               'Swept across the cheeks and over the bridge of the nose.',
           },
@@ -274,6 +398,54 @@ export const makeupPresets: PresetCategory[] = [
             title: 'Contour Blush',
             description:
               'Neutral or brown-toned blush in the hollows instead of bronzer.',
+          },
+        ],
+      },
+      {
+        id: 'blush-colors',
+        title: 'Colors',
+        options: [
+          {
+            id: 'blush-soft-pink',
+            title: 'Soft Pink',
+            description: 'A light, cool-toned pink.',
+          },
+          {
+            id: 'blush-peach',
+            title: 'Peach',
+            description: 'A warm, orange-tinged pink.',
+          },
+          {
+            id: 'blush-coral',
+            title: 'Coral',
+            description:
+              'A vibrant warm pink with orange undertones.',
+          },
+          {
+            id: 'blush-rose',
+            title: 'Rose / Dusty Rose',
+            description: 'A muted, mid-tone mauve-pink.',
+          },
+          {
+            id: 'blush-berry',
+            title: 'Berry',
+            description: 'A deep, cool-toned reddish-purple.',
+          },
+          {
+            id: 'blush-mauve',
+            title: 'Mauve',
+            description: 'A soft, muted purple-pink.',
+          },
+          {
+            id: 'blush-warm-nude',
+            title: 'Warm Nude / Bronze',
+            description:
+              'A subtle, skin-tone warmth (bronzy blush).',
+          },
+          {
+            id: 'blush-apricot',
+            title: 'Apricot',
+            description: 'A warm, soft orange-peach.',
           },
         ],
       },
@@ -295,7 +467,7 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'ombre-gradient',
-            title: 'Ombré / Gradient',
+            title: 'Ombré | Gradient',
             description:
               'Darker in the center and fading out (or vice versa).',
           },
@@ -307,13 +479,13 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'blotted-stained',
-            title: 'Blotted / Stained',
+            title: 'Blotted | Stained',
             description:
               'Lipstick applied and patted off for a sheer, just-bitten effect.',
           },
           {
             id: 'glossy-vinyl',
-            title: 'Glossy / Vinyl',
+            title: 'Glossy | Vinyl',
             description: 'High-shine, wet-look finish.',
           },
           {
@@ -321,6 +493,88 @@ export const makeupPresets: PresetCategory[] = [
             title: 'Blurred Edge',
             description:
               'No sharp lip line; pigment is buffed out for a soft, romantic look.',
+          },
+        ],
+      },
+      {
+        id: 'lip-colors',
+        title: 'Colors',
+        options: [
+          {
+            id: 'lip-classic-red',
+            title: 'Classic Red',
+            description: 'A true, balanced red.',
+          },
+          {
+            id: 'lip-deep-red',
+            title: 'Deep Red / Crimson',
+            description: 'A darker, dramatic red.',
+          },
+          {
+            id: 'lip-berry',
+            title: 'Berry',
+            description: 'A cool-toned, reddish-purple.',
+          },
+          {
+            id: 'lip-wine',
+            title: 'Wine / Burgundy',
+            description: 'A deep, dark berry-red.',
+          },
+          {
+            id: 'lip-mauve',
+            title: 'Mauve',
+            description: 'A muted, dusty pink-purple.',
+          },
+          {
+            id: 'lip-nude-pink',
+            title: 'Nude Pink',
+            description: 'A natural pink close to skin tone.',
+          },
+          {
+            id: 'lip-warm-nude',
+            title: 'Warm Nude',
+            description: 'A peachy or brown-toned nude.',
+          },
+          {
+            id: 'lip-coral',
+            title: 'Coral',
+            description: 'A warm, orange-tinged pink.',
+          },
+          {
+            id: 'lip-peach',
+            title: 'Peach',
+            description: 'A soft, warm light orange-pink.',
+          },
+          {
+            id: 'lip-rose',
+            title: 'Rose',
+            description: 'A mid-tone, classic rosy pink.',
+          },
+          {
+            id: 'lip-hot-pink',
+            title: 'Hot Pink / Fuchsia',
+            description: 'A bright, vibrant cool pink.',
+          },
+          {
+            id: 'lip-plum',
+            title: 'Plum',
+            description: 'A dark, muted purple.',
+          },
+          {
+            id: 'lip-brown',
+            title: 'Brown / 90s Brown',
+            description: 'A warm or cool-toned brown lip.',
+          },
+          {
+            id: 'lip-orange',
+            title: 'Orange',
+            description: 'A bold, warm true orange.',
+          },
+          {
+            id: 'lip-clear-gloss',
+            title: 'Clear / No Tint',
+            description:
+              'Transparent gloss or balm with no color pigment.',
           },
         ],
       },
@@ -336,7 +590,7 @@ export const makeupPresets: PresetCategory[] = [
         options: [
           {
             id: 'soap-brows',
-            title: 'Soap Brows / Laminated',
+            title: 'Soap Brows | Laminated',
             description:
               'Hairs brushed vertically and set for a feathery, fluffy look.',
           },
@@ -360,7 +614,7 @@ export const makeupPresets: PresetCategory[] = [
           },
           {
             id: 'natural-groomed',
-            title: 'Natural / Groomed',
+            title: 'Natural | Groomed',
             description:
               'Lightly filled following the natural shape, set with gel.',
           },
@@ -369,6 +623,50 @@ export const makeupPresets: PresetCategory[] = [
             title: 'Bleached',
             description:
               'Lightened to match the skin tone for an editorial look.',
+          },
+        ],
+      },
+      {
+        id: 'eyebrow-colors',
+        title: 'Colors',
+        options: [
+          {
+            id: 'brow-black',
+            title: 'Black',
+            description:
+              'A strong, dark brow matching deep hair tones.',
+          },
+          {
+            id: 'brow-dark-brown',
+            title: 'Dark Brown',
+            description: 'A rich brown for medium-to-dark hair.',
+          },
+          {
+            id: 'brow-medium-brown',
+            title: 'Medium Brown',
+            description: 'A soft, neutral brown.',
+          },
+          {
+            id: 'brow-taupe',
+            title: 'Taupe',
+            description:
+              'A cool, ashy light brown for fair hair.',
+          },
+          {
+            id: 'brow-blonde',
+            title: 'Blonde',
+            description: 'A light, warm tone for blonde hair.',
+          },
+          {
+            id: 'brow-auburn',
+            title: 'Auburn / Red',
+            description:
+              'A warm, reddish-brown for red hair.',
+          },
+          {
+            id: 'brow-grey',
+            title: 'Grey',
+            description: 'A cool, silver-toned brow.',
           },
         ],
       },

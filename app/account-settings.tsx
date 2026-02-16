@@ -11,15 +11,20 @@ import { useAccountSettings } from '@/hooks/profile';
 import {
   AIModelSection,
   AccountDangerZone,
+  AppearanceSection,
   PrivacySettingsSection,
   DeactivateAccountModal,
   DeleteAccountModal,
 } from '@/components/profile';
 import { LoadingSpinner } from '@/components/shared';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
-import { colors, spacing, borderRadius, typography } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { spacing, borderRadius, typography } from '@/styles';
+import type { ThemeColors } from '@/styles/themes';
 
 export default function AccountSettingsScreen() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const router = useRouter();
   const {
     settings,
@@ -77,6 +82,8 @@ export default function AccountSettingsScreen() {
       />
 
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
+        <AppearanceSection />
+
         <PrivacySettingsSection
           settings={settings}
           saving={saving}
@@ -116,7 +123,7 @@ export default function AccountSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -138,7 +145,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     textAlign: 'center',
     padding: spacing.md,
-    backgroundColor: '#fff3e0',
+    backgroundColor: colors.backgroundTertiary,
     borderRadius: borderRadius.md,
   },
 });

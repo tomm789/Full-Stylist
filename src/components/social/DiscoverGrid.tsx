@@ -12,13 +12,16 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  RefreshControl,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { FeedItem } from '@/lib/posts';
-import { colors, spacing, borderRadius, typography, layout } from '@/styles';
+import { spacing, typography } from '@/styles';
+import PostGrid, { postGridStyles } from './PostGrid';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
+
 
 interface DiscoverGridProps {
   feed: FeedItem[];
@@ -28,7 +31,6 @@ interface DiscoverGridProps {
   onRefresh: () => Promise<void>;
   onLoadMore: () => Promise<void>;
   hasMore: boolean;
-  alignLeft?: boolean;
   onItemPress?: (item: FeedItem) => void;
   selectionMode?: boolean;
   selectedIds?: Set<string>;
@@ -37,6 +39,7 @@ interface DiscoverGridProps {
   onScroll?: (event: any) => void;
   scrollEventThrottle?: number;
   scrollEnabled?: boolean;
+  ListHeaderComponent?: React.ReactElement | null;
   emptyTitle?: string;
   emptyMessage?: string;
   emptyIcon?: keyof typeof Ionicons.glyphMap;
@@ -51,7 +54,6 @@ export function DiscoverGrid({
   onRefresh,
   onLoadMore,
   hasMore,
-  alignLeft = false,
   onItemPress,
   selectionMode = false,
   selectedIds,
@@ -60,11 +62,14 @@ export function DiscoverGrid({
   onScroll,
   scrollEventThrottle,
   scrollEnabled = true,
+  ListHeaderComponent,
   emptyTitle = 'No public posts yet',
   emptyMessage = 'Check back later for new content from the community',
   emptyIcon = 'globe-outline',
   showOwnerOverlay = true,
 }: DiscoverGridProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const router = useRouter();
 
   const handlePostPress = (item: FeedItem) => {
@@ -75,6 +80,11 @@ export function DiscoverGrid({
 
     const post = item.post;
     if (!post) return;
+
+    if (post.owner_user_id) {
+      router.push(`/users/${post.owner_user_id}/feed?postId=${post.id}`);
+      return;
+    }
 
     if (post.entity_type === 'outfit') {
       router.push(`/outfits/${post.entity_id}/view`);
@@ -113,7 +123,7 @@ export function DiscoverGrid({
 
     return (
       <TouchableOpacity
-        style={[styles.gridItem, alignLeft && styles.gridItemFixed]}
+        style={postGridStyles.gridItem}
         onPress={handlePress}
         onLongPress={handleLongPress}
         delayLongPress={500}
@@ -122,12 +132,12 @@ export function DiscoverGrid({
         {imageUrl ? (
           <ExpoImage
             source={{ uri: imageUrl }}
-            style={styles.gridImage}
+            style={postGridStyles.gridImage}
             contentFit="cover"
             cachePolicy="memory-disk"
           />
         ) : (
-          <View style={styles.gridImagePlaceholder}>
+          <View style={postGridStyles.gridImagePlaceholder}>
             <Ionicons
               name={item.post?.entity_type === 'lookbook' ? 'albums-outline' : 'shirt-outline'}
               size={28}
@@ -136,13 +146,13 @@ export function DiscoverGrid({
           </View>
         )}
         {isSelected && (
-          <View style={styles.selectedBadge}>
-            <Text style={styles.selectedBadgeText}>✓</Text>
+          <View style={postGridStyles.selectionBadge}>
+            <Text style={postGridStyles.selectionBadgeText}>✓</Text>
           </View>
         )}
         {showOwnerOverlay && (
           <TouchableOpacity
-            style={styles.ownerOverlay}
+            style={postGridStyles.infoOverlay}
             onPress={() => handleOwnerPress(item)}
             activeOpacity={0.7}
           >
@@ -164,22 +174,18 @@ export function DiscoverGrid({
   }
 
   return (
-    <FlatList
+    <PostGrid
       data={feed}
       renderItem={renderGridItem}
       keyExtractor={(item) => item.id}
-      numColumns={3}
-      style={styles.gridList}
-      contentContainerStyle={styles.gridContent}
-      columnWrapperStyle={[styles.gridRow, alignLeft && styles.gridRowLeft]}
       onScroll={onScroll}
       scrollEventThrottle={scrollEventThrottle}
       scrollEnabled={scrollEnabled}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       onEndReached={hasMore ? onLoadMore : undefined}
       onEndReachedThreshold={0.5}
+      ListHeaderComponent={ListHeaderComponent}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
           <Ionicons name={emptyIcon} size={48} color={colors.gray400} />
@@ -198,71 +204,7 @@ export function DiscoverGrid({
   );
 }
 
-const styles = StyleSheet.create({
-  gridList: {
-    flex: 1,
-    width: '100%',
-    alignSelf: 'center',
-    maxWidth: layout.containerMaxWidth,
-  },
-  gridContent: {
-    paddingBottom: spacing.lg,
-  },
-  gridRow: {
-    gap: 1,
-  },
-  gridRowLeft: {
-    justifyContent: 'flex-start',
-  },
-  gridItem: {
-    flex: 1,
-    aspectRatio: 3 / 4,
-    margin: 0.5,
-    position: 'relative',
-  },
-  gridItemFixed: {
-    flexGrow: 0,
-    flexShrink: 0,
-    flexBasis: '33.333333%',
-    maxWidth: '33.333333%',
-  },
-  gridImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: colors.backgroundTertiary,
-  },
-  gridImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: colors.backgroundTertiary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedBadgeText: {
-    color: colors.textLight,
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.bold,
-  },
-  ownerOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   ownerHandle: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.medium,

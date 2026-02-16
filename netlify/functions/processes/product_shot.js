@@ -11,6 +11,7 @@ const {
   uploadImageToStorage,
   callGeminiAPI,
   resolveModelFromSettings,
+  getGeminiApiVersion,
   DEFAULT_IMAGE_MODEL
 } = require("../utils");
 
@@ -57,7 +58,8 @@ async function processProductShot(input, supabase, userId, perfTracker = null, t
     "ai_model_product_shot",
     DEFAULT_IMAGE_MODEL
   );
-  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model });
+  const apiVersion = getGeminiApiVersion(model);
+  console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, apiVersion });
   const productShotB64 = await callGeminiAPI(
     PROMPTS.PRODUCT_SHOT,
     [imageResult],

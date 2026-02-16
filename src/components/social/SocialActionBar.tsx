@@ -8,8 +8,10 @@ import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { EngagementCounts } from '@/hooks/social';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 interface SocialActionBarProps {
   counts: EngagementCounts;
@@ -34,6 +36,8 @@ export default function SocialActionBar({
   saving = false,
   reposting = false,
 }: SocialActionBarProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <View style={styles.actionRow}>
       {/* Like */}
@@ -96,7 +100,7 @@ export default function SocialActionBar({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',

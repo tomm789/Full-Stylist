@@ -11,7 +11,6 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/styles';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCategories, useFilters } from '@/hooks/wardrobe';
 import { CategoryPills, FilterDrawer, SearchBar } from '@/components/wardrobe';
@@ -24,6 +23,8 @@ import {
   WardrobeItem,
 } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 interface UserWardrobeScreenProps {
   userId: string;
@@ -31,6 +32,8 @@ interface UserWardrobeScreenProps {
   showAddButton?: boolean;
   onGridScroll?: (event: any) => void;
   scrollEventThrottle?: number;
+  listHeader?: React.ReactElement | null;
+  onExternalRefresh?: () => Promise<void>;
 }
 
 export default function UserWardrobeScreen({
@@ -39,7 +42,11 @@ export default function UserWardrobeScreen({
   showAddButton = false,
   onGridScroll,
   scrollEventThrottle,
+  listHeader,
+  onExternalRefresh,
 }: UserWardrobeScreenProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
   const { categories } = useCategories();
@@ -143,7 +150,7 @@ export default function UserWardrobeScreen({
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadWardrobe();
+    await Promise.all([loadWardrobe(), onExternalRefresh?.()]);
     setRefreshing(false);
   };
 
@@ -196,7 +203,7 @@ export default function UserWardrobeScreen({
           />
         ) : (
           <View style={styles.itemImagePlaceholder}>
-            <Ionicons name="shirt-outline" size={32} color="#999" />
+            <Ionicons name="shirt-outline" size={32} color={colors.textTertiary} />
           </View>
         )}
         <TouchableOpacity
@@ -206,7 +213,7 @@ export default function UserWardrobeScreen({
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           {isSaving ? (
-            <ActivityIndicator size="small" color="#007AFF" />
+            <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             <Ionicons
               name={isSaved ? 'bookmark' : 'bookmark-outline'}
@@ -219,19 +226,7 @@ export default function UserWardrobeScreen({
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading wardrobe...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  const shouldShowEmptyState =
-    filteredItems.length === 0;
+  const shouldShowEmptyState = !loading && filteredItems.length === 0;
   const emptyMessage =
     searchQuery || selectedCategoryId || hasActiveFilters
       ? 'No items found'
@@ -239,43 +234,53 @@ export default function UserWardrobeScreen({
 
   return (
     <View style={styles.container}>
-      {showSearchControls && (
-        <>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onFilter={() => setShowFilterDrawer(true)}
-            onAdd={showAddButton ? () => router.push('/wardrobe/add') : undefined}
-            hasActiveFilters={hasActiveFilters}
-            showAdd={showAddButton}
-          />
-          <CategoryPills
-            categories={categoryOptions}
-            selectedCategoryId={selectedCategoryId}
-            onSelectCategory={setSelectedCategoryId}
-            variant="category"
-          />
-        </>
-      )}
-
-      {shouldShowEmptyState ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="shirt-outline" size={48} color="#ccc" />
-          <Text style={styles.emptyText}>{emptyMessage}</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredItems}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          numColumns={3}
-          contentContainerStyle={styles.itemsList}
-          columnWrapperStyle={styles.itemsRow}
-          onScroll={onGridScroll}
-          scrollEventThrottle={scrollEventThrottle}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        />
-      )}
+      <FlatList
+        data={filteredItems}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        numColumns={3}
+        contentContainerStyle={styles.itemsList}
+        columnWrapperStyle={styles.itemsRow}
+        onScroll={onGridScroll}
+        scrollEventThrottle={scrollEventThrottle}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListHeaderComponent={
+          <>
+            {listHeader}
+            {showSearchControls && (
+              <>
+                <SearchBar
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  onFilter={() => setShowFilterDrawer(true)}
+                  onAdd={showAddButton ? () => router.push('/wardrobe/add') : undefined}
+                  hasActiveFilters={hasActiveFilters}
+                  showAdd={showAddButton}
+                />
+                <CategoryPills
+                  categories={categoryOptions}
+                  selectedCategoryId={selectedCategoryId}
+                  onSelectCategory={setSelectedCategoryId}
+                  variant="category"
+                />
+              </>
+            )}
+          </>
+        }
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Loading wardrobe...</Text>
+            </View>
+          ) : shouldShowEmptyState ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="shirt-outline" size={48} color={colors.gray400} />
+              <Text style={styles.emptyText}>{emptyMessage}</Text>
+            </View>
+          ) : null
+        }
+      />
 
       {showSearchControls && (
         <FilterDrawer
@@ -294,10 +299,10 @@ export default function UserWardrobeScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafafa',
+    backgroundColor: colors.backgroundSecondary,
   },
   loadingContainer: {
     flex: 1,
@@ -307,7 +312,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
   },
   emptyContainer: {
     flex: 1,
@@ -317,7 +322,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginTop: 12,
   },
   itemsList: {
@@ -329,19 +334,19 @@ const styles = StyleSheet.create({
   itemCard: {
     flex: 1,
     margin: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
     overflow: 'hidden',
     aspectRatio: 1,
   },
   itemImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.backgroundTertiary,
   },
   itemImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.backgroundTertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },

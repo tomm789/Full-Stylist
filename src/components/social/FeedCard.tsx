@@ -10,8 +10,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { FeedItem } from '@/lib/posts';
 import { theme } from '@/styles';
 import { formatTimestamp } from '@/utils/formatUtils';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, typography } = theme;
+const { spacing, typography } = theme;
 
 interface FeedCardProps {
   item: FeedItem;
@@ -30,6 +32,8 @@ export default function FeedCard({
   actions,
   caption,
 }: FeedCardProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const post = item.type === 'post' ? item.post : item.repost?.original_post;
   if (!post) return null;
 
@@ -105,7 +109,7 @@ export default function FeedCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     borderRadius: 0,

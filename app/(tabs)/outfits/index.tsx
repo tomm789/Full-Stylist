@@ -2,7 +2,7 @@
  * Outfits Screen (Refactored)
  * Main outfits screen with grid, explore, and scheduling flows.
  */
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   ActivityIndicator,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import type { FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useOutfits,
@@ -40,13 +41,21 @@ import {
   useTryOnOutfit,
   useSocialModals,
 } from '@/hooks/social';
-import { useLookbookSelection } from '@/hooks/lookbooks';
+import { useLookbookSelection, useLookbookTabs } from '@/hooks/lookbooks';
+import LookbookQuickAddModal from '@/components/outfits/LookbookQuickAddModal';
 import { LoadingSpinner } from '@/components/shared';
-import { commonStyles, colors, layout } from '@/styles';
+import { layout } from '@/styles';
 import { useSlotPresets } from '@/hooks/calendar';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
-import styles from './styles';
-type OutfitsTab = 'my_outfits' | 'explore' | 'following';
+import createOutfitStyles from './styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import { useSearch } from '@/hooks';
+import SearchOverlay from '@/components/search/SearchOverlay';
+import SearchHeaderRow from '@/components/search/SearchHeaderRow';
+import { useNotifications } from '@/contexts/NotificationsContext';
+type OutfitsTab = 'my_outfits' | 'explore' | 'following' | `lookbook_${string}`;
 type ViewMode = 'grid' | 'feed';
 const SHOW_VIEW_TOGGLE = false;
 const STATUS_LABELS: Record<OutfitScheduleStatus, string> = {
@@ -56,11 +65,27 @@ const STATUS_LABELS: Record<OutfitScheduleStatus, string> = {
 };
 
 export default function OutfitsScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createOutfitStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
+  const { setTabBarDimmed } = useFloatingTabBar();
+  const isFocused = useIsFocused();
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const { width: windowWidth } = useWindowDimensions();
   const showTabLabels = windowWidth >= layout.containerMaxWidth;
+  const { unreadCount } = useNotifications();
+  const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
+  const searchOpenRef = useRef(false);
+  const {
+    searchQuery: globalSearchQuery,
+    setSearchQuery: setGlobalSearchQuery,
+    selectedFilter: searchSelectedFilter,
+    setSelectedFilter: setSearchSelectedFilter,
+    filteredResults: searchFilteredResults,
+    loading: searchLoading,
+  } = useSearch({ userId: user?.id });
   const [showSortModal, setShowSortModal] = useState(false);
   const [activeTab, setActiveTab] = useState<OutfitsTab>('my_outfits');
   const [tabViews, setTabViews] = useState<Record<OutfitsTab, ViewMode>>({
@@ -79,7 +104,17 @@ export default function OutfitsScreen() {
     handleScroll: handleGridScroll,
     setHeaderVisible,
     resetScroll,
-  } = useHideHeaderOnScroll();
+  } = useHideHeaderOnScroll({
+    onVisibilityChange: (visible, timing) => {
+      setTabBarDimmed(!visible, timing);
+    },
+  });
+
+  useEffect(() => {
+    if (!isFocused) {
+      setTabBarDimmed(false);
+    }
+  }, [isFocused, setTabBarDimmed]);
   const {
     selectionMode,
     setSelectionMode,
@@ -107,6 +142,32 @@ export default function OutfitsScreen() {
     onNavigateToLookbook: (lookbookId) => router.push(`/lookbooks/${lookbookId}`),
   });
 
+  const {
+    pinnedLookbooks,
+    addLookbookTab,
+    removeLookbookTab,
+    availableLookbooks,
+    loadingLookbooks: loadingAvailableLookbooks,
+  } = useLookbookTabs({ userId: user?.id });
+
+  const [showLookbookAddModal, setShowLookbookAddModal] = useState(false);
+
+  const handleSelectLookbookFromModal = useCallback((id: string, title: string) => {
+    addLookbookTab(id, title);
+    setActiveTab(`lookbook_${id}`);
+    setSelectionMode(true);
+  }, [addLookbookTab, setSelectionMode]);
+
+  const handleCreateNewFromModal = useCallback(() => {
+    setSelectionMode(true);
+    setLookbookPickerVisible(true);
+  }, [setSelectionMode, setLookbookPickerVisible]);
+
+  const handleRemoveLookbookTab = useCallback((id: string) => {
+    removeLookbookTab(id);
+    setActiveTab('my_outfits');
+  }, [removeLookbookTab]);
+
   React.useEffect(() => {
     if (!tab) return;
     const nextTab = Array.isArray(tab) ? tab[0] : tab;
@@ -121,6 +182,15 @@ export default function OutfitsScreen() {
     updateFilter,
     getSortLabel,
   } = useOutfitFilters([]);
+
+  useEffect(() => {
+    if (!searchOpenRef.current && searchOverlayOpen) {
+      setSearchSelectedFilter('outfit');
+    }
+    searchOpenRef.current = searchOverlayOpen;
+  }, [searchOverlayOpen, setSearchSelectedFilter]);
+
+  // Search overlay is driven by local header state
 
   const { presets, createPreset } = useSlotPresets({ userId: user?.id });
 
@@ -234,7 +304,12 @@ export default function OutfitsScreen() {
     modals.setFollowStatuses(feedFollowStatuses);
   }, [feedFollowStatuses, modals]);
 
-  const activeView = tabViews[activeTab];
+  // Narrow tab for hooks that only understand the three fixed tabs
+  const coreTab: 'my_outfits' | 'explore' | 'following' = activeTab.startsWith('lookbook_')
+    ? 'my_outfits'
+    : (activeTab as 'my_outfits' | 'explore' | 'following');
+
+  const activeView = tabViews[coreTab];
   const setActiveView = (view: ViewMode) => {
     setTabViews((prev) => ({
       ...prev,
@@ -264,7 +339,7 @@ export default function OutfitsScreen() {
     followingGridImages,
   } = useOutfitsFeedOrchestration({
     userId: user?.id,
-    activeTab,
+    activeTab: coreTab,
     activeView,
     exploreFeed: exploreOutfitFeed,
     followingFeed: followingOutfitFeed,
@@ -276,6 +351,9 @@ export default function OutfitsScreen() {
       setHeaderVisible(true);
       resetScroll();
       setActiveView('feed');
+    },
+    onOpenPostFeed: (postId, ownerUserId) => {
+      router.push(`/users/${ownerUserId}/feed?postId=${postId}`);
     },
     onOpenLookbook: (lookbookId) => router.push(`/lookbooks/${lookbookId}`),
     outfitImages,
@@ -296,7 +374,8 @@ export default function OutfitsScreen() {
   });
   const { availableOccasions, toggleOccasion, filteredOutfitsWithOccasions } =
     useOutfitsDerivedFilters({
-      activeTab,
+      activeTab: coreTab,
+      allOutfits: outfits,
       filteredOutfits,
       exploreOutfitFeed,
       followingOutfitFeed,
@@ -493,6 +572,23 @@ export default function OutfitsScreen() {
     );
   }
 
+  const handleSearchResultPress = (result: (typeof searchFilteredResults)[0]) => {
+    switch (result.type) {
+      case 'user':
+        router.push(`/users/${result.id}`);
+        break;
+      case 'outfit':
+        router.push(`/outfits/${result.id}`);
+        break;
+      case 'lookbook':
+        router.push(`/lookbooks/${result.id}`);
+        break;
+      case 'wardrobe_item':
+        router.push(`/wardrobe/item/${result.id}`);
+        break;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <OutfitsHeaderSection
@@ -519,12 +615,70 @@ export default function OutfitsScreen() {
         onSearchChange={(text) => updateFilter('searchQuery', text)}
         onOpenSort={() => setShowSortModal(true)}
         hasActiveFilters={filters.showFavoritesOnly}
-        showSearch
+        showSearch={false}
         styles={styles}
+        pinnedLookbooks={pinnedLookbooks}
+        onAddLookbookTab={() => setShowLookbookAddModal(true)}
+        onRemoveLookbookTab={handleRemoveLookbookTab}
+        hintMessage={selectionMode && selectedOutfitIds.size === 0 ? 'Long press on an outfit to add it to your lookbook' : undefined}
+        occasionOptions={availableOccasions}
+        selectedOccasions={selectedOccasions}
+        onToggleOccasion={toggleOccasion}
+        onClearOccasions={() => setSelectedOccasions([])}
+        showOccasionPills={!activeTab.startsWith('lookbook_')}
+        hideTabs={searchOverlayOpen}
+        searchHeader={
+          <SearchHeaderRow
+            title="Outfits"
+            searchQuery={globalSearchQuery}
+            onSearchChange={setGlobalSearchQuery}
+            onSearchToggle={setSearchOverlayOpen}
+            onFilter={() => setShowSortModal(true)}
+            hasActiveFilters={filters.showFavoritesOnly}
+            placeholder="Search outfits..."
+            leftIcon="calendar-outline"
+            onLeftAction={() => router.push('/calendar' as any)}
+            rightIcon="notifications-outline"
+            onRightAction={() => router.push('/notifications' as any)}
+            rightBadgeCount={unreadCount}
+            searchOpen={searchOverlayOpen}
+          />
+        }
       />
 
+      <SearchOverlay
+        open={searchOverlayOpen}
+        width={windowWidth}
+        topOffset={headerHeight}
+        searchQuery={globalSearchQuery}
+        loading={searchLoading}
+        selectedFilter={searchSelectedFilter}
+        filteredResults={searchFilteredResults}
+        onFilterChange={setSearchSelectedFilter}
+        onResultPress={handleSearchResultPress}
+      />
 
-      {activeTab === 'my_outfits' ? (
+      {activeTab.startsWith('lookbook_') ? (
+        <View style={commonStyles.container}>
+          <OutfitsMyOutfitsTab
+            data={filteredOutfitsWithOccasions}
+            activeView="grid"
+            renderGridItem={renderMyOutfitGridItem}
+            renderFeedItem={renderMyOutfitFeedItem}
+            listRef={myOutfitsFeedRef}
+            onScroll={handleGridScroll}
+            scrollEventThrottle={16}
+            onLayout={handleMyOutfitsLayout}
+            onScrollToIndexFailed={handleMyOutfitsScrollToIndexFailed}
+            refreshing={refreshing}
+            onRefresh={refresh}
+            feedListStyle={styles.feedListWrapper}
+            feedContentStyle={styles.feedList}
+            searchQuery={filters.searchQuery}
+            showFavoritesOnly={filters.showFavoritesOnly}
+          />
+        </View>
+      ) : activeTab === 'my_outfits' ? (
         <View style={commonStyles.container}>
           <OutfitsMyOutfitsTab
             data={filteredOutfitsWithOccasions}
@@ -538,9 +692,6 @@ export default function OutfitsScreen() {
             onScrollToIndexFailed={handleMyOutfitsScrollToIndexFailed}
             refreshing={refreshing}
             onRefresh={refresh}
-            gridListStyle={styles.gridList}
-            gridContentStyle={styles.gridContent}
-            gridRowStyle={styles.gridRowLeft}
             feedListStyle={styles.feedListWrapper}
             feedContentStyle={styles.feedList}
             searchQuery={filters.searchQuery}
@@ -608,7 +759,6 @@ export default function OutfitsScreen() {
             message: 'Follow people to see their posts, or check out Explore!',
           }}
           styles={styles}
-          alignLeft
         />
       )}
 
@@ -642,6 +792,15 @@ export default function OutfitsScreen() {
         slideshowState={slideshowState}
         generationState={generationState}
         lookbookState={lookbookState}
+      />
+
+      <LookbookQuickAddModal
+        visible={showLookbookAddModal}
+        onClose={() => setShowLookbookAddModal(false)}
+        lookbooks={availableLookbooks}
+        loading={loadingAvailableLookbooks}
+        onSelectLookbook={handleSelectLookbookFromModal}
+        onCreateNew={handleCreateNewFromModal}
       />
     </View>
   );

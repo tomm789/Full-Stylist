@@ -6,7 +6,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, typography } from '@/styles';
+import { spacing, borderRadius, typography } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
 interface AccountDangerZoneProps {
   onSignOut: () => Promise<void>;
@@ -15,6 +17,8 @@ interface AccountDangerZoneProps {
 }
 
 export function AccountDangerZone({ onSignOut, onDeactivate, onDelete }: AccountDangerZoneProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Account</Text>
@@ -55,7 +59,7 @@ export function AccountDangerZone({ onSignOut, onDeactivate, onDelete }: Account
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginTop: spacing.xxxl,
   },

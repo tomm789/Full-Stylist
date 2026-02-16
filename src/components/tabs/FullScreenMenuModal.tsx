@@ -1,21 +1,33 @@
 /**
  * FullScreenMenuModal Component
- * Full-screen navigation menu with search and card-style links
+ * Slide-in navigation menu panel from the right edge.
+ * Header layout: title - add new ----- search - notifications
+ * No close button — closed by tapping the menu icon in the floating pill.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
-  Modal,
+  Animated,
+  DevSettings,
+  Dimensions,
+  PanResponder,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text as RNText,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { borderRadius, colors, spacing, typography, shadows } from '@/styles/theme';
+import { useNotifications } from '@/contexts/NotificationsContext';
+import { borderRadius, spacing, typography, shadows } from '@/styles/theme';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { HeaderActionIcons } from '@/components/shared';
+import type { ThemeColors } from '@/styles/themes';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SWIPE_THRESHOLD = 80;
 
 export type MenuItem = {
   key: string;
@@ -30,19 +42,62 @@ export type MenuItem = {
 type FullScreenMenuModalProps = {
   visible: boolean;
   onClose: () => void;
+  onAdd?: () => void;
   gridTitle: string;
   gridItems: MenuItem[];
   actionItems: MenuItem[];
+  query: string;
 };
 
 export function FullScreenMenuModal({
   visible,
   onClose,
+  onAdd,
   gridTitle,
   gridItems,
   actionItems,
+  query,
 }: FullScreenMenuModalProps) {
-  const [query, setQuery] = useState('');
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+  const router = useRouter();
+  const { unreadCount } = useNotifications();
+  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+  const [rendered, setRendered] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setRendered(true);
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 280,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: SCREEN_WIDTH,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) {
+          setRendered(false);
+        }
+      });
+    }
+  }, [visible]);
+
+  // Swipe right to dismiss menu
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gestureState) =>
+        Math.abs(gestureState.dx) > 10 && gestureState.dx > 0,
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dx > SWIPE_THRESHOLD) {
+          onClose();
+        }
+      },
+    })
+  ).current;
 
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -67,29 +122,72 @@ export function FullScreenMenuModal({
     [actionItems, normalizedQuery]
   );
 
+  const handleSearch = () => {
+    onClose();
+    router.push('/search' as any);
+  };
+
+  const handleNotifications = () => {
+    onClose();
+    router.push('/notifications' as any);
+  };
+
+  if (!rendered) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Animated.View
+      style={[
+        styles.overlay,
+        { transform: [{ translateX: slideAnim }] },
+      ]}
+      {...panResponder.panHandlers}
+    >
       <SafeAreaView style={styles.container}>
+        {/* Header — title + actions */}
         <View style={styles.header}>
-          <RNText style={styles.title}>Menu</RNText>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity style={styles.menuCollapseButton} onPress={onClose}>
+              <Ionicons name="chevron-back" size={22} color={colors.primary} />
+            </TouchableOpacity>
+            <RNText style={styles.title}>Menu</RNText>
+          </View>
+          <View style={styles.headerRight}>
+            <HeaderActionIcons
+              onAdd={onAdd}
+              onSearch={handleSearch}
+              onNotifications={handleNotifications}
+              unreadCount={unreadCount}
+            />
+          </View>
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.searchWrap}>
-            <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search menu"
-              placeholderTextColor={colors.textTertiary}
-              style={styles.searchInput}
-              autoCorrect={false}
-              returnKeyType="search"
-            />
-          </View>
+          <TouchableOpacity
+            style={styles.refreshRow}
+            onPress={async () => {
+              try {
+                // Expo Go may not include expo-updates in some setups.
+                // Use DevSettings reload as a safe fallback.
+                const Updates = require('expo-updates');
+                await Updates.reloadAsync();
+              } catch (error) {
+                DevSettings.reload();
+              }
+            }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Hard reload app"
+          >
+            <View style={styles.refreshIconWrap}>
+              <Ionicons name="refresh" size={20} color={colors.textPrimary} />
+            </View>
+            <View style={styles.refreshTextWrap}>
+              <RNText style={styles.refreshTitle}>Refresh</RNText>
+              <RNText style={styles.refreshDescription}>
+                Hard reload the Expo Go page
+              </RNText>
+            </View>
+          </TouchableOpacity>
 
           {filteredGridItems.length > 0 && (
             <View style={styles.section}>
@@ -164,14 +262,22 @@ export function FullScreenMenuModal({
           )}
         </ScrollView>
       </SafeAreaView>
-    </Modal>
+    </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.backgroundSecondary,
+    zIndex: 50,
+  },
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -183,34 +289,80 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderLight,
     backgroundColor: colors.background,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  menuCollapseButton: {
+    padding: spacing.xs,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   title: {
-    fontSize: typography.fontSize.xl,
+    fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
   },
-  closeButton: {
-    padding: spacing.xs,
+  headerIcon: {
+    position: 'relative',
+    padding: spacing.sm,
+    marginHorizontal: spacing.xs,
+  },
+  badge: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.round,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+  },
+  badgeText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
   },
   content: {
     padding: spacing.lg,
+    paddingBottom: spacing.massive + spacing.huge,
     gap: spacing.lg,
   },
-  searchWrap: {
+  refreshRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background,
     borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    ...shadows.sm,
   },
-  searchInput: {
+  refreshIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.round,
+    backgroundColor: colors.backgroundTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  refreshTextWrap: {
     flex: 1,
+    gap: spacing.xs,
+  },
+  refreshTitle: {
     fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
-    paddingVertical: 0,
+  },
+  refreshDescription: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
   },
   section: {
     gap: spacing.sm,

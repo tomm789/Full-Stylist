@@ -4,11 +4,14 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, borderRadius, typography } = theme;
+const { spacing, typography } = theme;
 
 interface OutfitGridPickerProps {
   outfits: any[];
@@ -23,6 +26,8 @@ export default function OutfitGridPicker({
   selectedOutfitId,
   onSelectOutfit,
 }: OutfitGridPickerProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   if (outfits.length === 0) {
     return (
       <View style={styles.container}>
@@ -35,49 +40,52 @@ export default function OutfitGridPicker({
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Outfit</Text>
-      <FlatList
+      <PostGrid
         data={outfits}
         keyExtractor={(item) => item.id}
-        numColumns={3}
+        scrollEnabled={false}
         renderItem={({ item }) => {
           const imageUrl = outfitImages.get(item.id);
           const isSelected = selectedOutfitId === item.id;
 
           return (
             <TouchableOpacity
-              style={[styles.outfitCard, isSelected && styles.outfitCardSelected]}
+              style={[
+                postGridStyles.gridItem,
+                styles.outfitCard,
+              ]}
               onPress={() => onSelectOutfit(isSelected ? null : item.id)}
             >
               {imageUrl ? (
                 <Image
                   source={{ uri: imageUrl }}
-                  style={styles.outfitImage}
+                  style={postGridStyles.gridImage}
                   contentFit="cover"
                 />
               ) : (
-                <View style={styles.outfitImagePlaceholder}>
+                <View style={[postGridStyles.gridImagePlaceholder, styles.outfitImagePlaceholder]}>
                   <Text style={styles.placeholderText}>No Image</Text>
                 </View>
               )}
               {isSelected && (
-                <View style={styles.selectedOverlay}>
-                  <Text style={styles.selectedCheck}>✓</Text>
+                <View style={postGridStyles.selectionBadge}>
+                  <Text style={postGridStyles.selectionBadgeText}>✓</Text>
                 </View>
               )}
-              <Text style={styles.outfitTitle} numberOfLines={1}>
-                {item.title || 'Untitled Outfit'}
-              </Text>
+              <View style={postGridStyles.infoOverlay}>
+                <Text style={styles.outfitTitle} numberOfLines={1}>
+                  {item.title || 'Untitled Outfit'}
+                </Text>
+              </View>
             </TouchableOpacity>
           );
         }}
-        scrollEnabled={false}
-        columnWrapperStyle={styles.row}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: spacing.lg + spacing.md,
   },
@@ -93,32 +101,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     textAlign: 'center',
   },
-  row: {
-    justifyContent: 'flex-start',
-    marginBottom: spacing.sm,
-  },
   outfitCard: {
-    flex: 1,
-    maxWidth: '31%',
-    margin: spacing.xs / 2,
-    borderRadius: borderRadius.md,
-    borderWidth: 2,
-    borderColor: colors.border,
     overflow: 'hidden',
-    backgroundColor: colors.white,
-  },
-  outfitCardSelected: {
-    borderColor: colors.black,
-    borderWidth: 3,
-  },
-  outfitImage: {
-    width: '100%',
-    aspectRatio: 0.75,
-    backgroundColor: colors.gray100,
   },
   outfitImagePlaceholder: {
-    width: '100%',
-    aspectRatio: 0.75,
     backgroundColor: colors.gray200,
     justifyContent: 'center',
     alignItems: 'center',
@@ -127,27 +113,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.textTertiary,
   },
-  selectedOverlay: {
-    position: 'absolute',
-    top: spacing.xs / 2,
-    right: spacing.xs / 2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.black,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedCheck: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   outfitTitle: {
-    padding: spacing.sm,
     fontSize: 12,
-    fontWeight: '500',
-    color: colors.textPrimary,
-    textAlign: 'center',
+    fontWeight: '600',
+    color: colors.white,
+    textAlign: 'left',
   },
 });

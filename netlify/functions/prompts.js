@@ -66,8 +66,8 @@ const PROMPTS = {
     SUBJECT: The person in the image.
     CLOTHING: Wearing a simple white ribbed singlet (wife beater).
     MODIFICATIONS: ${hair}, ${makeup}.
-    CRITICAL: Maintain the EXACT framing, zoom level, and head angle of the original image.
-    STYLE: Photorealistic, 8k, soft lighting, light grey/white background.
+    CRITICAL: Maintain the realistic headshot framing, zoom level, and head angle of the subject. Ensure only the head and shoulders are in frame.
+    STYLE: Photorealistic, 8k, soft lighting. Infinite, solid pure white background.
     OUTPUT: Professional headshot suitable for fashion photography.
   `,
   // Generate a professional headshot using preset-driven prompt text
@@ -201,7 +201,26 @@ ${identityInstruction}
     6. Create a cohesive outfit that looks natural and fashionable.
     7. Pay attention to layering: start with base layers (underwear/shirts) then add outer layers (jackets/coats).
   `;
-  }
+  },
+  // Try-on prompt: apply outfit from a reference image to the user's body shot
+  OUTFIT_REFERENCE: (details = 'Match the outfit exactly') => `
+    Fashion Photography.
+    OUTPUT FORMAT: Vertical Portrait (3:4 Aspect Ratio).
+
+    SUBJECT REFERENCE:
+    - Image 0: User body and face. Preserve identity, pose, and framing.
+
+    OUTFIT REFERENCE:
+    - Image 1: Outfit to replicate. Match clothing pieces, colors, patterns, textures, layering, and footwear.
+
+    CRITICAL:
+    1. PRESERVE THE FACE. Do not alter facial features, hair, or head shape from Image 0.
+    2. Maintain the EXACT pose and framing from Image 0.
+    3. Recreate the outfit from Image 1 as faithfully as possible.
+    4. Ensure head-to-body proportions are accurate (8-heads-tall rule).
+    5. Background: Pure white infinite studio.
+    6. ${details}.
+  `
 };
 
 module.exports = { PROMPTS };

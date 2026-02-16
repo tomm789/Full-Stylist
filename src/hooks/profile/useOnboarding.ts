@@ -8,7 +8,7 @@ import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { initializeUserProfile } from '@/lib/user';
 
-type OnboardingStep = 'account' | 'headshot' | 'bodyshot';
+type OnboardingStep = 'account' | 'selfie' | 'mirror';
 
 interface UseOnboardingProps {
   userId: string | undefined;
@@ -91,7 +91,7 @@ export function useOnboarding({
           Alert.alert('Error', error.message || 'Failed to create profile');
         }
       } else {
-        setCurrentStep('headshot');
+        setCurrentStep('selfie');
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'An unexpected error occurred');

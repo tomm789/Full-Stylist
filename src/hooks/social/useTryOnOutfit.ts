@@ -10,6 +10,7 @@ import { getOutfit, saveOutfit } from '@/lib/outfits';
 import { createAIJob, triggerAIJobExecution, waitForAIJobCompletion, getOutfitRenderItemLimit } from '@/lib/ai-jobs';
 import { supabase } from '@/lib/supabase';
 import { getWardrobeCategories, getWardrobeItemsByIds } from '@/lib/wardrobe';
+import { createImageRecord, uploadAndCreateImage } from '@/lib/utils/image-helpers';
 
 interface UseTryOnOutfitProps {
   userId: string | undefined;
@@ -36,16 +37,70 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
     setTryingOnOutfit(true);
 
     try {
+      if (!referenceImageUrl) {
+        Alert.alert('Error', 'Reference image not available for this outfit.');
+        setTryingOnOutfit(false);
+        return;
+      }
+
       const { data: userSettings } = await supabase
         .from('user_settings')
-        .select('body_shot_image_id, headshot_image_id, ai_model_preference, ai_model_outfit_render')
+        .select('body_shot_image_id, ai_model_preference, ai_model_outfit_render')
         .eq('user_id', userId)
         .single();
 
-      if (!userSettings?.body_shot_image_id || !userSettings?.headshot_image_id) {
-        Alert.alert('Setup Required', 'Please upload a body photo and generate a headshot before trying on outfits.');
+      if (!userSettings?.body_shot_image_id) {
+        Alert.alert('Setup Required', 'Please upload a studio model before trying on outfits.');
         setTryingOnOutfit(false);
         return;
+      }
+
+      const sanitizedUrl = referenceImageUrl.split('?')[0];
+      const publicMarker = '/storage/v1/object/public/';
+      const markerIndex = sanitizedUrl.indexOf(publicMarker);
+
+      let referenceImageId: string | null = null;
+
+      if (markerIndex !== -1) {
+        const path = sanitizedUrl.slice(markerIndex + publicMarker.length);
+        const [bucket, ...keyParts] = path.split('/');
+        const storageKey = keyParts.join('/');
+
+        if (bucket && storageKey) {
+          const { data: record, error: recordError } = await createImageRecord(
+            userId,
+            storageKey,
+            'image/jpeg',
+            'upload',
+            bucket
+          );
+
+          if (!recordError && record?.id) {
+            referenceImageId = record.id;
+          }
+        }
+      }
+
+      if (!referenceImageId) {
+        const referenceStamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const referenceResponse = await fetch(referenceImageUrl);
+        if (!referenceResponse.ok) {
+          throw new Error('Failed to download reference image');
+        }
+        const referenceBlob = await referenceResponse.blob();
+        const { data: referenceData, error: referenceError } = await uploadAndCreateImage(
+          userId,
+          referenceBlob,
+          `tryon-reference-${referenceStamp}.jpg`,
+          'upload'
+        );
+        if (referenceError || !referenceData) {
+          throw referenceError || new Error('Failed to upload reference image');
+        }
+        referenceImageId = referenceData.imageId;
+      }
+      if (!referenceImageId) {
+        throw new Error('Unable to prepare reference image');
       }
 
       const { data: outfitData } = await getOutfit(outfitId);
@@ -120,7 +175,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
       const renderLimit = getOutfitRenderItemLimit(modelPreference);
       let mannequinImageId: string | undefined;
 
-      if (selected.length > renderLimit) {
+      if (selected.length > renderLimit && !referenceImageId) {
         const { data: mannequinJob, error: mannequinError } = await createAIJob(userId, 'outfit_mannequin', {
           user_id: userId,
           outfit_id: newOutfitId,
@@ -151,6 +206,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
         outfit_id: newOutfitId,
         selected,
         mannequin_image_id: mannequinImageId,
+        reference_image_id: referenceImageId,
       });
 
       if (jobError || !renderJob) {

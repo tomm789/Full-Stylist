@@ -1,8 +1,11 @@
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
+import { CalendarEntryFlowProvider } from '@/contexts/CalendarEntryFlowContext';
 import { AddToHomeScreenBanner } from '@/components/AddToHomeScreenBanner';
 
 export default function RootLayout() {
@@ -89,23 +92,29 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <AuthProvider>
-      <NotificationsProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="index" />
-          <Stack.Screen name="auth" />
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="import" />
-          <Stack.Screen name="marketplace" />
-          <Stack.Screen name="notifications" />
-          <Stack.Screen name="search" />
-          <Stack.Screen name="users/[id]" />
-          <Stack.Screen name="account-settings" />
-          <Stack.Screen name="feedback/index" />
-        </Stack>
-        <AddToHomeScreenBanner />
-      </NotificationsProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <AuthProvider>
+          <NotificationsProvider>
+            <CalendarEntryFlowProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="index" />
+                <Stack.Screen name="auth" />
+                <Stack.Screen name="onboarding" />
+                <Stack.Screen name="import" />
+                <Stack.Screen name="marketplace" />
+                <Stack.Screen name="notifications" />
+                <Stack.Screen name="search" />
+                <Stack.Screen name="users/[id]" />
+                <Stack.Screen name="account-settings" />
+                <Stack.Screen name="feedback/index" />
+              </Stack>
+              <AddToHomeScreenBanner />
+            </CalendarEntryFlowProvider>
+          </NotificationsProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -7,8 +7,9 @@ import React from 'react';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 interface HeaderIconButtonProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -23,10 +24,12 @@ export default function HeaderIconButton({
   icon,
   onPress,
   size = 24,
-  color = colors.textPrimary,
+  color,
   disabled = false,
   accessibilityLabel,
 }: HeaderIconButtonProps) {
+  const colors = useThemeColors();
+  const iconColor = color ?? colors.textPrimary;
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -34,7 +37,7 @@ export default function HeaderIconButton({
       accessibilityLabel={accessibilityLabel}
       style={[styles.button, disabled && styles.buttonDisabled]}
     >
-      <Ionicons name={icon} size={size} color={color} />
+      <Ionicons name={icon} size={size} color={iconColor} />
     </TouchableOpacity>
   );
 }

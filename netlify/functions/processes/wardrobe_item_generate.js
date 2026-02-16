@@ -11,6 +11,7 @@ const {
   callGeminiAPI,
   optimizeGeminiOutput,
   resolveModelFromSettings,
+  getGeminiApiVersion,
   DEFAULT_IMAGE_MODEL
 } = require("../utils");
 
@@ -70,7 +71,8 @@ async function processWardrobeItemGenerate(
       DEFAULT_IMAGE_MODEL
     );
 
-    console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, branch: "image" });
+    const apiVersion = getGeminiApiVersion(model);
+    console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, apiVersion, branch: "image" });
     const productShotB64 = await callGeminiAPI(
       PROMPTS.PRODUCT_SHOT,
       [sourceImage], // <-- IMPORTANT: pass the downloaded source image
@@ -161,7 +163,8 @@ const storagePath = `${userId}/ai/product_shots/${shotKey}.jpg`;
 
     // Call Gemini TEXT with gemini-2.5-flash (not -image)
     const model = "gemini-2.5-flash";
-    console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, branch: "text" });
+    const apiVersion = getGeminiApiVersion(model);
+    console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, apiVersion, branch: "text" });
     const rawText = await callGeminiAPI(
       prompt,
       [sourceImage], // <-- IMPORTANT: pass the downloaded source image

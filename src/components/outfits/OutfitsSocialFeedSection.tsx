@@ -60,7 +60,6 @@ type OutfitsSocialFeedSectionProps = {
   }) => void;
   emptyCopy: EmptyStateCopy;
   styles: SectionStyles;
-  alignLeft?: boolean;
 };
 
 export default function OutfitsSocialFeedSection({
@@ -88,7 +87,6 @@ export default function OutfitsSocialFeedSection({
   onScrollToIndexFailed,
   emptyCopy,
   styles,
-  alignLeft,
 }: OutfitsSocialFeedSectionProps) {
   if (activeView === 'grid') {
     return (
@@ -100,7 +98,6 @@ export default function OutfitsSocialFeedSection({
         onRefresh={onRefresh}
         onLoadMore={onLoadMore}
         hasMore={Boolean(hasMore)}
-        alignLeft={alignLeft}
         onItemPress={onGridItemPress}
         selectionMode={selectionMode}
         selectedIds={selectedIds}

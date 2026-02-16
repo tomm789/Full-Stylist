@@ -43,6 +43,7 @@ export {
   triggerHeadshotGenerate,
   triggerHeadshotGenerateWithPrompt,
   triggerBodyShotGenerate,
+  triggerBodyShotGenerateFromSelfies,
   getActiveOutfitRenderJob,
   getRecentOutfitRenderJob,
   triggerBatchJob,

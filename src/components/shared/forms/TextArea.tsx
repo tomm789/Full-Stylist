@@ -4,17 +4,17 @@
  */
 
 import React from 'react';
-import { StyleSheet } from 'react-native';
 import Input from './Input';
-import { theme, commonStyles } from '@/styles';
-
-const { typography } = theme;
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
 
 interface TextAreaProps extends React.ComponentProps<typeof Input> {
   rows?: number;
 }
 
 export default function TextArea({ rows = 3, style, ...props }: TextAreaProps) {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
   const textAreaStyle = [
     commonStyles.textArea,
     { height: rows * 24 }, // Approximate line height
@@ -31,5 +31,3 @@ export default function TextArea({ rows = 3, style, ...props }: TextAreaProps) {
     />
   );
 }
-
-const styles = StyleSheet.create({});

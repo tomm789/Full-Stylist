@@ -3,14 +3,12 @@
  * View another user's profile with outfits and lookbooks
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  RefreshControl,
   SafeAreaView,
   Animated,
   ActivityIndicator,
@@ -26,19 +24,24 @@ import UserWardrobeScreen from '@/components/UserWardrobeScreen';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
 import { DiscoverGrid } from '@/components/social';
 import { Header } from '@/components/shared/layout';
-import { theme, commonStyles } from '@/styles';
+import { theme } from '@/styles';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing, typography } = theme;
+const { spacing, typography } = theme;
 
 type TabType = 'outfits' | 'lookbooks' | 'wardrobe';
 
 export default function UserProfileScreen() {
+  const colors = useThemeColors();
+  const commonStyles = createCommonStyles(colors);
+  const styles = createStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
-  const { id: userId } = useLocalSearchParams<{ id: string }>();
+  const { id: userId, tab } = useLocalSearchParams<{ id: string; tab?: string }>();
   const [activeTab, setActiveTab] = useState<TabType>('outfits');
-  const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const showTabLabels = Platform.OS === 'web' && width >= 1024;
   const {
@@ -50,6 +53,14 @@ export default function UserProfileScreen() {
     handleHeaderLayout,
     handleScroll: handleProfileScroll,
   } = useHideHeaderOnScroll();
+
+  useEffect(() => {
+    if (!tab || Array.isArray(tab)) return;
+    const nextTab = tab.toLowerCase();
+    if (nextTab === 'outfits' || nextTab === 'lookbooks' || nextTab === 'wardrobe') {
+      setActiveTab(nextTab);
+    }
+  }, [tab]);
 
   // Load user profile
   const {
@@ -81,11 +92,9 @@ export default function UserProfileScreen() {
       targetUserId: userId,
     });
 
-  const onRefresh = async () => {
-    setRefreshing(true);
+  const onRefreshProfile = async () => {
     await refresh();
     await refreshFeed();
-    setRefreshing(false);
   };
 
   const handleFeedRefresh = async () => {
@@ -162,6 +171,72 @@ export default function UserProfileScreen() {
     );
   }
 
+  const profileHeader = (
+    <>
+      <ProfileHeader
+        profile={profile}
+        primaryStat={{ label: 'Outfits', value: outfits.length }}
+        isOwnProfile={isOwnProfile}
+        isFollowing={isFollowing}
+        followStatus={status}
+        loadingFollow={followLoading}
+        onFollowPress={handleFollowPress}
+        onFollowersPress={() => router.push(`/users/${userId}/followers`)}
+        onFollowingPress={() => router.push(`/users/${userId}/following`)}
+      />
+
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'outfits' && styles.tabActive]}
+          onPress={() => setActiveTab('outfits')}
+        >
+          <Ionicons
+            name="shirt-outline"
+            size={20}
+            color={activeTab === 'outfits' ? colors.textPrimary : colors.textTertiary}
+          />
+          {showTabLabels && (
+            <Text style={[styles.tabText, activeTab === 'outfits' && styles.tabTextActive]}>
+              Outfits
+            </Text>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'lookbooks' && styles.tabActive]}
+          onPress={() => setActiveTab('lookbooks')}
+        >
+          <Ionicons
+            name="book-outline"
+            size={20}
+            color={activeTab === 'lookbooks' ? colors.textPrimary : colors.textTertiary}
+          />
+          {showTabLabels && (
+            <Text
+              style={[styles.tabText, activeTab === 'lookbooks' && styles.tabTextActive]}
+            >
+              Lookbooks
+            </Text>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'wardrobe' && styles.tabActive]}
+          onPress={() => setActiveTab('wardrobe')}
+        >
+          <Ionicons
+            name="grid-outline"
+            size={20}
+            color={activeTab === 'wardrobe' ? colors.textPrimary : colors.textTertiary}
+          />
+          {showTabLabels && (
+            <Text style={[styles.tabText, activeTab === 'wardrobe' && styles.tabTextActive]}>
+              Wardrobe
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
   return (
     <SafeAreaView style={commonStyles.container}>
       <Animated.View
@@ -218,136 +293,48 @@ export default function UserProfileScreen() {
         </View>
       </Animated.View>
 
-      <ScrollView
-        style={commonStyles.flex1}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        onScroll={handleProfileScroll}
-        scrollEventThrottle={16}
-      >
-        {/* Profile Header */}
-        <ProfileHeader
-          profile={profile}
-          primaryStat={{ label: 'Outfits', value: outfits.length }}
-          isOwnProfile={isOwnProfile}
-          isFollowing={isFollowing}
-          followStatus={status}
-          loadingFollow={followLoading}
-          onFollowPress={handleFollowPress}
-          onFollowersPress={() => router.push(`/users/${userId}/followers`)}
-          onFollowingPress={() => router.push(`/users/${userId}/following`)}
+      {activeTab === 'wardrobe' ? (
+        <UserWardrobeScreen
+          userId={typeof userId === 'string' ? userId : ''}
+          showSearchControls
+          showAddButton={isOwnProfile}
+          onGridScroll={handleProfileScroll}
+          scrollEventThrottle={16}
+          listHeader={profileHeader}
+          onExternalRefresh={onRefreshProfile}
         />
-
-        {/* Tabs */}
-        <View style={styles.tabsContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'outfits' && styles.tabActive]}
-            onPress={() => setActiveTab('outfits')}
-          >
-            <Ionicons
-              name="shirt-outline"
-              size={20}
-              color={activeTab === 'outfits' ? colors.textPrimary : colors.textTertiary}
-            />
-            {showTabLabels && (
-              <Text style={[styles.tabText, activeTab === 'outfits' && styles.tabTextActive]}>
-                Outfits
-              </Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'lookbooks' && styles.tabActive]}
-            onPress={() => setActiveTab('lookbooks')}
-          >
-            <Ionicons
-              name="book-outline"
-              size={20}
-              color={activeTab === 'lookbooks' ? colors.textPrimary : colors.textTertiary}
-            />
-            {showTabLabels && (
-              <Text
-                style={[styles.tabText, activeTab === 'lookbooks' && styles.tabTextActive]}
-              >
-                Lookbooks
-              </Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'wardrobe' && styles.tabActive]}
-            onPress={() => setActiveTab('wardrobe')}
-          >
-            <Ionicons
-              name="grid-outline"
-              size={20}
-              color={activeTab === 'wardrobe' ? colors.textPrimary : colors.textTertiary}
-            />
-            {showTabLabels && (
-              <Text style={[styles.tabText, activeTab === 'wardrobe' && styles.tabTextActive]}>
-                Wardrobe
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Content */}
-        <View style={styles.content}>
-          {activeTab === 'wardrobe' ? (
-            <UserWardrobeScreen
-              userId={typeof userId === 'string' ? userId : ''}
-              showSearchControls
-              showAddButton={isOwnProfile}
-              onGridScroll={handleProfileScroll}
-              scrollEventThrottle={16}
-            />
-          ) : activeTab === 'outfits' ? (
-            <DiscoverGrid
-              feed={outfitFeed}
-              images={feedOutfitImages}
-              loading={feedLoading}
-              refreshing={refreshingContent}
-              onRefresh={handleFeedRefresh}
-              onLoadMore={async () => {}}
-              hasMore={false}
-              alignLeft
-              onItemPress={handleOpenFeedPost}
-              scrollEnabled={false}
-              emptyIcon="shirt-outline"
-              emptyTitle="No outfits yet"
-              emptyMessage={
-                isOwnProfile
-                  ? 'Create your first outfit to get started'
-                  : 'This user has not created any outfits yet'
-              }
-              showOwnerOverlay={false}
-            />
-          ) : (
-            <DiscoverGrid
-              feed={lookbookFeed}
-              images={lookbookGridImages}
-              loading={feedLoading}
-              refreshing={refreshingContent}
-              onRefresh={handleFeedRefresh}
-              onLoadMore={async () => {}}
-              hasMore={false}
-              alignLeft
-              onItemPress={handleOpenFeedPost}
-              scrollEnabled={false}
-              emptyIcon="book-outline"
-              emptyTitle="No lookbooks yet"
-              emptyMessage={
-                isOwnProfile
-                  ? 'Create your first lookbook to get started'
-                  : 'This user has not created any lookbooks yet'
-              }
-              showOwnerOverlay={false}
-            />
-          )}
-        </View>
-      </ScrollView>
+      ) : (
+        <DiscoverGrid
+          feed={activeTab === 'outfits' ? outfitFeed : lookbookFeed}
+          images={activeTab === 'outfits' ? feedOutfitImages : lookbookGridImages}
+          loading={feedLoading}
+          refreshing={refreshingContent}
+          onRefresh={handleFeedRefresh}
+          onLoadMore={async () => {}}
+          hasMore={false}
+          onItemPress={handleOpenFeedPost}
+          onScroll={handleProfileScroll}
+          scrollEventThrottle={16}
+          ListHeaderComponent={profileHeader}
+          emptyIcon={activeTab === 'outfits' ? 'shirt-outline' : 'book-outline'}
+          emptyTitle={activeTab === 'outfits' ? 'No outfits yet' : 'No lookbooks yet'}
+          emptyMessage={
+            isOwnProfile
+              ? activeTab === 'outfits'
+                ? 'Create your first outfit to get started'
+                : 'Create your first lookbook to get started'
+              : activeTab === 'outfits'
+                ? 'This user has not created any outfits yet'
+                : 'This user has not created any lookbooks yet'
+          }
+          showOwnerOverlay={false}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   headerContainer: {
     overflow: 'hidden',
     backgroundColor: colors.background,
@@ -379,10 +366,6 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: colors.textPrimary,
     fontWeight: typography.fontWeight.semibold,
-  },
-  content: {
-    flex: 1,
-    minHeight: 400,
   },
   headerHandle: {
     fontSize: typography.fontSize.lg,

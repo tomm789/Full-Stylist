@@ -8,8 +8,10 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { createCalendarEntry, deleteCalendarEntry, getOutfitScheduledDates, CalendarEntry } from '@/lib/calendar';
 import { theme } from '@/styles';
 import { PrimaryButton, ScheduleCalendar } from '@/components/shared';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 
-const { colors, spacing } = theme;
+const { spacing } = theme;
 
 interface OutfitScheduleSectionProps {
   outfitId: string;
@@ -22,6 +24,8 @@ export default function OutfitScheduleSection({
   isNew,
   userId,
 }: OutfitScheduleSectionProps) {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [scheduledDates, setScheduledDates] = useState<Date[]>([]);
   const [scheduledEntries, setScheduledEntries] = useState<Record<string, CalendarEntry>>({});
@@ -127,7 +131,7 @@ export default function OutfitScheduleSection({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   scheduleSection: {
     marginTop: spacing.xl,
     gap: spacing.md,

@@ -2,6 +2,8 @@ import React from 'react';
 import { Animated, View } from 'react-native';
 import LookbookSelectionBar from './LookbookSelectionBar';
 import OutfitsHeaderBar from './OutfitsHeaderBar';
+import OccasionPills from './OccasionPills';
+import type { OutfitsTab } from './OutfitsHeaderBar';
 
 export type OutfitsHeaderSectionProps = {
   headerReady: boolean;
@@ -17,10 +19,10 @@ export type OutfitsHeaderSectionProps = {
   onRemoveOutfit: (id: string) => void;
   onExitSelection: () => void;
   onOpenPicker: () => void;
-  activeTab: 'my_outfits' | 'explore' | 'following';
+  activeTab: OutfitsTab;
   showTabLabels: boolean;
   activeView: 'grid' | 'feed';
-  onChangeTab: (tab: 'my_outfits' | 'explore' | 'following') => void;
+  onChangeTab: (tab: OutfitsTab) => void;
   onChangeView: (view: 'grid' | 'feed') => void;
   showViewToggle: boolean;
   searchQuery: string;
@@ -31,6 +33,17 @@ export type OutfitsHeaderSectionProps = {
   styles: {
     headerContainer: any;
   };
+  pinnedLookbooks?: { id: string; title: string }[];
+  onAddLookbookTab?: () => void;
+  onRemoveLookbookTab?: (id: string) => void;
+  hintMessage?: string;
+  occasionOptions?: string[];
+  selectedOccasions?: string[];
+  onToggleOccasion?: (occasion: string) => void;
+  onClearOccasions?: () => void;
+  showOccasionPills?: boolean;
+  searchHeader?: React.ReactNode;
+  hideTabs?: boolean;
 };
 
 export default function OutfitsHeaderSection({
@@ -59,6 +72,17 @@ export default function OutfitsHeaderSection({
   hasActiveFilters,
   showSearch,
   styles,
+  pinnedLookbooks,
+  onAddLookbookTab,
+  onRemoveLookbookTab,
+  hintMessage,
+  occasionOptions = [],
+  selectedOccasions = [],
+  onToggleOccasion,
+  onClearOccasions,
+  showOccasionPills = true,
+  searchHeader,
+  hideTabs = false,
 }: OutfitsHeaderSectionProps) {
   return (
     <Animated.View
@@ -73,6 +97,7 @@ export default function OutfitsHeaderSection({
       pointerEvents={uiHidden ? 'none' : 'auto'}
     >
       <View onLayout={onHeaderLayout}>
+        {searchHeader}
         {selectionMode && (
           <LookbookSelectionBar
             selectedOutfits={selectedOutfits}
@@ -81,21 +106,40 @@ export default function OutfitsHeaderSection({
             onRemoveOutfit={onRemoveOutfit}
             onExit={onExitSelection}
             onOpenPicker={onOpenPicker}
+            hintMessage={hintMessage}
           />
         )}
-        <OutfitsHeaderBar
-          activeTab={activeTab}
-          showTabLabels={showTabLabels}
-          activeView={activeView}
-          onChangeTab={onChangeTab}
-          onChangeView={onChangeView}
-          showViewToggle={showViewToggle}
-          searchQuery={searchQuery}
-          onSearchChange={onSearchChange}
-          onOpenSort={onOpenSort}
-          hasActiveFilters={hasActiveFilters}
-          showSearch={showSearch}
-        />
+        {!hideTabs && (
+          <>
+            <OutfitsHeaderBar
+              activeTab={activeTab}
+              showTabLabels={showTabLabels}
+              activeView={activeView}
+              onChangeTab={onChangeTab}
+              onChangeView={onChangeView}
+              showViewToggle={showViewToggle}
+              searchQuery={searchQuery}
+              onSearchChange={onSearchChange}
+              onOpenSort={onOpenSort}
+              hasActiveFilters={hasActiveFilters}
+              showSearch={showSearch}
+              pinnedLookbooks={pinnedLookbooks}
+              onAddLookbookTab={onAddLookbookTab}
+              onRemoveLookbookTab={onRemoveLookbookTab}
+            />
+            {showOccasionPills &&
+              occasionOptions.length > 0 &&
+              onToggleOccasion &&
+              onClearOccasions && (
+                <OccasionPills
+                  occasions={occasionOptions}
+                  selectedOccasions={selectedOccasions}
+                  onToggleOccasion={onToggleOccasion}
+                  onClear={onClearOccasions}
+                />
+              )}
+          </>
+        )}
       </View>
     </Animated.View>
   );

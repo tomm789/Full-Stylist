@@ -16,11 +16,14 @@ import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFollowing } from '@/lib/user';
-import { getDefaultWardrobeId, getWardrobeItems } from '@/lib/wardrobe';
-import { getWardrobeItemImages } from '@/lib/wardrobe';
+import { getDefaultWardrobeId, getWardrobeItems, getWardrobeCategories } from '@/lib/wardrobe';
+import { buildWardrobeItemsImageUrlCache, getWardrobeItemsImages } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
-import { commonStyles } from '@/styles';
+import { createCommonStyles } from '@/styles/commonStyles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
+import type { WardrobeItem } from '@/lib/wardrobe';
 
 interface FollowedUser {
   id: string;
@@ -29,10 +32,126 @@ interface FollowedUser {
   avatar_url: string | null;
   wardrobeId?: string;
   itemCount?: number;
-  previewImage?: string | null;
+  previewImages?: Array<string | null>;
 }
 
+type EngagementCounts = Map<string, number>;
+type CategoryNameMap = Map<string, string>;
+
+const PREVIEW_GRID_SIZE = 9;
+
+const normalizeCategoryName = (name?: string | null) =>
+  (name ?? '').trim().toLowerCase();
+
+const sortByEngagementThenRecent = (
+  a: WardrobeItem,
+  b: WardrobeItem,
+  engagementCounts: EngagementCounts
+) => {
+  const aScore = engagementCounts.get(a.id) ?? 0;
+  const bScore = engagementCounts.get(b.id) ?? 0;
+  if (aScore !== bScore) return bScore - aScore;
+  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+};
+
+const sortByRecent = (a: WardrobeItem, b: WardrobeItem) =>
+  new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+
+const selectPreviewItemIds = (
+  items: WardrobeItem[],
+  engagementCounts: EngagementCounts,
+  categoryNameById: CategoryNameMap
+) => {
+  if (!items.length) return [];
+
+  const selected: WardrobeItem[] = [];
+  const selectedIds = new Set<string>();
+  const addItem = (item?: WardrobeItem) => {
+    if (!item || selected.length >= PREVIEW_GRID_SIZE || selectedIds.has(item.id)) {
+      return;
+    }
+    selected.push(item);
+    selectedIds.add(item.id);
+  };
+
+  const byEngagement = [...items].sort((a, b) =>
+    sortByEngagementThenRecent(a, b, engagementCounts)
+  );
+  byEngagement.forEach(addItem);
+
+  const itemsByCategory = new Map<string, WardrobeItem[]>();
+  items.forEach((item) => {
+    if (!item.category_id) return;
+    const bucket = itemsByCategory.get(item.category_id) || [];
+    bucket.push(item);
+    itemsByCategory.set(item.category_id, bucket);
+  });
+
+  const categoryPicks = Array.from(itemsByCategory.values())
+    .map((list) =>
+      [...list].sort((a, b) => sortByEngagementThenRecent(a, b, engagementCounts))[0]
+    )
+    .filter(Boolean)
+    .sort((a, b) => sortByEngagementThenRecent(a, b, engagementCounts));
+  categoryPicks.forEach(addItem);
+
+  if (selected.length < PREVIEW_GRID_SIZE) {
+    const categoryRecentPicks = Array.from(itemsByCategory.values())
+      .map((list) => [...list].sort(sortByRecent)[0])
+      .filter(Boolean)
+      .sort(sortByRecent);
+    categoryRecentPicks.forEach(addItem);
+  }
+
+  if (selected.length < PREVIEW_GRID_SIZE) {
+    const dressCategoryIds = new Set(
+      Array.from(categoryNameById.entries())
+        .filter(([_, name]) => {
+          const normalized = normalizeCategoryName(name);
+          return normalized === 'dresses' || normalized === 'dress';
+        })
+        .map(([id]) => id)
+    );
+    const dresses = items
+      .filter((item) => item.category_id && dressCategoryIds.has(item.category_id))
+      .sort(sortByRecent);
+    dresses.forEach(addItem);
+  }
+
+  if (selected.length < PREVIEW_GRID_SIZE) {
+    const remaining = [...items].sort(sortByRecent);
+    remaining.forEach(addItem);
+  }
+
+  return selected.slice(0, PREVIEW_GRID_SIZE).map((item) => item.id);
+};
+
+const getWardrobeItemSaveCounts = async (itemIds: string[]): Promise<EngagementCounts> => {
+  if (itemIds.length === 0) return new Map();
+  try {
+    const { data, error } = await supabase
+      .from('saved_wardrobe_items')
+      .select('wardrobe_item_id')
+      .in('wardrobe_item_id', itemIds);
+
+    if (error || !data) return new Map();
+
+    const counts = new Map<string, number>();
+    data.forEach((row) => {
+      const id = row.wardrobe_item_id as string;
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    });
+    return counts;
+  } catch (error) {
+    console.error('Error loading wardrobe item saves:', error);
+    return new Map();
+  }
+};
+
 export default function FollowingWardrobesScreen() {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+  const commonStyles = createCommonStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<FollowedUser[]>([]);
@@ -51,34 +170,54 @@ export default function FollowingWardrobesScreen() {
         return;
       }
 
+      const { data: categories } = await getWardrobeCategories();
+      const categoryNameById = new Map(
+        (categories || []).map((category) => [category.id, category.name])
+      );
+
       // Load wardrobe info for each followed user
       const usersWithWardrobes = await Promise.all(
         following.map(async (followedUser) => {
-          const { data: wardrobeId } = await getDefaultWardrobeId(followedUser.id);
-          
+          const followed = followedUser.followed;
+          const followedUserId = followedUser.followed_user_id ?? followed?.id;
+          if (!followedUserId) {
+            return {
+              id: followedUser.followed_user_id,
+              display_name: followed?.display_name ?? '',
+              handle: followed?.handle ?? '',
+              avatar_url: followed?.avatar_url ?? null,
+              wardrobeId: null,
+              itemCount: 0,
+              previewImage: null,
+            };
+          }
+
+          const { data: wardrobeId } = await getDefaultWardrobeId(followedUserId);
+
           let itemCount = 0;
-          let previewImage: string | null = null;
+          let previewImages: Array<string | null> = [];
 
           if (wardrobeId) {
             const { data: items } = await getWardrobeItems(wardrobeId, {});
             itemCount = items?.length || 0;
 
-            // Get preview image from first item
             if (items && items.length > 0) {
-              const { data: images } = await getWardrobeItemImages(items[0].id);
-              if (images && images.length > 0) {
-                const firstImage = images[0].image;
-                if (firstImage) {
-                  const { data: urlData } = supabase.storage
-                    .from(firstImage.storage_bucket || 'media')
-                    .getPublicUrl(firstImage.storage_key);
-                  previewImage = urlData.publicUrl;
-                }
-              }
+              const itemIds = items.map((item) => item.id);
+              const engagementCounts = await getWardrobeItemSaveCounts(itemIds);
+              const previewItemIds = selectPreviewItemIds(
+                items,
+                engagementCounts,
+                categoryNameById
+              );
+              const { data: imagesMap } = await getWardrobeItemsImages(previewItemIds);
+              const urlCache = buildWardrobeItemsImageUrlCache(
+                previewItemIds,
+                imagesMap
+              );
+              previewImages = previewItemIds.map((id) => urlCache.get(id) ?? null);
             }
           }
 
-          const followed = followedUser.followed;
           return {
             id: followedUser.followed_user_id,
             display_name: followed?.display_name ?? '',
@@ -86,7 +225,7 @@ export default function FollowingWardrobesScreen() {
             avatar_url: followed?.avatar_url ?? null,
             wardrobeId,
             itemCount,
-            previewImage,
+            previewImages,
           };
         })
       );
@@ -133,11 +272,7 @@ export default function FollowingWardrobesScreen() {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.userCard}
-              onPress={() =>
-                item.wardrobeId
-                  ? router.push(`/wardrobes/${item.wardrobeId}`)
-                  : router.push(`/users/${item.id}`)
-              }
+              onPress={() => router.push(`/users/${item.id}?tab=wardrobe`)}
             >
               <View style={styles.userInfo}>
                 {item.avatar_url ? (
@@ -158,14 +293,25 @@ export default function FollowingWardrobesScreen() {
                   </Text>
                 </View>
               </View>
-              {item.previewImage && (
-                <ExpoImage
-                  source={{ uri: item.previewImage }}
-                  style={styles.previewImage}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                />
-              )}
+              <View style={styles.previewGrid}>
+                {Array.from({ length: PREVIEW_GRID_SIZE }).map((_, index) => {
+                  const imageUrl = item.previewImages?.[index] || null;
+                  return imageUrl ? (
+                    <ExpoImage
+                      key={`${item.id}-preview-${index}`}
+                      source={{ uri: imageUrl }}
+                      style={styles.previewImage}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+                  ) : (
+                    <View
+                      key={`${item.id}-preview-${index}`}
+                      style={styles.previewPlaceholder}
+                    />
+                  );
+                })}
+              </View>
             </TouchableOpacity>
           )}
           keyExtractor={(item) => item.id}
@@ -179,21 +325,21 @@ export default function FollowingWardrobesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   list: {
     padding: 16,
   },
   userCard: {
     flexDirection: 'row',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   userInfo: {
     flex: 1,
@@ -210,7 +356,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.gray200,
     marginRight: 12,
   },
   userText: {
@@ -219,22 +365,37 @@ const styles = StyleSheet.create({
   displayName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   handle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   itemCount: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textTertiary,
+  },
+  previewGrid: {
+    width: 84,
+    height: 84,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginLeft: 12,
   },
   previewImage: {
-    width: 60,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    width: 26,
+    height: 26,
+    margin: 1,
+    borderRadius: 4,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  previewPlaceholder: {
+    width: 26,
+    height: 26,
+    margin: 1,
+    borderRadius: 4,
+    backgroundColor: colors.backgroundTertiary,
   },
 });
