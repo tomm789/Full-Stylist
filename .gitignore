@@ -31,6 +31,9 @@ yarn-error.log
 # TypeScript
 *.tsbuildinfo*.swp
 
+# Claude worktrees
+.claude/worktrees/
+
 # AI session artifacts
 SESSION_*.md
 PHASE_*.md
