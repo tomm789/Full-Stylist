@@ -17,6 +17,7 @@ export { useItemAttributes } from './useItemAttributes';
 export { useWardrobeItemDetailActions } from './useWardrobeItemDetailActions';
 export { useAddWardrobeItem } from './useAddWardrobeItem';
 export { useAttributeEditor } from './useAttributeEditor';
+export { useWardrobeCamera } from './useWardrobeCamera';
 
 export type { FilterState, AvailableEntityAttribute } from './useFilters';
 export type { WardrobeItemsState } from './useWardrobeItems';

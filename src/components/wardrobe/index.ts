@@ -20,4 +20,5 @@ export { EditItemForm } from './EditItemForm';
 export { CategorySelector } from './CategorySelector';
 export { AttributeEditor } from './AttributeEditor';
 export { AddAttributeModal } from './AddAttributeModal';
+export { default as WardrobeCameraOverlay } from './WardrobeCameraOverlay';
 export { FilterPillGroup, FilterAccordionSection } from '@/components/shared';

@@ -34,12 +34,13 @@ export default function AddItemScreen() {
   const commonStyles = createCommonStyles(colors);
   const styles = createStyles(colors);
   const router = useRouter();
-  const { action } = useLocalSearchParams<{ action?: string }>();
+  const { action, imageUri } = useLocalSearchParams<{ action?: string; imageUri?: string }>();
   const didAutoActionRef = useRef(false);
   const {
     selectedImages,
     handleTakePhoto,
     handleUploadPhoto,
+    addImageFromUri,
     removeImage,
     cropperVisible,
     cropperImageUri,
@@ -55,15 +56,22 @@ export default function AddItemScreen() {
 
   useEffect(() => {
     if (didAutoActionRef.current) return;
-    if (!action) return;
     didAutoActionRef.current = true;
+
+    // If a pre-captured image URI was passed (from inline camera), add it directly
+    if (imageUri) {
+      addImageFromUri(decodeURIComponent(imageUri));
+      return;
+    }
+
+    if (!action) return;
 
     if (action === 'photo') {
       handleTakePhoto();
     } else if (action === 'upload') {
       handleUploadPhoto();
     }
-  }, [action, handleTakePhoto, handleUploadPhoto]);
+  }, [action, imageUri, handleTakePhoto, handleUploadPhoto, addImageFromUri]);
 
   if (wardrobeLoading) {
     return (

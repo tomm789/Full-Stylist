@@ -32,6 +32,7 @@ interface UseAddWardrobeItemReturn {
   setSelectedImages: (images: SelectedImage[]) => void;
   handleTakePhoto: () => Promise<void>;
   handleUploadPhoto: () => Promise<void>;
+  addImageFromUri: (uri: string) => void;
   removeImage: (index: number) => void;
 
   // Cropper
@@ -317,6 +318,15 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const addImageFromUri = useCallback((uri: string) => {
+    const newImage: SelectedImage = {
+      uri,
+      type: 'image/jpeg',
+      name: `photo-${Date.now()}.jpg`,
+    };
+    setSelectedImages((prev) => [...prev, newImage]);
+  }, []);
+
   const handleCropperCancel = useCallback(() => {
     setCropperVisible(false);
     setCropperImageUri(null);
@@ -457,6 +467,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
     setSelectedImages,
     handleTakePhoto,
     handleUploadPhoto,
+    addImageFromUri,
     removeImage,
 
     // Cropper
