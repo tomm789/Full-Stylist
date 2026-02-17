@@ -508,6 +508,7 @@ export default function WardrobeScreen() {
       Alert.alert('Error', 'Failed to save headshot selection');
       console.error('Failed to save headshot:', error);
     }
+  };
 
   const handleSaveHeadshotAsDraft = async (headshotId: string) => {
     if (!user?.id) return;
@@ -980,4 +981,3 @@ export default function WardrobeScreen() {
     </PanGestureHandler>
   );
 }
-
