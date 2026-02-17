@@ -685,6 +685,30 @@ export function useHairAndMakeup() {
     );
   };
 
+  const handleSetAsActiveHeadshot = async () => {
+    if (!user?.id || !previewImageId) return;
+
+    try {
+      // Update user settings to set this as the active headshot
+      const { error } = await supabase
+        .from('user_settings')
+        .update({
+          headshot_image_id: previewImageId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      // Show success message
+      Alert.alert('Success', 'Headshot set as active');
+    } catch (error) {
+      console.error('Failed to set active headshot:', error);
+      Alert.alert('Error', 'Could not set headshot as active');
+    }
+  };
+
   const handlePreviewPress = () => {
     if (previewImageUrl) {
       setLightboxUrl(previewImageUrl);
@@ -797,6 +821,7 @@ export function useHairAndMakeup() {
     handleRestoreSelfie,
     handleSharePreview,
     handleDeletePreviewImage,
+    handleSetAsActiveHeadshot,
     handlePreviewPress,
     handleHeadshotSelect,
     handleSwipeIndexChange,
