@@ -190,6 +190,8 @@ export default function WardrobeScreen() {
     },
   });
 
+
+
   const handleOpenCamera = useCallback(() => {
     router.push('/wardrobe/add?action=photo' as any);
   }, [router]);
@@ -979,4 +981,3 @@ export default function WardrobeScreen() {
   );
 }
 
-}
