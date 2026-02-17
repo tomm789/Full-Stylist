@@ -32,6 +32,96 @@ interface OutfitCreatorContainerProps {
   selectedCategoryIds?: Set<string>;
 }
 
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: spacing.xl + 60 + spacing.md, // Position above the pill (pill height 60 + spacing)
+    left: spacing.lg,
+    right: spacing.lg,
+    backgroundColor: colors.backgroundTertiary,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  scrollContent: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  itemCard: {
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: colors.gray200,
+  },
+  itemImage: {
+    width: '100%',
+    height: '100%',
+  },
+  itemImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.gray200,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeButton: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: colors.white,
+    borderRadius: 10,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  categoryShortcutsContainer: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginLeft: spacing.xs,
+  },
+  categoryShortcut: {
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  categoryShortcutSelected: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
+  categoryIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryPlusIcon: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: colors.white,
+    borderRadius: 10,
+  },
+  plusIconOverlay: {
+    padding: 2,
+  },
+});
+
 export default function OutfitCreatorContainer({
   selectedItems,
   categories,
@@ -138,93 +228,3 @@ export default function OutfitCreatorContainer({
     </Animated.View>
   );
 }
-
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    position: 'absolute',
-    bottom: spacing.xl + 60 + spacing.md, // Position above the pill (pill height 60 + spacing)
-    left: spacing.lg,
-    right: spacing.lg,
-    backgroundColor: colors.backgroundTertiary,
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  scrollContent: {
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xs,
-  },
-  itemCard: {
-    width: 60,
-    height: 60,
-    borderRadius: borderRadius.md,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: colors.gray200,
-  },
-  itemImage: {
-    width: '100%',
-    height: '100%',
-  },
-  itemImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: colors.gray200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  removeButton: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: colors.white,
-    borderRadius: 10,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  categoryShortcutsContainer: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginLeft: spacing.xs,
-  },
-  categoryShortcut: {
-    width: 60,
-    height: 60,
-    borderRadius: borderRadius.md,
-    overflow: 'hidden',
-    backgroundColor: colors.backgroundSecondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  categoryShortcutSelected: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-  },
-  categoryIconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  categoryPlusIcon: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    backgroundColor: colors.white,
-    borderRadius: 10,
-  },
-  plusIconOverlay: {
-    padding: 2,
-  },
-});
