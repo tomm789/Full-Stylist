@@ -29,6 +29,9 @@ import {
   ItemGrid,
   ItemDetailModal,
   OutfitCreatorBar,
+  OutfitCreatorContainer,
+  HeadshotSelectorCard,
+  HeadshotSelectorModal,
 } from '@/components/wardrobe';
 
 // Outfit Components (for generation progress)
@@ -86,6 +89,17 @@ export default function WardrobeScreen() {
   const [showFirstTimeTutorial, setShowFirstTimeTutorial] = useState(false);
   const [tutorialChecked, setTutorialChecked] = useState(false);
   const [showOutfitTipOnClose, setShowOutfitTipOnClose] = useState(false);
+
+  // Headshot selector state
+  const [showHeadshotSelector, setShowHeadshotSelector] = useState(false);
+  const [currentHeadshotId, setCurrentHeadshotId] = useState<string | null>(null);
+  const [currentHeadshotUrl, setCurrentHeadshotUrl] = useState<string | null>(null);
+  const [availableHeadshots, setAvailableHeadshots] = useState<Array<{ id: string; url: string | null }>>([]);
+  const [loadingHeadshots, setLoadingHeadshots] = useState(false);
+
+  // Outfit creator category filtering state
+  const [outfitCreatorCategoryId, setOutfitCreatorCategoryId] = useState<string | null>(null);
+
   const { width: searchOverlayWidth } = useWindowDimensions();
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
   const searchOpenRef = useRef(false);
@@ -398,6 +412,90 @@ export default function WardrobeScreen() {
     }
   };
 
+  // Fetch headshots and user settings when outfit creator mode is activated
+  useEffect(() => {
+    if (!outfitCreatorMode || !user?.id) return;
+
+    const fetchHeadshots = async () => {
+      setLoadingHeadshots(true);
+      try {
+        // Fetch user settings for current headshot
+        const { data: userSettings } = await supabase
+          .from('user_settings')
+          .select('body_shot_image_id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (userSettings?.body_shot_image_id) {
+          setCurrentHeadshotId(userSettings.body_shot_image_id);
+          // Fetch the image URL
+          const { data: imageData } = await supabase
+            .from('images')
+            .select('storage_key, storage_bucket')
+            .eq('id', userSettings.body_shot_image_id)
+            .single();
+
+          if (imageData) {
+            const publicUrl = supabase.storage
+              .from(imageData.storage_bucket || 'media')
+              .getPublicUrl(imageData.storage_key).data.publicUrl;
+            setCurrentHeadshotUrl(publicUrl);
+          }
+        }
+
+        // Fetch all available headshots
+        const { data: headshots } = await supabase
+          .from('images')
+          .select('id, storage_key, storage_bucket')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (headshots) {
+          const headshotUrls = headshots.map((img: any) => ({
+            id: img.id,
+            url: supabase.storage
+              .from(img.storage_bucket || 'media')
+              .getPublicUrl(img.storage_key).data.publicUrl,
+          }));
+          setAvailableHeadshots(headshotUrls);
+        }
+        setLoadingHeadshots(false);
+      } catch (error) {
+        console.error('Error fetching headshots:', error);
+        setLoadingHeadshots(false);
+      }
+    };
+
+    fetchHeadshots();
+  }, [outfitCreatorMode, user?.id]);
+
+  const handleSaveHeadshot = async (headshotId: string) => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_settings')
+        .update({
+          body_shot_image_id: headshotId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      setCurrentHeadshotId(headshotId);
+      const selectedHeadshot = availableHeadshots.find((h) => h.id === headshotId);
+      if (selectedHeadshot) {
+        setCurrentHeadshotUrl(selectedHeadshot.url);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'Failed to save headshot selection');
+      console.error('Failed to save headshot:', error);
+    }
+  };
+
   const handleModalOpenDetail = () => {
     if (!selectedItem) return;
     const itemIds = filteredItems.map((item) => item.id).join(',');
@@ -469,6 +567,15 @@ export default function WardrobeScreen() {
       imageUrl: imageCache.get(id) || null,
     }))
     .filter((item) => item !== null);
+
+  // Calculate which categories are already in the selection (for hiding category shortcuts)
+  const selectedItemObjects = selectedOutfitItems
+    .map((id) => allItems.find((i) => i.id === id))
+    .filter((i): i is WardrobeItem => Boolean(i));
+
+  const selectedCategoryIds = new Set(
+    selectedItemObjects.map((item) => item.category_id)
+  );
 
   // Determine dimmed items (conflicting with current selection in outfit mode)
   const dimmedItemIds = outfitCreatorMode
@@ -610,17 +717,38 @@ export default function WardrobeScreen() {
               showFilter={false}
             />
           )}
-          {/* Outfit Creator Bar */}
-          {!searchOverlayOpen && activeTab === 'my' && outfitCreatorMode && (
-            <OutfitCreatorBar
-              selectedItems={selectedItemsForBar}
-              onRemoveItem={(id) => setSelectedOutfitItems((prev) => prev.filter((i) => i !== id))}
-              onGenerate={handleGenerateOutfit}
-              onExit={() => {
-                setOutfitCreatorMode(false);
-                setSelectedOutfitItems([]);
-              }}
-            />
+          {/* Outfit Creator - Container & Bar */}
+          {!searchOverlayOpen && activeTab === 'my' && outfitCreatorMode && selectedOutfitItems.length > 0 && (
+            <>
+              {/* Container with selected items and category shortcuts */}
+              <OutfitCreatorContainer
+                selectedItems={selectedItemsForBar}
+                categories={categories}
+                onRemoveItem={(id) => setSelectedOutfitItems((prev) => prev.filter((i) => i !== id))}
+                onCategorySelect={(categoryId) => {
+                  if (outfitCreatorCategoryId === categoryId) {
+                    setOutfitCreatorCategoryId(null);
+                  } else {
+                    setOutfitCreatorCategoryId(categoryId);
+                  }
+                }}
+                selectedCategoryId={outfitCreatorCategoryId}
+                currentHeadshotUrl={currentHeadshotUrl}
+                onHeadshotSelect={() => setShowHeadshotSelector(true)}
+                selectedCategoryIds={selectedCategoryIds}
+              />
+
+              {/* Generate button bar */}
+              <OutfitCreatorBar
+                selectedItems={selectedItemsForBar}
+                onRemoveItem={(id) => setSelectedOutfitItems((prev) => prev.filter((i) => i !== id))}
+                onGenerate={handleGenerateOutfit}
+                onExit={() => {
+                  setOutfitCreatorMode(false);
+                  setSelectedOutfitItems([]);
+                }}
+              />
+            </>
           )}
 
           {/* Category Pills */}
@@ -733,6 +861,16 @@ export default function WardrobeScreen() {
           />
         )}
       </Animated.View>
+
+      {/* Headshot Selector Modal */}
+      <HeadshotSelectorModal
+        visible={showHeadshotSelector}
+        currentHeadshotId={currentHeadshotId}
+        headshots={availableHeadshots}
+        onClose={() => setShowHeadshotSelector(false)}
+        onSave={handleSaveHeadshot}
+        loading={loadingHeadshots}
+      />
 
       {/* Camera overlay — slides in from left */}
       <WardrobeCameraOverlay
