@@ -1,4 +1,67 @@
 
+
+/**
+ * Wardrobe Screen - Refactored
+ * Main wardrobe screen using modular architecture.
+ */
+
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { View, StyleSheet, Alert, Platform, Animated, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
+import { useAuth } from '@/contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import FollowingWardrobesScreen from '@/app/social/following-wardrobes';
+
+// Hooks - Business logic separated
+import {
+  useWardrobe,
+  useWardrobeItems,
+  useFilters,
+} from '@/hooks';
+import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits';
+
+// Shared Components
+import { EmptyState, LoadingOverlay, LoadingSpinner, TabPillsRow } from '@/components/shared';
+
+// Wardrobe Components
+import {
+  CategoryPills,
+  FilterDrawer,
+  ItemGrid,
+  ItemDetailModal,
+  OutfitCreatorBar,
+  OutfitCreatorContainer,
+  OutfitCreatorOptionsModal,
+  HeadshotSelectorModal,
+} from '@/components/wardrobe';
+
+// Outfit Components (for generation progress)
+import {
+  GenerationProgressModal,
+} from '@/components/outfits';
+
+// Styles
+import { theme } from '@/styles';
+
+// Utils
+import { findConflictingItem } from '@/utils';
+import { supabase } from '@/lib/supabase';
+import { WardrobeItem } from '@/lib/wardrobe';
+import { getUserSettings } from '@/lib/settings';
+import { logClientTiming } from '@/lib/perf/logClientTiming';
+import { PERF_MODE } from '@/lib/perf/perfMode';
+import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import type { ThemeColors } from '@/styles/themes';
+import { useSearch } from '@/hooks';
+import SearchOverlay from '@/components/search/SearchOverlay';
+import SearchHeaderRow from '@/components/search/SearchHeaderRow';
+import { PanGestureHandler } from 'react-native-gesture-handler';
+import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
+
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   // Minimal styles - most come from theme and commonStyles
   headerContainer: {
@@ -63,67 +126,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
 });
 
-/**
- * Wardrobe Screen - Refactored
- * Main wardrobe screen using modular architecture.
- */
-
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Alert, Platform, Animated, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
-import { useAuth } from '@/contexts/AuthContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import FollowingWardrobesScreen from '@/app/social/following-wardrobes';
-
-// Hooks - Business logic separated
-import {
-  useWardrobe,
-  useWardrobeItems,
-  useFilters,
-} from '@/hooks';
-import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits';
-
-// Shared Components
-import { EmptyState, LoadingOverlay, LoadingSpinner, TabPillsRow } from '@/components/shared';
-
-// Wardrobe Components
-import {
-  CategoryPills,
-  FilterDrawer,
-  ItemGrid,
-  ItemDetailModal,
-  OutfitCreatorBar,
-  OutfitCreatorContainer,
-  OutfitCreatorOptionsModal,
-  HeadshotSelectorModal,
-} from '@/components/wardrobe';
-
-// Outfit Components (for generation progress)
-import {
-  GenerationProgressModal,
-} from '@/components/outfits';
-
-// Styles
-import { theme } from '@/styles';
-
-// Utils
-import { findConflictingItem } from '@/utils';
-import { supabase } from '@/lib/supabase';
-import { WardrobeItem } from '@/lib/wardrobe';
-import { getUserSettings } from '@/lib/settings';
-import { logClientTiming } from '@/lib/perf/logClientTiming';
-import { PERF_MODE } from '@/lib/perf/perfMode';
-import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
-import { useThemeColors } from '@/contexts/ThemeContext';
-import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
-import { createCommonStyles } from '@/styles/commonStyles';
-import type { ThemeColors } from '@/styles/themes';
-import { useSearch } from '@/hooks';
-import SearchOverlay from '@/components/search/SearchOverlay';
-import SearchHeaderRow from '@/components/search/SearchHeaderRow';
-import { PanGestureHandler } from 'react-native-gesture-handler';
-import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
 
 
 export default function WardrobeScreen() {
@@ -187,6 +189,8 @@ export default function WardrobeScreen() {
       setTabBarDimmed(!visible, timing);
     },
   });
+
+
 
   const handleOpenCamera = useCallback(() => {
     router.push('/wardrobe/add?action=photo' as any);
