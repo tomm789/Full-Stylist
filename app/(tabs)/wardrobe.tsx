@@ -1,3 +1,68 @@
+
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  // Minimal styles - most come from theme and commonStyles
+  headerContainer: {
+    overflow: 'hidden',
+    backgroundColor: colors.background,
+  },
+  placeholderContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  tutorialContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.xxxl,
+    paddingBottom: theme.spacing.xxl,
+    justifyContent: 'space-between',
+  },
+  tutorialContent: {
+    gap: theme.spacing.lg,
+  },
+  tutorialTitle: {
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  tutorialSubtitle: {
+    fontSize: theme.typography.fontSize.md,
+    color: colors.textSecondary,
+  },
+  tutorialPrimaryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  tutorialPrimaryButtonText: {
+    color: colors.textLight,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.semibold,
+  },
+  tutorialSecondaryButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  tutorialSecondaryButtonText: {
+    color: colors.textPrimary,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.semibold,
+  },
+  tutorialLaterButton: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+  },
+  tutorialLaterText: {
+    color: colors.textSecondary,
+    fontSize: theme.typography.fontSize.sm,
+    textDecorationLine: 'underline',
+  },
+});
+
 /**
  * Wardrobe Screen - Refactored
  * Main wardrobe screen using modular architecture.
@@ -912,66 +977,3 @@ export default function WardrobeScreen() {
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  // Minimal styles - most come from theme and commonStyles
-  headerContainer: {
-    overflow: 'hidden',
-    backgroundColor: colors.background,
-  },
-  placeholderContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  tutorialContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.xxxl,
-    paddingBottom: theme.spacing.xxl,
-    justifyContent: 'space-between',
-  },
-  tutorialContent: {
-    gap: theme.spacing.lg,
-  },
-  tutorialTitle: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: colors.textPrimary,
-  },
-  tutorialSubtitle: {
-    fontSize: theme.typography.fontSize.md,
-    color: colors.textSecondary,
-  },
-  tutorialPrimaryButton: {
-    backgroundColor: colors.primary,
-    borderRadius: theme.borderRadius.lg,
-    paddingVertical: theme.spacing.md,
-    alignItems: 'center',
-  },
-  tutorialPrimaryButtonText: {
-    color: colors.textLight,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
-  },
-  tutorialSecondaryButton: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: theme.borderRadius.lg,
-    paddingVertical: theme.spacing.md,
-    alignItems: 'center',
-  },
-  tutorialSecondaryButtonText: {
-    color: colors.textPrimary,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
-  },
-  tutorialLaterButton: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-  },
-  tutorialLaterText: {
-    color: colors.textSecondary,
-    fontSize: theme.typography.fontSize.sm,
-    textDecorationLine: 'underline',
-  },
-});
