@@ -2,6 +2,7 @@
  * HeadshotSelectorModal Component
  * Full-screen modal for selecting headshot with custom header
  * Shows grid of available headshots with active state styling
+ * Supports multiple action buttons: Save, Save as Draft, Clear, Close
  */
 
 import React, { useState, useCallback } from 'react';
@@ -13,6 +14,7 @@ import {
   FlatList,
   SafeAreaView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +22,7 @@ import { Text } from 'react-native';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
-import { PrimaryButton } from '@/components/shared';
+import { PrimaryButton, DropdownMenuModal, DropdownMenuItem } from '@/components/shared';
 
 const { spacing, borderRadius, typography, shadows } = theme;
 
@@ -35,6 +37,8 @@ interface HeadshotSelectorModalProps {
   headshots: Headshot[];
   onClose: () => void;
   onSave: (headshotId: string) => Promise<void>;
+  onSaveAsDraft?: (headshotId: string) => Promise<void>;
+  onClearSelection?: () => Promise<void>;
   loading?: boolean;
 }
 
@@ -44,6 +48,8 @@ export default function HeadshotSelectorModal({
   headshots,
   onClose,
   onSave,
+  onSaveAsDraft,
+  onClearSelection,
   loading = false,
 }: HeadshotSelectorModalProps) {
   const colors = useThemeColors();
@@ -52,6 +58,7 @@ export default function HeadshotSelectorModal({
     currentHeadshotId
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
 
   // Update selectedHeadshotId when modal opens
   React.useEffect(() => {
@@ -77,7 +84,47 @@ export default function HeadshotSelectorModal({
     }
   }, [selectedHeadshotId, currentHeadshotId, onSave, onClose]);
 
-  const showSaveButton = selectedHeadshotId && selectedHeadshotId !== currentHeadshotId;
+  const handleSaveAsDraft = useCallback(async () => {
+    if (!selectedHeadshotId || !onSaveAsDraft) {
+      return;
+    }
+
+    setShowActionMenu(false);
+    setIsSaving(true);
+    try {
+      await onSaveAsDraft(selectedHeadshotId);
+      setIsSaving(false);
+    } catch (error) {
+      console.error('Failed to save headshot as draft:', error);
+      setIsSaving(false);
+    }
+  }, [selectedHeadshotId, onSaveAsDraft]);
+
+  const handleClearSelection = useCallback(async () => {
+    if (!onClearSelection) {
+      return;
+    }
+
+    setShowActionMenu(false);
+    setIsSaving(true);
+    try {
+      await onClearSelection();
+      setSelectedHeadshotId(null);
+      setIsSaving(false);
+    } catch (error) {
+      console.error('Failed to clear selection:', error);
+      setIsSaving(false);
+    }
+  }, [onClearSelection]);
+
+  const handleClose = useCallback(() => {
+    setShowActionMenu(false);
+    onClose();
+  }, [onClose]);
+
+  const hasSelection = selectedHeadshotId && selectedHeadshotId !== currentHeadshotId;
+  const canSaveAsDraft = selectedHeadshotId !== null;
+  const hasMultipleActions = Boolean(onSaveAsDraft) || Boolean(onClearSelection);
 
   const renderGridItem = useCallback(
     ({ item }: { item: Headshot }) => {
@@ -144,7 +191,70 @@ export default function HeadshotSelectorModal({
           </View>
 
           <View style={styles.headerRight}>
-            {showSaveButton && (
+            {hasMultipleActions && (canSaveAsDraft || hasSelection) ? (
+              // Show dropdown menu for multiple actions
+              <>
+                <TouchableOpacity
+                  style={styles.menuButton}
+                  onPress={() => setShowActionMenu(true)}
+                  disabled={isSaving || loading}
+                  hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                >
+                  <Ionicons
+                    name="ellipsis-vertical"
+                    size={20}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+
+                <DropdownMenuModal
+                  visible={showActionMenu}
+                  onClose={() => setShowActionMenu(false)}
+                  topOffset={60}
+                  align="right"
+                >
+                  {hasSelection && (
+                    <>
+                      <DropdownMenuItem
+                        label="Save"
+                        icon="checkmark-done-outline"
+                        onPress={handleSave}
+                        disabled={isSaving || loading}
+                      />
+                      <View style={{ height: 1, backgroundColor: colors.borderLight, marginVertical: spacing.xs }} />
+                    </>
+                  )}
+
+                  {onSaveAsDraft && canSaveAsDraft && (
+                    <DropdownMenuItem
+                      label="Save as Draft"
+                      icon="bookmark-outline"
+                      onPress={handleSaveAsDraft}
+                      disabled={isSaving || loading}
+                    />
+                  )}
+
+                  {onClearSelection && (
+                    <DropdownMenuItem
+                      label="Clear Selection"
+                      icon="close-circle-outline"
+                      onPress={handleClearSelection}
+                      disabled={isSaving || loading}
+                      danger
+                    />
+                  )}
+
+                  <View style={{ height: 1, backgroundColor: colors.borderLight, marginVertical: spacing.xs }} />
+
+                  <DropdownMenuItem
+                    label="Close"
+                    icon="chevron-back-outline"
+                    onPress={handleClose}
+                  />
+                </DropdownMenuModal>
+              </>
+            ) : hasSelection ? (
+              // Show simple Save button if no multiple actions
               <PrimaryButton
                 title="Save"
                 onPress={handleSave}
@@ -152,7 +262,7 @@ export default function HeadshotSelectorModal({
                 size="small"
                 loading={isSaving}
               />
-            )}
+            ) : null}
           </View>
         </View>
 
@@ -210,6 +320,11 @@ const createStyles = (colors: ThemeColors) =>
     headerRight: {
       justifyContent: 'center',
       alignItems: 'flex-end',
+    },
+    menuButton: {
+      padding: spacing.xs,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     gridContent: {
       padding: spacing.lg,

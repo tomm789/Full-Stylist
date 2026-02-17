@@ -387,6 +387,16 @@ export default function HairAndMakeUpScreen() {
         align="right"
       >
         <DropdownMenuItem
+          label="Set as Active Headshot"
+          icon="checkmark-circle-outline"
+          onPress={() => {
+            state.setShowFaceMenu(false);
+            state.handleSetAsActiveHeadshot();
+          }}
+          disabled={!state.previewImageId}
+        />
+        <View style={dropdownMenuStyles.menuDivider} />
+        <DropdownMenuItem
           label="Share"
           icon="share-outline"
           onPress={() => {

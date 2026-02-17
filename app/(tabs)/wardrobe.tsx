@@ -439,6 +439,56 @@ export default function WardrobeScreen() {
       Alert.alert('Error', 'Failed to save headshot selection');
       console.error('Failed to save headshot:', error);
     }
+
+  const handleSaveHeadshotAsDraft = async (headshotId: string) => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_settings')
+        .update({
+          body_shot_image_id: headshotId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      setCurrentHeadshotId(headshotId);
+      const selectedHeadshot = availableHeadshots.find((h) => h.id === headshotId);
+      if (selectedHeadshot) {
+        setCurrentHeadshotUrl(selectedHeadshot.url);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'Failed to save headshot selection');
+      console.error('Failed to save headshot as draft:', error);
+    }
+  };
+
+  const handleClearHeadshotSelection = async () => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_settings')
+        .update({
+          body_shot_image_id: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      setCurrentHeadshotId(null);
+      setCurrentHeadshotUrl(null);
+    } catch (error: any) {
+      Alert.alert('Error', 'Failed to clear headshot selection');
+      console.error('Failed to clear headshot selection:', error);
+    }
   };
 
   const handleGenerateOutfit = async () => {
@@ -853,6 +903,8 @@ export default function WardrobeScreen() {
         headshots={availableHeadshots}
         onClose={() => setShowHeadshotSelector(false)}
         onSave={handleSaveHeadshot}
+        onSaveAsDraft={handleSaveHeadshotAsDraft}
+        onClearSelection={handleClearHeadshotSelection}
         loading={loadingHeadshots}
       />
     </View>
