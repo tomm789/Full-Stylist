@@ -15,6 +15,31 @@ import type { ThemeColors } from '@/styles/themes';
 
 const { spacing, borderRadius, shadows } = theme;
 
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      width: 60,
+      height: 60,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      backgroundColor: colors.backgroundSecondary,
+      ...shadows.sm,
+    },
+    image: {
+      width: '100%',
+      height: '100%',
+    },
+    placeholder: {
+      width: '100%',
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.backgroundTertiary,
+    },
+  });
+
 interface HeadshotSelectorCardProps {
   headshotUrl: string | null;
   onSelect: () => void;
@@ -52,28 +77,3 @@ export default function HeadshotSelectorCard({
     </TouchableOpacity>
   );
 }
-
-const createStyles = (colors: ThemeColors) =>
-  StyleSheet.create({
-    container: {
-      width: 60,
-      height: 60,
-      borderRadius: borderRadius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      overflow: 'hidden',
-      backgroundColor: colors.backgroundSecondary,
-      ...shadows.sm,
-    },
-    image: {
-      width: '100%',
-      height: '100%',
-    },
-    placeholder: {
-      width: '100%',
-      height: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.backgroundTertiary,
-    },
-  });

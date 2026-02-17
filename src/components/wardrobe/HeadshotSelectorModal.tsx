@@ -42,6 +42,96 @@ interface HeadshotSelectorModalProps {
   loading?: boolean;
 }
 
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      height: 56,
+      paddingHorizontal: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.background,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      flex: 1,
+    },
+    backButton: {
+      padding: spacing.xs,
+    },
+    headerTitle: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.textPrimary,
+    },
+    headerRight: {
+      justifyContent: 'center',
+      alignItems: 'flex-end',
+    },
+    menuButton: {
+      padding: spacing.xs,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    gridContent: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xl,
+    },
+    columnWrapper: {
+      gap: spacing.md,
+      marginBottom: spacing.md,
+    },
+    gridItem: {
+      flex: 1,
+      aspectRatio: 1,
+      borderRadius: borderRadius.md,
+      overflow: 'hidden',
+      backgroundColor: colors.backgroundSecondary,
+      ...shadows.sm,
+    },
+    gridImage: {
+      width: '100%',
+      height: '100%',
+    },
+    gridImagePlaceholder: {
+      width: '100%',
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.backgroundTertiary,
+    },
+    checkmarkBadge: {
+      position: 'absolute',
+      top: spacing.sm,
+      right: spacing.sm,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...shadows.md,
+    },
+    loadingOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+  });
+
 export default function HeadshotSelectorModal({
   visible,
   currentHeadshotId,
@@ -286,93 +376,3 @@ export default function HeadshotSelectorModal({
     </Modal>
   );
 }
-
-const createStyles = (colors: ThemeColors) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      height: 56,
-      paddingHorizontal: spacing.lg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      backgroundColor: colors.background,
-    },
-    headerLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-      flex: 1,
-    },
-    backButton: {
-      padding: spacing.xs,
-    },
-    headerTitle: {
-      fontSize: typography.fontSize.lg,
-      fontWeight: typography.fontWeight.semibold,
-      color: colors.textPrimary,
-    },
-    headerRight: {
-      justifyContent: 'center',
-      alignItems: 'flex-end',
-    },
-    menuButton: {
-      padding: spacing.xs,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    gridContent: {
-      padding: spacing.lg,
-      paddingBottom: spacing.xl,
-    },
-    columnWrapper: {
-      gap: spacing.md,
-      marginBottom: spacing.md,
-    },
-    gridItem: {
-      flex: 1,
-      aspectRatio: 1,
-      borderRadius: borderRadius.md,
-      overflow: 'hidden',
-      backgroundColor: colors.backgroundSecondary,
-      ...shadows.sm,
-    },
-    gridImage: {
-      width: '100%',
-      height: '100%',
-    },
-    gridImagePlaceholder: {
-      width: '100%',
-      height: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.backgroundTertiary,
-    },
-    checkmarkBadge: {
-      position: 'absolute',
-      top: spacing.sm,
-      right: spacing.sm,
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: colors.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      ...shadows.md,
-    },
-    loadingOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.3)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-  });
