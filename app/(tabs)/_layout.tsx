@@ -14,6 +14,8 @@ import { borderRadius, shadows, spacing, typography } from '@/styles/theme';
 import type { ThemeColors } from '@/styles/themes';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
+const SEARCH_EXPAND_DURATION_MS = 180;
+
 function FloatingTabBar(
   props: BottomTabBarProps & {
     onMenuPress?: () => void;
@@ -21,15 +23,37 @@ function FloatingTabBar(
     menuQuery?: string;
     onMenuQueryChange?: (value: string) => void;
     onMenuQueryClear?: () => void;
+    menuSearchExpanded?: boolean;
+    onMenuSearchToggle?: (expanded: boolean) => void;
+    onNotificationsPress?: () => void;
+    onCreatePress?: () => void;
+    onProfilePress?: () => void;
   }
 ) {
   const colors = useThemeColors();
   const { tabBarOpacity } = useFloatingTabBar();
+  const menuInputRef = useRef<TextInput>(null);
+  const menuSearchAnim = useRef(new Animated.Value(props.menuSearchExpanded ? 1 : 0)).current;
   const menuQuery = props.menuQuery ?? '';
-  const hasMenuQuery = menuQuery.trim().length > 0;
-  const menuButtonIcon = props.menuActive && hasMenuQuery ? 'close' : 'menu-outline';
+  const menuSearchExpanded = Boolean(props.menuSearchExpanded);
   const containerZIndex = props.menuActive ? 60 : 40;
   const containerOpacity = props.menuActive ? 1 : tabBarOpacity;
+
+  useEffect(() => {
+    const animation = Animated.timing(menuSearchAnim, {
+      toValue: menuSearchExpanded ? 1 : 0,
+      duration: SEARCH_EXPAND_DURATION_MS,
+      useNativeDriver: false,
+    });
+    animation.start(({ finished }) => {
+      if (finished && menuSearchExpanded) {
+        menuInputRef.current?.focus();
+      }
+    });
+    return () => {
+      animation.stop();
+    };
+  }, [menuSearchAnim, menuSearchExpanded]);
 
   if (props.menuActive) {
     return (
@@ -44,27 +68,117 @@ function FloatingTabBar(
           },
         ]}
       >
-        <View style={floatingTabBarStyles.inner}>
-          <View style={[floatingTabBarStyles.searchWrap, { borderColor: colors.borderLight, backgroundColor: colors.background }]}>
-            <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
-            <TextInput
-              value={menuQuery}
-              onChangeText={props.onMenuQueryChange}
-              placeholder="Search menu"
-              placeholderTextColor={colors.textTertiary}
-              style={[floatingTabBarStyles.searchInput, { color: colors.textPrimary }]}
-              autoCorrect={false}
-              returnKeyType="search"
-            />
-          </View>
-          <TouchableOpacity
-            onPress={props.menuActive && hasMenuQuery ? props.onMenuQueryClear : props.onMenuPress}
-            style={floatingTabBarStyles.menuButton}
-            accessibilityRole="button"
-            accessibilityLabel={props.menuActive && hasMenuQuery ? 'Clear search' : 'Menu'}
+        <View style={[floatingTabBarStyles.inner, floatingTabBarStyles.menuInner]}>
+          <Animated.View
+            style={[
+              floatingTabBarStyles.menuActionsRow,
+              {
+                opacity: menuSearchAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 0],
+                }),
+                transform: [
+                  {
+                    translateY: menuSearchAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 8],
+                    }),
+                  },
+                ],
+              },
+            ]}
+            pointerEvents={menuSearchExpanded ? 'none' : 'auto'}
           >
-            <Ionicons name={menuButtonIcon} size={22} color={colors.primary} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => props.onMenuSearchToggle?.(true)}
+              style={floatingTabBarStyles.tab}
+              accessibilityRole="button"
+              accessibilityLabel="Search menu"
+            >
+              <Ionicons name="search-outline" size={22} color={colors.textPrimary} />
+              <Text style={[floatingTabBarStyles.label, { color: colors.textSecondary }]}>Search</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={props.onNotificationsPress}
+              style={floatingTabBarStyles.tab}
+              accessibilityRole="button"
+              accessibilityLabel="Notifications"
+            >
+              <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
+              <Text style={[floatingTabBarStyles.label, { color: colors.textSecondary }]}>Notifications</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={props.onCreatePress}
+              style={floatingTabBarStyles.tab}
+              accessibilityRole="button"
+              accessibilityLabel="Create new"
+            >
+              <Ionicons name="add-circle-outline" size={22} color={colors.textPrimary} />
+              <Text style={[floatingTabBarStyles.label, { color: colors.textSecondary }]}>New</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={props.onProfilePress}
+              style={floatingTabBarStyles.tab}
+              accessibilityRole="button"
+              accessibilityLabel="Profile"
+            >
+              <Ionicons name="person-outline" size={22} color={colors.textPrimary} />
+              <Text style={[floatingTabBarStyles.label, { color: colors.textSecondary }]}>Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={props.onMenuPress}
+              style={floatingTabBarStyles.tab}
+              accessibilityRole="button"
+              accessibilityLabel="Close menu"
+            >
+              <Ionicons name="menu-outline" size={22} color={colors.primary} />
+              <Text style={[floatingTabBarStyles.label, { color: colors.primary }]}>Menu</Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              floatingTabBarStyles.expandedSearchRow,
+              {
+                opacity: menuSearchAnim,
+                transform: [
+                  {
+                    translateY: menuSearchAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [8, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+            pointerEvents={menuSearchExpanded ? 'auto' : 'none'}
+          >
+            <View
+              style={[
+                floatingTabBarStyles.searchWrapExpanded,
+                { borderColor: colors.borderLight, backgroundColor: colors.background },
+              ]}
+            >
+              <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
+              <TextInput
+                ref={menuInputRef}
+                value={menuQuery}
+                onChangeText={props.onMenuQueryChange}
+                placeholder="Search menu"
+                placeholderTextColor={colors.textTertiary}
+                style={[floatingTabBarStyles.searchInput, { color: colors.textPrimary }]}
+                autoCorrect={false}
+                returnKeyType="search"
+              />
+              <TouchableOpacity
+                onPress={() => props.onMenuSearchToggle?.(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Collapse search"
+              >
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
         </View>
       </Animated.View>
     );
@@ -183,6 +297,9 @@ const floatingTabBarStyles = StyleSheet.create({
     flexDirection: 'row',
     height: 60,
   },
+  menuInner: {
+    position: 'relative',
+  },
   tab: {
     flex: 1,
     alignItems: 'center',
@@ -192,14 +309,21 @@ const floatingTabBarStyles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
-  searchWrap: {
-    flex: 1,
+  menuActionsRow: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+  },
+  expandedSearchRow: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  searchWrapExpanded: {
+    height: 42,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: borderRadius.round,
     paddingHorizontal: spacing.md,
-    marginLeft: 0,
-    marginRight: spacing.md,
     borderWidth: 1,
     gap: spacing.sm,
   },
@@ -207,11 +331,6 @@ const floatingTabBarStyles = StyleSheet.create({
     flex: 1,
     fontSize: typography.fontSize.sm,
     paddingVertical: 0,
-  },
-  menuButton: {
-    width: 54,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
 
@@ -235,6 +354,7 @@ function TabsLayoutInner() {
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [menuQuery, setMenuQuery] = useState('');
+  const [menuSearchExpanded, setMenuSearchExpanded] = useState(false);
   const tabBarPropsRef = useRef<BottomTabBarProps | null>(null);
   const tabBarUpdateScheduled = useRef(false);
   const [, forceTabBarRender] = useState(0);
@@ -249,6 +369,9 @@ function TabsLayoutInner() {
   useEffect(() => {
     if (!showMenu && menuQuery) {
       setMenuQuery('');
+    }
+    if (!showMenu) {
+      setMenuSearchExpanded(false);
     }
   }, [showMenu, menuQuery]);
 
@@ -445,6 +568,20 @@ function TabsLayoutInner() {
     return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
   }, [session?.user]);
 
+  const handleBottomPillCreate = useCallback(() => {
+    setShowCreateMenu(true);
+  }, []);
+
+  const handleBottomPillNotifications = useCallback(() => {
+    setShowMenu(false);
+    router.push('/notifications' as any);
+  }, [router]);
+
+  const handleBottomPillProfile = useCallback(() => {
+    setShowMenu(false);
+    router.push('/(tabs)/profile' as any);
+  }, [router]);
+
   return (
     <>
       <Tabs
@@ -617,6 +754,11 @@ function TabsLayoutInner() {
           menuQuery={menuQuery}
           onMenuQueryChange={setMenuQuery}
           onMenuQueryClear={() => setMenuQuery('')}
+          menuSearchExpanded={menuSearchExpanded}
+          onMenuSearchToggle={setMenuSearchExpanded}
+          onCreatePress={handleBottomPillCreate}
+          onNotificationsPress={handleBottomPillNotifications}
+          onProfilePress={handleBottomPillProfile}
         />
       )}
     </>
