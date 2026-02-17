@@ -9,6 +9,7 @@ type TabBarTiming = {
 type FloatingTabBarContextValue = {
   tabBarOpacity: Animated.Value;
   setTabBarDimmed: (dimmed: boolean, timing?: TabBarTiming) => void;
+  setTabBarOpacity: (opacity: number, timing?: TabBarTiming) => void;
 };
 
 const DEFAULT_TIMING = {
@@ -40,12 +41,27 @@ export function FloatingTabBarProvider({ children }: { children: React.ReactNode
     [tabBarOpacity]
   );
 
+  const setTabBarOpacity = useCallback(
+    (opacity: number, timing?: TabBarTiming) => {
+      const duration = opacity === 0
+        ? timing?.hideDuration ?? DEFAULT_TIMING.hideDuration
+        : timing?.showDuration ?? DEFAULT_TIMING.showDuration;
+      Animated.timing(tabBarOpacity, {
+        toValue: opacity,
+        duration,
+        useNativeDriver: false,
+      }).start();
+    },
+    [tabBarOpacity]
+  );
+
   const value = useMemo(
     () => ({
       tabBarOpacity,
       setTabBarDimmed,
+      setTabBarOpacity,
     }),
-    [setTabBarDimmed, tabBarOpacity]
+    [setTabBarDimmed, setTabBarOpacity, tabBarOpacity]
   );
 
   return (

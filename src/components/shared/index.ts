@@ -29,3 +29,6 @@ export { SearchResultItem } from './SearchResultItem';
 export { SearchFilterBar } from './SearchFilterBar';
 export { default as TabPillsRow } from './TabPillsRow';
 export { default as EdgePeekSlider } from './EdgePeekSlider';
+
+// Wardrobe
+export { default as WardrobeCategoryIcon } from './WardrobeCategoryIcon';

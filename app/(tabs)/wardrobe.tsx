@@ -21,7 +21,6 @@ import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits
 
 // Shared Components
 import { EmptyState, LoadingOverlay, LoadingSpinner, TabPillsRow } from '@/components/shared';
-import { WardrobeTabIcon } from '@/components/icons/tabs';
 
 // Wardrobe Components
 import {
@@ -30,6 +29,9 @@ import {
   ItemGrid,
   ItemDetailModal,
   OutfitCreatorBar,
+  OutfitCreatorContainer,
+  OutfitCreatorOptionsModal,
+  HeadshotSelectorModal,
 } from '@/components/wardrobe';
 
 // Outfit Components (for generation progress)
@@ -44,6 +46,7 @@ import { theme } from '@/styles';
 import { findConflictingItem } from '@/utils';
 import { supabase } from '@/lib/supabase';
 import { WardrobeItem } from '@/lib/wardrobe';
+import { getUserSettings } from '@/lib/settings';
 import { logClientTiming } from '@/lib/perf/logClientTiming';
 import { PERF_MODE } from '@/lib/perf/perfMode';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
@@ -56,8 +59,6 @@ import SearchOverlay from '@/components/search/SearchOverlay';
 import SearchHeaderRow from '@/components/search/SearchHeaderRow';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
-import { useWardrobeCamera } from '@/hooks/wardrobe/useWardrobeCamera';
-import WardrobeCameraOverlay from '@/components/wardrobe/WardrobeCameraOverlay';
 
 
 export default function WardrobeScreen() {
@@ -66,7 +67,7 @@ export default function WardrobeScreen() {
   const styles = createStyles(colors);
   const { user } = useAuth();
   const router = useRouter();
-  const { setTabBarDimmed } = useFloatingTabBar();
+  const { setTabBarDimmed, setTabBarOpacity } = useFloatingTabBar();
   const isFocused = useIsFocused();
   const { addItemId } = useLocalSearchParams<{ addItemId?: string }>();
   const [activeTab, setActiveTab] = useState<'my' | 'following' | 'discover'>('my');
@@ -78,6 +79,7 @@ export default function WardrobeScreen() {
 
   // Local UI state (must be before useMemo/backgroundGrid that depend on selectedOutfitItems + allItems)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [outfitCreatorCategoryId, setOutfitCreatorCategoryId] = useState<string | null>(null);
   const wardrobeSearchQuery = '';
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [outfitCreatorMode, setOutfitCreatorMode] = useState(false);
@@ -87,6 +89,15 @@ export default function WardrobeScreen() {
   const [showFirstTimeTutorial, setShowFirstTimeTutorial] = useState(false);
   const [tutorialChecked, setTutorialChecked] = useState(false);
   const [showOutfitTipOnClose, setShowOutfitTipOnClose] = useState(false);
+  const [showOutfitCreatorOptionsModal, setShowOutfitCreatorOptionsModal] = useState(false);
+
+  // Headshot selector state
+  const [showHeadshotSelector, setShowHeadshotSelector] = useState(false);
+  const [currentHeadshotId, setCurrentHeadshotId] = useState<string | null>(null);
+  const [currentHeadshotUrl, setCurrentHeadshotUrl] = useState<string | null>(null);
+  const [availableHeadshots, setAvailableHeadshots] = useState<Array<{ id: string; url: string | null }>>([]);
+  const [loadingHeadshots, setLoadingHeadshots] = useState(false);
+
   const { width: searchOverlayWidth } = useWindowDimensions();
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
   const searchOpenRef = useRef(false);
@@ -112,34 +123,15 @@ export default function WardrobeScreen() {
     },
   });
 
-  // Inline camera for left-swipe and camera icon
-  const wardrobeCamera = useWardrobeCamera();
-
   const handleOpenCamera = useCallback(() => {
-    wardrobeCamera.open();
-  }, [wardrobeCamera.open]);
-
-  const handleCameraCapture = useCallback(async () => {
-    const image = await wardrobeCamera.capture();
-    if (image) {
-      wardrobeCamera.close();
-      router.push(`/wardrobe/add?imageUri=${encodeURIComponent(image.uri)}` as any);
-    }
-  }, [wardrobeCamera.capture, wardrobeCamera.close, router]);
-
-  const handleCameraPickLibrary = useCallback(async () => {
-    const image = await wardrobeCamera.pickFromLibrary();
-    if (image) {
-      wardrobeCamera.close();
-      router.push(`/wardrobe/add?imageUri=${encodeURIComponent(image.uri)}` as any);
-    }
-  }, [wardrobeCamera.pickFromLibrary, wardrobeCamera.close, router]);
+    router.push('/wardrobe/add?action=photo' as any);
+  }, [router]);
 
   // Edge swipe: swipe from left edge to open camera
   const cameraSwipe = useEdgeSwipe({
     direction: 'left',
     onSwipe: handleOpenCamera,
-    enabled: isFocused && !searchOverlayOpen && !wardrobeCamera.isOpen,
+    enabled: isFocused && !searchOverlayOpen,
   });
 
   useEffect(() => {
@@ -147,6 +139,67 @@ export default function WardrobeScreen() {
       setTabBarDimmed(false);
     }
   }, [isFocused, setTabBarDimmed]);
+
+  // Hide/show tab bar based on outfit creator mode
+  useEffect(() => {
+    if (outfitCreatorMode) {
+      setTabBarOpacity(0); // Completely hide the pill
+    } else {
+      setTabBarOpacity(1); // Show the pill
+    }
+  }, [outfitCreatorMode, setTabBarOpacity]);
+
+  // Fetch headshots and user settings when outfit creator mode is activated
+  useEffect(() => {
+    if (!outfitCreatorMode || !user?.id) return;
+
+    const fetchHeadshots = async () => {
+      setLoadingHeadshots(true);
+      try {
+        // Fetch user settings for current headshot
+        const { data: userSettings } = await getUserSettings(user.id);
+        if (userSettings?.body_shot_image_id) {
+          setCurrentHeadshotId(userSettings.body_shot_image_id);
+          // Fetch the image URL
+          const { data: imageData } = await supabase
+            .from('images')
+            .select('storage_key, storage_bucket')
+            .eq('id', userSettings.body_shot_image_id)
+            .single();
+
+          if (imageData) {
+            const publicUrl = supabase.storage
+              .from(imageData.storage_bucket || 'media')
+              .getPublicUrl(imageData.storage_key).data.publicUrl;
+            setCurrentHeadshotUrl(publicUrl);
+          }
+        }
+
+        // Fetch all available headshots
+        const { data: headshots } = await supabase
+          .from('images')
+          .select('id, storage_key, storage_bucket')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (headshots) {
+          const headshotUrls = headshots.map((img: any) => ({
+            id: img.id,
+            url: supabase.storage
+              .from(img.storage_bucket || 'media')
+              .getPublicUrl(img.storage_key).data.publicUrl,
+          }));
+          setAvailableHeadshots(headshotUrls);
+        }
+      } catch (error) {
+        console.error('Failed to fetch headshots:', error);
+      } finally {
+        setLoadingHeadshots(false);
+      }
+    };
+
+    fetchHeadshots();
+  }, [outfitCreatorMode, user?.id]);
 
   // Items data with caching (allItems required for selectedItemsForGeneration)
   const {
@@ -161,7 +214,7 @@ export default function WardrobeScreen() {
   } = useWardrobeItems({
     wardrobeId,
     userId: user?.id,
-    categoryId: selectedCategoryId,
+    categoryId: outfitCreatorMode && outfitCreatorCategoryId ? outfitCreatorCategoryId : selectedCategoryId,
     searchQuery: wardrobeSearchQuery,
   });
 
@@ -358,6 +411,33 @@ export default function WardrobeScreen() {
     } catch (error: any) {
       Alert.alert('Error', 'Failed to toggle favorite');
       console.error('Failed to toggle favorite:', error);
+    }
+  };
+
+  const handleSaveHeadshot = async (headshotId: string) => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_settings')
+        .update({
+          body_shot_image_id: headshotId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      setCurrentHeadshotId(headshotId);
+      const selectedHeadshot = availableHeadshots.find((h) => h.id === headshotId);
+      if (selectedHeadshot) {
+        setCurrentHeadshotUrl(selectedHeadshot.url);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'Failed to save headshot selection');
+      console.error('Failed to save headshot:', error);
     }
   };
 
@@ -560,196 +640,220 @@ export default function WardrobeScreen() {
     <PanGestureHandler enabled={cameraSwipe.enabled} onGestureEvent={cameraSwipe.onGestureEvent}>
     <View style={commonStyles.container}>
 
-      {/* Grid content — slides right when camera opens */}
+      {/* Generation Progress Modal (hidden in PERF_MODE to measure UI overhead) */}
+      <LoadingOverlay
+        visible={PERF_MODE ? false : generating}
+        message={progress.message || 'Generating outfit...'}
+      />
+
       <Animated.View
         style={[
-          styles.gridSlideContainer,
-          { transform: [{ translateX: wardrobeCamera.gridTranslateX }] },
+          styles.headerContainer,
+          {
+            height: headerReady ? headerHeight : undefined,
+            opacity: headerOpacity,
+            transform: [{ translateY: headerTranslate }],
+          },
         ]}
+        pointerEvents={uiHidden ? 'none' : 'auto'}
       >
-        {/* Generation Progress Modal (hidden in PERF_MODE to measure UI overhead) */}
-        <LoadingOverlay
-          visible={PERF_MODE ? false : generating}
-          message={progress.message || 'Generating outfit...'}
-        />
-
-        <Animated.View
-          style={[
-            styles.headerContainer,
-            {
-              height: headerReady ? headerHeight : undefined,
-              opacity: headerOpacity,
-              transform: [{ translateY: headerTranslate }],
-            },
-          ]}
-          pointerEvents={uiHidden ? 'none' : 'auto'}
-        >
-          <View onLayout={handleHeaderLayout}>
-          <SearchHeaderRow
-            title="Wardrobe"
-            searchQuery={globalSearchQuery}
-            onSearchChange={setGlobalSearchQuery}
-            onSearchToggle={setSearchOverlayOpen}
-            onFilter={() => setShowFilterDrawer(true)}
-            hasActiveFilters={hasActiveFilters}
-            placeholder="Search wardrobe..."
-            leftIcon="camera-outline"
-            onLeftAction={handleOpenCamera}
-            searchOpen={searchOverlayOpen}
-          />
-          {!searchOverlayOpen && (
-            <TabPillsRow
-              pills={[
-                {
-                  id: 'my',
-                  label: 'My Wardrobe',
-                  icon: 'shirt-outline',
-                  iconComponent: ({ size, color }) => (
-                    <WardrobeTabIcon width={size} height={size} color={color} fill={color} />
-                  ),
-                },
-                { id: 'following', label: 'Following', icon: 'people-outline' },
-                { id: 'discover', label: 'Discover', icon: 'compass-outline' },
-              ]}
-              activeId={activeTab}
-              onPress={(id) => setActiveTab(id as 'my' | 'following' | 'discover')}
-              showFilter={false}
-            />
-          )}
-          {/* Outfit Creator Bar */}
-          {!searchOverlayOpen && activeTab === 'my' && outfitCreatorMode && (
-            <OutfitCreatorBar
-              selectedItems={selectedItemsForBar}
-              onRemoveItem={(id) => setSelectedOutfitItems((prev) => prev.filter((i) => i !== id))}
-              onGenerate={handleGenerateOutfit}
-              onExit={() => {
-                setOutfitCreatorMode(false);
-                setSelectedOutfitItems([]);
-              }}
-            />
-          )}
-
-          {/* Category Pills */}
-          {!searchOverlayOpen && activeTab === 'my' && (
-            <CategoryPills
-              categories={categories}
-              selectedCategoryId={selectedCategoryId}
-              onSelectCategory={setSelectedCategoryId}
-              variant="category"
-            />
-          )}
-
-          {/* Subcategory Pills - shown when a category is selected and has subcategories */}
-          {!searchOverlayOpen && activeTab === 'my' && selectedCategoryId && subcategories.length > 0 && (
-            <CategoryPills
-              subcategories={subcategories}
-              selectedSubcategoryId={filters.subcategoryId}
-              selectedCategoryLabel={getCategoryById(selectedCategoryId)?.name}
-              onSelectSubcategory={(id) => updateFilter('subcategoryId', id)}
-              variant="subcategory"
-            />
-          )}
-          </View>
-        </Animated.View>
-
-        <SearchOverlay
-          open={searchOverlayOpen}
-          width={searchOverlayWidth}
-          topOffset={headerHeight}
+        <View onLayout={handleHeaderLayout}>
+        <SearchHeaderRow
+          title="Wardrobe"
           searchQuery={globalSearchQuery}
-          loading={searchLoading}
-          selectedFilter={searchSelectedFilter}
-          filteredResults={searchFilteredResults}
-          onFilterChange={setSearchSelectedFilter}
-          onResultPress={handleSearchResultPress}
+          onSearchChange={setGlobalSearchQuery}
+          onSearchToggle={setSearchOverlayOpen}
+          onFilter={() => setShowFilterDrawer(true)}
+          hasActiveFilters={hasActiveFilters}
+          placeholder="Search wardrobe..."
+          leftIcon="camera-outline"
+          onLeftAction={handleOpenCamera}
+          searchOpen={searchOverlayOpen}
         />
-
-        {/* Items Grid */}
-        {activeTab === 'my' ? (
-          <ItemGrid
-            items={filteredItems}
-            imageCache={imageCache}
-            selectedItems={selectedOutfitItems}
-            dimmedItems={dimmedItemIds}
-            onItemPress={handleItemPress}
-            onItemLongPress={handleItemLongPress}
-            onFavoritePress={handleToggleFavorite}
-            onRefresh={refresh}
-            refreshing={refreshing}
-            emptyTitle={wardrobeSearchQuery || selectedCategoryId || hasActiveFilters ? 'No items found' : 'Your wardrobe is empty'}
-            emptyActionLabel="Add your first item"
-            onEmptyAction={() => router.push('/wardrobe/add')}
-            onScroll={handleGridScroll}
-            scrollEventThrottle={16}
+        {!searchOverlayOpen && (
+          <TabPillsRow
+            pills={[
+              { id: 'my', label: 'My Wardrobe', icon: 'shirt-outline' },
+              { id: 'following', label: 'Following', icon: 'people-outline' },
+              { id: 'discover', label: 'Discover', icon: 'compass-outline' },
+            ]}
+            activeId={activeTab}
+            onPress={(id) => setActiveTab(id as 'my' | 'following' | 'discover')}
+            showFilter={false}
           />
-        ) : activeTab === 'following' ? (
-          <FollowingWardrobesScreen />
-        ) : (
-          <View style={styles.placeholderContainer}>
-            <EmptyState
-              icon={activeTab === 'discover' ? 'search-outline' : 'people-outline'}
-              title={activeTab === 'discover' ? 'Discover coming soon' : 'Following coming soon'}
-              message={
-                activeTab === 'discover'
-                  ? 'We are working on a wardrobe discovery feed.'
-                  : 'We are working on a feed of wardrobes from people you follow.'
-              }
-            />
-          </View>
+        )}
+        {/* Category Pills */}
+        {!searchOverlayOpen && activeTab === 'my' && (
+          <CategoryPills
+            categories={categories}
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={setSelectedCategoryId}
+            variant="category"
+          />
         )}
 
-        {/* Filter Drawer */}
-        {activeTab === 'my' && (
-          <FilterDrawer
-            visible={showFilterDrawer}
-            onClose={() => setShowFilterDrawer(false)}
-            filters={filters}
-            onUpdateFilter={updateFilter}
-            onClearAll={clearFilters}
+        {/* Subcategory Pills - shown when a category is selected and has subcategories */}
+        {!searchOverlayOpen && activeTab === 'my' && selectedCategoryId && subcategories.length > 0 && (
+          <CategoryPills
             subcategories={subcategories}
-            availableColors={availableColors}
-            availableMaterials={availableMaterials}
-            availableSizes={availableSizes}
-            availableSeasons={availableSeasons}
-            availableBrands={availableBrands}
-            availableConditions={availableConditions}
-            availableEntityAttributes={availableEntityAttributes}
-            availableTags={availableTags}
+            selectedSubcategoryId={filters.subcategoryId}
+            selectedCategoryLabel={getCategoryById(selectedCategoryId)?.name}
+            onSelectSubcategory={(id) => updateFilter('subcategoryId', id)}
+            variant="subcategory"
           />
         )}
-
-        {/* Item Detail Modal */}
-        {activeTab === 'my' && (
-          <ItemDetailModal
-            visible={showItemModal}
-            onClose={() => setShowItemModal(false)}
-            item={selectedItem}
-            imageUrl={selectedItem ? imageCache.get(selectedItem.id) || null : null}
-            isOwner={Boolean(user && selectedItem && selectedItem.owner_user_id === user.id)}
-            onAddToOutfit={() => {
-              if (selectedItem) {
-                handleOutfitSelectionAttempt(selectedItem, false);
-                setShowItemModal(false);
-                Alert.alert('Added to outfit', 'Tip: Long hold an item to add it to your outfit.');
-              }
-            }}
-            onOpenDetail={handleModalOpenDetail}
-            onEdit={handleModalEdit}
-            onDelete={handleModalDelete}
-          />
-        )}
+        </View>
       </Animated.View>
 
-      {/* Camera overlay — slides in from left */}
-      <WardrobeCameraOverlay
-        translateX={wardrobeCamera.cameraTranslateX}
-        isOpen={wardrobeCamera.isOpen}
-        cameraRef={wardrobeCamera.cameraRef}
-        onCameraReady={wardrobeCamera.onCameraReady}
-        onCapture={handleCameraCapture}
-        onClose={wardrobeCamera.close}
-        onPickFromLibrary={handleCameraPickLibrary}
-        lastPhotoUri={wardrobeCamera.lastPhotoUri}
+      <SearchOverlay
+        open={searchOverlayOpen}
+        width={searchOverlayWidth}
+        topOffset={headerHeight}
+        searchQuery={globalSearchQuery}
+        loading={searchLoading}
+        selectedFilter={searchSelectedFilter}
+        filteredResults={searchFilteredResults}
+        onFilterChange={setSearchSelectedFilter}
+        onResultPress={handleSearchResultPress}
+      />
+
+      {/* Items Grid */}
+      {activeTab === 'my' ? (
+        <ItemGrid
+          items={filteredItems}
+          imageCache={imageCache}
+          selectedItems={selectedOutfitItems}
+          dimmedItems={dimmedItemIds}
+          onItemPress={handleItemPress}
+          onItemLongPress={handleItemLongPress}
+          onFavoritePress={handleToggleFavorite}
+          onRefresh={refresh}
+          refreshing={refreshing}
+          emptyTitle={wardrobeSearchQuery || selectedCategoryId || hasActiveFilters ? 'No items found' : 'Your wardrobe is empty'}
+          emptyActionLabel="Add your first item"
+          onEmptyAction={() => router.push('/wardrobe/add')}
+          onScroll={handleGridScroll}
+          scrollEventThrottle={16}
+        />
+      ) : activeTab === 'following' ? (
+        <FollowingWardrobesScreen />
+      ) : (
+        <View style={styles.placeholderContainer}>
+          <EmptyState
+            icon={activeTab === 'discover' ? 'search-outline' : 'people-outline'}
+            title={activeTab === 'discover' ? 'Discover coming soon' : 'Following coming soon'}
+            message={
+              activeTab === 'discover'
+                ? 'We are working on a wardrobe discovery feed.'
+                : 'We are working on a feed of wardrobes from people you follow.'
+            }
+          />
+        </View>
+      )}
+
+      {/* Filter Drawer */}
+      {activeTab === 'my' && (
+        <FilterDrawer
+          visible={showFilterDrawer}
+          onClose={() => setShowFilterDrawer(false)}
+          filters={filters}
+          onUpdateFilter={updateFilter}
+          onClearAll={clearFilters}
+          subcategories={subcategories}
+          availableColors={availableColors}
+          availableMaterials={availableMaterials}
+          availableSizes={availableSizes}
+          availableSeasons={availableSeasons}
+          availableBrands={availableBrands}
+          availableConditions={availableConditions}
+          availableEntityAttributes={availableEntityAttributes}
+          availableTags={availableTags}
+        />
+      )}
+
+      {/* Item Detail Modal */}
+      {activeTab === 'my' && (
+        <ItemDetailModal
+          visible={showItemModal}
+          onClose={() => setShowItemModal(false)}
+          item={selectedItem}
+          imageUrl={selectedItem ? imageCache.get(selectedItem.id) || null : null}
+          isOwner={Boolean(user && selectedItem && selectedItem.owner_user_id === user.id)}
+          onAddToOutfit={() => {
+            if (selectedItem) {
+              handleOutfitSelectionAttempt(selectedItem, false);
+              setShowItemModal(false);
+              Alert.alert('Added to outfit', 'Tip: Long hold an item to add it to your outfit.');
+            }
+          }}
+          onOpenDetail={handleModalOpenDetail}
+          onEdit={handleModalEdit}
+          onDelete={handleModalDelete}
+        />
+      )}
+
+      {/* Outfit Creator Container & Bar (Bottom) */}
+      {outfitCreatorMode && selectedOutfitItems.length > 0 && (() => {
+        // Calculate which categories are already in the selection
+        const selectedItemObjects = selectedOutfitItems
+          .map((id) => allItems.find((i) => i.id === id))
+          .filter((i): i is WardrobeItem => Boolean(i));
+
+        const selectedCategoryIds = new Set(
+          selectedItemObjects.map((item) => item.category_id)
+        );
+
+        return (
+          <>
+            {/* Container with selected items and category shortcuts */}
+            <OutfitCreatorContainer
+              selectedItems={selectedItemsForBar}
+              categories={categories}
+              onRemoveItem={(id) => setSelectedOutfitItems((prev) => prev.filter((i) => i !== id))}
+              onCategorySelect={(categoryId) => {
+                if (outfitCreatorCategoryId === categoryId) {
+                  setOutfitCreatorCategoryId(null);
+                } else {
+                  setOutfitCreatorCategoryId(categoryId);
+                }
+              }}
+              selectedCategoryId={outfitCreatorCategoryId}
+              currentHeadshotUrl={currentHeadshotUrl}
+              onHeadshotSelect={() => setShowHeadshotSelector(true)}
+              selectedCategoryIds={selectedCategoryIds}
+            />
+
+            {/* Generate button bar */}
+            <OutfitCreatorBar
+              itemCount={selectedOutfitItems.length}
+              onGenerate={handleGenerateOutfit}
+              onOptions={() => setShowOutfitCreatorOptionsModal(true)}
+              isGenerating={generating}
+            />
+          </>
+        );
+      })()}
+
+      {/* Outfit Creator Options Modal */}
+      <OutfitCreatorOptionsModal
+        visible={showOutfitCreatorOptionsModal}
+        onClose={() => setShowOutfitCreatorOptionsModal(false)}
+        onClearSelection={() => {
+          setSelectedOutfitItems([]);
+          setOutfitCreatorMode(false);
+          setOutfitCreatorCategoryId(null);
+          setShowOutfitCreatorOptionsModal(false);
+        }}
+      />
+
+      {/* Headshot Selector Modal */}
+      <HeadshotSelectorModal
+        visible={showHeadshotSelector}
+        currentHeadshotId={currentHeadshotId}
+        headshots={availableHeadshots}
+        onClose={() => setShowHeadshotSelector(false)}
+        onSave={handleSaveHeadshot}
+        loading={loadingHeadshots}
       />
     </View>
     </PanGestureHandler>
@@ -758,9 +862,6 @@ export default function WardrobeScreen() {
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   // Minimal styles - most come from theme and commonStyles
-  gridSlideContainer: {
-    flex: 1,
-  },
   headerContainer: {
     overflow: 'hidden',
     backgroundColor: colors.background,

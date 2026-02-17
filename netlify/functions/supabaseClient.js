@@ -10,8 +10,12 @@ const fs = require("fs");
 const path = require("path");
 const dotenv = require("dotenv");
 
-// Load env files from the project root, not from Netlify's internal serve cwd.
-const projectRoot = path.resolve(__dirname, "..", "..");
+// Find the actual project root by looking for netlify.toml
+let projectRoot = __dirname;
+while (projectRoot !== "/" && !fs.existsSync(path.join(projectRoot, "netlify.toml"))) {
+  projectRoot = path.dirname(projectRoot);
+}
+
 const envFiles = [".env.local", ".env"];
 for (const fileName of envFiles) {
   const fullPath = path.join(projectRoot, fileName);

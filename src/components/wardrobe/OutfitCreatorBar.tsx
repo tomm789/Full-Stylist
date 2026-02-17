@@ -1,139 +1,123 @@
 /**
  * OutfitCreatorBar Component
- * Bar showing selected items for outfit creation
+ * Bottom pill-style bar with generate button and options menu
+ * Replaces the floating tab bar when outfit creator mode is active
  */
 
-import React from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Image } from 'expo-image';
+import React, { useEffect, useRef } from 'react';
+import { View, TouchableOpacity, StyleSheet, Text, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { PrimaryButton, IconButton, ImagePlaceholder } from '@/components/shared';
-import { theme } from '@/styles';
+import { PrimaryButton, IconButton } from '@/components/shared';
+import { theme, shadows } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 
-const { spacing, borderRadius } = theme;
-
-interface SelectedItem {
-  id: string;
-  imageUrl: string | null;
-}
+const { spacing, borderRadius, typography } = theme;
 
 interface OutfitCreatorBarProps {
-  selectedItems: SelectedItem[];
-  onRemoveItem: (itemId: string) => void;
+  itemCount: number;
   onGenerate: () => void;
-  onExit: () => void;
+  onOptions: () => void;
+  isGenerating?: boolean;
 }
 
 export default function OutfitCreatorBar({
-  selectedItems,
-  onRemoveItem,
+  itemCount,
   onGenerate,
-  onExit,
+  onOptions,
+  isGenerating = false,
 }: OutfitCreatorBarProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(opacityAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [opacityAnim]);
 
   return (
-    <>
-      {/* Selection Bar */}
-      <View style={styles.bar}>
-        <ScrollView
-          horizontal
-          style={styles.scroll}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+    <Animated.View style={[styles.container, { opacity: opacityAnim }]}>
+      <View style={styles.inner}>
+        {/* Generate Button */}
+        <TouchableOpacity
+          style={styles.generateButton}
+          onPress={onGenerate}
+          disabled={isGenerating}
+          activeOpacity={0.7}
         >
-          {selectedItems.map((item) => (
-            <View key={item.id} style={styles.itemCard}>
-              {item.imageUrl ? (
-                <Image
-                  source={{ uri: item.imageUrl }}
-                  style={styles.itemImage}
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={styles.itemImagePlaceholder}>
-                  <ImagePlaceholder text="" iconSize={24} />
-                </View>
-              )}
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => onRemoveItem(item.id)}
-              >
-                <Ionicons name="close-circle" size={20} color={colors.error} />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-
-        <IconButton
-          icon="close"
-          onPress={onExit}
-          size={24}
-          color={colors.textPrimary}
-        />
-      </View>
-
-      {/* Generate Button */}
-      {selectedItems.length > 0 && (
-        <View style={styles.generateContainer}>
-          <PrimaryButton
-            title={`Generate Outfit (${selectedItems.length} items)`}
-            onPress={onGenerate}
-            fullWidth
+          <Ionicons
+            name="sparkles"
+            size={18}
+            color={colors.white}
+            style={styles.generateIcon}
           />
-        </View>
-      )}
-    </>
+          <Text style={styles.generateText} numberOfLines={1}>
+            Generate ({itemCount})
+          </Text>
+        </TouchableOpacity>
+
+        {/* Options Button */}
+        <TouchableOpacity
+          style={styles.optionsButton}
+          onPress={onOptions}
+          disabled={isGenerating}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+        >
+          <Ionicons
+            name="ellipsis-horizontal"
+            size={20}
+            color={colors.white}
+          />
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
   );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  bar: {
-    flexDirection: 'row',
-    backgroundColor: colors.backgroundTertiary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    padding: spacing.sm,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    gap: spacing.sm,
-    paddingRight: spacing.sm,
-  },
-  itemCard: {
-    width: 60,
-    height: 60,
-    borderRadius: borderRadius.md,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  itemImage: {
-    width: '100%',
-    height: '100%',
-  },
-  itemImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: colors.gray200,
-  },
-  removeButton: {
+  container: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: colors.white,
-    borderRadius: 10,
+    bottom: spacing.xl,
+    left: spacing.lg,
+    right: spacing.lg,
+    borderRadius: borderRadius.round,
+    overflow: 'hidden',
+    backgroundColor: colors.primary,
+    ...shadows.lg,
   },
-  generateContainer: {
-    padding: spacing.sm,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+  inner: {
+    flexDirection: 'row',
+    height: 60,
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
+  },
+  generateButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  generateIcon: {
+    marginRight: spacing.xs,
+  },
+  generateText: {
+    color: colors.white,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  optionsButton: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.round,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
 });

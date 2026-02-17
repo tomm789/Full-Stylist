@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
+import HeaderAvatarButton from './HeaderAvatarButton';
 
 const { spacing, borderRadius, typography } = theme;
 
@@ -16,6 +17,9 @@ type HeaderActionIconsProps = {
   onAdd?: () => void;
   onSearch: () => void;
   onNotifications: () => void;
+  onProfile?: () => void;
+  avatarUri?: string | null;
+  avatarInitials?: string;
   unreadCount?: number;
 };
 
@@ -23,6 +27,9 @@ export default function HeaderActionIcons({
   onAdd,
   onSearch,
   onNotifications,
+  onProfile,
+  avatarUri,
+  avatarInitials,
   unreadCount = 0,
 }: HeaderActionIconsProps) {
   const colors = useThemeColors();
@@ -63,6 +70,14 @@ export default function HeaderActionIcons({
           </View>
         )}
       </TouchableOpacity>
+      {onProfile && (
+        <HeaderAvatarButton
+          uri={avatarUri ?? undefined}
+          initials={avatarInitials}
+          onPress={onProfile}
+          inline
+        />
+      )}
     </View>
   );
 }
