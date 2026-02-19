@@ -148,7 +148,15 @@ const getWardrobeItemSaveCounts = async (itemIds: string[]): Promise<EngagementC
   }
 };
 
-export default function FollowingWardrobesScreen() {
+export interface FollowingWardrobesScreenProps {
+  selectedCategoryId?: string | null;
+  selectedSubcategoryId?: string | null;
+}
+
+export default function FollowingWardrobesScreen({
+  selectedCategoryId = null,
+  selectedSubcategoryId = null,
+}: FollowingWardrobesScreenProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const commonStyles = createCommonStyles(colors);
@@ -198,10 +206,16 @@ export default function FollowingWardrobesScreen() {
           let previewImages: Array<string | null> = [];
 
           if (wardrobeId) {
-            const { data: items } = await getWardrobeItems(wardrobeId, {});
-            itemCount = items?.length || 0;
+            const { data: rawItems } = await getWardrobeItems(wardrobeId, {
+              ...(selectedCategoryId && { category_id: selectedCategoryId }),
+            });
+            let items = rawItems || [];
+            if (selectedSubcategoryId && items.length > 0) {
+              items = items.filter((item) => item.subcategory_id === selectedSubcategoryId);
+            }
+            itemCount = items.length;
 
-            if (items && items.length > 0) {
+            if (items.length > 0) {
               const itemIds = items.map((item) => item.id);
               const engagementCounts = await getWardrobeItemSaveCounts(itemIds);
               const previewItemIds = selectPreviewItemIds(
@@ -230,7 +244,12 @@ export default function FollowingWardrobesScreen() {
         })
       );
 
-      setUsers(usersWithWardrobes);
+      const hasActiveFilters = Boolean(selectedCategoryId || selectedSubcategoryId);
+      const filteredUsers = hasActiveFilters
+        ? usersWithWardrobes.filter((u) => (u.itemCount ?? 0) > 0)
+        : usersWithWardrobes;
+
+      setUsers(filteredUsers);
     } catch (error) {
       console.error('Error loading following wardrobes:', error);
     } finally {
@@ -246,7 +265,7 @@ export default function FollowingWardrobesScreen() {
 
   useEffect(() => {
     loadFollowingWardrobes();
-  }, [user]);
+  }, [user, selectedCategoryId, selectedSubcategoryId]);
 
   if (loading) {
     return (

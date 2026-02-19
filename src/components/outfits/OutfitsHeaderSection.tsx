@@ -1,9 +1,15 @@
 import React from 'react';
-import { Animated, View } from 'react-native';
+import { Animated, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
 import LookbookSelectionBar from './LookbookSelectionBar';
 import OutfitsHeaderBar from './OutfitsHeaderBar';
 import OccasionPills from './OccasionPills';
 import type { OutfitsTab } from './OutfitsHeaderBar';
+import type { ThemeColors } from '@/styles/themes';
+
+const { spacing } = theme;
 
 export type OutfitsHeaderSectionProps = {
   headerReady: boolean;
@@ -84,6 +90,9 @@ export default function OutfitsHeaderSection({
   searchHeader,
   hideTabs = false,
 }: OutfitsHeaderSectionProps) {
+  const colors = useThemeColors();
+  const sectionStyles = createStyles(colors);
+
   return (
     <Animated.View
       style={[
@@ -120,23 +129,37 @@ export default function OutfitsHeaderSection({
               showViewToggle={showViewToggle}
               searchQuery={searchQuery}
               onSearchChange={onSearchChange}
-              onOpenSort={onOpenSort}
-              hasActiveFilters={hasActiveFilters}
+              onOpenSort={onOpenSort ?? (() => {})}
+              hasActiveFilters={hasActiveFilters ?? false}
               showSearch={showSearch}
-              pinnedLookbooks={pinnedLookbooks}
-              onAddLookbookTab={onAddLookbookTab}
-              onRemoveLookbookTab={onRemoveLookbookTab}
             />
             {showOccasionPills &&
               occasionOptions.length > 0 &&
               onToggleOccasion &&
               onClearOccasions && (
-                <OccasionPills
-                  occasions={occasionOptions}
-                  selectedOccasions={selectedOccasions}
-                  onToggleOccasion={onToggleOccasion}
-                  onClear={onClearOccasions}
-                />
+                <View style={sectionStyles.filterAndOccasionsRow}>
+                  {onOpenSort && (
+                    <TouchableOpacity
+                      style={[sectionStyles.filterButton, hasActiveFilters && sectionStyles.filterButtonActive]}
+                      onPress={onOpenSort}
+                      accessibilityLabel="Sort / Filter"
+                    >
+                      <Ionicons
+                        name="options-outline"
+                        size={18}
+                        color={hasActiveFilters ? colors.textLight : colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  )}
+                  <View style={sectionStyles.occasionPillsWrap}>
+                    <OccasionPills
+                      occasions={occasionOptions}
+                      selectedOccasions={selectedOccasions}
+                      onToggleOccasion={onToggleOccasion}
+                      onClear={onClearOccasions}
+                    />
+                  </View>
+                </View>
               )}
           </>
         )}
@@ -144,3 +167,34 @@ export default function OutfitsHeaderSection({
     </Animated.View>
   );
 }
+
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    filterAndOccasionsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+      backgroundColor: colors.backgroundDark,
+    },
+    filterButton: {
+      marginLeft: spacing.sm,
+      marginRight: spacing.xs,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.backgroundDark,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    filterButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    occasionPillsWrap: {
+      flex: 1,
+      minWidth: 0,
+    },
+  });

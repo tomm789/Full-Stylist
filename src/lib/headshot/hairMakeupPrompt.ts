@@ -6,6 +6,9 @@ type PromptInput = {
   hairPresetIds: string[];
   makeupPresetIds: string[];
   customDescription?: string;
+  accessorySubcategory?: string | null;
+  jewellerySubcategory?: string | null;
+  advancedFields?: Record<string, string>;
 };
 
 const collectOptions = (
@@ -35,6 +38,9 @@ export function buildHairMakeupPrompt({
   hairPresetIds,
   makeupPresetIds,
   customDescription,
+  accessorySubcategory,
+  jewellerySubcategory,
+  advancedFields,
 }: PromptInput): string {
   const hairOptions = collectOptions(hairPresets, hairPresetIds);
   const makeupOptions = collectOptions(makeupPresets, makeupPresetIds);
@@ -49,6 +55,27 @@ export function buildHairMakeupPrompt({
   if (makeupOptions.length > 0) {
     lines.push('MAKEUP:');
     makeupOptions.forEach((option) => lines.push(`- ${formatOptionLine(option)}`));
+  }
+
+  if (accessorySubcategory) {
+    lines.push('ACCESSORIES:');
+    lines.push(`- ${accessorySubcategory.replace(/-/g, ' ')}`);
+  }
+
+  if (jewellerySubcategory) {
+    lines.push('JEWELLERY:');
+    lines.push(`- ${jewellerySubcategory.replace(/-/g, ' ')}`);
+  }
+
+  if (advancedFields) {
+    const entries = Object.entries(advancedFields).filter(([, v]) => v.trim().length > 0);
+    if (entries.length > 0) {
+      lines.push('ADVANCED DETAILS:');
+      entries.forEach(([key, value]) => {
+        const label = key.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        lines.push(`- ${label}: ${value.trim()}`);
+      });
+    }
   }
 
   if (customDescription && customDescription.trim().length > 0) {

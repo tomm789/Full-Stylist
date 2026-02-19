@@ -14,16 +14,21 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  TextInput,
   Text as RNText,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '@/contexts/NotificationsContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { borderRadius, spacing, typography, shadows } from '@/styles/theme';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { HeaderActionIcons } from '@/components/shared';
+import HeaderSearchPill from '@/components/tabs/HeaderSearchPill';
+import SearchOverlay from '@/components/search/SearchOverlay';
+import { useSearch } from '@/hooks';
 import type { ThemeColors } from '@/styles/themes';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -44,12 +49,11 @@ type FullScreenMenuModalProps = {
   onClose: () => void;
   onAdd?: () => void;
   onProfile?: () => void;
-  avatarUri?: string | null;
-  avatarInitials?: string;
   gridTitle: string;
   gridItems: MenuItem[];
   actionItems: MenuItem[];
   query: string;
+  onQueryChange: (value: string) => void;
 };
 
 export function FullScreenMenuModal({
@@ -57,19 +61,30 @@ export function FullScreenMenuModal({
   onClose,
   onAdd,
   onProfile,
-  avatarUri,
-  avatarInitials,
   gridTitle,
   gridItems,
   actionItems,
   query,
+  onQueryChange,
 }: FullScreenMenuModalProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const router = useRouter();
+  const { width: windowWidth } = useWindowDimensions();
+  const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
   const [rendered, setRendered] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const {
+    searchQuery,
+    setSearchQuery,
+    selectedFilter,
+    setSelectedFilter,
+    filteredResults,
+    loading,
+  } = useSearch({ userId: user?.id });
 
   useEffect(() => {
     if (visible) {
@@ -89,6 +104,12 @@ export function FullScreenMenuModal({
           setRendered(false);
         }
       });
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) {
+      setSearchOpen(false);
     }
   }, [visible]);
 
@@ -129,8 +150,12 @@ export function FullScreenMenuModal({
   );
 
   const handleSearch = () => {
+    setSearchOpen(true);
+  };
+
+  const handleBackFromSearch = () => {
+    setSearchOpen(false);
     onClose();
-    router.push('/search' as any);
   };
 
   const handleNotifications = () => {
@@ -150,22 +175,89 @@ export function FullScreenMenuModal({
     >
       <SafeAreaView style={styles.container}>
         {/* Header — title + actions */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity style={styles.menuCollapseButton} onPress={onClose}>
-              <Ionicons name="chevron-back" size={22} color={colors.primary} />
-            </TouchableOpacity>
-            <RNText style={styles.title}>Menu</RNText>
-          </View>
-          <View style={styles.headerRight}>
-            <HeaderActionIcons
-              onAdd={onAdd}
-              onSearch={handleSearch}
-              onNotifications={handleNotifications}
-              onProfile={onProfile}
-              avatarUri={avatarUri}
-              avatarInitials={avatarInitials}
-              unreadCount={unreadCount}
+        <View
+          style={styles.header}
+          onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
+        >
+          {searchOpen ? (
+            <>
+              <TouchableOpacity style={styles.menuCollapseButton} onPress={handleBackFromSearch}>
+                <Ionicons name="chevron-back" size={22} color={colors.primary} />
+              </TouchableOpacity>
+              <View style={styles.searchHeaderPillWrap}>
+                <HeaderSearchPill
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  onFilter={() => {}}
+                  hasActiveFilters={false}
+                  placeholder="Search..."
+                  showFilter={false}
+                  inlineSearchEnabled
+                  expanded
+                  onToggleExpanded={() => handleBackFromSearch()}
+                />
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.headerLeft}>
+                <TouchableOpacity style={styles.menuCollapseButton} onPress={onClose}>
+                  <Ionicons name="chevron-back" size={22} color={colors.primary} />
+                </TouchableOpacity>
+                <RNText style={styles.title}>Menu</RNText>
+              </View>
+              <View style={styles.headerRight}>
+                {onAdd && (
+                  <TouchableOpacity
+                    style={styles.headerIcon}
+                    onPress={onAdd}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add item"
+                  >
+                    <Ionicons name="add-circle-outline" size={24} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.headerIcon}
+                  onPress={handleSearch}
+                  accessibilityRole="button"
+                  accessibilityLabel="Search"
+                >
+                  <Ionicons name="search-outline" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.headerIcon}
+                  onPress={handleNotifications}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+                >
+                  <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+                {onProfile && (
+                  <TouchableOpacity
+                    style={styles.headerIcon}
+                    onPress={onProfile}
+                    accessibilityRole="button"
+                    accessibilityLabel="Profile"
+                  >
+                    <Ionicons name="person-outline" size={24} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </>
+          )}
+        </View>
+
+        <View style={styles.menuSearchRow}>
+          <View style={styles.menuSearchWrap}>
+            <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
+            <TextInput
+              value={query}
+              onChangeText={onQueryChange}
+              placeholder="Filter menu options"
+              placeholderTextColor={colors.textTertiary}
+              style={styles.menuSearchInput}
+              autoCorrect={false}
             />
           </View>
         </View>
@@ -270,6 +362,25 @@ export function FullScreenMenuModal({
             </View>
           )}
         </ScrollView>
+
+        <SearchOverlay
+          open={searchOpen}
+          width={windowWidth}
+          topOffset={headerHeight}
+          searchQuery={searchQuery}
+          loading={loading}
+          selectedFilter={selectedFilter}
+          filteredResults={filteredResults}
+          onFilterChange={setSelectedFilter}
+          onResultPress={(result) => {
+            setSearchOpen(false);
+            onClose();
+            if (result.type === 'user') router.push(`/users/${result.id}`);
+            if (result.type === 'outfit') router.push(`/outfits/${result.id}`);
+            if (result.type === 'lookbook') router.push(`/lookbooks/${result.id}`);
+            if (result.type === 'wardrobe_item') router.push(`/wardrobe/item/${result.id}`);
+          }}
+        />
       </SafeAreaView>
     </Animated.View>
   );
@@ -309,6 +420,12 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 'auto',
+  },
+  searchHeaderPillWrap: {
+    flex: 1,
+    minWidth: 0,
+    marginLeft: spacing.sm,
   },
   title: {
     fontSize: typography.fontSize.lg,
@@ -320,22 +437,30 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     padding: spacing.sm,
     marginHorizontal: spacing.xs,
   },
-  badge: {
-    position: 'absolute',
-    top: spacing.xs,
-    right: spacing.xs,
-    backgroundColor: colors.error,
-    borderRadius: borderRadius.round,
-    minWidth: 18,
-    height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xs,
+  menuSearchRow: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
-  badgeText: {
-    color: colors.textLight,
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.bold,
+  menuSearchWrap: {
+    height: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.round,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  menuSearchInput: {
+    flex: 1,
+    fontSize: typography.fontSize.sm,
+    color: colors.textPrimary,
+    paddingVertical: 0,
   },
   content: {
     padding: spacing.lg,

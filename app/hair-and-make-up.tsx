@@ -6,11 +6,16 @@
 
 import React from 'react';
 import {
+  Dimensions,
+  LayoutAnimation,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  UIManager,
+  useWindowDimensions,
   View,
   Modal,
 } from 'react-native';
@@ -24,14 +29,27 @@ import {
   DropdownMenuModal,
   DropdownMenuItem,
   dropdownMenuStyles,
+  HeaderTabPill,
 } from '@/components/shared';
 import HeadshotSlideItem from '@/components/headshots/HeadshotSlideItem';
 import { HeaderTitlePillRow } from '@/components/shared/layout';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import ErrorModal from '@/components/ErrorModal';
-import { useHairAndMakeup } from '@/hooks/headshot';
+import {
+  useHairAndMakeup,
+} from '@/hooks/headshot';
+import {
+  ACCESSORY_SUBCATEGORIES,
+  JEWELLERY_SUBCATEGORIES,
+  ADVANCED_FIELDS,
+} from '@/hooks/headshot/useHairAndMakeup';
+import CreatorBar from '@/components/shared/CreatorBar';
+import HeadshotCreatorContainer from '@/components/headshots/HeadshotCreatorContainer';
+import HeadshotPromptSettings from '@/components/headshots/HeadshotPromptSettings';
+import HairLengthSlider from '@/components/headshots/HairLengthSlider';
 import { useThemeColors } from '@/contexts/ThemeContext';
+import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useRouter } from 'expo-router';
 import type { ThemeColors } from '@/styles/themes';
@@ -41,12 +59,68 @@ import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
 
 const { spacing, borderRadius, typography, shadows } = theme;
 const INFO_ICON_SIZE = 16;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+
+/** Approximate fill colors for hair-color preset pills. */
+const HAIR_COLOR_SWATCHES: Record<string, string | string[]> = {
+  // Natural
+  'color-black':            '#1a1a1a',
+  'color-dark-brown':       '#3b2213',
+  'color-medium-brown':     '#6b3a2a',
+  'color-light-brown':      '#8b5e3c',
+  'color-dirty-blonde':     '#b59a6e',
+  'color-golden-blonde':    '#d4a84b',
+  'color-platinum-blonde':  '#e8dcc8',
+  'color-strawberry-blonde':'#c8836a',
+  'color-auburn':           '#7b3019',
+  'color-copper-red':       '#b7452a',
+  'color-ginger':           '#d46a38',
+  'color-silver-grey':      '#a8a8a8',
+  'color-white':            '#f0ede8',
+  // Dyed
+  'dyed-jet-black':         '#0a0a0a',
+  'dyed-burgundy':          '#6b1c3a',
+  'dyed-cherry-red':        '#9b1b30',
+  'dyed-bright-red':        '#d62020',
+  'dyed-rose-gold':         '#c9908a',
+  'dyed-pastel-pink':       '#f2b5c8',
+  'dyed-hot-pink':          '#e0308a',
+  'dyed-lavender':          '#b19cd9',
+  'dyed-purple':            '#7b2d8e',
+  'dyed-blue':              '#2a5fcc',
+  'dyed-teal-green':        '#2a9d8f',
+  'dyed-peach':             '#f4a87d',
+  'dyed-silver':            '#c0c0c0',
+  'dyed-ombre':             ['#3b2213', '#d4a84b'],
+  'dyed-balayage':          ['#6b3a2a', '#c8a96e'],
+  'dyed-highlights':        ['#6b3a2a', '#e8dcc8'],
+  'dyed-split':             ['#1a1a1a', '#e8dcc8'],
+};
+
+/** Returns true when white text is needed on a given hex background. */
+function needsLightTextOnColor(hex: string): boolean {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  // Relative luminance (perceived brightness)
+  return (r * 0.299 + g * 0.587 + b * 0.114) < 140;
+}
 
 export default function HairAndMakeUpScreen() {
   const colors = useThemeColors();
+  const { width: windowWidth } = useWindowDimensions();
   const styles = createStyles(colors);
   const commonStyles = createCommonStyles(colors);
   const state = useHairAndMakeup();
+
+  const presetGridGap = spacing.sm;
+  const presetTileSize = (windowWidth - 2 * spacing.lg - 2 * spacing.sm - 3 * presetGridGap) / 4;
   const isFocused = useIsFocused();
   const { unreadCount } = useNotifications();
   const router = useRouter();
@@ -65,9 +139,31 @@ export default function HairAndMakeUpScreen() {
     return selfieItem ? [selfieItem, ...filtered] : filtered;
   }, [baseHeadshots, state.selfieImageId, state.selfieImageUrl]);
 
+  // Hair length slider: extract options and find selected ID
+  const hairLengthOptions = React.useMemo(() => {
+    const section = state.quickTabHairPresets?.sections[0];
+    return section?.options.map((o) => ({ id: o.id, title: o.title })) ?? [];
+  }, [state.quickTabHairPresets]);
+
+  const selectedHairLengthId = React.useMemo(() => {
+    const ids = new Set(hairLengthOptions.map((o) => o.id));
+    return state.selectedIds.find((id) => ids.has(id)) ?? null;
+  }, [hairLengthOptions, state.selectedIds]);
+
+  const [editModalVisible, setEditModalVisible] = React.useState(false);
+
+  const handleEditTabChange = React.useCallback(
+    (tab: string) => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      state.setEditTab(tab as any);
+      setEditModalVisible(true);
+    },
+    [state.setEditTab],
+  );
+
   const handleHeadshotPress = (item: { id: string; url: string | null }) => {
     state.handleHeadshotSelect(item);
-    state.setActiveView('face');
+    state.setPageTab('mirror');
   };
   const activeFaceIndex = React.useMemo(() => {
     if (headshots.length === 0) return 0;
@@ -105,6 +201,24 @@ export default function HairAndMakeUpScreen() {
       state.handlePickCamera();
     }
   }, [state.isStyleDisabled, state.handlePickCamera]);
+
+  const { setTabBarOpacity } = useFloatingTabBar();
+
+  // Hide/show tab bar based on creator mode
+  React.useEffect(() => {
+    if (!isFocused) {
+      setTabBarOpacity(1);
+    } else if (state.hasSelections) {
+      setTabBarOpacity(0);
+    } else {
+      setTabBarOpacity(1);
+    }
+  }, [isFocused, state.hasSelections, setTabBarOpacity]);
+
+  // Restore tab bar on unmount
+  React.useEffect(() => {
+    return () => setTabBarOpacity(1);
+  }, [setTabBarOpacity]);
 
   const cameraSwipe = useEdgeSwipe({
     direction: 'left',
@@ -167,223 +281,468 @@ export default function HairAndMakeUpScreen() {
         avatarInitials={state.profileInitials}
         unreadCount={unreadCount}
         cameraDisabled={state.isStyleDisabled}
-      />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View>
-          <View style={styles.pillRowStack}>
-            <View style={styles.tabPills}>
-              <View style={styles.tabRow}>
-                <View style={styles.viewToggle}>
-                  <TouchableOpacity
-                    style={[
-                      styles.viewToggleButton,
-                      state.showHeadshotGrid && styles.viewToggleButtonActive,
-                    ]}
-                    onPress={() => state.setActiveView('grid')}
-                    accessibilityLabel="Show grid view"
-                  >
-                    <Ionicons
-                      name="grid-outline"
-                      size={16}
-                      color={state.showHeadshotGrid ? colors.textLight : colors.textSecondary}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.viewToggleButton,
-                      state.showFacePreview && styles.viewToggleButtonActive,
-                    ]}
-                    onPress={() => {
-                      if (state.previewSource !== 'headshot' && state.previewSource !== 'variation') {
-                        state.handleRestoreSelfie();
-                      }
-                      state.setActiveView('face');
-                    }}
-                    accessibilityLabel="Show face view"
-                  >
-                    <Ionicons
-                      name="person-circle-outline"
-                      size={18}
-                      color={state.showFacePreview ? colors.textLight : colors.textSecondary}
-                    />
-                  </TouchableOpacity>
-                </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.tabPillsRow}>
-                    <PillButton
-                      label="Hair"
-                      icon="cut-outline"
-                      selected={state.activeView === 'hair'}
-                      onPress={() => {
-                        state.setLastPresetTab('hair');
-                        state.setActiveView('hair');
-                      }}
-                      size="medium"
-                      variant="default"
-                    />
-                    <PillButton
-                      label="Make-Up"
-                      icon="color-palette-outline"
-                      selected={state.activeView === 'makeup'}
-                      onPress={() => {
-                        state.setLastPresetTab('makeup');
-                        state.setActiveView('makeup');
-                      }}
-                      size="medium"
-                      variant="default"
-                    />
-                  </View>
-                </ScrollView>
-              </View>
-            </View>
-
-            {state.isPresetView && state.presets.length > 0 && (
-              <View style={styles.categoryPills}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.categoryPillsRow}>
-                    <PillButton
-                      label="Custom"
-                      selected={state.isCustomCategory}
-                      onPress={() => state.setActiveCategoryId('custom')}
-                      size="medium"
-                      variant="default"
-                    />
-                    {state.categoryPills.map((category) => (
-                      <PillButton
-                        key={category.id}
-                        label={state.formatCategoryLabel(category.title)}
-                        selected={state.activeCategory?.id === category.id}
-                        onPress={() => state.setActiveCategoryId(category.id)}
-                        size="medium"
-                        variant="default"
-                      />
-                    ))}
-                  </View>
-                </ScrollView>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {state.showFacePreview && (
-          <View
-            style={[
-              styles.facePreviewSection,
-              commonStyles.sectionTopPadding,
+        centerSlot={
+          <HeaderTabPill
+            pills={[
+              { id: 'grid', label: 'Grid', icon: 'grid-outline' },
+              { id: 'mirror', label: 'My Mirror', icon: 'person-circle-outline' },
+              { id: 'following', label: 'Following', icon: 'people-outline' },
+              { id: 'inspiration', label: 'Inspiration', icon: 'sparkles-outline' },
             ]}
-          >
-            {headshots.length > 0 ? (
-              <EdgePeekSlider
-                data={headshots}
-                keyExtractor={headshotKeyExtractor}
-                itemWidthRatio={0.78}
-                aspectRatio={3 / 4}
-                gap={2}
-                initialIndex={activeFaceIndex}
-                activeIndex={activeFaceIndex}
-                extraData={activeFaceIndex}
-                enableHaptics
-                edgeSwipeEnabled={false}
-                onIndexChange={handleSliderIndexChange}
-                renderItem={renderSliderItem}
-              />
-            ) : (
-              <View style={styles.faceEmptyCard}>
-                <TouchableOpacity
-                  style={styles.placeholder}
-                  onPress={state.handlePickCamera}
-                  disabled={state.isStyleDisabled}
-                >
-                  <Ionicons name="camera-outline" size={42} color={colors.textSecondary} />
-                  <Text style={styles.placeholderText}>Tap to open camera</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        )}
+            activeId={state.pageTab}
+            onPress={(id) => state.setPageTab(id as 'grid' | 'mirror' | 'following' | 'inspiration')}
+          />
+        }
+      />
 
-        {state.showHeadshotGrid && (
+      {/* Following / Inspiration placeholder */}
+      {(state.pageTab === 'following' || state.pageTab === 'inspiration') && (
+        <View style={styles.emptyTabContainer}>
+          <Ionicons
+            name={state.pageTab === 'following' ? 'people-outline' : 'sparkles-outline'}
+            size={48}
+            color={colors.textTertiary}
+          />
+          <Text style={styles.emptyTabText}>
+            {state.pageTab === 'following' ? 'Following' : 'Inspiration'} coming soon
+          </Text>
+        </View>
+      )}
+
+      {/* Grid tab: show only image grid */}
+      {state.pageTab === 'grid' && (
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
           <PostGrid
             data={state.allHeadshots}
             keyExtractor={(item) => item.id}
             renderItem={renderHeadshotGridItem}
             scrollEnabled={false}
           />
-        )}
+        </ScrollView>
+      )}
 
-        {state.isPresetView && (
-          <>
-            {(state.isCustomCategory || state.activeCategory) && (
-              <View
-                style={[
-                  styles.categoryCard,
-                  commonStyles.sectionHorizontalPadding,
-                  commonStyles.sectionTopPadding,
-                ]}
-              >
-                {state.isCustomCategory ? (
-                  <>
-                    <View style={styles.customHeader}>
-                      <Text style={styles.customHint}>{state.customDescriptionCopy}</Text>
-                      <TouchableOpacity
-                        style={styles.infoIconButton}
-                        onPress={() => state.setInfoModalVisible(true)}
-                      >
-                        <Ionicons
-                          name="information-circle-outline"
-                          size={18}
-                          color={colors.textSecondary}
-                        />
-                      </TouchableOpacity>
+      {state.pageTab === 'mirror' && (
+        <>
+          {/* Tab pills row: below header, above image slider */}
+          <View style={styles.pillRowStack}>
+            <View style={styles.tabPills}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.tabPillsRow}>
+                  <PillButton
+                    label="Quick"
+                    icon="flash-outline"
+                    selected={state.editTab === 'quick'}
+                    onPress={() => handleEditTabChange('quick')}
+                    size="medium"
+                    variant="default"
+                    layout="vertical"
+                  />
+                  <PillButton
+                    label="Hair"
+                    icon="cut-outline"
+                    selected={state.editTab === 'hair'}
+                    onPress={() => handleEditTabChange('hair')}
+                    size="medium"
+                    variant="default"
+                    layout="vertical"
+                  />
+                  <PillButton
+                    label="Make-Up"
+                    icon="color-palette-outline"
+                    selected={state.editTab === 'makeup'}
+                    onPress={() => handleEditTabChange('makeup')}
+                    size="medium"
+                    variant="default"
+                    layout="vertical"
+                  />
+                  <PillButton
+                    label="Accessories"
+                    icon="glasses-outline"
+                    selected={state.editTab === 'accessories'}
+                    onPress={() => handleEditTabChange('accessories')}
+                    size="medium"
+                    variant="default"
+                    layout="vertical"
+                  />
+                  <PillButton
+                    label="Jewellery"
+                    icon="diamond-outline"
+                    selected={state.editTab === 'jewellery'}
+                    onPress={() => handleEditTabChange('jewellery')}
+                    size="medium"
+                    variant="default"
+                    layout="vertical"
+                  />
+                  <PillButton
+                    label="Advanced"
+                    icon="options-outline"
+                    selected={state.editTab === 'advanced'}
+                    onPress={() => handleEditTabChange('advanced')}
+                    size="medium"
+                    variant="default"
+                    layout="vertical"
+                  />
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={[
+              styles.content,
+              state.hasSelections && { paddingBottom: spacing.massive + 140 },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Image slider then prompt details */}
+            <View
+              style={[
+                styles.facePreviewSection,
+                commonStyles.sectionTopPadding,
+              ]}
+            >
+              {headshots.length > 0 ? (
+                <EdgePeekSlider
+                  data={headshots}
+                  keyExtractor={headshotKeyExtractor}
+                  itemWidthRatio={0.78}
+                  aspectRatio={3 / 4}
+                  gap={2}
+                  initialIndex={activeFaceIndex}
+                  activeIndex={activeFaceIndex}
+                  extraData={activeFaceIndex}
+                  enableHaptics
+                  edgeSwipeEnabled={false}
+                  onIndexChange={handleSliderIndexChange}
+                  renderItem={renderSliderItem}
+                />
+              ) : (
+                <View style={styles.faceEmptyCard}>
+                  <TouchableOpacity
+                    style={styles.placeholder}
+                    onPress={state.handlePickCamera}
+                    disabled={state.isStyleDisabled}
+                  >
+                    <Ionicons name="camera-outline" size={42} color={colors.textSecondary} />
+                    <Text style={styles.placeholderText}>Tap to open camera</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <HeadshotPromptSettings variation={state.activeImageVariation} />
+            </View>
+          </ScrollView>
+
+          {/* Edit tab content modal */}
+          <Modal
+            visible={editModalVisible}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setEditModalVisible(false)}
+          >
+            <View style={styles.editModalOverlay}>
+              <View style={styles.editModalCard}>
+                <View style={styles.editModalHeader}>
+                  <Text style={styles.editModalTitle}>
+                    {state.editTab === 'quick' && 'Quick'}
+                    {state.editTab === 'hair' && 'Hair'}
+                    {state.editTab === 'makeup' && 'Make-Up'}
+                    {state.editTab === 'accessories' && 'Accessories'}
+                    {state.editTab === 'jewellery' && 'Jewellery'}
+                    {state.editTab === 'advanced' && 'Advanced'}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setEditModalVisible(false)}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  >
+                    <Ionicons name="close" size={24} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView
+                  style={styles.editModalScroll}
+                  contentContainerStyle={styles.editModalScrollContent}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {/* Accessories: subcategory row — same styling as Hair/Make-up category row */}
+                  {state.editTab === 'accessories' && (
+                    <View style={styles.categoryPills}>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <View style={styles.categoryPillsRow}>
+                          {ACCESSORY_SUBCATEGORIES.map((sub) => (
+                            <PillButton
+                              key={sub.id}
+                              label={sub.name}
+                              selected={state.accessorySubcategory === sub.id}
+                              onPress={() => state.setAccessorySubcategory(
+                                state.accessorySubcategory === sub.id ? null : sub.id
+                              )}
+                              size="medium"
+                              variant="default"
+                            />
+                          ))}
+                        </View>
+                      </ScrollView>
                     </View>
-                    <TextInput
-                      style={styles.customInput}
-                      placeholder={state.customPlaceholder}
-                      placeholderTextColor={colors.textTertiary}
-                      multiline
-                      value={state.customDescription}
-                      onChangeText={state.setCustomDescription}
-                    />
-                  </>
-                ) : (
+                  )}
+                  {/* Jewellery: subcategory row — same styling as Hair/Make-up category row */}
+                  {state.editTab === 'jewellery' && (
+                    <View style={styles.categoryPills}>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <View style={styles.categoryPillsRow}>
+                          {JEWELLERY_SUBCATEGORIES.map((sub) => (
+                            <PillButton
+                              key={sub.id}
+                              label={sub.name}
+                              selected={state.jewellerySubcategory === sub.id}
+                              onPress={() => state.setJewellerySubcategory(
+                                state.jewellerySubcategory === sub.id ? null : sub.id
+                              )}
+                              size="medium"
+                              variant="default"
+                            />
+                          ))}
+                        </View>
+                      </ScrollView>
+                    </View>
+                  )}
+                  {/* Category pills — only for hair/makeup tabs */}
+                  {state.editTab !== 'accessories' && state.editTab !== 'jewellery' && state.editTab !== 'advanced' && state.categoryPills.length > 0 && (
+                    <View style={styles.categoryPills}>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <View style={styles.categoryPillsRow}>
+                          <PillButton
+                            label="Quick"
+                            selected={state.isCustomCategory}
+                            onPress={() => state.setActiveCategoryId('custom')}
+                            size="medium"
+                            variant="default"
+                          />
+                          {state.categoryPills.map((category) => (
+                            <PillButton
+                              key={category.id}
+                              label={state.formatCategoryLabel(category.title)}
+                              selected={state.activeCategory?.id === category.id}
+                              onPress={() => state.setActiveCategoryId(category.id)}
+                              size="medium"
+                              variant="default"
+                            />
+                          ))}
+                        </View>
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  {(state.isCustomCategory || state.activeCategory) && (
+          <>
+            <View
+              style={[
+                styles.categoryCard,
+                commonStyles.sectionHorizontalPadding,
+                commonStyles.sectionTopPadding,
+              ]}
+            >
+              {state.isCustomCategory ? (
+                <>
+                  {/* Quick / custom tab: inline presets */}
+                  {state.editTab === 'quick' ? (
+                    <>
+                      {/* Quick tab: hair length slider + major-aesthetics */}
+                      <View style={styles.sectionBlock}>
+                        <Text style={styles.sectionLabel}>Hair Length</Text>
+                        <HairLengthSlider
+                          options={hairLengthOptions}
+                          selectedId={selectedHairLengthId}
+                          onSelect={(id) => state.toggleSelection(id)}
+                        />
+                      </View>
+                      {state.quickTabMakeupPresets?.sections.map((section) => (
+                        <View key={section.id} style={styles.sectionBlock}>
+                          <Text style={styles.sectionLabel}>Makeup</Text>
+                          <View style={[styles.presetGrid, { gap: presetGridGap }]}>
+                            {section.options.map((option) => {
+                              const isSelected = state.selectedIds.includes(option.id);
+                              return (
+                                <View
+                                  key={option.id}
+                                  style={{ width: presetTileSize, height: presetTileSize }}
+                                >
+                                  <TouchableOpacity
+                                    style={[styles.presetGridTile, isSelected && styles.presetGridTileSelected]}
+                                    onPress={() => state.toggleSelection(option.id)}
+                                    activeOpacity={0.85}
+                                  >
+                                    <View style={styles.presetGridTileTitleArea}>
+                                      <Text
+                                        numberOfLines={2}
+                                        style={[
+                                          styles.presetGridTileText,
+                                          isSelected && styles.presetGridTileTextSelected,
+                                        ]}
+                                      >
+                                        {option.title}
+                                      </Text>
+                                    </View>
+                                    <View style={styles.presetGridTileInfoRow}>
+                                      <TouchableOpacity
+                                        style={styles.presetGridTileInfoButton}
+                                        onPress={(event) => {
+                                          event.stopPropagation?.();
+                                          state.handleInfoPress(option);
+                                        }}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                      >
+                                        <Ionicons
+                                          name="information-circle-outline"
+                                          size={INFO_ICON_SIZE}
+                                          color={isSelected ? colors.textLight : colors.textSecondary}
+                                        />
+                                      </TouchableOpacity>
+                                    </View>
+                                  </TouchableOpacity>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      ))}
+                    </>
+                  ) : state.editTab === 'hair' ? (
+                    /* Hair tab quick section: length slider */
+                    <View style={styles.sectionBlock}>
+                      <HairLengthSlider
+                        options={hairLengthOptions}
+                        selectedId={selectedHairLengthId}
+                        onSelect={(id) => state.toggleSelection(id)}
+                      />
+                    </View>
+                  ) : (
+                    <>
+                      {/* Makeup quick sub-tab presets */}
+                      {state.quickTabPresets?.sections.map((section) => (
+                        <View key={section.id} style={styles.sectionBlock}>
+                          <View style={[styles.presetGrid, { gap: presetGridGap }]}>
+                            {section.options.map((option) => {
+                              const isSelected = state.selectedIds.includes(option.id);
+                              return (
+                                <View
+                                  key={option.id}
+                                  style={{ width: presetTileSize, height: presetTileSize }}
+                                >
+                                  <TouchableOpacity
+                                    style={[styles.presetGridTile, isSelected && styles.presetGridTileSelected]}
+                                    onPress={() => state.toggleSelection(option.id)}
+                                    activeOpacity={0.85}
+                                  >
+                                    <View style={styles.presetGridTileTitleArea}>
+                                      <Text
+                                        numberOfLines={2}
+                                        style={[
+                                          styles.presetGridTileText,
+                                          isSelected && styles.presetGridTileTextSelected,
+                                        ]}
+                                      >
+                                        {option.title}
+                                      </Text>
+                                    </View>
+                                    <View style={styles.presetGridTileInfoRow}>
+                                      <TouchableOpacity
+                                        style={styles.presetGridTileInfoButton}
+                                        onPress={(event) => {
+                                          event.stopPropagation?.();
+                                          state.handleInfoPress(option);
+                                        }}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                      >
+                                        <Ionicons
+                                          name="information-circle-outline"
+                                          size={INFO_ICON_SIZE}
+                                          color={isSelected ? colors.textLight : colors.textSecondary}
+                                        />
+                                      </TouchableOpacity>
+                                    </View>
+                                  </TouchableOpacity>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      ))}
+                    </>
+                  )}
+                  {/* Custom description */}
+                  <View style={styles.customHeader}>
+                    <Text style={styles.customHint}>{state.customDescriptionCopy}</Text>
+                    <TouchableOpacity
+                      style={styles.infoIconButton}
+                      onPress={() => state.setInfoModalVisible(true)}
+                    >
+                      <Ionicons
+                        name="information-circle-outline"
+                        size={18}
+                        color={colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput
+                    style={styles.customInput}
+                    placeholder={state.customPlaceholder}
+                    placeholderTextColor={colors.textTertiary}
+                    multiline
+                    value={state.customDescription}
+                    onChangeText={state.setCustomDescription}
+                  />
+                </>
+              ) : (
                   state.activeCategory?.sections.map((section) => (
                     <View key={section.id} style={styles.sectionBlock}>
                       {state.activeCategory!.sections.length > 1 && (
                         <Text style={styles.sectionLabel}>{section.title}</Text>
                       )}
-                      <View style={styles.pillRow}>
+                      <View style={[styles.presetGrid, { gap: presetGridGap }]}>
                         {section.options.map((option) => {
                           const isSelected = state.selectedIds.includes(option.id);
                           return (
-                            <TouchableOpacity
+                            <View
                               key={option.id}
-                              style={[styles.pill, isSelected && styles.pillSelected]}
-                              onPress={() => state.toggleSelection(option.id)}
-                              activeOpacity={0.85}
+                              style={{ width: presetTileSize, height: presetTileSize }}
                             >
-                              <Text
-                                style={[
-                                  styles.pillText,
-                                  isSelected && styles.pillTextSelected,
-                                ]}
-                              >
-                                {option.title}
-                              </Text>
                               <TouchableOpacity
-                                style={styles.infoButton}
-                                onPress={(event) => {
-                                  event.stopPropagation?.();
-                                  state.handleInfoPress(option);
-                                }}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                style={[styles.presetGridTile, isSelected && styles.presetGridTileSelected]}
+                                onPress={() => state.toggleSelection(option.id)}
+                                activeOpacity={0.85}
                               >
-                                <Ionicons
-                                  name="information-circle-outline"
-                                  size={INFO_ICON_SIZE}
-                                  color={isSelected ? colors.textLight : colors.textSecondary}
-                                />
+                                <View style={styles.presetGridTileTitleArea}>
+                                  <Text
+                                    numberOfLines={2}
+                                    style={[
+                                      styles.presetGridTileText,
+                                      isSelected && styles.presetGridTileTextSelected,
+                                    ]}
+                                  >
+                                    {option.title}
+                                  </Text>
+                                </View>
+                                <View style={styles.presetGridTileInfoRow}>
+                                  <TouchableOpacity
+                                    style={styles.presetGridTileInfoButton}
+                                    onPress={(event) => {
+                                      event.stopPropagation?.();
+                                      state.handleInfoPress(option);
+                                    }}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  >
+                                    <Ionicons
+                                      name="information-circle-outline"
+                                      size={INFO_ICON_SIZE}
+                                      color={isSelected ? colors.textLight : colors.textSecondary}
+                                    />
+                                  </TouchableOpacity>
+                                </View>
                               </TouchableOpacity>
-                            </TouchableOpacity>
+                            </View>
                           );
                         })}
                       </View>
@@ -391,12 +750,149 @@ export default function HairAndMakeUpScreen() {
                   ))
                 )}
               </View>
+
+            {/* Hair Color — always visible when hair or quick tab is active */}
+            {state.hairColorCategory && (
+              <View
+                style={[
+                  styles.categoryCard,
+                  commonStyles.sectionHorizontalPadding,
+                  commonStyles.sectionTopPadding,
+                ]}
+              >
+                {state.hairColorCategory.sections.map((section) => (
+                  <View key={section.id} style={styles.sectionBlock}>
+                    {state.hairColorCategory!.sections.length > 1 && (
+                      <Text style={styles.sectionLabel}>{section.title}</Text>
+                    )}
+                    <View style={[styles.presetGrid, { gap: presetGridGap }]}>
+                      {section.options.map((option) => {
+                        const isSelected = state.selectedIds.includes(option.id);
+                        const swatch = HAIR_COLOR_SWATCHES[option.id];
+                        const isDualColor = Array.isArray(swatch);
+                        const needsLightText = swatch ? needsLightTextOnColor(isDualColor ? swatch[0] : swatch) : false;
+                        return (
+                          <View
+                            key={option.id}
+                            style={{ width: presetTileSize, height: presetTileSize }}
+                          >
+                            <TouchableOpacity
+                              style={[
+                                styles.colorPillGridTile,
+                                swatch && !isDualColor && { backgroundColor: swatch as string },
+                                isSelected && styles.colorPillSelected,
+                              ]}
+                              onPress={() => state.toggleSelection(option.id)}
+                              activeOpacity={0.85}
+                            >
+                              {/* Dual-color angled background */}
+                              {isDualColor && (
+                                <View style={[styles.colorPillDualBg, { backgroundColor: swatch[1] }]}>
+                                  <View style={[styles.colorPillDualLeft, { backgroundColor: swatch[0] }]} />
+                                </View>
+                              )}
+                              <View style={styles.colorPillGridTileTitleArea}>
+                                <Text
+                                  numberOfLines={2}
+                                  style={[
+                                    styles.colorPillText,
+                                    (needsLightText || isSelected) && styles.colorPillTextLight,
+                                    { textAlign: 'center' },
+                                  ]}
+                                >
+                                  {option.title}
+                                </Text>
+                              </View>
+                              <View style={styles.colorPillGridTileInfoRow}>
+                                <TouchableOpacity
+                                  style={styles.colorPillGridTileInfoButton}
+                                  onPress={(event) => {
+                                    event.stopPropagation?.();
+                                    state.handleInfoPress(option);
+                                  }}
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                  <Ionicons
+                                    name="information-circle-outline"
+                                    size={INFO_ICON_SIZE}
+                                    color={(needsLightText || isSelected) ? 'rgba(255,255,255,0.7)' : colors.textSecondary}
+                                  />
+                                </TouchableOpacity>
+                              </View>
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ))}
+              </View>
             )}
           </>
         )}
-      </ScrollView>
 
-      <DropdownMenuModal
+        {/* Accessories tab content */}
+        {state.editTab === 'accessories' && (
+          <View style={[styles.categoryCard, commonStyles.sectionHorizontalPadding, commonStyles.sectionTopPadding]}>
+            {state.accessorySubcategory ? (
+              <View style={styles.emptySubcategoryContainer}>
+                <Ionicons name="glasses-outline" size={36} color={colors.textTertiary} />
+                <Text style={styles.emptySubcategoryText}>
+                  {ACCESSORY_SUBCATEGORIES.find((s) => s.id === state.accessorySubcategory)?.name} presets coming soon
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.emptySubcategoryContainer}>
+                <Text style={styles.emptySubcategoryText}>Select a subcategory above</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Jewellery tab content */}
+        {state.editTab === 'jewellery' && (
+          <View style={[styles.categoryCard, commonStyles.sectionHorizontalPadding, commonStyles.sectionTopPadding]}>
+            {state.jewellerySubcategory ? (
+              <View style={styles.emptySubcategoryContainer}>
+                <Ionicons name="diamond-outline" size={36} color={colors.textTertiary} />
+                <Text style={styles.emptySubcategoryText}>
+                  {JEWELLERY_SUBCATEGORIES.find((s) => s.id === state.jewellerySubcategory)?.name} presets coming soon
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.emptySubcategoryContainer}>
+                <Text style={styles.emptySubcategoryText}>Select a subcategory above</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Advanced tab content */}
+        {state.editTab === 'advanced' && (
+          <View style={[styles.categoryCard, commonStyles.sectionHorizontalPadding, commonStyles.sectionTopPadding]}>
+            {ADVANCED_FIELDS.map((field) => (
+              <View key={field.id} style={styles.sectionBlock}>
+                <Text style={styles.sectionLabel}>{field.label}</Text>
+                <TextInput
+                  style={styles.advancedInput}
+                  placeholder={field.placeholder}
+                  placeholderTextColor={colors.textTertiary}
+                  multiline
+                  value={state.advancedFields[field.id] || ''}
+                  onChangeText={(text) => state.setAdvancedField(field.id, text)}
+                />
+              </View>
+            ))}
+          </View>
+        )}
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
+        </>
+      )}
+
+      {state.pageTab === 'mirror' && <DropdownMenuModal
         visible={state.showFaceMenu}
         onClose={() => state.setShowFaceMenu(false)}
         topOffset={120}
@@ -432,7 +928,7 @@ export default function HairAndMakeUpScreen() {
           danger
           disabled={!state.showDeletePreview}
         />
-      </DropdownMenuModal>
+      </DropdownMenuModal>}
 
       <PolicyBlockModal
         visible={state.policyModalVisible}
@@ -489,12 +985,39 @@ export default function HairAndMakeUpScreen() {
           )}
         </View>
       </Modal>
+
+      {/* Headshot Creator Bar & Container */}
+      {state.pageTab === 'mirror' && state.hasSelections && (
+        <>
+          <HeadshotCreatorContainer
+            selections={state.creatorSelections}
+            onRemoveSelection={state.handleRemoveCreatorSelection}
+          />
+          <CreatorBar
+            label={`Generate${state.creatorSelections.length > 0 ? ` (${state.creatorSelections.length})` : ''}`}
+            onGenerate={state.handleGenerateVariation}
+            isGenerating={state.generating}
+            showOptionsButton={false}
+          />
+        </>
+      )}
       </View>
     </PanGestureHandler>
   );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  emptyTabContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: spacing.massive,
+    gap: spacing.md,
+  },
+  emptyTabText: {
+    fontSize: typography.fontSize.base,
+    color: colors.textTertiary,
+  },
   content: {
     paddingBottom: spacing.massive,
   },
@@ -723,6 +1246,52 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
+  presetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: '100%',
+  },
+  presetGridTile: {
+    flex: 1,
+    flexDirection: 'column',
+    borderRadius: borderRadius.round,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    overflow: 'hidden',
+    minHeight: 0,
+  },
+  presetGridTileTitleArea: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+  },
+  presetGridTileInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: spacing.xs,
+  },
+  presetGridTileInfoButton: {
+    padding: spacing.xs,
+  },
+  presetGridTileSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  presetGridTileText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xs,
+  },
+  presetGridTileTextSelected: {
+    color: colors.textLight,
+    fontWeight: typography.fontWeight.semibold,
+  },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -747,11 +1316,78 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.textLight,
     fontWeight: typography.fontWeight.semibold,
   },
+  colorPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: spacing.md,
+    paddingRight: spacing.xs * 2 + INFO_ICON_SIZE,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.round,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  colorPillGridTile: {
+    flex: 1,
+    flexDirection: 'column',
+    borderRadius: borderRadius.round,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    backgroundColor: colors.backgroundSecondary,
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 0,
+  },
+  colorPillGridTileTitleArea: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+    zIndex: 1,
+  },
+  colorPillGridTileInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: spacing.xs,
+    zIndex: 1,
+  },
+  colorPillGridTileInfoButton: {
+    padding: spacing.xs,
+  },
+  colorPillSelected: {
+    borderColor: colors.textLight,
+  },
+  colorPillText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textPrimary,
+    zIndex: 1,
+  },
+  colorPillTextLight: {
+    color: colors.textLight,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  colorPillDualBg: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  colorPillDualLeft: {
+    position: 'absolute',
+    top: -10,
+    left: -10,
+    bottom: -10,
+    width: '58%',
+    transform: [{ rotate: '-6deg' }],
+  },
   infoButton: {
     position: 'absolute',
     right: spacing.xs,
     top: '50%',
     transform: [{ translateY: -INFO_ICON_SIZE / 2 }],
+    zIndex: 1,
   },
   headshotGridPlaceholder: {
     flex: 1,
@@ -773,6 +1409,41 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.background,
     color: colors.textPrimary,
     textAlignVertical: 'top',
+  },
+  editModalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlayLight,
+    justifyContent: 'flex-end',
+  },
+  editModalCard: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    maxHeight: '90%',
+    ...shadows.lg,
+  },
+  editModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  editModalTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  editModalScroll: {
+    flexGrow: 0,
+    maxHeight: '85%',
+  },
+  editModalScrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingBottom: spacing.massive,
   },
   infoModalOverlay: {
     flex: 1,
@@ -960,5 +1631,58 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   lightboxImage: {
     width: '100%',
     height: '80%',
+  },
+  // Expandable pill (accessories/jewellery)
+  expandedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.black,
+    borderRadius: borderRadius.round,
+    borderWidth: 1,
+    borderColor: colors.black,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.xs,
+    paddingVertical: spacing.xs,
+    gap: spacing.sm,
+    maxWidth: SCREEN_WIDTH * 0.75,
+  },
+  expandedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexShrink: 0,
+  },
+  expandedLabel: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textLight,
+  },
+  subcategoryScroll: {
+    gap: spacing.xs,
+    paddingRight: spacing.xs,
+  },
+  // Accessories/Jewellery empty states
+  emptySubcategoryContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
+    gap: spacing.sm,
+  },
+  emptySubcategoryText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textTertiary,
+    textAlign: 'center',
+  },
+  // Advanced tab text fields
+  advancedInput: {
+    minHeight: 50,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    fontSize: typography.fontSize.sm,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
+    textAlignVertical: 'top',
   },
 });

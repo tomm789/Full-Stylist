@@ -126,6 +126,22 @@ export async function createHeadshotGenerationVariation(
   return data as HeadshotGenerationVariation;
 }
 
+export async function getVariationByImageId(
+  imageId: string
+): Promise<HeadshotGenerationVariation | null> {
+  const { data, error } = await supabase
+    .from('headshot_generation_variations')
+    .select('*')
+    .eq('image_id', imageId)
+    .eq('status', 'complete')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as HeadshotGenerationVariation;
+}
+
 export async function updateHeadshotGenerationVariation(
   variationId: string,
   updates: Partial<Pick<

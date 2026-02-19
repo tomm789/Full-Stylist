@@ -1,18 +1,33 @@
 /**
  * CategoryPills Component
- * Horizontal scrolling category pills for filtering
+ * Horizontal scrolling category pills with inline expandable subcategories
  */
 
-import React from 'react';
-import { View, FlatList, StyleSheet, ViewStyle, Text } from 'react-native';
-import { PillButton } from '@/components/shared';
+import React, { useRef, useEffect } from 'react';
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  ViewStyle,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+} from 'react-native';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 import { WardrobeCategory, WardrobeSubcategory } from '@/lib/wardrobe';
-import WardrobeCategoryIcon from '@/components/shared/WardrobeCategoryIcon';
+import ExpandableCategoryPill from './ExpandableCategoryPill';
 
-const { spacing, typography } = theme;
+const { spacing } = theme;
+
+// Enable LayoutAnimation on Android
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const DEFAULT_CATEGORY_ORDER = [
   'tops',
@@ -36,10 +51,8 @@ interface CategoryPillsProps {
   subcategories?: WardrobeSubcategory[];
   selectedCategoryId?: string | null;
   selectedSubcategoryId?: string | null;
-  selectedCategoryLabel?: string;
   onSelectCategory?: (categoryId: string | null) => void;
   onSelectSubcategory?: (subcategoryId: string | null) => void;
-  variant?: 'category' | 'subcategory';
   style?: ViewStyle;
 }
 
@@ -48,18 +61,15 @@ export default function CategoryPills({
   subcategories = [],
   selectedCategoryId = null,
   selectedSubcategoryId = null,
-  selectedCategoryLabel,
   onSelectCategory,
   onSelectSubcategory,
-  variant = 'category',
   style,
 }: CategoryPillsProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
+  const flatListRef = useRef<FlatList>(null);
 
-  const isCategory = variant === 'category';
   const sortedCategories = React.useMemo(() => {
-    if (!isCategory) return categories;
     return [...categories].sort((a, b) => {
       const aIndex = DEFAULT_CATEGORY_ORDER.indexOf(a.name.toLowerCase());
       const bIndex = DEFAULT_CATEGORY_ORDER.indexOf(b.name.toLowerCase());
@@ -67,93 +77,79 @@ export default function CategoryPills({
       const bPos = bIndex === -1 ? DEFAULT_CATEGORY_ORDER.length : bIndex;
       return aPos - bPos;
     });
-  }, [categories, isCategory]);
-  const items = isCategory ? sortedCategories : subcategories;
-  const selectedId = isCategory ? selectedCategoryId : selectedSubcategoryId;
-  const onSelect = isCategory ? onSelectCategory : onSelectSubcategory;
+  }, [categories]);
 
-  if (items.length === 0) return null;
-
-  const handlePress = (id: string) => {
-    if (selectedId === id) {
-      // Deselect if already selected
-      onSelect?.(null);
-    } else {
-      onSelect?.(id);
+  // Auto-scroll to the selected category when subcategories load
+  useEffect(() => {
+    if (selectedCategoryId && subcategories.length > 0) {
+      const index = sortedCategories.findIndex(
+        (c) => c.id === selectedCategoryId,
+      );
+      if (index >= 0 && flatListRef.current) {
+        // Small delay to let LayoutAnimation settle
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({
+            index,
+            animated: true,
+            viewPosition: 0,
+          });
+        }, 50);
+      }
     }
+  }, [selectedCategoryId, subcategories.length, sortedCategories]);
+
+  if (sortedCategories.length === 0) return null;
+
+  const handleSelectCategory = (categoryId: string | null) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    onSelectCategory?.(categoryId);
   };
-
-  const list = (
-    <FlatList
-      horizontal
-      data={items}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <PillButton
-          label={item.name}
-          leading={
-            isCategory ? (
-              <WardrobeCategoryIcon
-                categoryName={item.name}
-                size={28}
-                color={selectedId === item.id ? colors.white : colors.textSecondary}
-              />
-            ) : undefined
-          }
-          layout={isCategory ? 'vertical' : 'horizontal'}
-          selected={selectedId === item.id}
-          onPress={() => handlePress(item.id)}
-          variant={isCategory ? 'default' : 'primary'}
-          size={isCategory ? 'medium' : 'small'}
-        />
-      )}
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.list}
-    />
-  );
-
-  if (!isCategory && selectedCategoryLabel) {
-    return (
-      <View style={[styles.container, style]}>
-        <View style={styles.subcategoryRow}>
-          <Text style={styles.subcategoryLabel}>{selectedCategoryLabel}</Text>
-          <View style={styles.subcategoryList}>{list}</View>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.container, style]}>
-      {list}
+      <FlatList
+        ref={flatListRef}
+        horizontal
+        data={sortedCategories}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <ExpandableCategoryPill
+            category={item}
+            subcategories={
+              item.id === selectedCategoryId ? subcategories : []
+            }
+            selected={item.id === selectedCategoryId}
+            selectedSubcategoryId={selectedSubcategoryId}
+            onSelectCategory={handleSelectCategory}
+            onSelectSubcategory={onSelectSubcategory ?? (() => {})}
+          />
+        )}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.list}
+        onScrollToIndexFailed={(info) => {
+          setTimeout(() => {
+            flatListRef.current?.scrollToIndex({
+              index: info.index,
+              animated: true,
+              viewPosition: 0,
+            });
+          }, 100);
+        }}
+      />
     </View>
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.backgroundDark,
-  },
-  list: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    gap: spacing.xs,
-  },
-  subcategoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  subcategoryLabel: {
-    paddingLeft: spacing.sm,
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textLight,
-  },
-  subcategoryList: {
-    flex: 1,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+      backgroundColor: colors.backgroundDark,
+    },
+    list: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.sm,
+      gap: spacing.xs,
+    },
+  });

@@ -7,7 +7,7 @@
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { View, StyleSheet, Alert, Platform, Animated, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,7 +22,8 @@ import {
 import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits';
 
 // Shared Components
-import { EmptyState, LoadingOverlay, LoadingSpinner, TabPillsRow } from '@/components/shared';
+import { EmptyState, LoadingOverlay, LoadingSpinner, HeaderTabPill } from '@/components/shared';
+import { WardrobeTabIcon } from '@/components/icons/tabs';
 
 // Wardrobe Components
 import {
@@ -58,14 +59,25 @@ import { createCommonStyles } from '@/styles/commonStyles';
 import type { ThemeColors } from '@/styles/themes';
 import { useSearch } from '@/hooks';
 import SearchOverlay from '@/components/search/SearchOverlay';
-import SearchHeaderRow from '@/components/search/SearchHeaderRow';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
+import { Ionicons } from '@expo/vector-icons';
+import HeaderTitleRow from '@/components/tabs/HeaderTitleRow';
+import HeaderAvatarButton from '@/components/shared/layout/HeaderAvatarButton';
+import { useTabSearch } from '@/contexts/TabSearchContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   // Minimal styles - most come from theme and commonStyles
   headerContainer: {
     overflow: 'hidden',
+    backgroundColor: colors.background,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.sm,
     backgroundColor: colors.background,
   },
   placeholderContainer: {
@@ -124,6 +136,29 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
     textDecorationLine: 'underline',
   },
+  filterAndCategoriesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.backgroundDark,
+  },
+  filterButton: {
+    marginLeft: theme.spacing.sm,
+    marginRight: theme.spacing.xs,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.backgroundDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
 });
 
 
@@ -133,7 +168,10 @@ export default function WardrobeScreen() {
   const commonStyles = createCommonStyles(colors);
   const styles = createStyles(colors);
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
+  const pathname = usePathname();
+  const { registerTabSearch, clearTabSearch } = useTabSearch();
   const { setTabBarDimmed, setTabBarOpacity } = useFloatingTabBar();
   const isFocused = useIsFocused();
   const { addItemId } = useLocalSearchParams<{ addItemId?: string }>();
@@ -337,6 +375,32 @@ export default function WardrobeScreen() {
     }
     searchOpenRef.current = searchOverlayOpen;
   }, [searchOverlayOpen, setSearchSelectedFilter]);
+
+  useEffect(() => {
+    registerTabSearch(
+      {
+        query: globalSearchQuery,
+        open: searchOverlayOpen,
+        onQueryChange: setGlobalSearchQuery,
+        onOpen: () => setSearchOverlayOpen(true),
+        onClose: () => setSearchOverlayOpen(false),
+        setDefaultFilter: () => setSearchSelectedFilter('wardrobe_item'),
+      },
+      pathname
+    );
+
+    return () => {
+      clearTabSearch(pathname);
+    };
+  }, [
+    clearTabSearch,
+    globalSearchQuery,
+    pathname,
+    registerTabSearch,
+    searchOverlayOpen,
+    setGlobalSearchQuery,
+    setSearchSelectedFilter,
+  ]);
 
   // Load subcategories when category changes; clear subcategory filter
   useEffect(() => {
@@ -778,50 +842,63 @@ export default function WardrobeScreen() {
         pointerEvents={uiHidden ? 'none' : 'auto'}
       >
         <View onLayout={handleHeaderLayout}>
-        <SearchHeaderRow
-          title="Wardrobe"
-          searchQuery={globalSearchQuery}
-          onSearchChange={setGlobalSearchQuery}
-          onSearchToggle={setSearchOverlayOpen}
-          onFilter={() => setShowFilterDrawer(true)}
-          hasActiveFilters={hasActiveFilters}
-          placeholder="Search wardrobe..."
-          leftIcon="camera-outline"
-          onLeftAction={handleOpenCamera}
-          searchOpen={searchOverlayOpen}
-        />
-        {!searchOverlayOpen && (
-          <TabPillsRow
-            pills={[
-              { id: 'my', label: 'My Wardrobe', icon: 'shirt-outline' },
-              { id: 'following', label: 'Following', icon: 'people-outline' },
-              { id: 'discover', label: 'Discover', icon: 'compass-outline' },
-            ]}
-            activeId={activeTab}
-            onPress={(id) => setActiveTab(id as 'my' | 'following' | 'discover')}
-            showFilter={false}
+        <View style={[styles.headerRow, { paddingTop: insets.top + theme.spacing.sm }]}>
+          <HeaderTitleRow
+            title="Wardrobe"
+            leftIcon="camera-outline"
+            onLeftAction={handleOpenCamera}
+            centerSlot={
+              <HeaderTabPill
+                pills={[
+                  {
+                    id: 'my',
+                    label: 'My Wardrobe',
+                    icon: 'shirt-outline',
+                    iconComponent: ({ size, color }) => (
+                      <WardrobeTabIcon width={size} height={size} color={color} fill={color} />
+                    ),
+                  },
+                  { id: 'following', label: 'Following', icon: 'people-outline' },
+                  { id: 'discover', label: 'Discover', icon: 'compass-outline' },
+                ]}
+                activeId={activeTab}
+                onPress={(id) => setActiveTab(id as 'my' | 'following' | 'discover')}
+              />
+            }
+            rightSlot={
+              <HeaderAvatarButton
+                uri={currentHeadshotUrl ?? undefined}
+                initials={user?.email?.slice(0, 2).toUpperCase() ?? undefined}
+                onPress={() => router.push('/(tabs)/profile' as any)}
+                inline
+              />
+            }
           />
-        )}
-        {/* Category Pills */}
-        {!searchOverlayOpen && activeTab === 'my' && (
-          <CategoryPills
-            categories={categories}
-            selectedCategoryId={selectedCategoryId}
-            onSelectCategory={setSelectedCategoryId}
-            variant="category"
-          />
-        )}
-
-        {/* Subcategory Pills - shown when a category is selected and has subcategories */}
-        {!searchOverlayOpen && activeTab === 'my' && selectedCategoryId && subcategories.length > 0 && (
-          <CategoryPills
-            subcategories={subcategories}
-            selectedSubcategoryId={filters.subcategoryId}
-            selectedCategoryLabel={getCategoryById(selectedCategoryId)?.name}
-            onSelectSubcategory={(id) => updateFilter('subcategoryId', id)}
-            variant="subcategory"
-          />
-        )}
+        </View>
+        {/* Filter icon + Category Pills row */}
+        <View style={styles.filterAndCategoriesRow}>
+          <TouchableOpacity
+            style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}
+            onPress={() => setShowFilterDrawer(true)}
+            accessibilityLabel="Filters"
+          >
+            <Ionicons
+              name="options-outline"
+              size={18}
+              color={hasActiveFilters ? colors.textLight : colors.textSecondary}
+            />
+          </TouchableOpacity>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <CategoryPills
+              categories={categories}
+              subcategories={subcategories}
+              selectedCategoryId={selectedCategoryId}
+              selectedSubcategoryId={filters.subcategoryId}
+              onSelectCategory={setSelectedCategoryId}
+              onSelectSubcategory={(id) => updateFilter('subcategoryId', id)}
+            />
+          </View>
+        </View>
         </View>
       </Animated.View>
 
@@ -856,7 +933,10 @@ export default function WardrobeScreen() {
           scrollEventThrottle={16}
         />
       ) : activeTab === 'following' ? (
-        <FollowingWardrobesScreen />
+        <FollowingWardrobesScreen
+          selectedCategoryId={selectedCategoryId}
+          selectedSubcategoryId={filters.subcategoryId}
+        />
       ) : (
         <View style={styles.placeholderContainer}>
           <EmptyState

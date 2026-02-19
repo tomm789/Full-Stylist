@@ -38,6 +38,8 @@ type TabPillsRowProps = {
   showFilter?: boolean;
   onFilter?: () => void;
   hasActiveFilters?: boolean;
+  /** Custom icon for the leading button (defaults to 'options-outline') */
+  leadingIcon?: keyof typeof Ionicons.glyphMap;
 };
 
 export default function TabPillsRow({
@@ -49,6 +51,7 @@ export default function TabPillsRow({
   showFilter = true,
   onFilter,
   hasActiveFilters = false,
+  leadingIcon = 'options-outline',
 }: TabPillsRowProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
@@ -62,7 +65,7 @@ export default function TabPillsRow({
             onPress={onFilter}
             accessibilityLabel="Filters"
           >
-            <Ionicons name="options-outline" size={18} color={colors.textLight} />
+            <Ionicons name={leadingIcon} size={18} color={hasActiveFilters ? colors.textLight : colors.textSecondary} />
           </TouchableOpacity>
         )}
         <FlatList

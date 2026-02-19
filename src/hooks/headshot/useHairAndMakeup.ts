@@ -7,10 +7,12 @@ import { useProfileImages, useImageGeneration } from '@/hooks/profile';
 import { hairPresets } from '@/lib/headshot/hairPresets';
 import { makeupPresets } from '@/lib/headshot/makeupPresets';
 import type { PresetCategory, PresetOption } from '@/lib/headshot/presetTypes';
+import type { SelectionPill } from '@/components/headshots/HeadshotCreatorContainer';
 import {
   createHeadshotGenerationSession,
   createHeadshotGenerationVariation,
   getLatestHeadshotGenerationSession,
+  getVariationByImageId,
   listHeadshotGenerationVariations,
   updateHeadshotGenerationSession,
   updateHeadshotGenerationVariation,
@@ -29,11 +31,85 @@ import {
 } from '@/lib/ai-jobs';
 
 export type TabId = 'hair' | 'makeup';
-export type ViewMode = 'grid' | 'face' | TabId;
+export type EditTab = 'quick' | TabId | 'accessories' | 'jewellery' | 'advanced';
+
+export type ExpandableSubcategory = { id: string; name: string };
+
+export const ACCESSORY_SUBCATEGORIES: ExpandableSubcategory[] = [
+  { id: 'hair-accessories', name: 'Hair Accessories' },
+  { id: 'hats-caps', name: 'Hats & Caps' },
+  { id: 'sunglasses', name: 'Sunglasses' },
+  { id: 'scarves', name: 'Scarves' },
+];
+
+export const JEWELLERY_SUBCATEGORIES: ExpandableSubcategory[] = [
+  { id: 'earrings', name: 'Earrings' },
+  { id: 'necklaces', name: 'Necklaces' },
+];
+
+export const ADVANCED_FIELDS = [
+  { id: 'hairstyle-length', label: 'Hairstyle & Length', placeholder: 'e.g., long wavy layers with side part' },
+  { id: 'hair-color', label: 'Hair Color', placeholder: 'e.g., warm caramel balayage' },
+  { id: 'foundation-base', label: 'Foundation & Base', placeholder: 'e.g., dewy finish, light coverage' },
+  { id: 'eyeshadow', label: 'Eyeshadow Styles', placeholder: 'e.g., warm brown smoky eye' },
+  { id: 'eyeliner', label: 'Eyeliner Styles', placeholder: 'e.g., thin winged liner' },
+  { id: 'blush', label: 'Blush Placements', placeholder: 'e.g., soft draping on cheekbones' },
+  { id: 'lip-styles', label: 'Lip Styles', placeholder: 'e.g., glossy nude lip' },
+  { id: 'eyebrows', label: 'Eyebrow Styles', placeholder: 'e.g., fluffy brushed-up brows' },
+  { id: 'fake-tan', label: 'Fake Tan', placeholder: 'e.g., subtle golden glow' },
+  { id: 'lip-filler', label: 'Lip Filler', placeholder: 'e.g., natural-looking subtle enhancement' },
+  { id: 'botox', label: 'Botox', placeholder: 'e.g., smooth forehead, natural expression' },
+] as const;
+export type ViewMode = 'grid' | 'face';
+/** @deprecated Use ViewMode and EditTab separately */
+export type LegacyViewMode = 'grid' | 'face' | TabId;
 export type PreviewSource = 'none' | 'selfie' | 'headshot' | 'variation' | 'upload';
+export type PageTab = 'grid' | 'mirror' | 'following' | 'inspiration';
 
 const CUSTOM_CATEGORY_ID = 'custom';
 const DEFAULT_HAIR_CATEGORY_ID = 'long-hairstyles';
+
+function findPresetOptionById(presets: PresetCategory[], optionId: string): PresetOption | null {
+  for (const category of presets) {
+    for (const section of category.sections) {
+      const found = section.options.find((o) => o.id === optionId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/** Returns the category ID that contains the given option. */
+function findCategoryIdForOption(presets: PresetCategory[], optionId: string): string | null {
+  for (const category of presets) {
+    for (const section of category.sections) {
+      if (section.options.some((o) => o.id === optionId)) return category.id;
+    }
+  }
+  return null;
+}
+
+/** Returns the section ID that contains the given option. */
+function findSectionIdForOption(presets: PresetCategory[], optionId: string): string | null {
+  for (const category of presets) {
+    for (const section of category.sections) {
+      if (section.options.some((o) => o.id === optionId)) return section.id;
+    }
+  }
+  return null;
+}
+
+/** Returns all option IDs belonging to a given section. */
+function getOptionIdsForSection(presets: PresetCategory[], sectionId: string): string[] {
+  for (const category of presets) {
+    const section = category.sections.find((s) => s.id === sectionId);
+    if (section) return section.options.map((o) => o.id);
+  }
+  return [];
+}
+
+const HAIR_COLOR_CATEGORY_ID = 'hair-color';
+const MAX_HAIR_COLORS = 2;
 
 export function useHairAndMakeup() {
   const { user } = useAuth();
@@ -44,8 +120,8 @@ export function useHairAndMakeup() {
     refreshImages,
   } = useProfileImages({ userId: user?.id });
   const selfieUpload = useImageGeneration();
-  const [activeView, setActiveView] = useState<ViewMode>('grid');
-  const [lastPresetTab, setLastPresetTab] = useState<TabId>('hair');
+  const [pageTab, setPageTab] = useState<PageTab>('mirror');
+  const [editTab, setEditTab] = useState<EditTab>('quick');
   const [selectedHair, setSelectedHair] = useState<string[]>([]);
   const [selectedMakeup, setSelectedMakeup] = useState<string[]>([]);
   const [selectedHairCategory, setSelectedHairCategory] = useState<string | null>(
@@ -53,6 +129,12 @@ export function useHairAndMakeup() {
   );
   const [selectedMakeupCategory, setSelectedMakeupCategory] = useState<string | null>(null);
   const [customDescription, setCustomDescription] = useState('');
+  const [accessorySubcategory, setAccessorySubcategory] = useState<string | null>(null);
+  const [jewellerySubcategory, setJewellerySubcategory] = useState<string | null>(null);
+  const emptyAdvanced = Object.fromEntries(ADVANCED_FIELDS.map((f) => [f.id, '']));
+  const [advancedFields, setAdvancedFields] = useState<Record<string, string>>(emptyAdvanced);
+  const setAdvancedField = (key: string, value: string) =>
+    setAdvancedFields((prev) => ({ ...prev, [key]: value }));
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [variations, setVariations] = useState<HeadshotGenerationVariation[]>([]);
   const [variationUrls, setVariationUrls] = useState<Map<string, string | null>>(new Map());
@@ -73,6 +155,7 @@ export function useHairAndMakeup() {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [showFaceMenu, setShowFaceMenu] = useState(false);
+  const [activeImageVariation, setActiveImageVariation] = useState<HeadshotGenerationVariation | null>(null);
   const profileInitials = useMemo(() => {
     const raw =
       (user?.user_metadata as { full_name?: string })?.full_name ||
@@ -83,50 +166,159 @@ export function useHairAndMakeup() {
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
   }, [user]);
-  const showHeadshotGrid = activeView === 'grid';
-  const showFacePreview = activeView === 'face';
-  const isPresetView = activeView === 'hair' || activeView === 'makeup';
+  const showHeadshotGrid = pageTab === 'grid';
+  const showFacePreview = pageTab === 'mirror';
   const [baselineInput, setBaselineInput] = useState({
     hairPresetIds: [] as string[],
     makeupPresetIds: [] as string[],
     customDescription: '',
   });
 
-  const activeTab: TabId = isPresetView ? activeView : lastPresetTab;
+  // The active preset tab determines which preset bank to show
+  const activeTab: TabId = editTab === 'hair' || editTab === 'makeup' ? editTab : 'hair';
   const presets = useMemo<PresetCategory[]>(
     () => (activeTab === 'hair' ? hairPresets : makeupPresets),
     [activeTab]
   );
 
   const categoryPills = useMemo<PresetCategory[]>(() => {
-    if (activeTab !== 'hair') return presets;
+    if (editTab !== 'hair' && editTab !== 'makeup') return []; // Only hair/makeup tabs have category pills
+    // Filter out categories promoted to Quick tab or always-visible sections
+    const excludeIds =
+      editTab === 'hair'
+        ? ['hair-length', 'hair-color']
+        : ['major-aesthetics'];
+    const filtered = presets.filter((c) => !excludeIds.includes(c.id));
+
+    if (editTab !== 'hair') return filtered;
     const preferredOrder = [
       DEFAULT_HAIR_CATEGORY_ID,
       'medium-hairstyles',
       'short-hairstyles',
     ];
     const preferred = preferredOrder
-      .map((id) => presets.find((category) => category.id === id))
+      .map((id) => filtered.find((category) => category.id === id))
       .filter((category): category is PresetCategory => Boolean(category));
-    const remaining = presets.filter((category) => !preferredOrder.includes(category.id));
+    const remaining = filtered.filter((category) => !preferredOrder.includes(category.id));
     return [...preferred, ...remaining];
-  }, [activeTab, presets]);
+  }, [editTab, presets]);
+
+  // Quick tab presets: combine hair-length AND major-aesthetics sections
+  const quickTabHairPresets = useMemo<PresetCategory | null>(() => {
+    return hairPresets.find((c) => c.id === 'hair-length') || null;
+  }, []);
+
+  const quickTabMakeupPresets = useMemo<PresetCategory | null>(() => {
+    return makeupPresets.find((c) => c.id === 'major-aesthetics') || null;
+  }, []);
+
+  // Legacy single quickTabPresets for backward compat in category card rendering
+  const quickTabPresets = useMemo<PresetCategory | null>(() => {
+    if (editTab !== 'quick') {
+      const targetId = editTab === 'hair' ? 'hair-length' : 'major-aesthetics';
+      return presets.find((c) => c.id === targetId) || null;
+    }
+    return null;
+  }, [editTab, presets]);
+
+  // Hair color category — always visible when hair or quick tab is active
+  const hairColorCategory = useMemo<PresetCategory | null>(() => {
+    if (editTab !== 'quick' && editTab !== 'hair') return null;
+    return hairPresets.find((c) => c.id === 'hair-color') || null;
+  }, [editTab]);
 
   const activeCategoryId =
-    activeTab === 'hair' ? selectedHairCategory : selectedMakeupCategory;
+    editTab === 'hair' ? selectedHairCategory : editTab === 'makeup' ? selectedMakeupCategory : null;
   const setActiveCategoryId =
-    activeTab === 'hair' ? setSelectedHairCategory : setSelectedMakeupCategory;
+    editTab === 'hair' ? setSelectedHairCategory : setSelectedMakeupCategory;
 
   const activeCategory = useMemo(() => {
+    if (editTab !== 'hair' && editTab !== 'makeup') return null;
     if (presets.length === 0) return null;
     if (activeCategoryId === CUSTOM_CATEGORY_ID) return null;
     const found = presets.find((category) => category.id === activeCategoryId);
     return found || presets[0];
-  }, [presets, activeCategoryId]);
+  }, [editTab, presets, activeCategoryId]);
 
-  const selectedIds = activeTab === 'hair' ? selectedHair : selectedMakeup;
-  const setSelectedIds = activeTab === 'hair' ? setSelectedHair : setSelectedMakeup;
-  const isCustomCategory = activeCategoryId === CUSTOM_CATEGORY_ID;
+  // On quick tab, show combined selections; on hair/makeup show respective
+  const selectedIds = editTab === 'quick'
+    ? [...selectedHair, ...selectedMakeup]
+    : activeTab === 'hair' ? selectedHair : selectedMakeup;
+  const isCustomCategory = editTab === 'quick' || ((editTab === 'hair' || editTab === 'makeup') && activeCategoryId === CUSTOM_CATEGORY_ID);
+
+  const advancedHasValues = useMemo(
+    () => Object.values(advancedFields).some((v) => v.trim().length > 0),
+    [advancedFields],
+  );
+
+  const hasSelections = useMemo(() => {
+    return (
+      selectedHair.length > 0 ||
+      selectedMakeup.length > 0 ||
+      customDescription.trim().length > 0 ||
+      accessorySubcategory !== null ||
+      jewellerySubcategory !== null ||
+      advancedHasValues
+    );
+  }, [selectedHair, selectedMakeup, customDescription, accessorySubcategory, jewellerySubcategory, advancedHasValues]);
+
+  const creatorSelections = useMemo((): SelectionPill[] => {
+    const pills: SelectionPill[] = [];
+    for (const id of selectedHair) {
+      const option = findPresetOptionById(hairPresets, id);
+      if (option) pills.push({ id, label: option.title, type: 'hair' });
+    }
+    for (const id of selectedMakeup) {
+      const option = findPresetOptionById(makeupPresets, id);
+      if (option) pills.push({ id, label: option.title, type: 'makeup' });
+    }
+    if (customDescription.trim()) {
+      const trimmed = customDescription.trim();
+      const label = trimmed.length > 30 ? trimmed.slice(0, 30) + '...' : trimmed;
+      pills.push({ id: 'custom', label: `Custom: ${label}`, type: 'custom' });
+    }
+    if (accessorySubcategory) {
+      const sub = ACCESSORY_SUBCATEGORIES.find((s) => s.id === accessorySubcategory);
+      if (sub) pills.push({ id: `acc-${sub.id}`, label: sub.name, type: 'custom' });
+    }
+    if (jewellerySubcategory) {
+      const sub = JEWELLERY_SUBCATEGORIES.find((s) => s.id === jewellerySubcategory);
+      if (sub) pills.push({ id: `jew-${sub.id}`, label: sub.name, type: 'custom' });
+    }
+    for (const field of ADVANCED_FIELDS) {
+      const val = advancedFields[field.id]?.trim();
+      if (val) {
+        const label = val.length > 25 ? val.slice(0, 25) + '...' : val;
+        pills.push({ id: `adv-${field.id}`, label: `${field.label}: ${label}`, type: 'custom' });
+      }
+    }
+    return pills;
+  }, [selectedHair, selectedMakeup, customDescription, accessorySubcategory, jewellerySubcategory, advancedFields]);
+
+  const handleRemoveCreatorSelection = (id: string) => {
+    if (id === 'custom') {
+      setCustomDescription('');
+      return;
+    }
+    if (id.startsWith('acc-')) {
+      setAccessorySubcategory(null);
+      return;
+    }
+    if (id.startsWith('jew-')) {
+      setJewellerySubcategory(null);
+      return;
+    }
+    if (id.startsWith('adv-')) {
+      const fieldId = id.slice(4);
+      setAdvancedField(fieldId, '');
+      return;
+    }
+    if (selectedHair.includes(id)) {
+      setSelectedHair((prev) => prev.filter((i) => i !== id));
+      return;
+    }
+    setSelectedMakeup((prev) => prev.filter((i) => i !== id));
+  };
 
   const formatCategoryLabel = (label: string) => {
     if (activeTab !== 'hair') return label;
@@ -135,9 +327,11 @@ export function useHairAndMakeup() {
   };
 
   const customDescriptionCopy =
-    activeTab === 'hair'
-      ? 'Describe your hairstyle or combine it with a preset for additional refinements.'
-      : 'Describe your makeup or combine it with a preset for additional refinements.';
+    editTab === 'quick'
+      ? 'Describe your look or combine with presets for additional refinements.'
+      : activeTab === 'hair'
+        ? 'Describe your hairstyle or combine it with a preset for additional refinements.'
+        : 'Describe your makeup or combine it with a preset for additional refinements.';
 
   const customPlaceholder =
     activeTab === 'hair'
@@ -145,9 +339,69 @@ export function useHairAndMakeup() {
       : 'e.g., soft glam with glossy lips, warm brown smoky eye';
 
   const toggleSelection = (optionId: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(optionId) ? prev.filter((id) => id !== optionId) : [...prev, optionId]
-    );
+    if (editTab === 'quick') {
+      // On quick tab, determine which bank the option belongs to
+      if (findPresetOptionById(hairPresets, optionId)) {
+        toggleHairSelection(optionId);
+      } else {
+        toggleMakeupSelection(optionId);
+      }
+    } else if (activeTab === 'hair') {
+      toggleHairSelection(optionId);
+    } else {
+      toggleMakeupSelection(optionId);
+    }
+  };
+
+  /** Hair: one style from one category, up to 2 colors. */
+  const toggleHairSelection = (optionId: string) => {
+    const isColor = findCategoryIdForOption(hairPresets, optionId) === HAIR_COLOR_CATEGORY_ID;
+
+    setSelectedHair((prev) => {
+      // Deselect if already selected
+      if (prev.includes(optionId)) {
+        return prev.filter((id) => id !== optionId);
+      }
+
+      if (isColor) {
+        // Keep existing non-color selections, enforce max 2 colors
+        const colorIds = prev.filter(
+          (id) => findCategoryIdForOption(hairPresets, id) === HAIR_COLOR_CATEGORY_ID
+        );
+        const nonColorIds = prev.filter(
+          (id) => findCategoryIdForOption(hairPresets, id) !== HAIR_COLOR_CATEGORY_ID
+        );
+        const nextColors =
+          colorIds.length >= MAX_HAIR_COLORS
+            ? [...colorIds.slice(1), optionId]
+            : [...colorIds, optionId];
+        return [...nonColorIds, ...nextColors];
+      }
+
+      // Style option: clear all other style selections, keep colors
+      const colorIds = prev.filter(
+        (id) => findCategoryIdForOption(hairPresets, id) === HAIR_COLOR_CATEGORY_ID
+      );
+      return [...colorIds, optionId];
+    });
+  };
+
+  /** Makeup: one selection per section (e.g. one technique + one color per category). */
+  const toggleMakeupSelection = (optionId: string) => {
+    const sectionId = findSectionIdForOption(makeupPresets, optionId);
+
+    setSelectedMakeup((prev) => {
+      if (prev.includes(optionId)) {
+        return prev.filter((id) => id !== optionId);
+      }
+
+      if (!sectionId) return [...prev, optionId];
+
+      // Remove any existing selection from the same section
+      const sameSectionIds = getOptionIdsForSection(makeupPresets, sectionId);
+      const filtered = prev.filter((id) => !sameSectionIds.includes(id));
+      return [...filtered, optionId];
+    });
   };
 
   const handleInfoPress = (option: PresetOption) => {
@@ -317,6 +571,19 @@ export function useHairAndMakeup() {
     setHiddenVariationIds([]);
   }, [baseImageId]);
 
+  // Fetch variation data for the current preview image (for prompt settings display)
+  React.useEffect(() => {
+    if (!previewImageId || previewImageId === selfieImageId) {
+      setActiveImageVariation(null);
+      return;
+    }
+    let cancelled = false;
+    getVariationByImageId(previewImageId).then((variation) => {
+      if (!cancelled) setActiveImageVariation(variation);
+    });
+    return () => { cancelled = true; };
+  }, [previewImageId, selfieImageId]);
+
   const handleGenerateVariation = async () => {
     if (!user?.id) return;
     let activeBaseImageId = baseImageId;
@@ -350,6 +617,9 @@ export function useHairAndMakeup() {
       hairPresetIds: selectedHair,
       makeupPresetIds: selectedMakeup,
       customDescription,
+      accessorySubcategory,
+      jewellerySubcategory,
+      advancedFields,
     };
     const promptText = buildHairMakeupPrompt(inputSnapshot);
 
@@ -492,9 +762,12 @@ export function useHairAndMakeup() {
     return (
       sortIds(selectedHair) !== sortIds(baselineInput.hairPresetIds) ||
       sortIds(selectedMakeup) !== sortIds(baselineInput.makeupPresetIds) ||
-      (customDescription || '') !== (baselineInput.customDescription || '')
+      (customDescription || '') !== (baselineInput.customDescription || '') ||
+      accessorySubcategory !== null ||
+      jewellerySubcategory !== null ||
+      advancedHasValues
     );
-  }, [selectedHair, selectedMakeup, customDescription, baselineInput]);
+  }, [selectedHair, selectedMakeup, customDescription, baselineInput, accessorySubcategory, jewellerySubcategory, advancedHasValues]);
 
   const previewHasImage = Boolean(previewImageUrl);
   const previewIsGenerated =
@@ -757,23 +1030,38 @@ export function useHairAndMakeup() {
   return {
     // Navigation
     navigation,
-    // View state
-    activeView,
-    setActiveView,
-    lastPresetTab,
-    setLastPresetTab,
+    // Page-level tabs
+    pageTab,
+    setPageTab,
+    // View state (derived from pageTab)
     showHeadshotGrid,
     showFacePreview,
-    isPresetView,
-    // Tabs & categories
+    // Edit tabs
+    editTab,
+    setEditTab,
     activeTab,
+    // Expandable subcategories
+    accessorySubcategory,
+    setAccessorySubcategory,
+    jewellerySubcategory,
+    setJewellerySubcategory,
+    // Advanced fields
+    advancedFields,
+    setAdvancedField,
     presets,
     categoryPills,
+    quickTabPresets,
+    quickTabHairPresets,
+    quickTabMakeupPresets,
+    hairColorCategory,
     activeCategory,
     activeCategoryId,
     setActiveCategoryId,
     selectedIds,
     isCustomCategory,
+    hasSelections,
+    creatorSelections,
+    handleRemoveCreatorSelection,
     formatCategoryLabel,
     customDescriptionCopy,
     customPlaceholder,
@@ -789,6 +1077,7 @@ export function useHairAndMakeup() {
     selfieImageId,
     selfieImageUrl,
     // Preview
+    activeImageVariation,
     previewImageUrl,
     previewImageId,
     previewHasImage,

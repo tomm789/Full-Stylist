@@ -1,15 +1,16 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { Animated, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { WardrobeTabIcon, OutfitsTabIcon, HairMakeupTabIcon } from '@/components/icons/tabs';
 import { HeaderAddMenu, HeaderRightMenu, FullScreenMenuModal } from '@/components/tabs';
 import { DropdownMenuModal } from '@/components/shared/modals/DropdownMenuModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { FloatingTabBarProvider, useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { HeaderSearchProvider } from '@/contexts/HeaderSearchContext';
+import { TabSearchProvider, useTabSearch } from '@/contexts/TabSearchContext';
 import { useCalendarEntryFlow } from '@/contexts/CalendarEntryFlowContext';
-import { useProfileImages } from '@/hooks/profile';
 import { borderRadius, shadows, spacing, typography } from '@/styles/theme';
 import type { ThemeColors } from '@/styles/themes';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -20,11 +21,12 @@ function FloatingTabBar(
   props: BottomTabBarProps & {
     onMenuPress?: () => void;
     menuActive?: boolean;
-    menuQuery?: string;
-    onMenuQueryChange?: (value: string) => void;
-    onMenuQueryClear?: () => void;
-    menuSearchExpanded?: boolean;
-    onMenuSearchToggle?: (expanded: boolean) => void;
+    tabSearchEnabled?: boolean;
+    tabSearchQuery?: string;
+    tabSearchOpen?: boolean;
+    onTabSearchToggle?: (expanded: boolean) => void;
+    onTabSearchChange?: (value: string) => void;
+    tabSearchPlaceholder?: string;
     onNotificationsPress?: () => void;
     onCreatePress?: () => void;
     onProfilePress?: () => void;
@@ -32,28 +34,29 @@ function FloatingTabBar(
 ) {
   const colors = useThemeColors();
   const { tabBarOpacity } = useFloatingTabBar();
-  const menuInputRef = useRef<TextInput>(null);
-  const menuSearchAnim = useRef(new Animated.Value(props.menuSearchExpanded ? 1 : 0)).current;
-  const menuQuery = props.menuQuery ?? '';
-  const menuSearchExpanded = Boolean(props.menuSearchExpanded);
+  const tabSearchInputRef = useRef<TextInput>(null);
+  const tabSearchAnim = useRef(new Animated.Value(props.tabSearchOpen ? 1 : 0)).current;
+  const tabSearchEnabled = Boolean(props.tabSearchEnabled);
+  const tabSearchQuery = props.tabSearchQuery ?? '';
+  const tabSearchOpen = Boolean(props.tabSearchOpen);
   const containerZIndex = props.menuActive ? 60 : 40;
   const containerOpacity = props.menuActive ? 1 : tabBarOpacity;
 
   useEffect(() => {
-    const animation = Animated.timing(menuSearchAnim, {
-      toValue: menuSearchExpanded ? 1 : 0,
+    const animation = Animated.timing(tabSearchAnim, {
+      toValue: tabSearchOpen ? 1 : 0,
       duration: SEARCH_EXPAND_DURATION_MS,
       useNativeDriver: false,
     });
     animation.start(({ finished }) => {
-      if (finished && menuSearchExpanded) {
-        menuInputRef.current?.focus();
+      if (finished && tabSearchOpen) {
+        tabSearchInputRef.current?.focus();
       }
     });
     return () => {
       animation.stop();
     };
-  }, [menuSearchAnim, menuSearchExpanded]);
+  }, [tabSearchAnim, tabSearchOpen]);
 
   if (props.menuActive) {
     return (
@@ -69,35 +72,7 @@ function FloatingTabBar(
         ]}
       >
         <View style={[floatingTabBarStyles.inner, floatingTabBarStyles.menuInner]}>
-          <Animated.View
-            style={[
-              floatingTabBarStyles.menuActionsRow,
-              {
-                opacity: menuSearchAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 0],
-                }),
-                transform: [
-                  {
-                    translateY: menuSearchAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 8],
-                    }),
-                  },
-                ],
-              },
-            ]}
-            pointerEvents={menuSearchExpanded ? 'none' : 'auto'}
-          >
-            <TouchableOpacity
-              onPress={() => props.onMenuSearchToggle?.(true)}
-              style={floatingTabBarStyles.tab}
-              accessibilityRole="button"
-              accessibilityLabel="Search menu"
-            >
-              <Ionicons name="search-outline" size={22} color={colors.textPrimary} />
-              <Text style={[floatingTabBarStyles.label, { color: colors.textSecondary }]}>Search</Text>
-            </TouchableOpacity>
+          <View style={floatingTabBarStyles.menuActionsRow}>
             <TouchableOpacity
               onPress={props.onNotificationsPress}
               style={floatingTabBarStyles.tab}
@@ -134,51 +109,7 @@ function FloatingTabBar(
               <Ionicons name="menu-outline" size={22} color={colors.primary} />
               <Text style={[floatingTabBarStyles.label, { color: colors.primary }]}>Menu</Text>
             </TouchableOpacity>
-          </Animated.View>
-
-          <Animated.View
-            style={[
-              floatingTabBarStyles.expandedSearchRow,
-              {
-                opacity: menuSearchAnim,
-                transform: [
-                  {
-                    translateY: menuSearchAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [8, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-            pointerEvents={menuSearchExpanded ? 'auto' : 'none'}
-          >
-            <View
-              style={[
-                floatingTabBarStyles.searchWrapExpanded,
-                { borderColor: colors.borderLight, backgroundColor: colors.background },
-              ]}
-            >
-              <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
-              <TextInput
-                ref={menuInputRef}
-                value={menuQuery}
-                onChangeText={props.onMenuQueryChange}
-                placeholder="Search menu"
-                placeholderTextColor={colors.textTertiary}
-                style={[floatingTabBarStyles.searchInput, { color: colors.textPrimary }]}
-                autoCorrect={false}
-                returnKeyType="search"
-              />
-              <TouchableOpacity
-                onPress={() => props.onMenuSearchToggle?.(false)}
-                accessibilityRole="button"
-                accessibilityLabel="Collapse search"
-              >
-                <Ionicons name="close" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
+          </View>
         </View>
       </Animated.View>
     );
@@ -196,7 +127,27 @@ function FloatingTabBar(
         },
       ]}
     >
-      <View style={floatingTabBarStyles.inner}>
+      <View style={[floatingTabBarStyles.inner, floatingTabBarStyles.menuInner]}>
+        <Animated.View
+          style={[
+            floatingTabBarStyles.menuActionsRow,
+            {
+              opacity: tabSearchAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 0],
+              }),
+              transform: [
+                {
+                  translateY: tabSearchAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 8],
+                  }),
+                },
+              ],
+            },
+          ]}
+          pointerEvents={tabSearchOpen ? 'none' : 'auto'}
+        >
         {props.state.routes.map((route, index) => {
           const { options } = props.descriptors[route.key];
 
@@ -228,38 +179,33 @@ function FloatingTabBar(
 
           if (route.name === 'profile' && props.onMenuPress) {
             return (
-              <TouchableOpacity
-                key={route.key}
-                onPress={props.onMenuPress}
-                style={floatingTabBarStyles.tab}
-                accessibilityRole="button"
-                accessibilityState={{ selected: focused }}
-                accessibilityLabel={labelText || 'Menu'}
-              >
-                {iconNode}
-                {labelText ? (
-                  <Text style={[floatingTabBarStyles.label, { color }]}>{labelText}</Text>
+              <React.Fragment key={route.key}>
+                {tabSearchEnabled ? (
+                  <TouchableOpacity
+                    onPress={() => {
+                      props.onTabSearchToggle?.(true);
+                    }}
+                    style={floatingTabBarStyles.tab}
+                    accessibilityRole="button"
+                    accessibilityLabel="Search"
+                  >
+                    <Ionicons name="search-outline" size={22} color={colors.textTertiary} />
+                    <Text style={[floatingTabBarStyles.label, { color: colors.textTertiary }]}>Search</Text>
+                  </TouchableOpacity>
                 ) : null}
-              </TouchableOpacity>
-            );
-          }
-
-          // Use custom tabBarButton if provided (e.g. the Menu/profile tab)
-          const ButtonComponent = options.tabBarButton;
-          if (ButtonComponent) {
-            return (
-              <ButtonComponent
-                key={route.key}
-                style={floatingTabBarStyles.tab}
-                accessibilityRole="button"
-                accessibilityState={{ selected: focused }}
-                accessibilityLabel={labelText || undefined}
-              >
-                {iconNode}
-                {labelText ? (
-                  <Text style={[floatingTabBarStyles.label, { color }]}>{labelText}</Text>
-                ) : null}
-              </ButtonComponent>
+                <TouchableOpacity
+                  onPress={props.onMenuPress}
+                  style={floatingTabBarStyles.tab}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: focused }}
+                  accessibilityLabel={labelText || 'Menu'}
+                >
+                  {iconNode}
+                  {labelText ? (
+                    <Text style={[floatingTabBarStyles.label, { color }]}>{labelText}</Text>
+                  ) : null}
+                </TouchableOpacity>
+              </React.Fragment>
             );
           }
 
@@ -279,6 +225,51 @@ function FloatingTabBar(
             </TouchableOpacity>
           );
         })}
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            floatingTabBarStyles.expandedSearchRow,
+            {
+              opacity: tabSearchAnim,
+              transform: [
+                {
+                  translateY: tabSearchAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [8, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+          pointerEvents={tabSearchOpen ? 'auto' : 'none'}
+        >
+          <View
+            style={[
+              floatingTabBarStyles.searchWrapExpanded,
+              { borderColor: colors.borderLight, backgroundColor: colors.background },
+            ]}
+          >
+            <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
+            <TextInput
+              ref={tabSearchInputRef}
+              value={tabSearchQuery}
+              onChangeText={props.onTabSearchChange}
+              placeholder={props.tabSearchPlaceholder ?? 'Search'}
+              placeholderTextColor={colors.textTertiary}
+              style={[floatingTabBarStyles.searchInput, { color: colors.textPrimary }]}
+              autoCorrect={false}
+              returnKeyType="search"
+            />
+            <TouchableOpacity
+              onPress={() => props.onTabSearchToggle?.(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Collapse search"
+            >
+              <Ionicons name="close" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
       </View>
     </Animated.View>
   );
@@ -338,7 +329,9 @@ export default function TabsLayout() {
   return (
     <FloatingTabBarProvider>
       <HeaderSearchProvider>
-        <TabsLayoutInner />
+        <TabSearchProvider>
+          <TabsLayoutInner />
+        </TabSearchProvider>
       </HeaderSearchProvider>
     </FloatingTabBarProvider>
   );
@@ -348,13 +341,13 @@ function TabsLayoutInner() {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const router = useRouter();
+  const pathname = usePathname();
   const { session, loading, signOut } = useAuth();
-  const { headshotImageUrl } = useProfileImages({ userId: session?.user?.id });
+  const { getTabSearch, version: tabSearchVersion } = useTabSearch();
   const { openDateSelector } = useCalendarEntryFlow();
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [menuQuery, setMenuQuery] = useState('');
-  const [menuSearchExpanded, setMenuSearchExpanded] = useState(false);
   const tabBarPropsRef = useRef<BottomTabBarProps | null>(null);
   const tabBarUpdateScheduled = useRef(false);
   const [, forceTabBarRender] = useState(0);
@@ -370,10 +363,13 @@ function TabsLayoutInner() {
     if (!showMenu && menuQuery) {
       setMenuQuery('');
     }
-    if (!showMenu) {
-      setMenuSearchExpanded(false);
-    }
   }, [showMenu, menuQuery]);
+
+  const tabSearchState = getTabSearch(pathname);
+  void tabSearchVersion;
+  const tabSearchEnabled = Boolean(
+    tabSearchState && (pathname?.includes('/wardrobe') || pathname?.includes('/outfits'))
+  );
 
   const handleCreateOption = (type: string) => {
     setShowCreateMenu(false);
@@ -491,14 +487,6 @@ function TabsLayoutInner() {
   const actionItems = useMemo(
     () => [
       {
-        key: 'search',
-        label: 'Search',
-        icon: 'search-outline' as const,
-        description: 'Find outfits, people, and more',
-        keywords: ['discover', 'find', 'browse', 'query'],
-        onPress: () => handleMenuOption('search'),
-      },
-      {
         key: 'feedback',
         label: 'Feedback',
         icon: 'chatbubbles-outline' as const,
@@ -556,17 +544,6 @@ function TabsLayoutInner() {
     ],
     [handleMenuOption]
   );
-
-  const profileInitials = useMemo(() => {
-    const raw =
-      (session?.user?.user_metadata as { full_name?: string })?.full_name ||
-      session?.user?.email ||
-      '';
-    const parts = raw.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return '';
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
-  }, [session?.user]);
 
   const handleBottomPillCreate = useCallback(() => {
     setShowCreateMenu(true);
@@ -626,7 +603,7 @@ function TabsLayoutInner() {
             headerShown: false,
             tabBarLabel: 'Wardrobe',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="shirt-outline" size={size} color={color} />
+              <WardrobeTabIcon width={size} height={size} color={color} fill={color} />
             ),
           }}
         />
@@ -636,7 +613,7 @@ function TabsLayoutInner() {
             headerShown: false,
             tabBarLabel: 'Outfits',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="sparkles-outline" size={size} color={color} />
+              <OutfitsTabIcon width={size} height={size} color={color} fill={color} />
             ),
           }}
         />
@@ -654,7 +631,7 @@ function TabsLayoutInner() {
             headerShown: false,
             tabBarLabel: 'Hair & Make-Up',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="cut-outline" size={size} color={color} />
+              <HairMakeupTabIcon width={size} height={size} color={color} fill={color} />
             ),
           }}
         />
@@ -665,16 +642,6 @@ function TabsLayoutInner() {
             tabBarLabel: 'Menu',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="menu-outline" size={size} color={color} />
-            ),
-            tabBarButton: ({ onPress: _nav, onLongPress: _long, onPressIn: _in, onPressOut: _out, href: _href, children, ...rest }) => (
-              <TouchableOpacity
-                {...rest}
-                onPress={() => setShowMenu((prev) => !prev)}
-                accessibilityRole="button"
-                accessibilityLabel="Menu"
-              >
-                {children}
-              </TouchableOpacity>
             ),
           }}
         />
@@ -693,12 +660,11 @@ function TabsLayoutInner() {
         onClose={() => setShowMenu(false)}
         onAdd={() => { setShowMenu(false); setShowCreateMenu(true); }}
         onProfile={() => handleMenuOption('profile')}
-        avatarUri={headshotImageUrl}
-        avatarInitials={profileInitials}
         gridTitle=""
         gridItems={gridItems}
         actionItems={actionItems}
         query={menuQuery}
+        onQueryChange={setMenuQuery}
       />
 
       <DropdownMenuModal
@@ -751,11 +717,22 @@ function TabsLayoutInner() {
           {...tabBarPropsRef.current}
           onMenuPress={() => setShowMenu((prev) => !prev)}
           menuActive={showMenu}
-          menuQuery={menuQuery}
-          onMenuQueryChange={setMenuQuery}
-          onMenuQueryClear={() => setMenuQuery('')}
-          menuSearchExpanded={menuSearchExpanded}
-          onMenuSearchToggle={setMenuSearchExpanded}
+          tabSearchEnabled={tabSearchEnabled}
+          tabSearchQuery={tabSearchState?.query}
+          tabSearchOpen={tabSearchState?.open}
+          onTabSearchToggle={(expanded) => {
+            if (!tabSearchState) return;
+            if (expanded) {
+              tabSearchState.setDefaultFilter?.();
+              tabSearchState.onOpen();
+              return;
+            }
+            tabSearchState.onClose();
+          }}
+          onTabSearchChange={(value) => tabSearchState?.onQueryChange(value)}
+          tabSearchPlaceholder={
+            pathname?.includes('/wardrobe') ? 'Search wardrobe...' : 'Search outfits...'
+          }
           onCreatePress={handleBottomPillCreate}
           onNotificationsPress={handleBottomPillNotifications}
           onProfilePress={handleBottomPillProfile}

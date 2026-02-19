@@ -11,6 +11,13 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.background,
   },
+  searchHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.background,
+  },
   outfitFeedCard: {
     width: '100%',
   },

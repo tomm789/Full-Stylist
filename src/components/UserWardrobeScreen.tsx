@@ -261,7 +261,6 @@ export default function UserWardrobeScreen({
                   categories={categoryOptions}
                   selectedCategoryId={selectedCategoryId}
                   onSelectCategory={setSelectedCategoryId}
-                  variant="category"
                 />
               </>
             )}

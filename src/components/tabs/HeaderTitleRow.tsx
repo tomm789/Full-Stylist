@@ -27,6 +27,8 @@ type HeaderTitleRowProps = {
   hideLeftIcon?: boolean;
   rightSlotExpand?: boolean;
   collapseTitle?: boolean;
+  /** When provided, renders in the center and hides the title. */
+  centerSlot?: React.ReactNode;
   /** @deprecated Use hideLeftIcon instead. */
   hideCalendar?: boolean;
 };
@@ -40,6 +42,7 @@ export default function HeaderTitleRow({
   hideLeftIcon,
   rightSlotExpand = false,
   collapseTitle = false,
+  centerSlot,
   hideCalendar,
 }: HeaderTitleRowProps) {
   const colors = useThemeColors();
@@ -47,6 +50,7 @@ export default function HeaderTitleRow({
   const router = useRouter();
 
   const isHidden = hideLeftIcon ?? hideCalendar ?? false;
+  const hideTitle = collapseTitle || !!centerSlot;
 
   const handleLeftPress = () => {
     if (onLeftAction) {
@@ -72,16 +76,20 @@ export default function HeaderTitleRow({
         />
       </TouchableOpacity>
       {leftSlot ? <View style={styles.leftSlot}>{leftSlot}</View> : null}
-      <Text
-        style={[
-          styles.titleText,
-          isHidden && styles.titleTextCompressed,
-          collapseTitle && styles.titleTextCollapsed,
-        ]}
-        numberOfLines={1}
-      >
-        {title}
-      </Text>
+      {centerSlot ? (
+        <View style={styles.centerSlot}>{centerSlot}</View>
+      ) : (
+        <Text
+          style={[
+            styles.titleText,
+            isHidden && styles.titleTextCompressed,
+            hideTitle && styles.titleTextCollapsed,
+          ]}
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
+      )}
       {rightSlot ? (
         <View style={[styles.rightSlot, rightSlotExpand && styles.rightSlotExpand]}>
           {rightSlot}
@@ -110,6 +118,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   leftSlot: {
     marginRight: spacing.xs,
+  },
+  centerSlot: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
   },
   titleText: {
     fontSize: typography.fontSize.lg,

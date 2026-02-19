@@ -85,7 +85,7 @@ export default function PillButton({
           name={icon}
           size={size === 'small' ? 14 : size === 'medium' ? 16 : 18}
           color={selected ? colors.white : colors.textSecondary}
-          style={styles.icon}
+          style={label ? (isVertical ? styles.iconVertical : styles.icon) : undefined}
         />
       )}
       {label ? (
@@ -198,6 +198,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   icon: {
     marginRight: spacing.xs / 2,
   },
+  iconVertical: {},
   removeButton: {
     marginLeft: spacing.xs / 2,
     padding: spacing.xs / 2,

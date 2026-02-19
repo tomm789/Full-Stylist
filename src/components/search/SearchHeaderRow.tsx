@@ -30,6 +30,14 @@ type SearchHeaderRowProps = {
   onRightAction?: () => void;
   rightBadgeCount?: number;
   searchOpen: boolean;
+  /** When provided, renders in the center and hides the title. */
+  centerSlot?: React.ReactNode;
+  /** When true and centerSlot is provided, hide filter from the right pill (default: true when centerSlot is used). */
+  showFilter?: boolean;
+  /** Avatar for right pill (wardrobe: search + avatar). */
+  avatarUri?: string | null;
+  avatarInitials?: string;
+  onProfile?: () => void;
 };
 
 export default function SearchHeaderRow({
@@ -46,10 +54,16 @@ export default function SearchHeaderRow({
   onRightAction,
   rightBadgeCount = 0,
   searchOpen,
+  centerSlot,
+  showFilter: showFilterProp,
+  avatarUri,
+  avatarInitials,
+  onProfile,
 }: SearchHeaderRowProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const insets = useSafeAreaInsets();
+  const showFilter = showFilterProp ?? !centerSlot;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.sm }]}>
@@ -78,11 +92,13 @@ export default function SearchHeaderRow({
         </TouchableOpacity>
       )}
 
-      {!searchOpen && (
+      {!searchOpen && centerSlot ? (
+        <View style={styles.centerSlot}>{centerSlot}</View>
+      ) : !searchOpen ? (
         <Text style={styles.titleText} numberOfLines={1}>
           {title}
         </Text>
-      )}
+      ) : null}
 
       <View style={[styles.pillWrap, searchOpen && styles.pillWrapExpanded]}>
         <HeaderSearchPill
@@ -91,13 +107,16 @@ export default function SearchHeaderRow({
           onFilter={onFilter}
           hasActiveFilters={hasActiveFilters}
           placeholder={placeholder}
-          showFilter
+          showFilter={showFilter}
           inlineSearchEnabled
           expanded={searchOpen}
           onToggleExpanded={() => onSearchToggle(!searchOpen)}
           rightIcon={rightIcon}
           onRightAction={onRightAction}
           rightBadgeCount={rightBadgeCount}
+          avatarUri={avatarUri}
+          avatarInitials={avatarInitials}
+          onProfile={onProfile}
         />
       </View>
     </View>
@@ -115,6 +134,12 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   leftButton: {
     padding: spacing.xs,
+  },
+  centerSlot: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 0,
   },
   titleText: {
     fontSize: typography.fontSize.lg,

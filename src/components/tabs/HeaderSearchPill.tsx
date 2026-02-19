@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
+import HeaderAvatarButton from '@/components/shared/layout/HeaderAvatarButton';
 import type { ThemeColors } from '@/styles/themes';
 
 const { spacing, borderRadius, typography } = theme;
@@ -35,6 +36,9 @@ type HeaderSearchPillProps = {
   rightIcon?: keyof typeof Ionicons.glyphMap;
   onRightAction?: () => void;
   rightBadgeCount?: number;
+  avatarUri?: string | null;
+  avatarInitials?: string;
+  onProfile?: () => void;
 };
 
 export default function HeaderSearchPill({
@@ -51,6 +55,9 @@ export default function HeaderSearchPill({
   rightIcon,
   onRightAction,
   rightBadgeCount = 0,
+  avatarUri,
+  avatarInitials,
+  onProfile,
 }: HeaderSearchPillProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
@@ -163,7 +170,15 @@ export default function HeaderSearchPill({
           </TouchableOpacity>
         </Animated.View>
       )}
-      {rightIcon && !expanded && (
+      {!expanded && onProfile != null ? (
+        <HeaderAvatarButton
+          uri={avatarUri ?? undefined}
+          initials={avatarInitials}
+          onPress={onProfile}
+          inline
+          borderless
+        />
+      ) : !expanded && rightIcon ? (
         <TouchableOpacity
           style={styles.iconButton}
           onPress={onRightAction}
@@ -178,7 +193,7 @@ export default function HeaderSearchPill({
             </View>
           )}
         </TouchableOpacity>
-      )}
+      ) : null}
     </View>
   );
 }

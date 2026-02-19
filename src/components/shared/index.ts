@@ -28,7 +28,11 @@ export * from './filters';
 export { SearchResultItem } from './SearchResultItem';
 export { SearchFilterBar } from './SearchFilterBar';
 export { default as TabPillsRow } from './TabPillsRow';
+export { default as HeaderTabPill } from './HeaderTabPill';
 export { default as EdgePeekSlider } from './EdgePeekSlider';
+
+// Creator
+export { default as CreatorBar } from './CreatorBar';
 
 // Wardrobe
 export { default as WardrobeCategoryIcon } from './WardrobeCategoryIcon';

@@ -71,10 +71,14 @@ export function FloatingTabBarProvider({ children }: { children: React.ReactNode
   );
 }
 
+const NOOP_OPACITY = new Animated.Value(1);
+const noopFallback: FloatingTabBarContextValue = {
+  tabBarOpacity: NOOP_OPACITY,
+  setTabBarDimmed: () => {},
+  setTabBarOpacity: () => {},
+};
+
 export function useFloatingTabBar() {
   const context = useContext(FloatingTabBarContext);
-  if (!context) {
-    throw new Error('useFloatingTabBar must be used within FloatingTabBarProvider');
-  }
-  return context;
+  return context ?? noopFallback;
 }

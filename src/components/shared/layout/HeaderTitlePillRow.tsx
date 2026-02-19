@@ -23,6 +23,8 @@ type HeaderTitlePillRowProps = {
   avatarInitials?: string;
   unreadCount?: number;
   cameraDisabled?: boolean;
+  /** When provided, renders in the center and hides the title. */
+  centerSlot?: React.ReactNode;
 };
 
 export default function HeaderTitlePillRow({
@@ -34,6 +36,7 @@ export default function HeaderTitlePillRow({
   avatarInitials,
   unreadCount = 0,
   cameraDisabled = false,
+  centerSlot,
 }: HeaderTitlePillRowProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
@@ -45,6 +48,7 @@ export default function HeaderTitlePillRow({
         title={title}
         leftIcon="camera-outline"
         onLeftAction={cameraDisabled ? undefined : onCamera}
+        centerSlot={centerSlot}
         rightSlot={
           <HeaderActionPill
             onNotifications={onNotifications}

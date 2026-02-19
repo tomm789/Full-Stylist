@@ -1,32 +1,17 @@
 /**
  * OutfitsHeaderBar Component
- * Pill-style tab selector + view toggle + filters/search for Outfits screen.
+ * View toggle + SearchBar for Outfits screen. Tabs are in the header via HeaderTabPill.
  */
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, typography, spacing } from '@/styles';
-import { SearchBar, TabPillsRow } from '@/components/shared';
-import type { TabPillItem } from '@/components/shared/TabPillsRow';
-import { OutfitsTabIcon } from '@/components/icons/tabs';
+import { SearchBar } from '@/components/shared';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 
-export type OutfitsTab = 'my_outfits' | 'explore' | 'following' | `lookbook_${string}`;
-
-const FIXED_TABS: TabPillItem[] = [
-  {
-    id: 'my_outfits',
-    label: 'My Outfits',
-    icon: 'shirt-outline',
-    iconComponent: ({ size, color }) => (
-      <OutfitsTabIcon width={size} height={size} color={color} fill={color} />
-    ),
-  },
-  { id: 'explore', label: 'Explore', icon: 'compass-outline' },
-  { id: 'following', label: 'Following', icon: 'people-outline' },
-];
+export type OutfitsTab = 'my_outfits' | 'explore' | 'following' | 'lookbooks' | `lookbook_${string}`;
 
 type OutfitsHeaderBarProps = {
   activeTab: OutfitsTab;
@@ -40,16 +25,10 @@ type OutfitsHeaderBarProps = {
   onOpenSort: () => void;
   hasActiveFilters: boolean;
   showSearch: boolean;
-  pinnedLookbooks?: { id: string; title: string }[];
-  onAddLookbookTab?: () => void;
-  onRemoveLookbookTab?: (id: string) => void;
 };
 
 export default function OutfitsHeaderBar({
-  activeTab,
-  showTabLabels,
   activeView,
-  onChangeTab,
   onChangeView,
   showViewToggle,
   searchQuery,
@@ -57,38 +36,12 @@ export default function OutfitsHeaderBar({
   onOpenSort,
   hasActiveFilters,
   showSearch,
-  pinnedLookbooks = [],
-  onAddLookbookTab,
-  onRemoveLookbookTab,
 }: OutfitsHeaderBarProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
 
-  const allPills: TabPillItem[] = [
-    ...FIXED_TABS,
-    ...pinnedLookbooks.map((lb) => ({
-      id: `lookbook_${lb.id}`,
-      label: lb.title,
-      icon: 'book-outline' as keyof typeof Ionicons.glyphMap,
-      removable: true,
-    })),
-  ];
-
   return (
     <View style={styles.container}>
-      <TabPillsRow
-        pills={allPills}
-        activeId={activeTab}
-        onPress={(id) => onChangeTab(id as OutfitsTab)}
-        onRemove={
-          onRemoveLookbookTab
-            ? (id) => onRemoveLookbookTab(id.replace('lookbook_', ''))
-            : undefined
-        }
-        onAdd={onAddLookbookTab}
-        showFilter={false}
-      />
-
       {showViewToggle && (
         <View style={styles.viewToggle}>
           <TouchableOpacity
