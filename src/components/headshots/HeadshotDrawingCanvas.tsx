@@ -9,11 +9,19 @@ import React, { useImperativeHandle } from 'react';
 
 export type HeadshotDrawingCanvasRef = {
   makeMaskSnapshot: () => Promise<string | null>;
+  undo: () => void;
+  redo: () => void;
+  clear: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  hasStrokes: boolean;
 };
 
-type HeadshotDrawingCanvasProps = {
+export type HeadshotDrawingCanvasProps = {
   drawingEnabled: boolean;
   currentColor: string;
+  strokeWidth?: number;
+  onStrokeChange?: (hasStrokes: boolean, canUndo: boolean, canRedo: boolean) => void;
 };
 
 const HeadshotDrawingCanvas = React.forwardRef<
@@ -22,6 +30,12 @@ const HeadshotDrawingCanvas = React.forwardRef<
 >((_props, ref) => {
   useImperativeHandle(ref, () => ({
     makeMaskSnapshot: async () => null,
+    undo: () => {},
+    redo: () => {},
+    clear: () => {},
+    canUndo: false,
+    canRedo: false,
+    hasStrokes: false,
   }));
   return null;
 });

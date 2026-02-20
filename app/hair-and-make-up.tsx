@@ -32,6 +32,7 @@ import {
   HeaderTabPill,
 } from '@/components/shared';
 import HeadshotSlideItem from '@/components/headshots/HeadshotSlideItem';
+import DrawModeModal from '@/components/headshots/DrawModeModal';
 import { HeaderTitlePillRow } from '@/components/shared/layout';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
@@ -230,7 +231,7 @@ export default function HairAndMakeUpScreen() {
       !state.infoModalVisible &&
       !state.policyModalVisible &&
       !state.showFaceMenu &&
-      !state.isDrawMode,
+      !state.isDrawModeOpen,
   });
 
   const renderSliderItem = React.useCallback(
@@ -245,13 +246,16 @@ export default function HairAndMakeUpScreen() {
         previewIsGenerated={state.previewIsGenerated}
         onRestoreSelfie={state.handleRestoreSelfie}
         isStyleDisabled={state.isStyleDisabled}
-        drawingEnabled={state.isDrawMode}
-        currentColor={state.currentDrawColor}
-        drawingCanvasRef={state.drawingCanvasRef}
       />
     ),
-    [state.handlePreviewPress, handleMenuPress, state.generating, state.generateOverlayOpacity, state.previewIsGenerated, state.handleRestoreSelfie, state.isStyleDisabled, state.isDrawMode, state.currentDrawColor, state.drawingCanvasRef],
+    [state.handlePreviewPress, handleMenuPress, state.generating, state.generateOverlayOpacity, state.previewIsGenerated, state.handleRestoreSelfie, state.isStyleDisabled],
   );
+
+  const handleOpenCategoryEditor = React.useCallback((categoryId: string) => {
+    state.setIsDrawModeOpen(false);
+    state.setEditTab(categoryId === 'hair' ? 'hair' : 'makeup');
+    setEditModalVisible(true);
+  }, [state]);
 
   const renderHeadshotGridItem = ({ item }: { item: { id: string; url: string | null } }) => (
     <TouchableOpacity
@@ -437,26 +441,12 @@ export default function HairAndMakeUpScreen() {
               )}
               {state.previewHasImage && Platform.OS !== 'web' && (
                 <TouchableOpacity
-                  style={[
-                    styles.drawModeButton,
-                    state.isDrawMode && styles.drawModeButtonActive,
-                  ]}
-                  onPress={() => state.setIsDrawMode((prev) => !prev)}
-                  accessibilityLabel={state.isDrawMode ? 'Exit draw mode' : 'Enter draw mode'}
+                  style={styles.drawModeButton}
+                  onPress={() => state.setIsDrawModeOpen(true)}
+                  accessibilityLabel="Open draw mode"
                 >
-                  <Ionicons
-                    name="pencil-outline"
-                    size={16}
-                    color={state.isDrawMode ? colors.textLight : colors.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.drawModeButtonLabel,
-                      state.isDrawMode && styles.drawModeButtonLabelActive,
-                    ]}
-                  >
-                    {state.isDrawMode ? 'Drawing' : 'Draw'}
-                  </Text>
+                  <Ionicons name="pencil-outline" size={16} color={colors.textSecondary} />
+                  <Text style={styles.drawModeButtonLabel}>Draw</Text>
                 </TouchableOpacity>
               )}
               <HeadshotPromptSettings variation={state.activeImageVariation} />
@@ -1013,6 +1003,23 @@ export default function HairAndMakeUpScreen() {
           )}
         </View>
       </Modal>
+
+      {/* Fullscreen Draw Mode */}
+      <DrawModeModal
+        visible={state.isDrawModeOpen}
+        onClose={() => state.setIsDrawModeOpen(false)}
+        previewImageUrl={state.previewImageUrl}
+        baseImageId={state.baseImageId}
+        userId={state.userId}
+        creatorSelections={state.creatorSelections}
+        hasSelections={state.hasSelections}
+        generating={state.generating}
+        onGenerate={state.handleGenerateVariation}
+        onRemoveSelection={state.handleRemoveCreatorSelection}
+        onOpenCategoryEditor={handleOpenCategoryEditor}
+        onApplyTemplateSelections={state.handleApplyTemplateSelections}
+        drawingCanvasRef={state.drawingCanvasRef}
+      />
 
       {/* Headshot Creator Bar & Container */}
       {state.pageTab === 'mirror' && state.hasSelections && (

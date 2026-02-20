@@ -22,6 +22,7 @@ import { buildHairMakeupPrompt } from '@/lib/headshot/hairMakeupPrompt';
 import { getPublicImageUrl } from '@/lib/images';
 import { deleteImage, uploadBase64ImageToStorage } from '@/lib/utils/image-helpers';
 import type { HeadshotDrawingCanvasRef } from '@/components/headshots/HeadshotDrawingCanvas';
+import { getDrawColour } from '@/lib/headshot/drawingColors';
 import { getUserSettings, updateUserSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
 import {
@@ -157,7 +158,7 @@ export function useHairAndMakeup() {
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [showFaceMenu, setShowFaceMenu] = useState(false);
   const [activeImageVariation, setActiveImageVariation] = useState<HeadshotGenerationVariation | null>(null);
-  const [isDrawMode, setIsDrawMode] = useState(false);
+  const [isDrawModeOpen, setIsDrawModeOpen] = useState(false);
   const drawingCanvasRef = useRef<HeadshotDrawingCanvasRef>(null);
   const profileInitials = useMemo(() => {
     const raw =
@@ -180,11 +181,9 @@ export function useHairAndMakeup() {
   // The active preset tab determines which preset bank to show
   const activeTab: TabId = editTab === 'hair' || editTab === 'makeup' ? editTab : 'hair';
 
-  // Semantic color for the drawing mask overlay
-  const currentDrawColor =
-    editTab === 'makeup' ? '#FF00FF' :
-    editTab === 'hair'   ? '#00FFFF' :
-    '#FF00FF'; // default
+  // Draw mode uses a per-category colour (managed inside DrawModeModal).
+  // This value is kept for any legacy reference but DrawModeModal owns the active colour.
+  const currentDrawColor = getDrawColour('lip-styles');
   const presets = useMemo<PresetCategory[]>(
     () => (activeTab === 'hair' ? hairPresets : makeupPresets),
     [activeTab]
@@ -671,10 +670,10 @@ export function useHairAndMakeup() {
 
       setVariations((prev) => [variation, ...prev]);
 
-      // Capture mask snapshot if draw mode is active
+      // Capture mask snapshot if draw mode is open
       let maskStoragePath: string | undefined;
       let maskStorageBucket: string | undefined;
-      if (isDrawMode && drawingCanvasRef.current) {
+      if (isDrawModeOpen && drawingCanvasRef.current) {
         const maskBase64 = await drawingCanvasRef.current.makeMaskSnapshot();
         if (maskBase64) {
           const maskBucket = 'user-images';
@@ -1017,6 +1016,18 @@ export function useHairAndMakeup() {
     }
   };
 
+  const handleApplyTemplateSelections = (snapshot: {
+    hairPresetIds: string[];
+    makeupPresetIds: string[];
+    customDescription?: string;
+  }) => {
+    setSelectedHair(snapshot.hairPresetIds ?? []);
+    setSelectedMakeup(snapshot.makeupPresetIds ?? []);
+    if (snapshot.customDescription !== undefined) {
+      setCustomDescription(snapshot.customDescription);
+    }
+  };
+
   const handlePreviewPress = () => {
     if (previewImageUrl) {
       setLightboxUrl(previewImageUrl);
@@ -1111,6 +1122,9 @@ export function useHairAndMakeup() {
     selfieUpload,
     selfieImageId,
     selfieImageUrl,
+    // Identity
+    userId: user?.id ?? null,
+    baseImageId,
     // Preview
     activeImageVariation,
     previewImageUrl,
@@ -1163,9 +1177,10 @@ export function useHairAndMakeup() {
     showFaceMenu,
     setShowFaceMenu,
     // Draw mode
-    isDrawMode,
-    setIsDrawMode,
+    isDrawModeOpen,
+    setIsDrawModeOpen,
     drawingCanvasRef,
     currentDrawColor,
+    handleApplyTemplateSelections,
   };
 }
