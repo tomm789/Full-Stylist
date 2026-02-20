@@ -96,7 +96,13 @@ export function useWardrobeItems({
         ]);
 
         const newCache = buildWardrobeItemsImageUrlCache(itemIds, imagesMap);
-        setImageCache(newCache);
+        setImageCache((prev) => {
+          const merged = new Map(prev);
+          for (const [id, url] of newCache.entries()) {
+            merged.set(id, url);
+          }
+          return merged;
+        });
         setEntityAttributesMap(entityAttrsMap);
         setTagsMap(tagsData);
       }

@@ -10,6 +10,7 @@ export { default as SearchBar } from '../shared/layout/SearchBar';
 export { default as CategoryPills } from './CategoryPills';
 export { default as FilterDrawer } from './FilterDrawer';
 export { default as OutfitCreatorBar } from './OutfitCreatorBar';
+export { default as OutfitCreatorCanvas } from './OutfitCreatorCanvas';
 export { default as OutfitCreatorContainer } from './OutfitCreatorContainer';
 export { default as OutfitCreatorOptionsModal } from './OutfitCreatorOptionsModal';
 export { default as HeadshotSelectorCard } from './HeadshotSelectorCard';

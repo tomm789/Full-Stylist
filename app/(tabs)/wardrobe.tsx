@@ -32,6 +32,7 @@ import {
   ItemGrid,
   ItemDetailModal,
   OutfitCreatorBar,
+  OutfitCreatorCanvas,
   OutfitCreatorContainer,
   OutfitCreatorOptionsModal,
   HeadshotSelectorModal,
@@ -66,6 +67,14 @@ import HeaderTitleRow from '@/components/tabs/HeaderTitleRow';
 import HeaderAvatarButton from '@/components/shared/layout/HeaderAvatarButton';
 import { useTabSearch } from '@/contexts/TabSearchContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  getDefaultOutfitCanvasLayout,
+  type OutfitCanvasItemLayout,
+  type OutfitCanvasLayoutMap,
+  type OutfitCanvasTrimMap,
+  type OutfitCanvasTrimStatusMap,
+} from '@/lib/outfits/canvasLayout';
+import { fetchCanvasTrimMetadata } from '@/lib/outfits/canvasTrim';
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   // Minimal styles - most come from theme and commonStyles
@@ -159,7 +168,24 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
+  expandedCreatorDismissZone: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 12,
+  },
+  edgeSwipeGestureZone: {
+    position: 'absolute',
+    left: 0,
+    bottom: 0,
+    width: 28,
+    backgroundColor: 'transparent',
+    zIndex: 50,
+  },
 });
+
+const CREATOR_BAR_HEIGHT = 60;
+const CREATOR_ROW_HEIGHT = 60;
 
 
 
@@ -184,17 +210,20 @@ export default function WardrobeScreen() {
 
   // Local UI state (must be before useMemo/backgroundGrid that depend on selectedOutfitItems + allItems)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [outfitCreatorCategoryId, setOutfitCreatorCategoryId] = useState<string | null>(null);
   const wardrobeSearchQuery = '';
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [outfitCreatorMode, setOutfitCreatorMode] = useState(false);
   const [selectedOutfitItems, setSelectedOutfitItems] = useState<string[]>([]);
+  const [selectedOutfitItemMap, setSelectedOutfitItemMap] = useState<Map<string, WardrobeItem>>(new Map());
   const [selectedItem, setSelectedItem] = useState<WardrobeItem | null>(null);
   const [showItemModal, setShowItemModal] = useState(false);
   const [showFirstTimeTutorial, setShowFirstTimeTutorial] = useState(false);
   const [tutorialChecked, setTutorialChecked] = useState(false);
   const [showOutfitTipOnClose, setShowOutfitTipOnClose] = useState(false);
   const [showOutfitCreatorOptionsModal, setShowOutfitCreatorOptionsModal] = useState(false);
+  const [isCreatorExpanded, setIsCreatorExpanded] = useState(false);
+  const [outfitCanvasLayouts, setOutfitCanvasLayouts] = useState<OutfitCanvasLayoutMap>({});
+  const [outfitCanvasTrims, setOutfitCanvasTrims] = useState<OutfitCanvasTrimMap>({});
 
   // Headshot selector state
   const [showHeadshotSelector, setShowHeadshotSelector] = useState(false);
@@ -206,6 +235,8 @@ export default function WardrobeScreen() {
   const { width: searchOverlayWidth } = useWindowDimensions();
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
   const searchOpenRef = useRef(false);
+  const cameraNavLockRef = useRef(false);
+  const [outfitCanvasTrimStatuses, setOutfitCanvasTrimStatuses] = useState<OutfitCanvasTrimStatusMap>({});
   const {
     searchQuery: globalSearchQuery,
     setSearchQuery: setGlobalSearchQuery,
@@ -224,6 +255,7 @@ export default function WardrobeScreen() {
     handleScroll: handleGridScroll,
   } = useHideHeaderOnScroll({
     onVisibilityChange: (visible, timing) => {
+      if (outfitCreatorMode) return;
       setTabBarDimmed(!visible, timing);
     },
   });
@@ -231,14 +263,26 @@ export default function WardrobeScreen() {
 
 
   const handleOpenCamera = useCallback(() => {
+    if (cameraNavLockRef.current) return;
+    cameraNavLockRef.current = true;
     router.push('/wardrobe/add?action=photo' as any);
+    setTimeout(() => {
+      cameraNavLockRef.current = false;
+    }, 700);
   }, [router]);
 
   // Edge swipe: swipe from left edge to open camera
   const cameraSwipe = useEdgeSwipe({
     direction: 'left',
     onSwipe: handleOpenCamera,
-    enabled: isFocused && !searchOverlayOpen,
+    enabled:
+      isFocused &&
+      activeTab === 'my' &&
+      !searchOverlayOpen &&
+      !showItemModal &&
+      !showHeadshotSelector &&
+      !showFilterDrawer &&
+      !isCreatorExpanded,
   });
 
   useEffect(() => {
@@ -250,11 +294,13 @@ export default function WardrobeScreen() {
   // Hide/show tab bar based on outfit creator mode
   useEffect(() => {
     if (outfitCreatorMode) {
+      setTabBarDimmed(false);
       setTabBarOpacity(0); // Completely hide the pill
     } else {
       setTabBarOpacity(1); // Show the pill
+      setTabBarDimmed(false);
     }
-  }, [outfitCreatorMode, setTabBarOpacity]);
+  }, [outfitCreatorMode, setTabBarDimmed, setTabBarOpacity]);
 
   // Fetch headshots and user settings when outfit creator mode is activated
   useEffect(() => {
@@ -321,23 +367,84 @@ export default function WardrobeScreen() {
   } = useWardrobeItems({
     wardrobeId,
     userId: user?.id,
-    categoryId: outfitCreatorMode && outfitCreatorCategoryId ? outfitCreatorCategoryId : selectedCategoryId,
+    categoryId: selectedCategoryId || undefined,
     searchQuery: wardrobeSearchQuery,
   });
 
-  // Selected items as WardrobeItem[] (for background grid + generate); memoized so background hook debounce is stable
-  const selectedItemsForGeneration = useMemo(
+  const selectedItemsById = useMemo(() => {
+    const lookup = new Map<string, WardrobeItem>();
+    for (const item of allItems) {
+      lookup.set(item.id, item);
+    }
+    for (const [id, item] of selectedOutfitItemMap.entries()) {
+      if (!lookup.has(id)) {
+        lookup.set(id, item);
+      }
+    }
+    return lookup;
+  }, [allItems, selectedOutfitItemMap]);
+
+  const selectedWardrobeItems = useMemo(
     () =>
       selectedOutfitItems
-        .map((id) => allItems.find((item) => item.id === id))
+        .map((id) => selectedItemsById.get(id))
         .filter((item): item is WardrobeItem => Boolean(item)),
-    [selectedOutfitItems, allItems]
+    [selectedOutfitItems, selectedItemsById]
   );
+
+  // Selected items as WardrobeItem[] (for background grid + generate); memoized so background hook debounce is stable
+  const selectedItemsForGeneration = useMemo(
+    () => selectedWardrobeItems,
+    [selectedWardrobeItems]
+  );
+  const activeOutfitCanvasLayouts = useMemo(() => {
+    if (selectedOutfitItems.length === 0) return {};
+    const next: OutfitCanvasLayoutMap = {};
+    for (const itemId of selectedOutfitItems) {
+      const layout = outfitCanvasLayouts[itemId];
+      if (!layout) continue;
+      next[itemId] = layout;
+    }
+    return next;
+  }, [outfitCanvasLayouts, selectedOutfitItems]);
+  const activeOutfitCanvasTrims = useMemo(() => {
+    if (selectedOutfitItems.length === 0) return {};
+    const next: OutfitCanvasTrimMap = {};
+    for (const itemId of selectedOutfitItems) {
+      const trim = outfitCanvasTrims[itemId];
+      if (!trim) continue;
+      next[itemId] = trim;
+    }
+    return next;
+  }, [outfitCanvasTrims, selectedOutfitItems]);
+  const activeOutfitCanvasTrimStatuses = useMemo(() => {
+    if (selectedOutfitItems.length === 0) return {};
+    const next: OutfitCanvasTrimStatusMap = {};
+    for (const itemId of selectedOutfitItems) {
+      next[itemId] = outfitCanvasTrimStatuses[itemId] ?? 'idle';
+    }
+    return next;
+  }, [outfitCanvasTrimStatuses, selectedOutfitItems]);
+  const hasCustomCreatorLayout =
+    Object.keys(activeOutfitCanvasLayouts).length > 0 ||
+    Object.keys(activeOutfitCanvasTrims).length > 0;
+  const pendingTrimCount = selectedOutfitItems.filter(
+    (itemId) => activeOutfitCanvasTrimStatuses[itemId] === 'pending'
+  ).length;
+  const successTrimCount = selectedOutfitItems.filter(
+    (itemId) => activeOutfitCanvasTrimStatuses[itemId] === 'success'
+  ).length;
+  const isCanvasPreparing =
+    isCreatorExpanded &&
+    selectedOutfitItems.length > 0 &&
+    successTrimCount === 0 &&
+    pendingTrimCount > 0;
 
   // Background grid: pre-upload grid while user selects (gated by EXPO_PUBLIC_PREGEND_GRID, default OFF)
   const backgroundGrid = useBackgroundGridGenerator(
     selectedItemsForGeneration,
-    user?.id ?? null
+    user?.id ?? null,
+    hasCustomCreatorLayout
   );
   const pregenGridEnabled =
     typeof process !== 'undefined' && process.env.EXPO_PUBLIC_PREGEND_GRID === 'true';
@@ -347,7 +454,7 @@ export default function WardrobeScreen() {
     userId: user?.id || '',
     categories,
     backgroundGrid:
-      pregenGridEnabled && backgroundGrid
+      pregenGridEnabled && backgroundGrid && !hasCustomCreatorLayout
         ? { getStoredKeyOrAwaitPending: backgroundGrid.getStoredKeyOrAwaitPending }
         : null,
   });
@@ -411,6 +518,302 @@ export default function WardrobeScreen() {
   }, [selectedCategoryId]);
 
   // === Handlers ===
+
+  const handleCategorySelect = useCallback((categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
+  }, []);
+
+  const upsertSelectedOutfitItem = useCallback((item: WardrobeItem) => {
+    setSelectedOutfitItemMap((prev) => {
+      const next = new Map(prev);
+      next.set(item.id, item);
+      return next;
+    });
+  }, []);
+
+  const removeSelectedOutfitItem = useCallback((itemId: string) => {
+    setSelectedOutfitItemMap((prev) => {
+      if (!prev.has(itemId)) return prev;
+      const next = new Map(prev);
+      next.delete(itemId);
+      return next;
+    });
+  }, []);
+
+  const resetOutfitCreatorState = useCallback(() => {
+    setSelectedOutfitItems([]);
+    setSelectedOutfitItemMap(new Map());
+    setOutfitCanvasLayouts({});
+    setOutfitCanvasTrims({});
+    setOutfitCanvasTrimStatuses({});
+    setIsCreatorExpanded(false);
+    setOutfitCreatorMode(false);
+    handleCategorySelect(null);
+    updateFilter('subcategoryId', null);
+  }, [handleCategorySelect, updateFilter]);
+
+  useEffect(() => {
+    if (!isCreatorExpanded || selectedOutfitItems.length === 0) return;
+    setOutfitCanvasLayouts((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      selectedOutfitItems.forEach((itemId, index) => {
+        if (next[itemId]) return;
+        next[itemId] = getDefaultOutfitCanvasLayout(index, selectedOutfitItems.length);
+        changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [isCreatorExpanded, selectedOutfitItems]);
+
+  useEffect(() => {
+    const selectedSet = new Set(selectedOutfitItems);
+    setOutfitCanvasLayouts((prev) => {
+      let changed = false;
+      const next: OutfitCanvasLayoutMap = {};
+      for (const [itemId, layout] of Object.entries(prev)) {
+        if (!selectedSet.has(itemId)) {
+          changed = true;
+          continue;
+        }
+        next[itemId] = layout;
+      }
+      return changed ? next : prev;
+    });
+  }, [selectedOutfitItems]);
+
+  useEffect(() => {
+    const selectedSet = new Set(selectedOutfitItems);
+    setOutfitCanvasTrims((prev) => {
+      let changed = false;
+      const next: OutfitCanvasTrimMap = {};
+      for (const [itemId, trim] of Object.entries(prev)) {
+        if (!selectedSet.has(itemId)) {
+          changed = true;
+          continue;
+        }
+        next[itemId] = trim;
+      }
+      return changed ? next : prev;
+    });
+  }, [selectedOutfitItems]);
+
+  useEffect(() => {
+    const selectedSet = new Set(selectedOutfitItems);
+    setOutfitCanvasTrimStatuses((prev) => {
+      let changed = false;
+      const next: OutfitCanvasTrimStatusMap = {};
+      for (const [itemId, status] of Object.entries(prev)) {
+        if (!selectedSet.has(itemId)) {
+          changed = true;
+          continue;
+        }
+        next[itemId] = status;
+      }
+      return changed ? next : prev;
+    });
+  }, [selectedOutfitItems]);
+
+  useEffect(() => {
+    if (!isCreatorExpanded || selectedOutfitItems.length === 0) return;
+    setOutfitCanvasTrimStatuses((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const itemId of selectedOutfitItems) {
+        if (!next[itemId]) {
+          next[itemId] = 'idle';
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [isCreatorExpanded, selectedOutfitItems]);
+
+  useEffect(() => {
+    if (selectedOutfitItems.length === 0) return;
+    setOutfitCanvasTrimStatuses((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const itemId of selectedOutfitItems) {
+        if (!outfitCanvasTrims[itemId]) continue;
+        if (next[itemId] === 'success') continue;
+        next[itemId] = 'success';
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [outfitCanvasTrims, selectedOutfitItems]);
+
+  useEffect(() => {
+    if (!isCreatorExpanded || !user?.id) return;
+    if (selectedOutfitItems.length === 0) return;
+
+    const requestIds = selectedOutfitItems.filter(
+      (itemId) =>
+        !outfitCanvasTrims[itemId] &&
+        (outfitCanvasTrimStatuses[itemId] === 'idle' || !outfitCanvasTrimStatuses[itemId])
+    );
+    if (requestIds.length === 0) return;
+
+    setOutfitCanvasTrimStatuses((prev) => {
+      const next = { ...prev };
+      requestIds.forEach((itemId) => {
+        next[itemId] = 'pending';
+      });
+      return next;
+    });
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const { data: imageLinks, error } = await supabase
+          .from('wardrobe_item_images')
+          .select(`
+            wardrobe_item_id,
+            type,
+            sort_order,
+            images!inner(storage_key)
+          `)
+          .in('wardrobe_item_id', requestIds);
+
+        if (error || !imageLinks) {
+          setOutfitCanvasTrimStatuses((prev) => {
+            const next = { ...prev };
+            requestIds.forEach((itemId) => {
+              next[itemId] = 'failed';
+            });
+            return next;
+          });
+          return;
+        }
+
+        const linksByItem = new Map<string, any[]>();
+        for (const link of imageLinks as any[]) {
+          const itemId = link.wardrobe_item_id as string;
+          if (!linksByItem.has(itemId)) linksByItem.set(itemId, []);
+          linksByItem.get(itemId)!.push(link);
+        }
+
+        const trimItems: Array<{ itemId: string; storageKey: string }> = [];
+        for (const itemId of requestIds) {
+          const links = linksByItem.get(itemId) ?? [];
+          if (!links.length) continue;
+          links.sort((a, b) => {
+            if (a.type === 'product_shot' && b.type !== 'product_shot') return -1;
+            if (b.type === 'product_shot' && a.type !== 'product_shot') return 1;
+            return (a.sort_order || 999) - (b.sort_order || 999);
+          });
+          const storageKey = links[0]?.images?.storage_key;
+          if (!storageKey) continue;
+          trimItems.push({ itemId, storageKey });
+        }
+
+        if (trimItems.length === 0) {
+          setOutfitCanvasTrimStatuses((prev) => {
+            const next = { ...prev };
+            requestIds.forEach((itemId) => {
+              next[itemId] = 'failed';
+            });
+            return next;
+          });
+          return;
+        }
+        const trims = await fetchCanvasTrimMetadata(trimItems);
+        if (cancelled) return;
+        const resolvedTrims = trims ?? {};
+        const successIds = new Set(Object.keys(resolvedTrims));
+        if (successIds.size > 0) {
+          setOutfitCanvasTrims((prev) => ({ ...prev, ...resolvedTrims }));
+        }
+        setOutfitCanvasTrimStatuses((prev) => {
+          const next = { ...prev };
+          requestIds.forEach((itemId) => {
+            next[itemId] = successIds.has(itemId) ? 'success' : 'failed';
+          });
+          return next;
+        });
+      } catch (trimError) {
+        console.warn('[Wardrobe] Failed to fetch canvas trim metadata', trimError);
+        if (cancelled) return;
+        setOutfitCanvasTrimStatuses((prev) => {
+          const next = { ...prev };
+          requestIds.forEach((itemId) => {
+            next[itemId] = 'failed';
+          });
+          return next;
+        });
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+      setOutfitCanvasTrimStatuses((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        requestIds.forEach((itemId) => {
+          if (next[itemId] !== 'pending') return;
+          next[itemId] = 'idle';
+          changed = true;
+        });
+        return changed ? next : prev;
+      });
+    };
+  }, [isCreatorExpanded, outfitCanvasTrims, selectedOutfitItems, user?.id]);
+
+  const handleCanvasLayoutChange = useCallback(
+    (itemId: string, nextLayout: OutfitCanvasItemLayout) => {
+      setOutfitCanvasLayouts((prev) => {
+        const current = prev[itemId];
+        if (
+          current &&
+          current.centerX === nextLayout.centerX &&
+          current.centerY === nextLayout.centerY &&
+          current.scale === nextLayout.scale &&
+          current.zIndex === nextLayout.zIndex
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [itemId]: nextLayout,
+        };
+      });
+    },
+    []
+  );
+
+  const handleBringForward = useCallback((itemId: string) => {
+    setOutfitCanvasLayouts((prev) => {
+      const index = selectedOutfitItems.findIndex((id) => id === itemId);
+      if (index === -1) return prev;
+      const current = prev[itemId] ?? getDefaultOutfitCanvasLayout(index, selectedOutfitItems.length);
+      const maxZ = Math.max(...Object.values(prev).map((layout) => layout.zIndex), current.zIndex);
+      return {
+        ...prev,
+        [itemId]: {
+          ...current,
+          zIndex: maxZ + 1,
+        },
+      };
+    });
+  }, [selectedOutfitItems]);
+
+  const handleSendBackward = useCallback((itemId: string) => {
+    setOutfitCanvasLayouts((prev) => {
+      const index = selectedOutfitItems.findIndex((id) => id === itemId);
+      if (index === -1) return prev;
+      const current = prev[itemId] ?? getDefaultOutfitCanvasLayout(index, selectedOutfitItems.length);
+      const minZ = Math.min(...Object.values(prev).map((layout) => layout.zIndex), current.zIndex);
+      return {
+        ...prev,
+        [itemId]: {
+          ...current,
+          zIndex: minZ - 1,
+        },
+      };
+    });
+  }, [selectedOutfitItems]);
 
 
   useEffect(() => {
@@ -489,13 +892,9 @@ export default function WardrobeScreen() {
   };
 
   const handleOutfitSelectionAttempt = (item: WardrobeItem, promptOnConflict: boolean) => {
-    const selectedItems = selectedOutfitItems
-      .map((id) => allItems.find((i) => i.id === id))
-      .filter((i): i is WardrobeItem => Boolean(i));
-
     const conflictingItem = findConflictingItem(
       item,
-      selectedItems,
+      selectedWardrobeItems,
       (categoryId) => getCategoryById(categoryId)?.name || ''
     );
 
@@ -509,9 +908,9 @@ export default function WardrobeScreen() {
             text: 'Replace',
             style: 'destructive',
             onPress: () => {
-              setSelectedOutfitItems((prev) =>
-                prev.filter((id) => id !== conflictingItem.id).concat(item.id)
-              );
+              removeSelectedOutfitItem(conflictingItem.id);
+              upsertSelectedOutfitItem(item);
+              setSelectedOutfitItems((prev) => prev.filter((id) => id !== conflictingItem.id).concat(item.id));
               if (!outfitCreatorMode) setOutfitCreatorMode(true);
             },
           },
@@ -522,9 +921,14 @@ export default function WardrobeScreen() {
 
     // Add to outfit
     if (!outfitCreatorMode) setOutfitCreatorMode(true);
-    setSelectedOutfitItems((prev) =>
-      prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id]
-    );
+    setSelectedOutfitItems((prev) => {
+      if (prev.includes(item.id)) {
+        removeSelectedOutfitItem(item.id);
+        return prev.filter((id) => id !== item.id);
+      }
+      upsertSelectedOutfitItem(item);
+      return [...prev, item.id];
+    });
   };
 
   const handleToggleFavorite = async (itemId: string, currentFavoriteStatus: boolean) => {
@@ -632,9 +1036,7 @@ export default function WardrobeScreen() {
     }
 
     // Get the actual wardrobe items from IDs
-    const selectedItems = selectedOutfitItems
-      .map((id) => allItems.find((item) => item.id === id))
-      .filter((item): item is WardrobeItem => Boolean(item));
+    const selectedItems = selectedWardrobeItems;
 
     if (selectedItems.length === 0) {
       Alert.alert('Error', 'Failed to load selected items');
@@ -643,13 +1045,16 @@ export default function WardrobeScreen() {
 
     // Generate outfit using the hook
     const result = await logClientTiming('outfit_generation_client', async () => {
-      return generateOutfit(selectedItems);
+      return generateOutfit(
+        selectedItems,
+        hasCustomCreatorLayout ? activeOutfitCanvasLayouts : null,
+        hasCustomCreatorLayout ? activeOutfitCanvasTrims : null
+      );
     });
 
     if (result.success && result.outfitId) {
       // Clear selection and exit outfit creator mode
-      setOutfitCreatorMode(false);
-      setSelectedOutfitItems([]);
+      resetOutfitCreatorState();
 
       const navigateAt = Date.now();
       console.debug('[outfit_render_timing] navigate_to_view_at', { ts: navigateAt, outfitId: result.outfitId, traceId: result.renderTraceId });
@@ -660,6 +1065,12 @@ export default function WardrobeScreen() {
       Alert.alert('Error', result.error || 'Failed to generate outfit');
     }
   };
+
+  useEffect(() => {
+    if (!outfitCreatorMode) return;
+    if (selectedOutfitItems.length > 0) return;
+    resetOutfitCreatorState();
+  }, [outfitCreatorMode, selectedOutfitItems.length, resetOutfitCreatorState]);
 
   const handleModalOpenDetail = () => {
     if (!selectedItem) return;
@@ -730,6 +1141,7 @@ export default function WardrobeScreen() {
     .map((id) => ({
       id,
       imageUrl: imageCache.get(id) || null,
+      trimStatus: outfitCanvasTrimStatuses[id] ?? 'idle',
     }))
     .filter((item) => item !== null);
 
@@ -738,11 +1150,8 @@ export default function WardrobeScreen() {
     ? filteredItems
         .filter((item) => {
           if (selectedOutfitItems.includes(item.id)) return false;
-          const selectedItems = selectedOutfitItems
-            .map((id) => allItems.find((i) => i.id === id))
-            .filter((i): i is WardrobeItem => Boolean(i));
           return Boolean(
-            findConflictingItem(item, selectedItems, (categoryId) =>
+            findConflictingItem(item, selectedWardrobeItems, (categoryId) =>
               getCategoryById(categoryId)?.name || ''
             )
           );
@@ -820,8 +1229,14 @@ export default function WardrobeScreen() {
     }
   };
 
+  const headerHeightPx = typeof headerHeight === 'number' ? headerHeight : 0;
+  const creatorCanvasTop = Math.max(headerHeightPx + theme.spacing.xs, insets.top + 72);
+  const creatorCanvasBottom =
+    theme.spacing.xl + CREATOR_BAR_HEIGHT + theme.spacing.md + CREATOR_ROW_HEIGHT + theme.spacing.md;
+  const dismissZoneTop = headerHeightPx;
+  const dismissZoneHeight = Math.max(0, creatorCanvasTop - dismissZoneTop);
+
   return (
-    <PanGestureHandler enabled={cameraSwipe.enabled} onGestureEvent={cameraSwipe.onGestureEvent}>
     <View style={commonStyles.container}>
 
       {/* Generation Progress Modal (hidden in PERF_MODE to measure UI overhead) */}
@@ -894,7 +1309,7 @@ export default function WardrobeScreen() {
               subcategories={subcategories}
               selectedCategoryId={selectedCategoryId}
               selectedSubcategoryId={filters.subcategoryId}
-              onSelectCategory={setSelectedCategoryId}
+              onSelectCategory={handleCategorySelect}
               onSelectSubcategory={(id) => updateFilter('subcategoryId', id)}
             />
           </View>
@@ -995,29 +1410,56 @@ export default function WardrobeScreen() {
       {/* Outfit Creator Container & Bar (Bottom) */}
       {outfitCreatorMode && selectedOutfitItems.length > 0 && (() => {
         // Calculate which categories are already in the selection
-        const selectedItemObjects = selectedOutfitItems
-          .map((id) => allItems.find((i) => i.id === id))
-          .filter((i): i is WardrobeItem => Boolean(i));
-
         const selectedCategoryIds = new Set(
-          selectedItemObjects.map((item) => item.category_id)
+          selectedWardrobeItems.map((item) => item.category_id)
         );
 
         return (
           <>
+            {isCreatorExpanded && dismissZoneHeight > 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.expandedCreatorDismissZone,
+                  {
+                    top: dismissZoneTop,
+                    height: dismissZoneHeight,
+                  },
+                ]}
+                onPress={() => setIsCreatorExpanded(false)}
+                activeOpacity={1}
+              />
+            )}
+
+            <OutfitCreatorCanvas
+              visible={isCreatorExpanded}
+              isPreparing={isCanvasPreparing}
+              selectedItems={selectedItemsForBar}
+              layoutMap={outfitCanvasLayouts}
+              trimMap={outfitCanvasTrims}
+              containerStyle={{
+                top: creatorCanvasTop,
+                bottom: creatorCanvasBottom,
+                zIndex: 13,
+              }}
+              onLayoutChange={handleCanvasLayoutChange}
+              onBringForward={handleBringForward}
+              onSendBackward={handleSendBackward}
+            />
+
             {/* Container with selected items and category shortcuts */}
             <OutfitCreatorContainer
               selectedItems={selectedItemsForBar}
               categories={categories}
-              onRemoveItem={(id) => setSelectedOutfitItems((prev) => prev.filter((i) => i !== id))}
-              onCategorySelect={(categoryId) => {
-                if (outfitCreatorCategoryId === categoryId) {
-                  setOutfitCreatorCategoryId(null);
-                } else {
-                  setOutfitCreatorCategoryId(categoryId);
-                }
+              onRemoveItem={(id) => {
+                removeSelectedOutfitItem(id);
+                setSelectedOutfitItems((prev) => prev.filter((i) => i !== id));
               }}
-              selectedCategoryId={outfitCreatorCategoryId}
+              onCategorySelect={(categoryId) => {
+                setIsCreatorExpanded(false);
+                const nextCategoryId = selectedCategoryId === categoryId ? null : categoryId;
+                handleCategorySelect(nextCategoryId);
+              }}
+              selectedCategoryId={selectedCategoryId}
               currentHeadshotUrl={currentHeadshotUrl}
               onHeadshotSelect={() => setShowHeadshotSelector(true)}
               selectedCategoryIds={selectedCategoryIds}
@@ -1028,6 +1470,8 @@ export default function WardrobeScreen() {
               itemCount={selectedOutfitItems.length}
               onGenerate={handleGenerateOutfit}
               onOptions={() => setShowOutfitCreatorOptionsModal(true)}
+              expanded={isCreatorExpanded}
+              onToggleExpanded={() => setIsCreatorExpanded((prev) => !prev)}
               isGenerating={generating}
             />
           </>
@@ -1039,9 +1483,7 @@ export default function WardrobeScreen() {
         visible={showOutfitCreatorOptionsModal}
         onClose={() => setShowOutfitCreatorOptionsModal(false)}
         onClearSelection={() => {
-          setSelectedOutfitItems([]);
-          setOutfitCreatorMode(false);
-          setOutfitCreatorCategoryId(null);
+          resetOutfitCreatorState();
           setShowOutfitCreatorOptionsModal(false);
         }}
       />
@@ -1057,7 +1499,10 @@ export default function WardrobeScreen() {
         onClearSelection={handleClearHeadshotSelection}
         loading={loadingHeadshots}
       />
+
+      <PanGestureHandler enabled={cameraSwipe.enabled} onGestureEvent={cameraSwipe.onGestureEvent}>
+        <View style={[styles.edgeSwipeGestureZone, { top: headerHeightPx }]} />
+      </PanGestureHandler>
     </View>
-    </PanGestureHandler>
   );
 }

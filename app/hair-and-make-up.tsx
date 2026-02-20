@@ -229,7 +229,8 @@ export default function HairAndMakeUpScreen() {
       !state.lightboxVisible &&
       !state.infoModalVisible &&
       !state.policyModalVisible &&
-      !state.showFaceMenu,
+      !state.showFaceMenu &&
+      !state.isDrawMode,
   });
 
   const renderSliderItem = React.useCallback(
@@ -244,9 +245,12 @@ export default function HairAndMakeUpScreen() {
         previewIsGenerated={state.previewIsGenerated}
         onRestoreSelfie={state.handleRestoreSelfie}
         isStyleDisabled={state.isStyleDisabled}
+        drawingEnabled={state.isDrawMode}
+        currentColor={state.currentDrawColor}
+        drawingCanvasRef={state.drawingCanvasRef}
       />
     ),
-    [state.handlePreviewPress, handleMenuPress, state.generating, state.generateOverlayOpacity, state.previewIsGenerated, state.handleRestoreSelfie, state.isStyleDisabled],
+    [state.handlePreviewPress, handleMenuPress, state.generating, state.generateOverlayOpacity, state.previewIsGenerated, state.handleRestoreSelfie, state.isStyleDisabled, state.isDrawMode, state.currentDrawColor, state.drawingCanvasRef],
   );
 
   const renderHeadshotGridItem = ({ item }: { item: { id: string; url: string | null } }) => (
@@ -430,6 +434,30 @@ export default function HairAndMakeUpScreen() {
                     <Text style={styles.placeholderText}>Tap to open camera</Text>
                   </TouchableOpacity>
                 </View>
+              )}
+              {state.previewHasImage && Platform.OS !== 'web' && (
+                <TouchableOpacity
+                  style={[
+                    styles.drawModeButton,
+                    state.isDrawMode && styles.drawModeButtonActive,
+                  ]}
+                  onPress={() => state.setIsDrawMode((prev) => !prev)}
+                  accessibilityLabel={state.isDrawMode ? 'Exit draw mode' : 'Enter draw mode'}
+                >
+                  <Ionicons
+                    name="pencil-outline"
+                    size={16}
+                    color={state.isDrawMode ? colors.textLight : colors.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.drawModeButtonLabel,
+                      state.isDrawMode && styles.drawModeButtonLabelActive,
+                    ]}
+                  >
+                    {state.isDrawMode ? 'Drawing' : 'Draw'}
+                  </Text>
+                </TouchableOpacity>
               )}
               <HeadshotPromptSettings variation={state.activeImageVariation} />
             </View>
@@ -1672,6 +1700,31 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.textTertiary,
     textAlign: 'center',
+  },
+  // Draw mode toggle button
+  drawModeButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.round,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.backgroundSecondary,
+    gap: spacing.xs,
+  },
+  drawModeButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  drawModeButtonLabel: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: typography.fontWeight.medium,
+  },
+  drawModeButtonLabelActive: {
+    color: colors.textLight,
   },
   // Advanced tab text fields
   advancedInput: {

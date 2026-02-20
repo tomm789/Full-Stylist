@@ -8,6 +8,7 @@ type TabBarTiming = {
 
 type FloatingTabBarContextValue = {
   tabBarOpacity: Animated.Value;
+  tabBarDimOpacity: Animated.Value;
   setTabBarDimmed: (dimmed: boolean, timing?: TabBarTiming) => void;
   setTabBarOpacity: (opacity: number, timing?: TabBarTiming) => void;
 };
@@ -23,6 +24,7 @@ const FloatingTabBarContext = createContext<FloatingTabBarContextValue | null>(n
 
 export function FloatingTabBarProvider({ children }: { children: React.ReactNode }) {
   const tabBarOpacity = useRef(new Animated.Value(1)).current;
+  const tabBarDimOpacity = useRef(new Animated.Value(1)).current;
   const dimmedRef = useRef(false);
 
   const setTabBarDimmed = useCallback(
@@ -32,13 +34,13 @@ export function FloatingTabBarProvider({ children }: { children: React.ReactNode
       const duration = dimmed
         ? timing?.hideDuration ?? DEFAULT_TIMING.hideDuration
         : timing?.showDuration ?? DEFAULT_TIMING.showDuration;
-      Animated.timing(tabBarOpacity, {
+      Animated.timing(tabBarDimOpacity, {
         toValue: dimmed ? DIMMED_OPACITY : 1,
         duration,
         useNativeDriver: false,
       }).start();
     },
-    [tabBarOpacity]
+    [tabBarDimOpacity]
   );
 
   const setTabBarOpacity = useCallback(
@@ -58,10 +60,11 @@ export function FloatingTabBarProvider({ children }: { children: React.ReactNode
   const value = useMemo(
     () => ({
       tabBarOpacity,
+      tabBarDimOpacity,
       setTabBarDimmed,
       setTabBarOpacity,
     }),
-    [setTabBarDimmed, setTabBarOpacity, tabBarOpacity]
+    [setTabBarDimmed, setTabBarOpacity, tabBarOpacity, tabBarDimOpacity]
   );
 
   return (
@@ -74,6 +77,7 @@ export function FloatingTabBarProvider({ children }: { children: React.ReactNode
 const NOOP_OPACITY = new Animated.Value(1);
 const noopFallback: FloatingTabBarContextValue = {
   tabBarOpacity: NOOP_OPACITY,
+  tabBarDimOpacity: NOOP_OPACITY,
   setTabBarDimmed: () => {},
   setTabBarOpacity: () => {},
 };

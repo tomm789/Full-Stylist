@@ -35,7 +35,9 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
     makeup_style,
     prompt_text,
     output_folder,
-    skip_user_settings_update
+    skip_user_settings_update,
+    mask_storage_path,
+    mask_storage_bucket,
   } = input;
   if (!selfie_image_id) {
     throw new Error("Missing selfie_image_id");
@@ -55,11 +57,34 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
     throw new Error("Invalid base64 image format");
   }
   
+  // Download mask from storage if a drawing mask was provided
+  let maskResult = null;
+  if (mask_storage_path && mask_storage_bucket) {
+    console.log(`[processHeadshotGenerate] Downloading mask from storage: ${mask_storage_bucket}/${mask_storage_path}`);
+    const { data: maskBlob, error: maskError } = await supabase.storage
+      .from(mask_storage_bucket)
+      .download(mask_storage_path);
+    if (maskError || !maskBlob) {
+      console.warn(`[processHeadshotGenerate] Failed to download mask: ${maskError?.message}`);
+    } else {
+      const maskBuffer = Buffer.from(await maskBlob.arrayBuffer());
+      const maskBase64 = maskBuffer.toString('base64');
+      maskResult = { base64: maskBase64, mimeType: 'image/png' };
+      console.log(`[processHeadshotGenerate] Mask downloaded, base64 length: ${maskBase64.length}`);
+    }
+  }
+
   const hair = hair_style || "Keep original hair";
   const makeup = makeup_style || "Natural look";
-  const prompt = prompt_text
+  let prompt = prompt_text
     ? PROMPTS.HEADSHOT_PRESET(prompt_text)
     : PROMPTS.HEADSHOT(hair, makeup);
+
+  // Append mask instructions when a semantic mask is present
+  if (maskResult) {
+    prompt += '\n\nImage 2 is a semantic mask on a black background. Pure Magenta (#FF00FF) marks where to apply makeup changes. Cyan (#00FFFF) marks where to apply hair modifications. Apply the requested changes only in the regions indicated by the mask color.';
+  }
+
   const { data: userSettings } = await supabase
     .from("user_settings")
     .select("ai_model_preference, ai_model_headshot_generate")
@@ -73,10 +98,13 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
   const apiVersion = getGeminiApiVersion(model);
   console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, apiVersion });
   console.log(`[processHeadshotGenerate] Calling Gemini API with prompt length: ${prompt.length}`);
+  // Build the image array: always include selfie; add mask when present
+  const geminiImages = maskResult ? [selfieResult, maskResult] : [selfieResult];
+
   // Generate the headshot via Gemini - pass full result object to include mime-type
   const headshotB64 = await callGeminiAPI(
     prompt,
-    [selfieResult],
+    geminiImages,
     model,
     "IMAGE",
     perfTracker,

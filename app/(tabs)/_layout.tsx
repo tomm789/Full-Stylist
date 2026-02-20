@@ -33,14 +33,16 @@ function FloatingTabBar(
   }
 ) {
   const colors = useThemeColors();
-  const { tabBarOpacity } = useFloatingTabBar();
+  const { tabBarOpacity, tabBarDimOpacity } = useFloatingTabBar();
   const tabSearchInputRef = useRef<TextInput>(null);
   const tabSearchAnim = useRef(new Animated.Value(props.tabSearchOpen ? 1 : 0)).current;
   const tabSearchEnabled = Boolean(props.tabSearchEnabled);
   const tabSearchQuery = props.tabSearchQuery ?? '';
   const tabSearchOpen = Boolean(props.tabSearchOpen);
   const containerZIndex = props.menuActive ? 60 : 40;
-  const containerOpacity = props.menuActive ? 1 : tabBarOpacity;
+  const containerOpacity = props.menuActive
+    ? 1
+    : Animated.multiply(tabBarOpacity, tabBarDimOpacity);
 
   useEffect(() => {
     const animation = Animated.timing(tabSearchAnim, {

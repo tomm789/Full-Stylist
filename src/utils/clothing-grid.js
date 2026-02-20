@@ -55,7 +55,7 @@ function calculateGridLayout(itemCount) {
  * @param {string[]} imageUrls - Array of image URLs to load and composite (CORS enabled)
  * @returns {Promise<string>} Base64 encoded JPEG string (quality 0.8)
  */
-export async function generateClothingGrid(imageUrls) {
+export async function generateClothingGrid(imageUrls, options = {}) {
   if (typeof document === 'undefined' || typeof Image === 'undefined') {
     throw new Error('generateClothingGrid requires DOM canvas APIs (web only)');
   }
@@ -131,6 +131,64 @@ export async function generateClothingGrid(imageUrls) {
 
   // Draw each trimmed canvas in its grid cell (scaled to fill cell)
   const SAFETY_MARGIN = 1.0; // 1.0 = fill cell; use e.g. 0.9 for margin so items don't touch edges
+  const { itemIds = null, layoutByItemId = null } = options || {};
+  const hasCustomLayout =
+    !!layoutByItemId &&
+    !!itemIds &&
+    Array.isArray(itemIds) &&
+    itemIds.length === trimmedCanvases.length;
+
+  const getDefaultCenter = (index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    return {
+      centerX: (col * (cellWidth + PADDING) + cellWidth / 2) / CANVAS_WIDTH,
+      centerY: (row * (cellHeight + PADDING) + cellHeight / 2) / CANVAS_HEIGHT,
+    };
+  };
+
+  if (hasCustomLayout) {
+    const layeredItems = trimmedCanvases.map((trimmedCanvas, index) => {
+      const itemId = itemIds[index];
+      const customLayout = layoutByItemId[itemId] || null;
+      return {
+        trimmedCanvas,
+        index,
+        layout: customLayout,
+        zIndex:
+          typeof customLayout?.zIndex === 'number'
+            ? customLayout.zIndex
+            : index,
+      };
+    });
+
+    layeredItems.sort((a, b) => a.zIndex - b.zIndex);
+
+    for (const entry of layeredItems) {
+      const trimmedCanvas = entry.trimmedCanvas;
+      const trimmedWidth = trimmedCanvas.width;
+      const trimmedHeight = trimmedCanvas.height;
+      const defaultCenter = getDefaultCenter(entry.index);
+      const centerX = Math.max(0.05, Math.min(0.95, entry.layout?.centerX ?? defaultCenter.centerX));
+      const centerY = Math.max(0.05, Math.min(0.95, entry.layout?.centerY ?? defaultCenter.centerY));
+      const userScale = Math.max(0.55, Math.min(2.2, entry.layout?.scale ?? 1));
+
+      const baseScale = Math.min(cellWidth / trimmedWidth, cellHeight / trimmedHeight) * SAFETY_MARGIN;
+      const scale = baseScale * userScale;
+      const dstWidth = trimmedWidth * scale;
+      const dstHeight = trimmedHeight * scale;
+
+      const x = centerX * CANVAS_WIDTH - dstWidth / 2;
+      const y = centerY * CANVAS_HEIGHT - dstHeight / 2;
+
+      ctx.drawImage(trimmedCanvas, 0, 0, trimmedWidth, trimmedHeight, x, y, dstWidth, dstHeight);
+    }
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    const base64String = dataUrl.split(',')[1];
+    console.log(`[generateClothingGrid] Custom-layout canvas created, base64 length: ${base64String.length}`);
+    return base64String;
+  }
 
   for (let i = 0; i < trimmedCanvases.length; i++) {
     const trimmedCanvas = trimmedCanvases[i];

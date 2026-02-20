@@ -42,7 +42,8 @@ export interface BackgroundGridResult {
 
 export function useBackgroundGridGenerator(
   selectedItems: WardrobeItem[],
-  userId: string | null
+  userId: string | null,
+  hasCustomLayout = false
 ): BackgroundGridResult {
   const [preUploadedGridKey, setPreUploadedGridKey] = useState<string | null>(null);
   const [selectionKeyForStored, setSelectionKeyForStored] = useState<string | null>(null);
@@ -143,7 +144,7 @@ export function useBackgroundGridGenerator(
   );
 
   useEffect(() => {
-    if (!PREGEND_GRID_ENABLED || !userId || selectedItems.length === 0) {
+    if (!PREGEND_GRID_ENABLED || hasCustomLayout || !userId || selectedItems.length === 0) {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
@@ -188,11 +189,11 @@ export function useBackgroundGridGenerator(
         debounceTimerRef.current = null;
       }
     };
-  }, [userId, selectedItems, performUpload]);
+  }, [hasCustomLayout, userId, selectedItems, performUpload]);
 
   const getStoredKeyOrAwaitPending = useCallback(
     async (currentSelectionKey: string): Promise<string | null> => {
-      if (!PREGEND_GRID_ENABLED) return null;
+      if (!PREGEND_GRID_ENABLED || hasCustomLayout) return null;
       if (preUploadedGridKey && selectionKeyForStored === currentSelectionKey) {
         return preUploadedGridKey;
       }
@@ -203,7 +204,7 @@ export function useBackgroundGridGenerator(
       }
       return null;
     },
-    [preUploadedGridKey, selectionKeyForStored]
+    [hasCustomLayout, preUploadedGridKey, selectionKeyForStored]
   );
 
   // Reset stored key when selection changes so we don't reuse for wrong set

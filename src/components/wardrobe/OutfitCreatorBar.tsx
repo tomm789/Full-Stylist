@@ -18,6 +18,8 @@ interface OutfitCreatorBarProps {
   itemCount: number;
   onGenerate: () => void;
   onOptions: () => void;
+  expanded: boolean;
+  onToggleExpanded: () => void;
   isGenerating?: boolean;
 }
 
@@ -25,6 +27,8 @@ export default function OutfitCreatorBar({
   itemCount,
   onGenerate,
   onOptions,
+  expanded,
+  onToggleExpanded,
   isGenerating = false,
 }: OutfitCreatorBarProps) {
   const colors = useThemeColors();
@@ -61,6 +65,20 @@ export default function OutfitCreatorBar({
         </TouchableOpacity>
 
         {/* Options Button */}
+        <TouchableOpacity
+          style={styles.optionsButton}
+          onPress={onToggleExpanded}
+          disabled={isGenerating}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+        >
+          <Ionicons
+            name={expanded ? 'contract-outline' : 'expand-outline'}
+            size={20}
+            color={colors.white}
+          />
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.optionsButton}
           onPress={onOptions}

@@ -206,6 +206,8 @@ export async function triggerHeadshotGenerateWithPrompt(
   options?: {
     outputFolder?: string;
     skipUserSettingsUpdate?: boolean;
+    maskStoragePath?: string;
+    maskStorageBucket?: string;
   }
 ): Promise<QueryResult<AIJob>> {
   return createAIJob(userId, 'headshot_generate', {
@@ -213,6 +215,8 @@ export async function triggerHeadshotGenerateWithPrompt(
     prompt_text: promptText,
     output_folder: options?.outputFolder,
     skip_user_settings_update: options?.skipUserSettingsUpdate,
+    mask_storage_path: options?.maskStoragePath,
+    mask_storage_bucket: options?.maskStorageBucket,
   });
 }
 

@@ -185,6 +185,103 @@ function normalizeLabelList(values) {
   return normalized;
 }
 
+function calculateGridLayout(itemCount) {
+  if (itemCount <= 1) return { cols: 1, rows: 1 };
+  if (itemCount === 2) return { cols: 2, rows: 1 };
+  if (itemCount <= 4) return { cols: 2, rows: 2 };
+  if (itemCount <= 6) return { cols: 2, rows: 3 };
+  if (itemCount <= 9) return { cols: 3, rows: 3 };
+  if (itemCount <= 12) return { cols: 3, rows: 4 };
+  const cols = Math.ceil(Math.sqrt(itemCount));
+  return { cols, rows: Math.ceil(itemCount / cols) };
+}
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+function normalizeTrimBounds(rawBounds) {
+  const left = clamp(Number(rawBounds?.left ?? 0), 0, 1);
+  const top = clamp(Number(rawBounds?.top ?? 0), 0, 1);
+  const right = clamp(Number(rawBounds?.right ?? 1), left + 0.001, 1);
+  const bottom = clamp(Number(rawBounds?.bottom ?? 1), top + 0.001, 1);
+  return { left, top, right, bottom };
+}
+
+async function composeCustomCanvasGrid(itemImageResults, wardrobeItemIds, settings = {}) {
+  const CANVAS_WIDTH = 1536;
+  const CANVAS_HEIGHT = 2048;
+  const PADDING = 20;
+  const canvasLayout = settings.canvas_layout || {};
+  const canvasTrimMap = settings.canvas_trim_map || {};
+  const { cols, rows } = calculateGridLayout(itemImageResults.length);
+  const cellWidth = Math.floor((CANVAS_WIDTH - (cols - 1) * PADDING) / cols);
+  const cellHeight = Math.floor((CANVAS_HEIGHT - (rows - 1) * PADDING) / rows);
+
+  const getDefaultCenter = (index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    return {
+      centerX: (col * (cellWidth + PADDING) + cellWidth / 2) / CANVAS_WIDTH,
+      centerY: (row * (cellHeight + PADDING) + cellHeight / 2) / CANVAS_HEIGHT,
+    };
+  };
+
+  const layers = await Promise.all(
+    itemImageResults.map(async (result, index) => {
+      const itemId = wardrobeItemIds[index];
+      const imageBuffer = Buffer.from(result.base64, "base64");
+      const metadata = await sharp(imageBuffer).metadata();
+      const width = metadata.width || 1;
+      const height = metadata.height || 1;
+      const trim = normalizeTrimBounds(canvasTrimMap[itemId]?.bounds || null);
+      const left = Math.floor(trim.left * width);
+      const top = Math.floor(trim.top * height);
+      const right = Math.ceil(trim.right * width);
+      const bottom = Math.ceil(trim.bottom * height);
+      const extractWidth = Math.max(1, right - left);
+      const extractHeight = Math.max(1, bottom - top);
+      const croppedBuffer = await sharp(imageBuffer)
+        .extract({ left, top, width: extractWidth, height: extractHeight })
+        .png()
+        .toBuffer();
+
+      const itemLayout = canvasLayout[itemId] || {};
+      const defaultCenter = getDefaultCenter(index);
+      const centerX = clamp(Number(itemLayout.centerX ?? defaultCenter.centerX), 0.05, 0.95);
+      const centerY = clamp(Number(itemLayout.centerY ?? defaultCenter.centerY), 0.05, 0.95);
+      const userScale = clamp(Number(itemLayout.scale ?? 1), 0.55, 2.2);
+      const zIndex = Number.isFinite(itemLayout.zIndex) ? itemLayout.zIndex : index;
+
+      const baseScale = Math.min(cellWidth / extractWidth, cellHeight / extractHeight);
+      const finalWidth = Math.max(1, Math.round(extractWidth * baseScale * userScale));
+      const finalHeight = Math.max(1, Math.round(extractHeight * baseScale * userScale));
+      const leftPx = Math.round(centerX * CANVAS_WIDTH - finalWidth / 2);
+      const topPx = Math.round(centerY * CANVAS_HEIGHT - finalHeight / 2);
+
+      const renderedBuffer = await sharp(croppedBuffer)
+        .resize(finalWidth, finalHeight, { fit: "fill" })
+        .png()
+        .toBuffer();
+
+      return { input: renderedBuffer, left: leftPx, top: topPx, zIndex };
+    })
+  );
+
+  layers.sort((a, b) => a.zIndex - b.zIndex);
+  const composedBuffer = await sharp({
+    create: {
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      channels: 3,
+      background: "#FFFFFF",
+    },
+  })
+    .composite(layers.map((layer) => ({ input: layer.input, left: layer.left, top: layer.top })))
+    .jpeg({ quality: 92 })
+    .toBuffer();
+
+  return composedBuffer.toString("base64");
+}
+
 /**
  * Fetch outfit item details for description generation
  */
@@ -267,6 +364,12 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
   }
 
   const useStackedImage = !useReferenceImage && !!stacked_image_id;
+  if (settings?.custom_layout_enabled) {
+    const customLayoutCount = settings?.canvas_layout
+      ? Object.keys(settings.canvas_layout).length
+      : 0;
+    console.log(`[OutfitRender] Custom canvas layout enabled (${customLayoutCount} item overrides)`);
+  }
   const modeLabel = useReferenceImage
     ? 'reference'
     : useStackedImage
@@ -384,7 +487,15 @@ async function processOutfitRender(input, supabase, userId, perfTracker = null, 
       })
     );
     console.log(`[OutfitRender] Downloaded ${itemImageResults.length} item images`);
-    const stackedItemsB64 = itemImageResults.map(result => result.base64);
+    let stackedItemsB64 = itemImageResults.map(result => result.base64);
+    if (settings?.custom_layout_enabled && wardrobeItemIds.length === itemImageResults.length) {
+      try {
+        stackedItemsB64 = await composeCustomCanvasGrid(itemImageResults, wardrobeItemIds, settings);
+        console.log(`[OutfitRender] Composed custom layout grid for ${wardrobeItemIds.length} items`);
+      } catch (composeError) {
+        console.warn("[OutfitRender] Failed custom layout composition, falling back to legacy item inputs", composeError);
+      }
+    }
     const itemCount = imageIdsToDownload.length;
     return { stackedItemsB64, itemCount };
   })();

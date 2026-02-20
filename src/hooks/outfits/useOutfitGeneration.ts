@@ -23,6 +23,7 @@ import { generateClothingGrid } from '@/utils/clothing-grid';
 import { startTimeline } from '@/lib/perf/timeline';
 import { PERF_MODE } from '@/lib/perf/perfMode';
 import { toDataUri } from '@/lib/images/dataUri';
+import type { OutfitCanvasLayoutMap, OutfitCanvasTrimMap } from '@/lib/outfits/canvasLayout';
 
 const DESCRIPTION_POLL_MAX_MS = 30_000;
 
@@ -191,7 +192,11 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
   }, []);
 
   const generateOutfit = useCallback(
-    async (selectedItems: WardrobeItem[]): Promise<{ success: boolean; outfitId?: string; error?: string; renderTraceId?: string }> => {
+    async (
+      selectedItems: WardrobeItem[],
+      canvasLayoutMap?: OutfitCanvasLayoutMap | null,
+      canvasTrimMap?: OutfitCanvasTrimMap | null
+    ): Promise<{ success: boolean; outfitId?: string; error?: string; renderTraceId?: string }> => {
       if (!userId || selectedItems.length === 0) {
         return { success: false, error: 'No items selected' };
       }
@@ -382,7 +387,20 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
               console.log(`[OutfitGeneration] Starting grid generation...`);
               timeline.mark('grid_start');
 
-              const gridBase64 = await generateClothingGrid(imageUrls);
+              const topImageItemIds = topImages.map((link) => link.wardrobe_item_id);
+              const hasCustomLayout = Boolean(
+                (canvasLayoutMap && Object.keys(canvasLayoutMap).length > 0) ||
+                (canvasTrimMap && Object.keys(canvasTrimMap).length > 0)
+              );
+              const gridBase64 = await generateClothingGrid(
+                imageUrls,
+                hasCustomLayout
+                  ? {
+                    itemIds: topImageItemIds,
+                    layoutByItemId: canvasLayoutMap,
+                  }
+                  : undefined
+              );
               timeline.mark('grid_done');
               console.log(`[OutfitGeneration] Grid generated successfully, base64 length: ${gridBase64.length}`);
 
@@ -463,6 +481,10 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           userSettings?.ai_model_outfit_render ||
           userSettings?.ai_model_preference ||
           'gemini-2.5-flash-image';
+        const hasCustomLayout = Boolean(
+          (canvasLayoutMap && Object.keys(canvasLayoutMap).length > 0) ||
+          (canvasTrimMap && Object.keys(canvasTrimMap).length > 0)
+        );
 
         // Phase 5: Create and trigger AI job with grid image
         setProgress({
@@ -488,6 +510,9 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
             settings: {
               items_count: selectedItems.length,
               used_client_stacking: !!stackedResult,
+              custom_layout_enabled: hasCustomLayout,
+              canvas_layout: hasCustomLayout ? canvasLayoutMap : null,
+              canvas_trim_map: hasCustomLayout ? canvasTrimMap ?? null : null,
             },
           }
         );

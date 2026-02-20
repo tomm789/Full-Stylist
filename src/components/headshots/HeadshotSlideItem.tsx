@@ -17,6 +17,9 @@ import { Image as ExpoImage } from 'expo-image';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 import { theme } from '@/styles';
+import HeadshotDrawingCanvas, {
+  type HeadshotDrawingCanvasRef,
+} from './HeadshotDrawingCanvas';
 
 const { spacing } = theme;
 
@@ -30,6 +33,9 @@ type HeadshotSlideItemProps = {
   previewIsGenerated: boolean;
   onRestoreSelfie: () => void;
   isStyleDisabled: boolean;
+  drawingEnabled?: boolean;
+  currentColor?: string;
+  drawingCanvasRef?: React.RefObject<HeadshotDrawingCanvasRef>;
 };
 
 const HeadshotSlideItem = React.memo(
@@ -43,6 +49,9 @@ const HeadshotSlideItem = React.memo(
     previewIsGenerated,
     onRestoreSelfie,
     isStyleDisabled,
+    drawingEnabled = false,
+    currentColor = '#FF00FF',
+    drawingCanvasRef,
   }: HeadshotSlideItemProps) => {
     const colors = useThemeColors();
     const styles = React.useMemo(() => createStyles(colors), [colors]);
@@ -53,7 +62,7 @@ const HeadshotSlideItem = React.memo(
           style={styles.faceSlideButton}
           onPress={onPreviewPress}
           activeOpacity={0.9}
-          disabled={!item.url}
+          disabled={!item.url || drawingEnabled}
         >
           {item.url ? (
             <ExpoImage
@@ -65,6 +74,14 @@ const HeadshotSlideItem = React.memo(
             <View style={styles.faceSlideImage} />
           )}
         </TouchableOpacity>
+
+        {isActive && item.url && drawingCanvasRef && (
+          <HeadshotDrawingCanvas
+            ref={drawingCanvasRef}
+            drawingEnabled={drawingEnabled}
+            currentColor={currentColor}
+          />
+        )}
 
         {isActive && (
           <>
