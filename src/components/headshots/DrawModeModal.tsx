@@ -20,6 +20,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import Animated, {
@@ -38,7 +39,7 @@ import { supabase } from '@/lib/supabase';
 import { uploadBase64ImageToStorage } from '@/lib/utils/image-helpers';
 import { saveDrawingTemplate, listDrawingTemplates, type HeadshotDrawingTemplate } from '@/lib/headshot/drawingTemplates';
 import { DRAW_COLOUR_MAP, DRAW_COLOUR_ORDER, getDrawColour } from '@/lib/headshot/drawingColors';
-import HeadshotDrawingCanvas, { type HeadshotDrawingCanvasRef } from './HeadshotDrawingCanvas';
+import HeadshotDrawingCanvas, { type HeadshotDrawingCanvasRef, type DrawnColorEntry } from './HeadshotDrawingCanvas';
 import HeadshotCreatorContainer, { type SelectionPill } from './HeadshotCreatorContainer';
 import CreatorBar from '../shared/CreatorBar';
 import BottomSheet from '../shared/modals/BottomSheet';
@@ -60,7 +61,7 @@ export type DrawModeModalProps = {
   creatorSelections: SelectionPill[];
   hasSelections: boolean;
   generating: boolean;
-  onGenerate: () => void;
+  onGenerate: (maskBase64: string | null, colorMap: DrawnColorEntry[]) => void;
   onRemoveSelection: (id: string) => void;
   onOpenCategoryEditor: (categoryId: string) => void;
   onApplyTemplateSelections?: (snapshot: {
@@ -88,7 +89,11 @@ export default function DrawModeModal({
   drawingCanvasRef,
 }: DrawModeModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  // Portrait canvas: fill width at 3:4 ratio, capped so UI still fits on small phones
+  const canvasWidth = screenWidth;
+  const canvasHeight = Math.min(canvasWidth * (4 / 3), screenHeight * 0.58);
+  const styles = createStyles(colors, canvasWidth, canvasHeight);
 
   // --- Draw state ---
   const [activeCategory, setActiveCategory] = useState<string>('lip-styles');
@@ -96,6 +101,7 @@ export default function DrawModeModal({
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [hasStrokes, setHasStrokes] = useState(false);
+  const [capturing, setCapturing] = useState(false);
 
   // --- Modals ---
   const [infoVisible, setInfoVisible] = useState(false);
@@ -135,6 +141,19 @@ export default function DrawModeModal({
     ] as any,
   }));
 
+  // 1-finger Pan — draws on the canvas via imperative ref methods
+  const drawGesture = Gesture.Pan()
+    .minPointers(1)
+    .maxPointers(1)
+    .runOnJS(true)
+    .minDistance(0)
+    .onBegin((e) => drawingCanvasRef.current?.handleDrawBegin(e.x, e.y))
+    .onUpdate((e) => drawingCanvasRef.current?.handleDrawUpdate(e.x, e.y))
+    .onEnd(() => drawingCanvasRef.current?.handleDrawEnd())
+    // Fallback: commit stroke if gesture is cancelled mid-draw (e.g. by double-tap recogniser).
+    // handleDrawEnd guards on activePathRef.current so double-calling is safe.
+    .onFinalize(() => drawingCanvasRef.current?.handleDrawEnd());
+
   // Pinch-to-zoom (2 fingers)
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => {
@@ -163,7 +182,13 @@ export default function DrawModeModal({
     .runOnJS(true)
     .onEnd(() => resetZoom());
 
-  const zoomGesture = Gesture.Simultaneous(pinchGesture, panZoomGesture, doubleTapGesture);
+  // All gestures in one detector — avoids nested-GestureDetector conflicts
+  const allGestures = Gesture.Simultaneous(
+    drawGesture,
+    pinchGesture,
+    panZoomGesture,
+    doubleTapGesture,
+  );
 
   // --- Stroke change callback ---
   const handleStrokeChange = useCallback(
@@ -265,13 +290,21 @@ export default function DrawModeModal({
   };
 
   // --- Generate ---
-  const canGenerate = (hasSelections || hasStrokes) && !generating;
-  const generateLabel = generating
+  const canGenerate = (hasSelections || hasStrokes) && !generating && !capturing;
+  const generateLabel = capturing
+    ? 'Capturing…'
+    : generating
     ? 'Generating…'
     : `Generate${creatorSelections.length > 0 ? ` (${creatorSelections.length})` : ''}`;
 
-  const handleGenerate = () => {
-    onGenerate();
+  const handleGenerate = async () => {
+    setCapturing(true);
+    // Always ask the canvas — it returns null if completedStrokes is empty.
+    // Don't gate on hasStrokes state, which can lag behind the canvas.
+    const maskBase64 = await drawingCanvasRef.current?.makeMaskSnapshot() ?? null;
+    const colorMap = drawingCanvasRef.current?.getDrawnColorMap() ?? [];
+    setCapturing(false);
+    onGenerate(maskBase64, colorMap);
     onClose();
   };
 
@@ -338,15 +371,15 @@ export default function DrawModeModal({
             </TouchableOpacity>
           </View>
 
-          {/* ── Image + canvas (zoomable) ── */}
-          <GestureDetector gesture={zoomGesture}>
+          {/* ── Image + canvas (draw + zoom, single GestureDetector) ── */}
+          <GestureDetector gesture={allGestures}>
             <View style={styles.canvasContainer}>
               <Animated.View style={[StyleSheet.absoluteFill, animatedCanvasStyle]}>
                 {previewImageUrl ? (
                   <ExpoImage
                     source={{ uri: previewImageUrl }}
                     style={StyleSheet.absoluteFill}
-                    contentFit="cover"
+                    contentFit="contain"
                   />
                 ) : (
                   <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.backgroundTertiary }]} />
@@ -368,6 +401,9 @@ export default function DrawModeModal({
                   currentColor={currentColour}
                   strokeWidth={strokeWidth}
                   onStrokeChange={handleStrokeChange}
+                  viewScale={scale}
+                  viewTranslateX={translateX}
+                  viewTranslateY={translateY}
                 />
               </Animated.View>
 
@@ -525,7 +561,7 @@ export default function DrawModeModal({
   );
 }
 
-const createStyles = (colors: ThemeColors) =>
+const createStyles = (colors: ThemeColors, canvasWidth: number, canvasHeight: number) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
@@ -534,7 +570,6 @@ const createStyles = (colors: ThemeColors) =>
     root: {
       flex: 1,
       position: 'relative',
-      paddingBottom: spacing.massive, // room for floating CreatorBar
     },
     // Header
     header: {
@@ -580,9 +615,10 @@ const createStyles = (colors: ThemeColors) =>
     controlSpacer: {
       flex: 1,
     },
-    // Canvas
+    // Canvas — explicit portrait dimensions so 3:4 images are never cropped
     canvasContainer: {
-      flex: 1,
+      width: canvasWidth,
+      height: canvasHeight,
       overflow: 'hidden',
       backgroundColor: colors.backgroundTertiary,
     },

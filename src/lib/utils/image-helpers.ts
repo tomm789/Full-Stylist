@@ -91,10 +91,11 @@ async function uploadUriToStorage(
       },
     });
 
+    console.log('[uploadUriToStorage] HTTP status:', uploadResult.status, 'body:', uploadResult.body?.substring(0, 200));
     if (uploadResult.status < 200 || uploadResult.status >= 300) {
       return {
         data: null,
-        error: new Error(`Upload failed with status ${uploadResult.status}`),
+        error: new Error(`Upload failed with status ${uploadResult.status}: ${uploadResult.body}`),
       };
     }
 
@@ -294,11 +295,15 @@ export async function uploadBase64ImageToStorage(
       const fileName = storagePath.split('/').pop() || 'upload.jpg';
       const tempPath = `${LegacyFileSystem.cacheDirectory || LegacyFileSystem.documentDirectory}${fileName}`;
 
+      console.log('[uploadBase64ImageToStorage] Native path:', { storagePath, tempPath, base64Length: base64Data.length, mimeType, bucket });
+
       await LegacyFileSystem.writeAsStringAsync(tempPath, base64Data, {
         encoding: LegacyFileSystem.EncodingType.Base64,
       });
+      console.log('[uploadBase64ImageToStorage] Wrote temp file, uploading...');
 
       const result = await uploadUriToStorage(storagePath, tempPath, mimeType, bucket);
+      console.log('[uploadBase64ImageToStorage] uploadUriToStorage result:', { path: result.data?.path, error: result.error });
       await LegacyFileSystem.deleteAsync(tempPath, { idempotent: true });
       return result;
     }

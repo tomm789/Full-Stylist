@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { debugIngest } from '@/lib/ai-jobs/debug-ingest';
+import { clearHairMakeupSessionVisited } from '@/hooks/headshot/useHairAndMakeup';
 
 interface AuthContextType {
   session: Session | null;
@@ -128,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    clearHairMakeupSessionVisited();
     debugIngest({ location: 'AuthContext.tsx:138', message: 'signOut called', data: { sessionBefore: session?.user?.id ?? 'null', userBefore: user?.id ?? 'null', hasSession: !!session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
     try {
       console.log('[AuthContext] Signing out...');

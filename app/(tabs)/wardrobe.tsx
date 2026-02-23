@@ -236,6 +236,7 @@ export default function WardrobeScreen() {
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
   const searchOpenRef = useRef(false);
   const cameraNavLockRef = useRef(false);
+  const trimInFlightIdsRef = useRef<Set<string>>(new Set());
   const [outfitCanvasTrimStatuses, setOutfitCanvasTrimStatuses] = useState<OutfitCanvasTrimStatusMap>({});
   const {
     searchQuery: globalSearchQuery,
@@ -421,16 +422,23 @@ export default function WardrobeScreen() {
     if (selectedOutfitItems.length === 0) return {};
     const next: OutfitCanvasTrimStatusMap = {};
     for (const itemId of selectedOutfitItems) {
-      next[itemId] = outfitCanvasTrimStatuses[itemId] ?? 'idle';
+      if (outfitCanvasTrims[itemId]) {
+        next[itemId] = 'success';
+        continue;
+      }
+      next[itemId] =
+        outfitCanvasTrimStatuses[itemId] ??
+        (isCreatorExpanded ? 'pending' : 'idle');
     }
     return next;
-  }, [outfitCanvasTrimStatuses, selectedOutfitItems]);
+  }, [isCreatorExpanded, outfitCanvasTrimStatuses, outfitCanvasTrims, selectedOutfitItems]);
   const hasCustomCreatorLayout =
     Object.keys(activeOutfitCanvasLayouts).length > 0 ||
     Object.keys(activeOutfitCanvasTrims).length > 0;
-  const pendingTrimCount = selectedOutfitItems.filter(
-    (itemId) => activeOutfitCanvasTrimStatuses[itemId] === 'pending'
-  ).length;
+  const unresolvedTrimCount = selectedOutfitItems.filter((itemId) => {
+    const status = activeOutfitCanvasTrimStatuses[itemId];
+    return status === 'idle' || status === 'pending';
+  }).length;
   const successTrimCount = selectedOutfitItems.filter(
     (itemId) => activeOutfitCanvasTrimStatuses[itemId] === 'success'
   ).length;
@@ -438,7 +446,7 @@ export default function WardrobeScreen() {
     isCreatorExpanded &&
     selectedOutfitItems.length > 0 &&
     successTrimCount === 0 &&
-    pendingTrimCount > 0;
+    unresolvedTrimCount > 0;
 
   // Background grid: pre-upload grid while user selects (gated by EXPO_PUBLIC_PREGEND_GRID, default OFF)
   const backgroundGrid = useBackgroundGridGenerator(
@@ -620,14 +628,15 @@ export default function WardrobeScreen() {
       let changed = false;
       const next = { ...prev };
       for (const itemId of selectedOutfitItems) {
-        if (!next[itemId]) {
-          next[itemId] = 'idle';
+        if (outfitCanvasTrims[itemId]) continue;
+        if (!next[itemId] || next[itemId] === 'idle') {
+          next[itemId] = 'pending';
           changed = true;
         }
       }
       return changed ? next : prev;
     });
-  }, [isCreatorExpanded, selectedOutfitItems]);
+  }, [isCreatorExpanded, outfitCanvasTrims, selectedOutfitItems]);
 
   useEffect(() => {
     if (selectedOutfitItems.length === 0) return;
@@ -651,10 +660,14 @@ export default function WardrobeScreen() {
     const requestIds = selectedOutfitItems.filter(
       (itemId) =>
         !outfitCanvasTrims[itemId] &&
-        (outfitCanvasTrimStatuses[itemId] === 'idle' || !outfitCanvasTrimStatuses[itemId])
+        (!outfitCanvasTrimStatuses[itemId] ||
+          outfitCanvasTrimStatuses[itemId] === 'idle' ||
+          outfitCanvasTrimStatuses[itemId] === 'pending') &&
+        !trimInFlightIdsRef.current.has(itemId)
     );
     if (requestIds.length === 0) return;
 
+    requestIds.forEach((itemId) => trimInFlightIdsRef.current.add(itemId));
     setOutfitCanvasTrimStatuses((prev) => {
       const next = { ...prev };
       requestIds.forEach((itemId) => {
@@ -662,6 +675,8 @@ export default function WardrobeScreen() {
       });
       return next;
     });
+
+    const controller = new AbortController();
     let cancelled = false;
 
     const run = async () => {
@@ -718,7 +733,10 @@ export default function WardrobeScreen() {
           });
           return;
         }
-        const trims = await fetchCanvasTrimMetadata(trimItems);
+        const trims = await fetchCanvasTrimMetadata(trimItems, {
+          signal: controller.signal,
+          timeoutMs: 12000,
+        });
         if (cancelled) return;
         const resolvedTrims = trims ?? {};
         const successIds = new Set(Object.keys(resolvedTrims));
@@ -742,22 +760,16 @@ export default function WardrobeScreen() {
           });
           return next;
         });
+      } finally {
+        requestIds.forEach((itemId) => trimInFlightIdsRef.current.delete(itemId));
       }
     };
 
     run();
     return () => {
       cancelled = true;
-      setOutfitCanvasTrimStatuses((prev) => {
-        let changed = false;
-        const next = { ...prev };
-        requestIds.forEach((itemId) => {
-          if (next[itemId] !== 'pending') return;
-          next[itemId] = 'idle';
-          changed = true;
-        });
-        return changed ? next : prev;
-      });
+      controller.abort();
+      requestIds.forEach((itemId) => trimInFlightIdsRef.current.delete(itemId));
     };
   }, [isCreatorExpanded, outfitCanvasTrims, selectedOutfitItems, user?.id]);
 
@@ -1141,7 +1153,10 @@ export default function WardrobeScreen() {
     .map((id) => ({
       id,
       imageUrl: imageCache.get(id) || null,
-      trimStatus: outfitCanvasTrimStatuses[id] ?? 'idle',
+      trimStatus:
+        outfitCanvasTrims[id]
+          ? 'success'
+          : outfitCanvasTrimStatuses[id] ?? (isCreatorExpanded ? 'pending' : 'idle'),
     }))
     .filter((item) => item !== null);
 

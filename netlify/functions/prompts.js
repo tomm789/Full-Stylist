@@ -46,7 +46,7 @@ const PROMPTS = {
     VISUAL REQUIREMENTS:
     1. STYLE: "Ghost Mannequin" / "Invisible Mannequin". The item must look 3D and filled out as if worn, but NO mannequin, human body parts, or stands should be visible. Hollow out the neck/sleeves.
     2. BACKGROUND: Pure Solid White (Hex #FFFFFF). Do not use light grey or off-white. The background must be #FFFFFF.
-    3. LIGHTING: Soft, commercial studio lighting. Subtle, natural drop shadow directly underneath to ground the item (no floating).
+    3. LIGHTING: Soft, commercial studio lighting.
     4. FIDELITY: Maintain the EXACT colors, patterns, texture, and text/logos of the original item. Do not hallucinate new details.
 
     NEGATIVE CONSTRAINTS:

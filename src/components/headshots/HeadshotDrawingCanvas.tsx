@@ -7,14 +7,20 @@
 
 import React, { useImperativeHandle } from 'react';
 
+export type DrawnColorEntry = { hex: string; label: string };
+
 export type HeadshotDrawingCanvasRef = {
   makeMaskSnapshot: () => Promise<string | null>;
+  getDrawnColorMap: () => DrawnColorEntry[];
   undo: () => void;
   redo: () => void;
   clear: () => void;
   canUndo: boolean;
   canRedo: boolean;
   hasStrokes: boolean;
+  handleDrawBegin: (x: number, y: number) => void;
+  handleDrawUpdate: (x: number, y: number) => void;
+  handleDrawEnd: () => void;
 };
 
 export type HeadshotDrawingCanvasProps = {
@@ -30,12 +36,16 @@ const HeadshotDrawingCanvas = React.forwardRef<
 >((_props, ref) => {
   useImperativeHandle(ref, () => ({
     makeMaskSnapshot: async () => null,
+    getDrawnColorMap: () => [],
     undo: () => {},
     redo: () => {},
     clear: () => {},
     canUndo: false,
     canRedo: false,
     hasStrokes: false,
+    handleDrawBegin: () => {},
+    handleDrawUpdate: () => {},
+    handleDrawEnd: () => {},
   }));
   return null;
 });

@@ -38,6 +38,7 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
     skip_user_settings_update,
     mask_storage_path,
     mask_storage_bucket,
+    mask_color_map,
   } = input;
   if (!selfie_image_id) {
     throw new Error("Missing selfie_image_id");
@@ -82,7 +83,13 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
 
   // Append mask instructions when a semantic mask is present
   if (maskResult) {
-    prompt += '\n\nImage 2 is a semantic mask on a black background. Pure Magenta (#FF00FF) marks where to apply makeup changes. Cyan (#00FFFF) marks where to apply hair modifications. Apply the requested changes only in the regions indicated by the mask color.';
+    const colorLines = Array.isArray(mask_color_map) && mask_color_map.length > 0
+      ? mask_color_map
+          .map(({ hex, label }) => `  - ${hex} (${label}): apply the ${label.toLowerCase()}-related changes from the instructions above to the corresponding area of Image 1`)
+          .join('\n')
+      : '  - All colored regions: apply the requested changes to the corresponding areas of Image 1';
+
+    prompt += `\n\nImage 2 is a spatial mask that maps directly onto Image 1 — treat it as a semi-transparent overlay placed on top of the portrait. Each colored region in Image 2 marks the area of the face or hair in Image 1 where a specific change should be applied:\n${colorLines}\nThe strokes are rough hand-drawn guides, not precise boundaries. Use the colored regions to understand approximately where on the face or hair each change should occur. Apply only the changes indicated, and leave every part of Image 1 that is not covered by a colored region completely unchanged.`;
   }
 
   const { data: userSettings } = await supabase

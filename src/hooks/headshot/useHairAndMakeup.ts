@@ -71,6 +71,13 @@ export type PageTab = 'grid' | 'mirror' | 'following' | 'inspiration';
 const CUSTOM_CATEGORY_ID = 'custom';
 const DEFAULT_HAIR_CATEGORY_ID = 'long-hairstyles';
 
+/** Session-scoped: true after the user has visited the hair & makeup screen this session. Cleared on sign-out. */
+let hasVisitedHairMakeupThisSession = false;
+
+export function clearHairMakeupSessionVisited(): void {
+  hasVisitedHairMakeupThisSession = false;
+}
+
 function findPresetOptionById(presets: PresetCategory[], optionId: string): PresetOption | null {
   for (const category of presets) {
     for (const section of category.sections) {
@@ -518,18 +525,22 @@ export function useHairAndMakeup() {
     const session = await getLatestHeadshotGenerationSession(user.id, baseImageId);
     if (session) {
       setSessionId(session.id);
-      const input = session.input_json || {};
-      const hairPresetIds = input.hairPresetIds || [];
-      const makeupPresetIds = input.makeupPresetIds || [];
-      const custom = input.customDescription || '';
-      setSelectedHair(hairPresetIds);
-      setSelectedMakeup(makeupPresetIds);
-      setCustomDescription(custom);
-      setBaselineInput({
-        hairPresetIds,
-        makeupPresetIds,
-        customDescription: custom,
-      });
+      if (hasVisitedHairMakeupThisSession) {
+        const input = session.input_json || {};
+        const hairPresetIds = input.hairPresetIds || [];
+        const makeupPresetIds = input.makeupPresetIds || [];
+        const custom = input.customDescription || '';
+        setSelectedHair(hairPresetIds);
+        setSelectedMakeup(makeupPresetIds);
+        setCustomDescription(custom);
+        setBaselineInput({
+          hairPresetIds,
+          makeupPresetIds,
+          customDescription: custom,
+        });
+      } else {
+        hasVisitedHairMakeupThisSession = true;
+      }
       await loadVariations(session.id);
     } else {
       setSessionId(null);
@@ -592,7 +603,7 @@ export function useHairAndMakeup() {
     return () => { cancelled = true; };
   }, [previewImageId, selfieImageId]);
 
-  const handleGenerateVariation = async () => {
+  const handleGenerateVariation = async (maskBase64?: string | null, maskColorMap?: Array<{ hex: string; label: string }>) => {
     if (!user?.id) return;
     let activeBaseImageId = baseImageId;
 
@@ -670,24 +681,26 @@ export function useHairAndMakeup() {
 
       setVariations((prev) => [variation, ...prev]);
 
-      // Capture mask snapshot if draw mode is open
+      // Upload pre-captured mask if provided by the draw mode modal
       let maskStoragePath: string | undefined;
       let maskStorageBucket: string | undefined;
-      if (isDrawModeOpen && drawingCanvasRef.current) {
-        const maskBase64 = await drawingCanvasRef.current.makeMaskSnapshot();
-        if (maskBase64) {
-          const maskBucket = 'user-images';
-          const maskPath = `${user.id}/masks/mask-${Date.now()}.png`;
-          const { data: maskUpload } = await uploadBase64ImageToStorage(
-            maskBucket,
-            maskPath,
-            maskBase64,
-            'image/png'
-          );
-          if (maskUpload?.path) {
-            maskStoragePath = maskUpload.path;
-            maskStorageBucket = maskBucket;
-          }
+      if (maskBase64) {
+        const maskBucket = 'user-images';
+        const maskPath = `${user.id}/masks/mask-${Date.now()}.png`;
+        console.log('[HairMakeup] Uploading mask:', { maskBucket, maskPath, base64Length: maskBase64.length });
+        const { data: maskUpload, error: maskError } = await uploadBase64ImageToStorage(
+          maskBucket,
+          maskPath,
+          maskBase64,
+          'image/png'
+        );
+        console.log('[HairMakeup] Mask upload result:', { path: maskUpload?.path, fullPath: maskUpload?.fullPath, error: maskError });
+        if (maskUpload?.path) {
+          maskStoragePath = maskUpload.path;
+          maskStorageBucket = maskBucket;
+          console.log('[HairMakeup] Mask upload success, maskStoragePath:', maskStoragePath);
+        } else {
+          console.warn('[HairMakeup] Mask upload failed — continuing without mask. Error:', maskError);
         }
       }
 
@@ -700,6 +713,7 @@ export function useHairAndMakeup() {
           skipUserSettingsUpdate: true,
           maskStoragePath,
           maskStorageBucket,
+          maskColorMap: maskStoragePath ? maskColorMap : undefined,
         }
       );
 
