@@ -29,6 +29,7 @@ interface ItemGridProps {
   onEmptyAction?: () => void;
   numColumns?: number;
   style?: ViewStyle;
+  contentContainerStyle?: ViewStyle;
   onScroll?: (event: any) => void;
   scrollEventThrottle?: number;
 }
@@ -50,6 +51,7 @@ export default function ItemGrid({
   onEmptyAction,
   numColumns = 3,
   style,
+  contentContainerStyle,
   onScroll,
   scrollEventThrottle,
 }: ItemGridProps) {
@@ -98,7 +100,7 @@ export default function ItemGrid({
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       numColumns={numColumns}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={[styles.list, contentContainerStyle]}
       columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
       onScroll={onScroll}
       scrollEventThrottle={scrollEventThrottle}

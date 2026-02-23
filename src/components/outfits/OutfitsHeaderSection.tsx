@@ -3,7 +3,6 @@ import { Animated, View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import LookbookSelectionBar from './LookbookSelectionBar';
 import OutfitsHeaderBar from './OutfitsHeaderBar';
 import OccasionPills from './OccasionPills';
 import type { OutfitsTab } from './OutfitsHeaderBar';
@@ -18,13 +17,6 @@ export type OutfitsHeaderSectionProps = {
   headerTranslate: Animated.AnimatedInterpolation<string | number> | number;
   uiHidden: boolean;
   onHeaderLayout: (event: any) => void;
-  selectionMode: boolean;
-  selectedOutfits: { id: string; imageUrl: string | null }[];
-  selectionCount: number;
-  isSaving: boolean;
-  onRemoveOutfit: (id: string) => void;
-  onExitSelection: () => void;
-  onOpenPicker: () => void;
   activeTab: OutfitsTab;
   showTabLabels: boolean;
   activeView: 'grid' | 'feed';
@@ -42,7 +34,6 @@ export type OutfitsHeaderSectionProps = {
   pinnedLookbooks?: { id: string; title: string }[];
   onAddLookbookTab?: () => void;
   onRemoveLookbookTab?: (id: string) => void;
-  hintMessage?: string;
   occasionOptions?: string[];
   selectedOccasions?: string[];
   onToggleOccasion?: (occasion: string) => void;
@@ -59,13 +50,6 @@ export default function OutfitsHeaderSection({
   headerTranslate,
   uiHidden,
   onHeaderLayout,
-  selectionMode,
-  selectedOutfits,
-  selectionCount,
-  isSaving,
-  onRemoveOutfit,
-  onExitSelection,
-  onOpenPicker,
   activeTab,
   showTabLabels,
   activeView,
@@ -81,7 +65,6 @@ export default function OutfitsHeaderSection({
   pinnedLookbooks,
   onAddLookbookTab,
   onRemoveLookbookTab,
-  hintMessage,
   occasionOptions = [],
   selectedOccasions = [],
   onToggleOccasion,
@@ -107,17 +90,6 @@ export default function OutfitsHeaderSection({
     >
       <View onLayout={onHeaderLayout}>
         {searchHeader}
-        {selectionMode && (
-          <LookbookSelectionBar
-            selectedOutfits={selectedOutfits}
-            selectionCount={selectionCount}
-            isSaving={isSaving}
-            onRemoveOutfit={onRemoveOutfit}
-            onExit={onExitSelection}
-            onOpenPicker={onOpenPicker}
-            hintMessage={hintMessage}
-          />
-        )}
         {!hideTabs && (
           <>
             <OutfitsHeaderBar

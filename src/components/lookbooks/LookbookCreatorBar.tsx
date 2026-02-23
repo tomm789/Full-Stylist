@@ -78,8 +78,6 @@ export default function LookbookCreatorBar({
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
     paddingBottom: spacing.sm,
   },
   bar: {

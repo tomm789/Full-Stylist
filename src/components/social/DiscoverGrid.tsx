@@ -12,6 +12,7 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
+  ViewStyle,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,6 +40,7 @@ interface DiscoverGridProps {
   onScroll?: (event: any) => void;
   scrollEventThrottle?: number;
   scrollEnabled?: boolean;
+  contentContainerStyle?: ViewStyle;
   ListHeaderComponent?: React.ReactElement | null;
   emptyTitle?: string;
   emptyMessage?: string;
@@ -62,6 +64,7 @@ export function DiscoverGrid({
   onScroll,
   scrollEventThrottle,
   scrollEnabled = true,
+  contentContainerStyle,
   ListHeaderComponent,
   emptyTitle = 'No public posts yet',
   emptyMessage = 'Check back later for new content from the community',
@@ -181,6 +184,7 @@ export function DiscoverGrid({
       onScroll={onScroll}
       scrollEventThrottle={scrollEventThrottle}
       scrollEnabled={scrollEnabled}
+      contentContainerStyle={contentContainerStyle}
       refreshing={refreshing}
       onRefresh={onRefresh}
       onEndReached={hasMore ? onLoadMore : undefined}

@@ -51,9 +51,7 @@ interface OutfitCreatorCanvasProps {
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
-      position: 'absolute',
-      left: spacing.lg,
-      right: spacing.lg,
+      flex: 1,
       borderRadius: borderRadius.lg,
       borderWidth: 1,
       borderColor: colors.border,

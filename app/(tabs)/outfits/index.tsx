@@ -43,6 +43,8 @@ import {
 } from '@/hooks/social';
 import { useLookbookSelection, useLookbookTabs } from '@/hooks/lookbooks';
 import LookbookQuickAddModal from '@/components/outfits/LookbookQuickAddModal';
+import LookbookSelectionBar from '@/components/outfits/LookbookSelectionBar';
+import { LOOKBOOK_PANEL_COLLAPSED_HEIGHT } from '@/components/lookbooks/LookbookCreatorPanel';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
 import { layout, spacing } from '@/styles';
 import { useSlotPresets } from '@/hooks/calendar';
@@ -63,6 +65,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type OutfitsTab = 'my_outfits' | 'explore' | 'following' | 'lookbooks' | `lookbook_${string}`;
 type ViewMode = 'grid' | 'feed';
 const SHOW_VIEW_TOGGLE = false;
+const CREATOR_BAR_HEIGHT = 60;
+// Matches panelBottomOffset in LookbookSelectionBar
+const LOOKBOOK_PANEL_BOTTOM_OFFSET = spacing.xl + CREATOR_BAR_HEIGHT + spacing.sm;
 const STATUS_LABELS: Record<OutfitScheduleStatus, string> = {
   planned: 'Planned',
   worn: 'Worn',
@@ -78,7 +83,7 @@ export default function OutfitsScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const { registerTabSearch, clearTabSearch } = useTabSearch();
-  const { setTabBarDimmed } = useFloatingTabBar();
+  const { setTabBarDimmed, setTabBarOpacity } = useFloatingTabBar();
   const isFocused = useIsFocused();
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const { width: windowWidth } = useWindowDimensions();
@@ -123,6 +128,7 @@ export default function OutfitsScreen() {
       setTabBarDimmed(false);
     }
   }, [isFocused, setTabBarDimmed]);
+
   const {
     selectionMode,
     setSelectionMode,
@@ -149,6 +155,14 @@ export default function OutfitsScreen() {
     userId: user?.id,
     onNavigateToLookbook: (lookbookId) => router.push(`/lookbooks/${lookbookId}`),
   });
+
+  useEffect(() => {
+    if (selectionMode) {
+      setTabBarOpacity(0);
+    } else {
+      setTabBarOpacity(1);
+    }
+  }, [selectionMode, setTabBarOpacity]);
 
   const {
     pinnedLookbooks,
@@ -602,6 +616,11 @@ export default function OutfitsScreen() {
     },
   });
 
+  // Bottom padding to allow scroll content to clear floating UI elements
+  const listBottomPadding = selectionMode
+    ? LOOKBOOK_PANEL_BOTTOM_OFFSET + LOOKBOOK_PANEL_COLLAPSED_HEIGHT + spacing.sm
+    : spacing.xl + CREATOR_BAR_HEIGHT + spacing.md + insets.bottom;
+
   // Loading state
   if (loading && outfits.length === 0) {
     return (
@@ -637,13 +656,6 @@ export default function OutfitsScreen() {
         headerTranslate={headerTranslate}
         uiHidden={uiHidden}
         onHeaderLayout={handleHeaderLayout}
-        selectionMode={selectionMode}
-        selectedOutfits={selectedOutfitsForBar}
-        selectionCount={selectedOutfitIds.size}
-        isSaving={lookbookSaving}
-        onRemoveOutfit={toggleOutfitSelection}
-        onExitSelection={exitSelectionMode}
-        onOpenPicker={() => setLookbookPickerVisible(true)}
         activeTab={activeTab}
         showTabLabels={showTabLabels}
         activeView={activeView}
@@ -659,7 +671,6 @@ export default function OutfitsScreen() {
         pinnedLookbooks={pinnedLookbooks}
         onAddLookbookTab={() => setShowLookbookAddModal(true)}
         onRemoveLookbookTab={handleRemoveLookbookTab}
-        hintMessage={selectionMode && selectedOutfitIds.size === 0 ? 'Long press on an outfit to add it to your lookbook' : undefined}
         occasionOptions={availableOccasions}
         selectedOccasions={selectedOccasions}
         onToggleOccasion={toggleOccasion}
@@ -744,7 +755,8 @@ export default function OutfitsScreen() {
             refreshing={refreshing}
             onRefresh={refresh}
             feedListStyle={styles.feedListWrapper}
-            feedContentStyle={styles.feedList}
+            feedContentStyle={[styles.feedList, { paddingBottom: listBottomPadding }]}
+            gridContentContainerStyle={{ paddingBottom: listBottomPadding }}
             searchQuery={filters.searchQuery}
             showFavoritesOnly={filters.showFavoritesOnly}
           />
@@ -764,7 +776,8 @@ export default function OutfitsScreen() {
             refreshing={refreshing}
             onRefresh={refresh}
             feedListStyle={styles.feedListWrapper}
-            feedContentStyle={styles.feedList}
+            feedContentStyle={[styles.feedList, { paddingBottom: listBottomPadding }]}
+            gridContentContainerStyle={{ paddingBottom: listBottomPadding }}
             searchQuery={filters.searchQuery}
             showFavoritesOnly={filters.showFavoritesOnly}
           />
@@ -797,6 +810,7 @@ export default function OutfitsScreen() {
             message: 'Check back later for new content from the community.',
           }}
           styles={styles}
+          contentContainerStyle={{ paddingBottom: listBottomPadding }}
         />
       ) : feedLoading && followingOutfitFeed.length === 0 ? (
         <View style={styles.loadingContainer}>
@@ -830,6 +844,7 @@ export default function OutfitsScreen() {
             message: 'Follow people to see their posts, or check out Explore!',
           }}
           styles={styles}
+          contentContainerStyle={{ paddingBottom: listBottomPadding }}
         />
       )}
 
@@ -873,6 +888,18 @@ export default function OutfitsScreen() {
         onSelectLookbook={handleSelectLookbookFromModal}
         onCreateNew={handleCreateNewFromModal}
       />
+
+      {selectionMode && (
+        <LookbookSelectionBar
+          selectedOutfits={selectedOutfitsForBar}
+          selectionCount={selectedOutfitIds.size}
+          isSaving={lookbookSaving}
+          onRemoveOutfit={toggleOutfitSelection}
+          onExit={exitSelectionMode}
+          onOpenPicker={() => setLookbookPickerVisible(true)}
+          hintMessage={selectedOutfitIds.size === 0 ? 'Long press an outfit to add it to your lookbook' : undefined}
+        />
+      )}
     </View>
   );
 }

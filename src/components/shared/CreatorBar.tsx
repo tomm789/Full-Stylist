@@ -20,6 +20,7 @@ interface CreatorBarProps {
   onOptions?: () => void;
   isGenerating?: boolean;
   showOptionsButton?: boolean;
+  icon?: string;
 }
 
 export default function CreatorBar({
@@ -28,6 +29,7 @@ export default function CreatorBar({
   onOptions,
   isGenerating = false,
   showOptionsButton = true,
+  icon = 'sparkles',
 }: CreatorBarProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
@@ -51,7 +53,7 @@ export default function CreatorBar({
           activeOpacity={0.7}
         >
           <Ionicons
-            name="sparkles"
+            name={icon as any}
             size={18}
             color={colors.white}
             style={styles.generateIcon}

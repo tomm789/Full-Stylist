@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { FlatList, RefreshControl } from 'react-native';
+import { FlatList, RefreshControl, ViewStyle } from 'react-native';
 import { OutfitWithRating } from '@/lib/outfits';
 import { EmptyState } from '@/components/shared';
 import { theme } from '@/styles';
@@ -26,6 +26,7 @@ type MyOutfitsSectionProps = {
   onRefresh: () => void;
   feedListStyle: object;
   feedContentStyle: object;
+  gridContentContainerStyle?: ViewStyle;
   emptyTitle: string;
   emptyMessage: string;
   emptyActionLabel?: string;
@@ -46,6 +47,7 @@ export default function MyOutfitsSection({
   onRefresh,
   feedListStyle,
   feedContentStyle,
+  gridContentContainerStyle,
   emptyTitle,
   emptyMessage,
   emptyActionLabel,
@@ -62,6 +64,7 @@ export default function MyOutfitsSection({
         scrollEventThrottle={scrollEventThrottle}
         refreshing={refreshing}
         onRefresh={onRefresh}
+        contentContainerStyle={gridContentContainerStyle}
         ListEmptyComponent={
           <EmptyState
             title={emptyTitle}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 import MyOutfitsSection from './MyOutfitsSection';
 
@@ -17,6 +17,7 @@ export type OutfitsMyOutfitsTabProps = {
   onRefresh: () => void;
   feedListStyle: any;
   feedContentStyle: any;
+  gridContentContainerStyle?: ViewStyle;
   searchQuery: string;
   showFavoritesOnly: boolean;
 };
@@ -35,6 +36,7 @@ export default function OutfitsMyOutfitsTab({
   onRefresh,
   feedListStyle,
   feedContentStyle,
+  gridContentContainerStyle,
   searchQuery,
   showFavoritesOnly,
 }: OutfitsMyOutfitsTabProps) {
@@ -66,6 +68,7 @@ export default function OutfitsMyOutfitsTab({
         onRefresh={onRefresh}
         feedListStyle={feedListStyle}
         feedContentStyle={feedContentStyle}
+        gridContentContainerStyle={gridContentContainerStyle}
         emptyTitle={emptyTitle}
         emptyMessage={emptyMessage}
         emptyActionLabel={emptyActionLabel}

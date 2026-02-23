@@ -51,6 +51,7 @@ import HeadshotPromptSettings from '@/components/headshots/HeadshotPromptSetting
 import HairLengthSlider from '@/components/headshots/HairLengthSlider';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useRouter } from 'expo-router';
 import type { ThemeColors } from '@/styles/themes';
@@ -119,6 +120,10 @@ export default function HairAndMakeUpScreen() {
   const styles = createStyles(colors);
   const commonStyles = createCommonStyles(colors);
   const state = useHairAndMakeup();
+  const insets = useSafeAreaInsets();
+
+  // Bottom padding to allow content to scroll above the floating tab bar or CreatorBar
+  const floatingBarClearance = spacing.xl + 60 + spacing.md + insets.bottom;
 
   const presetGridGap = spacing.sm;
   const presetTileSize = (windowWidth - 2 * spacing.lg - 2 * spacing.sm - 3 * presetGridGap) / 4;
@@ -320,7 +325,7 @@ export default function HairAndMakeUpScreen() {
       {/* Grid tab: show only image grid */}
       {state.pageTab === 'grid' && (
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingBottom: floatingBarClearance }]}
           showsVerticalScrollIndicator={false}
         >
           <PostGrid
@@ -401,7 +406,7 @@ export default function HairAndMakeUpScreen() {
           <ScrollView
             contentContainerStyle={[
               styles.content,
-              state.hasSelections && { paddingBottom: spacing.massive + 140 },
+              { paddingBottom: state.hasSelections ? spacing.massive + 140 : floatingBarClearance },
             ]}
             showsVerticalScrollIndicator={false}
           >

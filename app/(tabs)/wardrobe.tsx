@@ -6,7 +6,12 @@
  */
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Alert, Platform, Animated, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Alert, Platform, Animated, Text, TouchableOpacity, useWindowDimensions, LayoutAnimation, UIManager } from 'react-native';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { useRouter, useLocalSearchParams, usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,7 +27,7 @@ import {
 import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits';
 
 // Shared Components
-import { EmptyState, LoadingOverlay, LoadingSpinner, HeaderTabPill } from '@/components/shared';
+import { EmptyState, LoadingOverlay, LoadingSpinner, HeaderTabPill, CreatorBar } from '@/components/shared';
 import { WardrobeTabIcon } from '@/components/icons/tabs';
 
 // Wardrobe Components
@@ -31,12 +36,11 @@ import {
   FilterDrawer,
   ItemGrid,
   ItemDetailModal,
-  OutfitCreatorBar,
-  OutfitCreatorCanvas,
-  OutfitCreatorContainer,
+  OutfitCreatorPanel,
   OutfitCreatorOptionsModal,
   HeadshotSelectorModal,
 } from '@/components/wardrobe';
+import { PANEL_COLLAPSED_HEIGHT, PANEL_HANDLE_AREA_HEIGHT } from '@/components/wardrobe/OutfitCreatorPanel';
 
 // Outfit Components (for generation progress)
 import {
@@ -168,12 +172,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  expandedCreatorDismissZone: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 12,
-  },
   edgeSwipeGestureZone: {
     position: 'absolute',
     left: 0,
@@ -185,7 +183,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
 });
 
 const CREATOR_BAR_HEIGHT = 60;
-const CREATOR_ROW_HEIGHT = 60;
 
 
 
@@ -232,7 +229,7 @@ export default function WardrobeScreen() {
   const [availableHeadshots, setAvailableHeadshots] = useState<Array<{ id: string; url: string | null }>>([]);
   const [loadingHeadshots, setLoadingHeadshots] = useState(false);
 
-  const { width: searchOverlayWidth } = useWindowDimensions();
+  const { width: searchOverlayWidth, height: windowHeight } = useWindowDimensions();
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
   const searchOpenRef = useRef(false);
   const cameraNavLockRef = useRef(false);
@@ -559,6 +556,17 @@ export default function WardrobeScreen() {
     handleCategorySelect(null);
     updateFilter('subcategoryId', null);
   }, [handleCategorySelect, updateFilter]);
+
+  // Animated expand/collapse helpers — LayoutAnimation must be called before state change
+  const handleToggleExpanded = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsCreatorExpanded((prev) => !prev);
+  }, []);
+
+  const handleSetExpanded = useCallback((value: boolean) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsCreatorExpanded(value);
+  }, []);
 
   useEffect(() => {
     if (!isCreatorExpanded || selectedOutfitItems.length === 0) return;
@@ -1246,10 +1254,17 @@ export default function WardrobeScreen() {
 
   const headerHeightPx = typeof headerHeight === 'number' ? headerHeight : 0;
   const creatorCanvasTop = Math.max(headerHeightPx + theme.spacing.xs, insets.top + 72);
-  const creatorCanvasBottom =
-    theme.spacing.xl + CREATOR_BAR_HEIGHT + theme.spacing.md + CREATOR_ROW_HEIGHT + theme.spacing.md;
-  const dismissZoneTop = headerHeightPx;
-  const dismissZoneHeight = Math.max(0, creatorCanvasTop - dismissZoneTop);
+  const panelBottomOffset = theme.spacing.xl + CREATOR_BAR_HEIGHT + theme.spacing.md;
+  const expandedPanelHeight = Math.max(
+    PANEL_COLLAPSED_HEIGHT + 100,
+    windowHeight - creatorCanvasTop - panelBottomOffset,
+  );
+
+  // Bottom padding to allow scroll content to clear floating UI elements
+  const isCreatorVisible = outfitCreatorMode && selectedOutfitItems.length > 0;
+  const listBottomPadding = isCreatorVisible
+    ? panelBottomOffset + PANEL_COLLAPSED_HEIGHT + theme.spacing.md
+    : theme.spacing.xl + CREATOR_BAR_HEIGHT + theme.spacing.md + insets.bottom;
 
   return (
     <View style={commonStyles.container}>
@@ -1361,6 +1376,7 @@ export default function WardrobeScreen() {
           onEmptyAction={() => router.push('/wardrobe/add')}
           onScroll={handleGridScroll}
           scrollEventThrottle={16}
+          contentContainerStyle={{ paddingBottom: listBottomPadding }}
         />
       ) : activeTab === 'following' ? (
         <FollowingWardrobesScreen
@@ -1422,47 +1438,20 @@ export default function WardrobeScreen() {
         />
       )}
 
-      {/* Outfit Creator Container & Bar (Bottom) */}
+      {/* Outfit Creator Panel & Bar (Bottom) */}
       {outfitCreatorMode && selectedOutfitItems.length > 0 && (() => {
-        // Calculate which categories are already in the selection
         const selectedCategoryIds = new Set(
           selectedWardrobeItems.map((item) => item.category_id)
         );
 
         return (
           <>
-            {isCreatorExpanded && dismissZoneHeight > 0 && (
-              <TouchableOpacity
-                style={[
-                  styles.expandedCreatorDismissZone,
-                  {
-                    top: dismissZoneTop,
-                    height: dismissZoneHeight,
-                  },
-                ]}
-                onPress={() => setIsCreatorExpanded(false)}
-                activeOpacity={1}
-              />
-            )}
-
-            <OutfitCreatorCanvas
-              visible={isCreatorExpanded}
-              isPreparing={isCanvasPreparing}
-              selectedItems={selectedItemsForBar}
-              layoutMap={outfitCanvasLayouts}
-              trimMap={outfitCanvasTrims}
-              containerStyle={{
-                top: creatorCanvasTop,
-                bottom: creatorCanvasBottom,
-                zIndex: 13,
-              }}
-              onLayoutChange={handleCanvasLayoutChange}
-              onBringForward={handleBringForward}
-              onSendBackward={handleSendBackward}
-            />
-
-            {/* Container with selected items and category shortcuts */}
-            <OutfitCreatorContainer
+            <OutfitCreatorPanel
+              isExpanded={isCreatorExpanded}
+              onToggleExpanded={handleToggleExpanded}
+              expandedHeight={expandedPanelHeight}
+              bottomOffset={panelBottomOffset}
+              zIndex={13}
               selectedItems={selectedItemsForBar}
               categories={categories}
               onRemoveItem={(id) => {
@@ -1470,23 +1459,27 @@ export default function WardrobeScreen() {
                 setSelectedOutfitItems((prev) => prev.filter((i) => i !== id));
               }}
               onCategorySelect={(categoryId) => {
-                setIsCreatorExpanded(false);
+                handleSetExpanded(false);
                 const nextCategoryId = selectedCategoryId === categoryId ? null : categoryId;
                 handleCategorySelect(nextCategoryId);
               }}
               selectedCategoryId={selectedCategoryId}
+              selectedCategoryIds={selectedCategoryIds}
               currentHeadshotUrl={currentHeadshotUrl}
               onHeadshotSelect={() => setShowHeadshotSelector(true)}
-              selectedCategoryIds={selectedCategoryIds}
+              isPreparing={isCanvasPreparing}
+              layoutMap={outfitCanvasLayouts}
+              trimMap={outfitCanvasTrims}
+              onLayoutChange={handleCanvasLayoutChange}
+              onBringForward={handleBringForward}
+              onSendBackward={handleSendBackward}
             />
 
             {/* Generate button bar */}
-            <OutfitCreatorBar
-              itemCount={selectedOutfitItems.length}
+            <CreatorBar
+              label={`Generate (${selectedOutfitItems.length})`}
               onGenerate={handleGenerateOutfit}
               onOptions={() => setShowOutfitCreatorOptionsModal(true)}
-              expanded={isCreatorExpanded}
-              onToggleExpanded={() => setIsCreatorExpanded((prev) => !prev)}
               isGenerating={generating}
             />
           </>
@@ -1497,6 +1490,7 @@ export default function WardrobeScreen() {
       <OutfitCreatorOptionsModal
         visible={showOutfitCreatorOptionsModal}
         onClose={() => setShowOutfitCreatorOptionsModal(false)}
+        onExpand={() => handleSetExpanded(true)}
         onClearSelection={() => {
           resetOutfitCreatorState();
           setShowOutfitCreatorOptionsModal(false);

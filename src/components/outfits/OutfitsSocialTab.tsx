@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList } from 'react-native';
+import { FlatList, ViewStyle } from 'react-native';
 import { FeedItem } from '@/lib/posts';
 import OutfitsSocialFeedSection from './OutfitsSocialFeedSection';
 
@@ -42,6 +42,7 @@ export type OutfitsSocialTabProps = {
     emptyText: any;
     emptySubtext: any;
   };
+  contentContainerStyle?: ViewStyle;
 };
 
 export default function OutfitsSocialTab({
@@ -68,6 +69,7 @@ export default function OutfitsSocialTab({
   onScrollToIndexFailed,
   emptyCopy,
   styles,
+  contentContainerStyle,
 }: OutfitsSocialTabProps) {
   const handleItemLongPress = (item: FeedItem) => {
     if (!selectionMode) {
@@ -108,6 +110,7 @@ export default function OutfitsSocialTab({
       onScrollToIndexFailed={onScrollToIndexFailed}
       emptyCopy={emptyCopy}
       styles={styles}
+      contentContainerStyle={contentContainerStyle}
     />
   );
 }

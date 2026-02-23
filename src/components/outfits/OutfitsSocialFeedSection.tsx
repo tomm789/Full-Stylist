@@ -60,6 +60,7 @@ type OutfitsSocialFeedSectionProps = {
   }) => void;
   emptyCopy: EmptyStateCopy;
   styles: SectionStyles;
+  contentContainerStyle?: ViewStyle;
 };
 
 export default function OutfitsSocialFeedSection({
@@ -87,6 +88,7 @@ export default function OutfitsSocialFeedSection({
   onScrollToIndexFailed,
   emptyCopy,
   styles,
+  contentContainerStyle,
 }: OutfitsSocialFeedSectionProps) {
   if (activeView === 'grid') {
     return (
@@ -105,6 +107,7 @@ export default function OutfitsSocialFeedSection({
         onItemLongPress={onItemLongPress}
         onScroll={onScroll}
         scrollEventThrottle={scrollEventThrottle}
+        contentContainerStyle={contentContainerStyle}
       />
     );
   }
@@ -116,7 +119,7 @@ export default function OutfitsSocialFeedSection({
       renderItem={renderFeedItem(feedOutfitImages, feedLookbookImages)}
       keyExtractor={(item) => item.id}
       style={styles.feedListWrapper}
-      contentContainerStyle={styles.feedList}
+      contentContainerStyle={[styles.feedList, contentContainerStyle]}
       onLayout={onLayout}
       onScrollToIndexFailed={onScrollToIndexFailed}
       refreshControl={

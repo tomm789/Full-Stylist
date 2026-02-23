@@ -16,6 +16,7 @@ const { spacing, borderRadius, typography } = theme;
 interface OutfitCreatorOptionsModalProps {
   visible: boolean;
   onClose: () => void;
+  onExpand?: () => void;
   onSaveAsDraft?: () => void;
   onClearSelection?: () => void;
 }
@@ -31,6 +32,7 @@ interface MenuOption {
 export default function OutfitCreatorOptionsModal({
   visible,
   onClose,
+  onExpand,
   onSaveAsDraft,
   onClearSelection,
 }: OutfitCreatorOptionsModalProps) {
@@ -38,6 +40,18 @@ export default function OutfitCreatorOptionsModal({
   const styles = createStyles(colors);
 
   const options: MenuOption[] = [];
+
+  if (onExpand) {
+    options.push({
+      id: 'expand',
+      label: 'Expand',
+      icon: 'expand-outline',
+      onPress: () => {
+        onExpand();
+        onClose();
+      },
+    });
+  }
 
   if (onSaveAsDraft) {
     options.push({
@@ -54,7 +68,7 @@ export default function OutfitCreatorOptionsModal({
   if (onClearSelection) {
     options.push({
       id: 'clear',
-      label: 'Clear Selection',
+      label: 'Clear All',
       icon: 'trash-outline',
       onPress: () => {
         onClearSelection();

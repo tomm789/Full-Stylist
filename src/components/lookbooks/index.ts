@@ -14,3 +14,4 @@ export { AddOutfitsModal } from './AddOutfitsModal';
 export { OutfitActionsMenu } from './OutfitActionsMenu';
 export { default as LookbookCreatorBar } from './LookbookCreatorBar';
 export { default as LookbookPickerModal } from './LookbookPickerModal';
+export { default as LookbookCreatorPanel, LOOKBOOK_PANEL_COLLAPSED_HEIGHT, LOOKBOOK_PANEL_HANDLE_AREA_HEIGHT } from './LookbookCreatorPanel';
