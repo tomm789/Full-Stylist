@@ -6,6 +6,7 @@
 
 import React from 'react';
 import {
+  Animated,
   Dimensions,
   LayoutAnimation,
   Platform,
@@ -23,6 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { useIsFocused } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
 import {
   PillButton,
   EdgePeekSlider,
@@ -31,6 +33,7 @@ import {
   dropdownMenuStyles,
   HeaderTabPill,
 } from '@/components/shared';
+import HeadshotSocialTab from '@/components/headshots/HeadshotSocialTab';
 import HeadshotSlideItem from '@/components/headshots/HeadshotSlideItem';
 import DrawModeModal from '@/components/headshots/DrawModeModal';
 import { HeaderTitlePillRow } from '@/components/shared/layout';
@@ -40,6 +43,7 @@ import ErrorModal from '@/components/ErrorModal';
 import {
   useHairAndMakeup,
 } from '@/hooks/headshot';
+import { useApplyLook, getPendingApplyLookSnapshot } from '@/hooks/headshot/useApplyLook';
 import {
   ACCESSORY_SUBCATEGORIES,
   JEWELLERY_SUBCATEGORIES,
@@ -114,6 +118,87 @@ function needsLightTextOnColor(hex: string): boolean {
   return (r * 0.299 + g * 0.587 + b * 0.114) < 140;
 }
 
+function ShareToFeedModal({
+  visible,
+  onClose,
+  onShare,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onShare: (caption?: string) => Promise<void>;
+}) {
+  const colors = useThemeColors();
+  const [caption, setCaption] = React.useState('');
+  const [sharing, setSharing] = React.useState(false);
+
+  const handleShare = async () => {
+    setSharing(true);
+    await onShare(caption.trim() || undefined);
+    setCaption('');
+    setSharing(false);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <TouchableOpacity
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: colors.background,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            padding: spacing.lg,
+            paddingBottom: spacing.xxl,
+            gap: spacing.md,
+          }}
+        >
+          <Text style={{ fontSize: 18, fontWeight: '600', color: colors.textPrimary }}>
+            Share to Feed
+          </Text>
+          <TextInput
+            placeholder="Add a caption (optional)"
+            placeholderTextColor={colors.textTertiary}
+            value={caption}
+            onChangeText={setCaption}
+            multiline
+            style={{
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: 8,
+              padding: spacing.sm,
+              color: colors.textPrimary,
+              minHeight: 80,
+              textAlignVertical: 'top',
+            }}
+          />
+          <TouchableOpacity
+            onPress={handleShare}
+            disabled={sharing}
+            style={{
+              backgroundColor: colors.primary,
+              borderRadius: 8,
+              paddingVertical: spacing.sm + 2,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>
+              {sharing ? 'Sharing...' : 'Share'}
+            </Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
 export default function HairAndMakeUpScreen() {
   const colors = useThemeColors();
   const { width: windowWidth } = useWindowDimensions();
@@ -121,6 +206,21 @@ export default function HairAndMakeUpScreen() {
   const commonStyles = createCommonStyles(colors);
   const state = useHairAndMakeup();
   const insets = useSafeAreaInsets();
+  const { variationId } = useLocalSearchParams<{ variationId?: string }>();
+  const { applyLook } = useApplyLook();
+  const [showShareModal, setShowShareModal] = React.useState(false);
+
+  // On mount: if a variationId URL param was set (by Apply Look), populate presets
+  const appliedVariationRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!variationId || appliedVariationRef.current === variationId) return;
+    appliedVariationRef.current = variationId;
+    const snapshot = getPendingApplyLookSnapshot();
+    if (snapshot) {
+      state.applySnapshot(snapshot);
+      state.setPageTab('mirror');
+    }
+  }, [variationId]);
 
   // Bottom padding to allow content to scroll above the floating tab bar or CreatorBar
   const floatingBarClearance = spacing.xl + 60 + spacing.md + insets.bottom;
@@ -182,6 +282,28 @@ export default function HairAndMakeUpScreen() {
   const activeFaceIndexRef = React.useRef(activeFaceIndex);
   activeFaceIndexRef.current = activeFaceIndex;
 
+  // Sequential dialog lines shown in the white space below the image during generation.
+  const dialogLine1Opacity = React.useRef(new Animated.Value(0)).current;
+  const dialogLine2Opacity = React.useRef(new Animated.Value(0)).current;
+  const dialogLine3Opacity = React.useRef(new Animated.Value(0)).current;
+  const dialogLine4Opacity = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    dialogLine1Opacity.setValue(0);
+    dialogLine2Opacity.setValue(0);
+    dialogLine3Opacity.setValue(0);
+    dialogLine4Opacity.setValue(0);
+    if (!state.generating) return;
+    const anim = Animated.stagger(2500, [
+      Animated.timing(dialogLine1Opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(dialogLine2Opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(dialogLine3Opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(dialogLine4Opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+    ]);
+    anim.start();
+    return () => anim.stop();
+  }, [state.generating]);
+
   const headshotKeyExtractor = React.useCallback(
     (item: { id: string; url: string | null }) => item.id,
     [],
@@ -198,8 +320,11 @@ export default function HairAndMakeUpScreen() {
   );
 
   const handleMenuPress = React.useCallback(
-    () => state.setShowFaceMenu(true),
-    [state.setShowFaceMenu],
+    (item: { id: string; url: string | null }) => {
+      state.handleSwipeIndexChange(item);
+      state.setShowFaceMenu(true);
+    },
+    [state.handleSwipeIndexChange, state.setShowFaceMenu],
   );
 
   const handleEdgeSwipeStart = React.useCallback(() => {
@@ -241,15 +366,15 @@ export default function HairAndMakeUpScreen() {
 
   const renderSliderItem = React.useCallback(
     ({ item, index }: { item: { id: string; url: string | null }; index: number }) => (
-      <HeadshotSlideItem
-        item={item}
-        isActive={index === activeFaceIndexRef.current}
-        onPreviewPress={state.handlePreviewPress}
-        onMenuPress={handleMenuPress}
-        generating={state.generating}
-        generateOverlayOpacity={state.generateOverlayOpacity}
-        previewIsGenerated={state.previewIsGenerated}
-        onRestoreSelfie={state.handleRestoreSelfie}
+        <HeadshotSlideItem
+          item={item}
+          isActive={index === activeFaceIndexRef.current}
+          onPreviewPress={state.handlePreviewPress}
+          onMenuPress={() => handleMenuPress(item)}
+          generating={state.generating}
+          generateOverlayOpacity={state.generateOverlayOpacity}
+          previewIsGenerated={state.previewIsGenerated}
+          onRestoreSelfie={state.handleRestoreSelfie}
         isStyleDisabled={state.isStyleDisabled}
       />
     ),
@@ -308,18 +433,13 @@ export default function HairAndMakeUpScreen() {
         }
       />
 
-      {/* Following / Inspiration placeholder */}
+      {/* Following / Inspiration feeds */}
       {(state.pageTab === 'following' || state.pageTab === 'inspiration') && (
-        <View style={styles.emptyTabContainer}>
-          <Ionicons
-            name={state.pageTab === 'following' ? 'people-outline' : 'sparkles-outline'}
-            size={48}
-            color={colors.textTertiary}
-          />
-          <Text style={styles.emptyTabText}>
-            {state.pageTab === 'following' ? 'Following' : 'Inspiration'} coming soon
-          </Text>
-        </View>
+        <HeadshotSocialTab
+          activeTab={state.pageTab as 'following' | 'inspiration'}
+          currentUserId={state.userId ?? undefined}
+          onApplyLook={applyLook}
+        />
       )}
 
       {/* Grid tab: show only image grid */}
@@ -404,6 +524,7 @@ export default function HairAndMakeUpScreen() {
           </View>
 
           <ScrollView
+            style={state.generating ? styles.generatingScrollView : undefined}
             contentContainerStyle={[
               styles.content,
               { paddingBottom: state.hasSelections ? spacing.massive + 140 : floatingBarClearance },
@@ -444,17 +565,36 @@ export default function HairAndMakeUpScreen() {
                   </TouchableOpacity>
                 </View>
               )}
-              {state.previewHasImage && Platform.OS !== 'web' && (
-                <TouchableOpacity
-                  style={styles.drawModeButton}
-                  onPress={() => state.setIsDrawModeOpen(true)}
-                  accessibilityLabel="Open draw mode"
-                >
-                  <Ionicons name="pencil-outline" size={16} color={colors.textSecondary} />
-                  <Text style={styles.drawModeButtonLabel}>Draw</Text>
-                </TouchableOpacity>
+              {state.generating ? (
+                <View style={styles.generatingDialog}>
+                  <Animated.Text style={[styles.dialogLine, { opacity: dialogLine1Opacity }]}>
+                    Ooo...
+                  </Animated.Text>
+                  <Animated.Text style={[styles.dialogLine, { opacity: dialogLine2Opacity }]}>
+                    You don't need any make up at all honey...
+                  </Animated.Text>
+                  <Animated.Text style={[styles.dialogLine, { opacity: dialogLine3Opacity }]}>
+                    But I love this look sister!
+                  </Animated.Text>
+                  <Animated.Text style={[styles.dialogLine, { opacity: dialogLine4Opacity }]}>
+                    Ready?
+                  </Animated.Text>
+                </View>
+              ) : (
+                <>
+                  {state.previewHasImage && Platform.OS !== 'web' && (
+                    <TouchableOpacity
+                      style={styles.drawModeButton}
+                      onPress={() => state.setIsDrawModeOpen(true)}
+                      accessibilityLabel="Open draw mode"
+                    >
+                      <Ionicons name="pencil-outline" size={16} color={colors.textSecondary} />
+                      <Text style={styles.drawModeButtonLabel}>Draw</Text>
+                    </TouchableOpacity>
+                  )}
+                  <HeadshotPromptSettings variation={state.activeImageVariation} />
+                </>
               )}
-              <HeadshotPromptSettings variation={state.activeImageVariation} />
             </View>
           </ScrollView>
 
@@ -932,6 +1072,16 @@ export default function HairAndMakeUpScreen() {
         />
         <View style={dropdownMenuStyles.menuDivider} />
         <DropdownMenuItem
+          label="Share to Feed"
+          icon="share-social-outline"
+          onPress={() => {
+            state.setShowFaceMenu(false);
+            setShowShareModal(true);
+          }}
+          disabled={!state.canShare}
+        />
+        <View style={dropdownMenuStyles.menuDivider} />
+        <DropdownMenuItem
           label="Share"
           icon="share-outline"
           onPress={() => {
@@ -1024,6 +1174,16 @@ export default function HairAndMakeUpScreen() {
         onOpenCategoryEditor={handleOpenCategoryEditor}
         onApplyTemplateSelections={state.handleApplyTemplateSelections}
         drawingCanvasRef={state.drawingCanvasRef}
+      />
+
+      {/* Share to Feed Modal */}
+      <ShareToFeedModal
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        onShare={async (caption) => {
+          setShowShareModal(false);
+          await state.handleShareToFeed(caption);
+        }}
       />
 
       {/* Headshot Creator Bar & Container */}
@@ -1737,6 +1897,23 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   drawModeButtonLabelActive: {
     color: colors.textLight,
+  },
+  // Generation loading
+  generatingScrollView: {
+    backgroundColor: '#FFFFFF',
+  },
+  generatingDialog: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xl,
+    gap: spacing.lg,
+    backgroundColor: '#FFFFFF',
+    minHeight: 220,
+  },
+  dialogLine: {
+    fontSize: 20,
+    fontStyle: 'italic',
+    color: '#1a1a1a',
+    lineHeight: 30,
   },
   // Advanced tab text fields
   advancedInput: {

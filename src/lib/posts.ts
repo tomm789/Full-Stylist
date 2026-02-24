@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 export interface Post {
   id: string;
   owner_user_id: string;
-  entity_type: 'outfit' | 'lookbook';
+  entity_type: 'outfit' | 'lookbook' | 'headshot';
   entity_id: string;
   caption?: string;
   visibility: 'public' | 'followers' | 'private_link' | 'private' | 'inherit';
@@ -32,15 +32,25 @@ export interface FeedItem {
   entity?: {
     outfit?: any;
     lookbook?: any;
+    headshot?: {
+      id: string;
+      storage_bucket: string;
+      storage_key: string;
+      width?: number;
+      height?: number;
+      prompt_text?: string;
+      input_snapshot_json?: any;
+      variation_id?: string;
+    };
   };
 }
 
 /**
- * Create a post for an outfit or lookbook
+ * Create a post for an outfit, lookbook, or headshot
  */
 export async function createPost(
   userId: string,
-  entityType: 'outfit' | 'lookbook',
+  entityType: 'outfit' | 'lookbook' | 'headshot',
   entityId: string,
   caption?: string,
   visibility?: 'public' | 'followers' | 'private_link' | 'private' | 'inherit'
@@ -119,6 +129,21 @@ export async function deletePost(
   } catch (error: any) {
     return { error };
   }
+}
+
+/**
+ * Create a post for a headshot image
+ */
+export async function createHeadshotPost(
+  userId: string,
+  imageId: string,
+  caption?: string,
+  visibility?: 'public' | 'followers' | 'private_link' | 'private' | 'inherit'
+): Promise<{
+  data: Post | null;
+  error: any;
+}> {
+  return createPost(userId, 'headshot', imageId, caption, visibility);
 }
 
 /**
@@ -228,6 +253,7 @@ export async function getFeed(
     // 🔥 OPTIMIZATION: Batch fetch all entities in TWO queries instead of N queries
     const outfitIds = new Set<string>();
     const lookbookIds = new Set<string>();
+    const headshotIds = new Set<string>();
 
     limitedItems.forEach(item => {
       const post = item.type === 'post' ? item.post! : item.repost!.original_post!;
@@ -236,6 +262,8 @@ export async function getFeed(
           outfitIds.add(post.entity_id);
         } else if (post.entity_type === 'lookbook') {
           lookbookIds.add(post.entity_id);
+        } else if (post.entity_type === 'headshot') {
+          headshotIds.add(post.entity_id);
         }
       }
     });
@@ -247,7 +275,7 @@ export async function getFeed(
         .from('outfits')
         .select('*')
         .in('id', Array.from(outfitIds));
-      
+
       if (outfits) {
         outfits.forEach(outfit => outfitsMap.set(outfit.id, outfit));
       }
@@ -260,10 +288,40 @@ export async function getFeed(
         .from('lookbooks')
         .select('*')
         .in('id', Array.from(lookbookIds));
-      
+
       if (lookbooks) {
         lookbooks.forEach(lookbook => lookbooksMap.set(lookbook.id, lookbook));
       }
+    }
+
+    // Fetch headshot images + variation prompts in TWO queries
+    let headshotsMap = new Map<string, any>();
+    if (headshotIds.size > 0) {
+      const [{ data: headshotImages }, { data: headshotVariations }] = await Promise.all([
+        supabase
+          .from('images')
+          .select('id, storage_bucket, storage_key, width, height')
+          .in('id', Array.from(headshotIds)),
+        supabase
+          .from('headshot_generation_variations')
+          .select('id, image_id, prompt_text, input_snapshot_json')
+          .in('image_id', Array.from(headshotIds)),
+      ]);
+
+      headshotImages?.forEach(img => {
+        headshotsMap.set(img.id, { ...img });
+      });
+      headshotVariations?.forEach(v => {
+        const existing = headshotsMap.get(v.image_id);
+        if (existing) {
+          headshotsMap.set(v.image_id, {
+            ...existing,
+            prompt_text: v.prompt_text,
+            input_snapshot_json: v.input_snapshot_json,
+            variation_id: v.id,
+          });
+        }
+      });
     }
 
     // Attach entities to feed items (instant lookup)
@@ -280,6 +338,11 @@ export async function getFeed(
           if (lookbook) {
             item.entity = { lookbook };
           }
+        } else if (post.entity_type === 'headshot') {
+          const headshot = headshotsMap.get(post.entity_id);
+          if (headshot) {
+            item.entity = { headshot };
+          }
         }
       }
     });
@@ -291,26 +354,36 @@ export async function getFeed(
 }
 
 /**
- * Get discover feed - public posts from all users (excluding current user)
- * Used for the Discover tab on the social page
+ * Get discover feed - public posts from all users.
+ * By default excludes current user, with an option to include them.
  */
 export async function getDiscoverFeed(
   userId: string,
   limit: number = 60,
-  offset: number = 0
+  offset: number = 0,
+  options?: {
+    includeCurrentUser?: boolean;
+  }
 ): Promise<{
   data: FeedItem[];
   error: any;
 }> {
   try {
-    // Query public posts from all users except current user
-    const { data: posts, error: postsError } = await supabase
+    const includeCurrentUser = options?.includeCurrentUser === true;
+
+    // Query public posts from all users (optionally excluding current user).
+    let postsQuery = supabase
       .from('posts')
       .select('*, owner:users(id, handle, display_name, avatar_url)')
       .eq('visibility', 'public')
-      .neq('owner_user_id', userId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
+
+    if (!includeCurrentUser) {
+      postsQuery = postsQuery.neq('owner_user_id', userId);
+    }
+
+    const { data: posts, error: postsError } = await postsQuery;
 
     if (postsError) throw postsError;
 
@@ -324,6 +397,7 @@ export async function getDiscoverFeed(
     // Batch fetch entities (same optimization as getFeed)
     const outfitIds = new Set<string>();
     const lookbookIds = new Set<string>();
+    const headshotIds = new Set<string>();
 
     feedItems.forEach(item => {
       const post = item.post!;
@@ -331,6 +405,8 @@ export async function getDiscoverFeed(
         outfitIds.add(post.entity_id);
       } else if (post.entity_type === 'lookbook') {
         lookbookIds.add(post.entity_id);
+      } else if (post.entity_type === 'headshot') {
+        headshotIds.add(post.entity_id);
       }
     });
 
@@ -360,6 +436,36 @@ export async function getDiscoverFeed(
       }
     }
 
+    // Fetch headshot images + variation prompts
+    let headshotsMap = new Map<string, any>();
+    if (headshotIds.size > 0) {
+      const [{ data: headshotImages }, { data: headshotVariations }] = await Promise.all([
+        supabase
+          .from('images')
+          .select('id, storage_bucket, storage_key, width, height')
+          .in('id', Array.from(headshotIds)),
+        supabase
+          .from('headshot_generation_variations')
+          .select('id, image_id, prompt_text, input_snapshot_json')
+          .in('image_id', Array.from(headshotIds)),
+      ]);
+
+      headshotImages?.forEach(img => {
+        headshotsMap.set(img.id, { ...img });
+      });
+      headshotVariations?.forEach(v => {
+        const existing = headshotsMap.get(v.image_id);
+        if (existing) {
+          headshotsMap.set(v.image_id, {
+            ...existing,
+            prompt_text: v.prompt_text,
+            input_snapshot_json: v.input_snapshot_json,
+            variation_id: v.id,
+          });
+        }
+      });
+    }
+
     // Attach entities
     feedItems.forEach(item => {
       const post = item.post!;
@@ -372,6 +478,11 @@ export async function getDiscoverFeed(
         const lookbook = lookbooksMap.get(post.entity_id);
         if (lookbook) {
           item.entity = { lookbook };
+        }
+      } else if (post.entity_type === 'headshot') {
+        const headshot = headshotsMap.get(post.entity_id);
+        if (headshot) {
+          item.entity = { headshot };
         }
       }
     });

@@ -1,6 +1,7 @@
 /**
- * User Feed Screen (Refactored)
- * View a specific user's posts
+ * User Feed Screen
+ * View a specific user's posts in a single-column feed.
+ * Supports three-dots menu, try-on, comments, and find-similar.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -12,15 +13,10 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { useFeed, useSocialEngagement } from '@/hooks/social';
-import { useSlideshow } from '@/hooks/lookbooks';
-import {
-  FeedCard,
-  SocialActionBar,
-  FeedOutfitCard,
-  FeedLookbookCarousel,
-} from '@/components/social';
-import { SlideshowModal } from '@/components/lookbooks';
+import { useFeed, useSocialEngagement, useSocialModals, useTryOnOutfit, useFeedSlideshow } from '@/hooks/social';
+import { useApplyLook } from '@/hooks/headshot/useApplyLook';
+import { FeedItemComponent } from '@/components/social/FeedItem';
+import { PostMenuModal, CommentsModal, SlideshowModal } from '@/components/social';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
 import { theme } from '@/styles';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
@@ -42,23 +38,55 @@ export default function UserFeedScreen() {
   const MAX_SCROLL_ATTEMPTS = 6;
 
   // Load feed filtered by user
-  const { feed, outfitImages, lookbookImages, engagementCounts, setEngagementCounts, loading, refresh } =
-    useFeed({
-      userId: user?.id,
-      filterByUserId: userId,
-    });
+  const {
+    feed,
+    outfitImages,
+    lookbookImages,
+    headshotImages,
+    engagementCounts,
+    setEngagementCounts,
+    followStatuses,
+    loading,
+    refresh,
+  } = useFeed({
+    userId: user?.id,
+    filterByUserId: userId,
+  });
 
-  // Social engagement
-  const { handleLike, handleSave, handleRepost, liking, saving, reposting } =
-    useSocialEngagement({
-      userId: user?.id,
-      engagementCounts,
-      setEngagementCounts,
-      onRepost: refresh,
-    });
+  const { applyLook } = useApplyLook();
 
-  // Slideshow for lookbooks
-  const slideshow = useSlideshow();
+  // Social engagement (like, save, repost)
+  const { handleLike, handleSave, handleRepost } = useSocialEngagement({
+    userId: user?.id,
+    engagementCounts,
+    setEngagementCounts,
+    onRepost: refresh,
+  });
+
+  // Modal state: menu, comments, find-similar, follow/unfollow
+  const modals = useSocialModals({ refreshFeed: refresh });
+
+  // Try-on feature
+  const { tryOnOutfit, tryingOnOutfit } = useTryOnOutfit({ userId: user?.id });
+
+  // Slideshow for lookbooks (accepts lookbook ID, matching FeedItemComponent's onOpenSlideshow signature)
+  const {
+    slideshowVisible,
+    slideshowOutfits,
+    slideshowImages,
+    currentSlideIndex,
+    isAutoPlaying,
+    openSlideshow,
+    closeSlideshow,
+    handleManualNavigation,
+    toggleAutoPlay,
+  } = useFeedSlideshow(user?.id);
+
+  // Sync follow statuses into modal state
+  useEffect(() => {
+    modals.setFollowStatuses(followStatuses);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followStatuses]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -66,92 +94,38 @@ export default function UserFeedScreen() {
     setRefreshing(false);
   };
 
-  const renderFeedItem = ({ item }: { item: any }) => {
-    const post = item.type === 'post' ? item.post : item.repost?.original_post;
-    if (!post) return null;
-
-    const engagement = engagementCounts[post.id] || {
-      likes: 0,
-      saves: 0,
-      comments: 0,
-      reposts: 0,
-      hasLiked: false,
-      hasSaved: false,
-      hasReposted: false,
-    };
-
-    // Render outfit post
-    if (post.entity_type === 'outfit' && item.entity?.outfit) {
-      const outfit = item.entity.outfit;
-      const imageUrl = outfitImages.get(outfit.id);
-
-      return (
-        <FeedCard
-          item={item}
-          onUserPress={(targetUserId) => router.push(`/users/${targetUserId}`)}
-          caption={post.caption}
-          actions={
-            <SocialActionBar
-              counts={engagement}
-              onLike={() => handleLike(post.id)}
-              onComment={() => {}}
-              onRepost={() => handleRepost(post.id)}
-              onSave={() => handleSave(post.id)}
-              liking={liking.has(post.id)}
-              saving={saving.has(post.id)}
-              reposting={reposting.has(post.id)}
-            />
-          }
-        >
-          <FeedOutfitCard
-            outfit={outfit}
-            imageUrl={imageUrl}
-            onPress={() => {}}
-          />
-        </FeedCard>
-      );
-    }
-
-    // Render lookbook post
-    if (post.entity_type === 'lookbook' && item.entity?.lookbook) {
-      const lookbook = item.entity.lookbook;
-
-      const lookbookOutfits = lookbookImages.get(`${lookbook.id}_outfits`) || [];
-      return (
-        <FeedCard
-          item={item}
-          onUserPress={(targetUserId) => router.push(`/users/${targetUserId}`)}
-          caption={post.caption}
-          actions={
-            <SocialActionBar
-              counts={engagement}
-              onLike={() => handleLike(post.id)}
-              onComment={() => {}}
-              onRepost={() => handleRepost(post.id)}
-              onSave={() => handleSave(post.id)}
-              liking={liking.has(post.id)}
-              saving={saving.has(post.id)}
-              reposting={reposting.has(post.id)}
-            />
-          }
-        >
-          <FeedLookbookCarousel
-            lookbook={lookbook}
-            lookbookImages={lookbookImages}
-            onPlayPress={() => slideshow.open(lookbookOutfits)}
-            onPress={() => {}}
-          />
-        </FeedCard>
-      );
-    }
-
-    return null;
-  };
-
   const getPostId = (item: any) => {
     const post = item.type === 'post' ? item.post : item.repost?.original_post;
     return post?.id ?? null;
   };
+
+  const renderFeedItem = ({ item }: { item: any }) => (
+    <FeedItemComponent
+      item={item}
+      engagementCounts={engagementCounts}
+      outfitImages={outfitImages}
+      lookbookImages={lookbookImages}
+      headshotImages={headshotImages}
+      currentUserId={user?.id}
+      onLike={handleLike}
+      onComment={modals.openComments}
+      onRepost={handleRepost}
+      onSave={handleSave}
+      onFindSimilar={modals.handleFindSimilar}
+      onTryOnOutfitShortcut={tryOnOutfit}
+      onApplyLook={applyLook}
+      onMenuPress={(postId, position) => {
+        modals.setMenuButtonPosition(position);
+        modals.setOpenMenuPostId(modals.openMenuPostId === postId ? null : postId);
+      }}
+      onOpenSlideshow={openSlideshow}
+      menuButtonRefs={modals.menuButtonRefs}
+      menuButtonPositions={modals.menuButtonPositions}
+      openMenuPostId={modals.openMenuPostId}
+      setMenuButtonPosition={modals.setMenuButtonPosition}
+      setOpenMenuPostId={modals.setOpenMenuPostId}
+    />
+  );
 
   const handleScrollToIndexFailed = (info: {
     index: number;
@@ -214,6 +188,19 @@ export default function UserFeedScreen() {
     scrollAttemptRef.current = 0;
   }, [postId, feed]);
 
+  // Resolve the open menu's post ID and owner ID for PostMenuModal
+  const openMenuItem = modals.openMenuPostId
+    ? feed.find((item) => getPostId(item) === modals.openMenuPostId) ?? null
+    : null;
+  const openMenuOwnerId = openMenuItem
+    ? (openMenuItem.type === 'post'
+        ? openMenuItem.post?.owner_user_id
+        : openMenuItem.repost?.original_post?.owner_user_id) ?? null
+    : null;
+
+  // Resolve the open comments post ID for CommentsModal
+  const commentsPostId = modals.selectedItem ? getPostId(modals.selectedItem) : null;
+
   if (loading) {
     return (
       <View style={commonStyles.loadingContainer}>
@@ -251,15 +238,65 @@ export default function UserFeedScreen() {
 
       {/* Slideshow Modal */}
       <SlideshowModal
-        visible={slideshow.visible}
-        outfits={slideshow.outfits}
-        images={slideshow.images}
-        currentIndex={slideshow.currentIndex}
-        isAutoPlaying={slideshow.isAutoPlaying}
-        onClose={slideshow.close}
-        onNext={slideshow.next}
-        onPrevious={slideshow.previous}
-        onToggleAutoPlay={slideshow.toggleAutoPlay}
+        visible={slideshowVisible}
+        outfits={slideshowOutfits}
+        images={slideshowImages}
+        currentIndex={currentSlideIndex}
+        isAutoPlaying={isAutoPlaying}
+        onClose={closeSlideshow}
+        onNext={() => handleManualNavigation('next')}
+        onPrevious={() => handleManualNavigation('prev')}
+        onToggleAutoPlay={toggleAutoPlay}
+      />
+
+      {/* Three-dots post menu */}
+      <PostMenuModal
+        visible={modals.openMenuPostId !== null}
+        feedItem={openMenuItem}
+        currentUserId={user?.id}
+        isFollowingOwner={openMenuOwnerId ? modals.followStatuses.get(openMenuOwnerId) === true : false}
+        buttonPosition={modals.menuButtonPosition}
+        tryingOnOutfit={tryingOnOutfit}
+        unfollowingUserId={modals.unfollowingUserId}
+        onClose={() => {
+          modals.setOpenMenuPostId(null);
+          modals.setMenuButtonPosition(null);
+        }}
+        onEditOutfit={modals.handleEditOutfit}
+        onDeletePost={modals.handleDeletePost}
+        onTryOnOutfit={tryOnOutfit}
+        onApplyLook={applyLook}
+        onUnfollow={modals.handleUnfollow}
+        getImageUrl={(outfitId) => outfitImages.get(outfitId) ?? null}
+      />
+
+      {/* Comments sheet */}
+      <CommentsModal
+        visible={modals.showComments}
+        onClose={() => modals.setShowComments(false)}
+        postId={commentsPostId}
+        userId={user?.id}
+        comments={modals.comments}
+        onCommentsUpdate={modals.setComments}
+        onCountUpdate={(count) => {
+          if (commentsPostId) {
+            setEngagementCounts((prev) => ({
+              ...prev,
+              [commentsPostId]: {
+                ...(prev[commentsPostId] || {
+                  likes: 0,
+                  saves: 0,
+                  comments: 0,
+                  reposts: 0,
+                  hasLiked: false,
+                  hasSaved: false,
+                  hasReposted: false,
+                }),
+                comments: count,
+              },
+            }));
+          }
+        }}
       />
     </View>
   );

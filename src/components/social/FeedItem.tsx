@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import FeedOutfitCard from '@/components/social/FeedOutfitCard';
 import FeedLookbookCarousel from '@/components/social/FeedLookbookCarousel';
+import HeadshotFeedCard from '@/components/social/HeadshotFeedCard';
 import { FeedItem } from '@/lib/posts';
 import { formatTimestamp } from '@/utils/formatUtils';
 
@@ -29,12 +30,15 @@ interface FeedItemProps {
   >;
   outfitImages: Map<string, string | null>;
   lookbookImages: Map<string, string | null>;
+  headshotImages?: Map<string, string | null>;
   currentUserId: string | undefined;
   onLike: (postId: string) => void;
   onComment: (item: FeedItem) => void;
   onRepost: (postId: string) => void;
   onSave: (postId: string) => void;
   onFindSimilar: (entityType: 'wardrobe_item' | 'outfit', entityId: string, categoryId?: string) => void;
+  onTryOnOutfitShortcut?: (outfitId: string, imageUrl: string | null) => void;
+  onApplyLook?: (variationId: string, inputSnapshotJson: any) => void;
   onMenuPress: (postId: string, position: { x: number; y: number; width: number; height: number }) => void;
   onOpenSlideshow: (lookbookId: string) => void;
   menuButtonRefs: React.MutableRefObject<Map<string, any>>;
@@ -49,12 +53,15 @@ export function FeedItemComponent({
   engagementCounts,
   outfitImages,
   lookbookImages,
+  headshotImages,
   currentUserId,
   onLike,
   onComment,
   onRepost,
   onSave,
   onFindSimilar,
+  onTryOnOutfitShortcut,
+  onApplyLook,
   onMenuPress,
   onOpenSlideshow,
   menuButtonRefs,
@@ -78,7 +85,9 @@ export function FeedItemComponent({
   };
 
   const isOutfit = post.entity_type === 'outfit';
+  const isHeadshot = post.entity_type === 'headshot';
   const entity = item.entity?.outfit || item.entity?.lookbook;
+  const headshotEntity = item.entity?.headshot;
   const timestamp = item.type === 'post' ? item.post!.created_at : item.repost!.created_at;
   const isOwnPost = item.type === 'post' && post.owner_user_id === currentUserId;
 
@@ -187,13 +196,20 @@ export function FeedItemComponent({
           loading={!outfitImages.has(entity.id)}
         />
       )}
-      {!isOutfit && entity && (
+      {!isOutfit && !isHeadshot && entity && (
         <FeedLookbookCarousel
           lookbook={entity}
           lookbookImages={lookbookImages}
           onPress={() => router.push(`/lookbooks/${entity.id}/view`)}
           onPlayPress={() => onOpenSlideshow(entity.id)}
           loading={!lookbookImages.has(`${entity.id}_outfits`)}
+        />
+      )}
+      {isHeadshot && headshotEntity && (
+        <HeadshotFeedCard
+          headshot={headshotEntity}
+          imageUrl={headshotImages?.get(headshotEntity.id) ?? null}
+          loading={!headshotImages?.has(headshotEntity.id)}
         />
       )}
 
@@ -217,14 +233,30 @@ export function FeedItemComponent({
             {counts.comments > 0 && <Text style={styles.actionCount}>{counts.comments}</Text>}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton} onPress={() => onRepost(post.id)}>
-            <Ionicons
-              name={counts.hasReposted ? 'repeat' : 'repeat-outline'}
-              size={28}
-              color={counts.hasReposted ? '#00ba7c' : '#000'}
-            />
-            {counts.reposts > 0 && <Text style={styles.actionCount}>{counts.reposts}</Text>}
-          </TouchableOpacity>
+          {onApplyLook && isHeadshot && headshotEntity && headshotEntity.variation_id && !isOwnPost ? (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => onApplyLook(headshotEntity.variation_id!, headshotEntity.input_snapshot_json)}
+            >
+              <Ionicons name="color-wand-outline" size={26} color="#007AFF" />
+            </TouchableOpacity>
+          ) : onTryOnOutfitShortcut && isOutfit && entity && !isOwnPost ? (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => onTryOnOutfitShortcut(entity.id, outfitImages.get(entity.id) ?? null)}
+            >
+              <Ionicons name="shirt-outline" size={26} color="#007AFF" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.actionButton} onPress={() => onRepost(post.id)}>
+              <Ionicons
+                name={counts.hasReposted ? 'repeat' : 'repeat-outline'}
+                size={28}
+                color={counts.hasReposted ? '#00ba7c' : '#000'}
+              />
+              {counts.reposts > 0 && <Text style={styles.actionCount}>{counts.reposts}</Text>}
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity style={styles.actionButton} onPress={() => onSave(post.id)}>
             <Ionicons
@@ -238,9 +270,7 @@ export function FeedItemComponent({
           {isOutfit && entity && (
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => {
-                onFindSimilar('outfit', entity.id, undefined);
-              }}
+              onPress={() => onFindSimilar('outfit', entity.id, undefined)}
             >
               <Ionicons name="search-outline" size={26} color="#000" />
             </TouchableOpacity>

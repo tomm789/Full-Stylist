@@ -14,6 +14,11 @@ const isUriUploadSource = (file: UploadSource): file is UriUploadSource => {
   return typeof file === 'object' && file !== null && 'uri' in file;
 };
 
+function replaceFileExtension(fileName: string, extension: string): string {
+  const baseName = fileName.replace(/\.[^/.]+$/, '');
+  return `${baseName}.${extension}`;
+}
+
 /**
  * Get public URL for an image from Supabase storage
  */
@@ -246,13 +251,51 @@ export async function uploadAndCreateImage(
   userId: string,
   file: UploadSource,
   fileName: string,
-  source: 'upload' | 'ai_generated' = 'upload'
+  source: 'upload' | 'ai_generated' = 'upload',
+  options?: { skipCompression?: boolean }
 ): Promise<{
   data: { imageId: string; path: string; url: string } | null;
   error: any;
 }> {
   try {
-    const uploadResult = await uploadImageToStorage(userId, file, fileName);
+    let uploadSource: UploadSource = file;
+    let uploadFileName = fileName;
+    let uploadMimeType = isUriUploadSource(file)
+      ? file.mimeType
+      : file.type || 'image/webp';
+
+    // Compress raw user uploads before storage to reduce downstream AI latency.
+    if (source === 'upload' && !options?.skipCompression) {
+      if (isUriUploadSource(uploadSource) && Platform.OS !== 'web') {
+        const compressed = await compressImageUri(
+          uploadSource.uri,
+          uploadSource.mimeType,
+          uploadFileName
+        );
+        uploadSource = { uri: compressed.uri, mimeType: compressed.mimeType };
+        uploadMimeType = compressed.mimeType;
+        uploadFileName = compressed.fileName;
+      } else if (!isUriUploadSource(uploadSource) && Platform.OS === 'web') {
+        const inputFile =
+          uploadSource instanceof File
+            ? uploadSource
+            : new File([uploadSource], uploadFileName, {
+                type: uploadSource.type || uploadMimeType || 'image/jpeg',
+              });
+        const compressedFile = await compressImageFile(inputFile);
+        uploadSource = compressedFile;
+        uploadMimeType = compressedFile.type || uploadMimeType;
+        if (uploadMimeType === 'image/webp') {
+          uploadFileName = replaceFileExtension(uploadFileName, 'webp');
+        } else if (uploadMimeType === 'image/png') {
+          uploadFileName = replaceFileExtension(uploadFileName, 'png');
+        } else if (uploadMimeType === 'image/jpeg') {
+          uploadFileName = replaceFileExtension(uploadFileName, 'jpg');
+        }
+      }
+    }
+
+    const uploadResult = await uploadImageToStorage(userId, uploadSource, uploadFileName);
     if (uploadResult.error || !uploadResult.data) {
       return { data: null, error: uploadResult.error };
     }
@@ -260,7 +303,7 @@ export async function uploadAndCreateImage(
     const imageResult = await createImageRecord(
       userId,
       uploadResult.data.path,
-      isUriUploadSource(file) ? file.mimeType : file.type || 'image/webp',
+      uploadMimeType,
       source
     );
 
@@ -457,7 +500,9 @@ export async function batchUploadImages(
         fileType = compressed.mimeType;
       }
 
-      const result = await uploadAndCreateImage(userId, uploadSource, fileName, source);
+      const result = await uploadAndCreateImage(userId, uploadSource, fileName, source, {
+        skipCompression: true,
+      });
 
       if (result.error || !result.data) {
         errors.push({ file: fileName, error: result.error });

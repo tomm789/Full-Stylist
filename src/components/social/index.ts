@@ -17,3 +17,4 @@ export { FeedItemComponent } from './FeedItem';
 export { DiscoverGrid } from './DiscoverGrid';
 export { default as PostGrid } from './PostGrid';
 export { postGridStyles } from './PostGrid';
+export { default as HeadshotFeedCard } from './HeadshotFeedCard';

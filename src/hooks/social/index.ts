@@ -14,3 +14,5 @@ export { useEngagementActions } from './useEngagementActions';
 export { useFeedSlideshow } from './useFeedSlideshow';
 export { useTryOnOutfit } from './useTryOnOutfit';
 export { useSocialModals } from './useSocialModals';
+export { useHeadshotFollowingFeed } from './useHeadshotFollowingFeed';
+export { useHeadshotDiscoverFeed } from './useHeadshotDiscoverFeed';

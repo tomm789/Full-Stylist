@@ -8,6 +8,7 @@ import { Alert } from 'react-native';
 import { getUserSettings, updateUserSettings } from '@/lib/settings';
 import { getPublicImageUrl, getUserGeneratedImages } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
+import { syncBodyshotAfterActiveHeadshotSet, waitForAIJobCompletion } from '@/lib/ai-jobs';
 
 interface ProfileImage {
   id: string;
@@ -152,6 +153,74 @@ export function useProfileImages({
       setActiveHeadshotId(imageId);
       const imageUrls = await loadImageUrls([imageId]);
       setHeadshotImageUrl(imageUrls.get(imageId) || null);
+
+      // Run bodyshot sync in the background so headshot activation is immediate.
+      void (async () => {
+        try {
+          const syncResult = await syncBodyshotAfterActiveHeadshotSet(userId, imageId);
+          if (syncResult.status === 'reused_existing' && syncResult.imageId) {
+            setActiveBodyShotId(syncResult.imageId);
+            const bodyUrls = await loadImageUrls([syncResult.imageId]);
+            setBodyShotImageUrl(bodyUrls.get(syncResult.imageId) || null);
+            return;
+          }
+
+          if (syncResult.status === 'error') {
+            console.warn('[useProfileImages] Active headshot set but bodyshot sync failed', {
+              userId,
+              imageId,
+              message: syncResult.message,
+            });
+            Alert.alert(
+              'Body Shot Notice',
+              'Headshot is active, but we could not sync your body shot.'
+            );
+            return;
+          }
+
+          if (syncResult.status === 'generation_started' && syncResult.jobId) {
+            const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+              syncResult.jobId,
+              60,
+              2000,
+              '[BodyShotSync]'
+            );
+            if (pollError || !completedJob || completedJob.status === 'failed') {
+              console.warn('[useProfileImages] Bodyshot generation failed after headshot activation', {
+                userId,
+                imageId,
+                jobId: syncResult.jobId,
+                pollError,
+                status: completedJob?.status,
+                error: completedJob?.error,
+              });
+              Alert.alert(
+                'Body Shot Notice',
+                'Headshot is active, but generating a matching body shot failed.'
+              );
+              return;
+            }
+
+            const generatedImageId =
+              completedJob.result?.image_id || completedJob.result?.generated_image_id;
+            if (generatedImageId) {
+              setActiveBodyShotId(generatedImageId);
+              const bodyUrls = await loadImageUrls([generatedImageId]);
+              setBodyShotImageUrl(bodyUrls.get(generatedImageId) || null);
+            }
+          }
+        } catch (syncError: any) {
+          console.warn('[useProfileImages] Unexpected bodyshot sync error', {
+            userId,
+            imageId,
+            message: syncError?.message,
+          });
+          Alert.alert(
+            'Body Shot Notice',
+            'Headshot is active, but we could not sync your body shot.'
+          );
+        }
+      })();
     } catch (error: any) {
       Alert.alert('Error', 'Failed to set active headshot');
     }

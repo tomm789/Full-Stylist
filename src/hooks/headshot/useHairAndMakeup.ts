@@ -18,6 +18,7 @@ import {
   updateHeadshotGenerationVariation,
   type HeadshotGenerationVariation,
 } from '@/lib/headshot/generation';
+import { createHeadshotPost } from '@/lib/posts';
 import { buildHairMakeupPrompt } from '@/lib/headshot/hairMakeupPrompt';
 import { getPublicImageUrl } from '@/lib/images';
 import { deleteImage, uploadBase64ImageToStorage } from '@/lib/utils/image-helpers';
@@ -30,6 +31,7 @@ import {
   waitForAIJobCompletion,
   isGeminiPolicyBlockError,
   triggerHeadshotGenerateWithPrompt,
+  syncBodyshotAfterActiveHeadshotSet,
 } from '@/lib/ai-jobs';
 
 export type TabId = 'hair' | 'makeup';
@@ -463,13 +465,13 @@ export function useHairAndMakeup() {
       Animated.sequence([
         Animated.timing(generatePulse, {
           toValue: 1,
-          duration: 900,
+          duration: 600,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(generatePulse, {
           toValue: 0,
-          duration: 900,
+          duration: 600,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
@@ -855,7 +857,7 @@ export function useHairAndMakeup() {
   const isGenerateDisabled = !isDirty || generating;
   const generateOverlayOpacity = generatePulse.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.08, 0.22],
+    outputRange: [0.0, 0.65],
   });
   const generateIconScale = generatePulse.interpolate({
     inputRange: [0, 1],
@@ -1022,8 +1024,51 @@ export function useHairAndMakeup() {
 
       if (error) throw error;
 
-      // Show success message
       Alert.alert('Success', 'Headshot set as active');
+
+      // Run bodyshot sync in the background so headshot activation feedback is immediate.
+      void (async () => {
+        try {
+          const syncResult = await syncBodyshotAfterActiveHeadshotSet(user.id, previewImageId);
+
+          if (syncResult.status === 'error') {
+            console.warn('Bodyshot sync failed after active headshot update:', syncResult.message);
+            Alert.alert(
+              'Body Shot Notice',
+              'Headshot is active, but we could not sync your body shot.'
+            );
+            return;
+          }
+
+          if (syncResult.status === 'generation_started' && syncResult.jobId) {
+            const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
+              syncResult.jobId,
+              60,
+              2000,
+              '[BodyShotSync]'
+            );
+
+            if (pollError || !completedJob || completedJob.status === 'failed') {
+              console.warn('Bodyshot generation failed after active headshot update', {
+                jobId: syncResult.jobId,
+                pollError,
+                status: completedJob?.status,
+                error: completedJob?.error,
+              });
+              Alert.alert(
+                'Body Shot Notice',
+                'Headshot is active, but generating a matching body shot failed.'
+              );
+            }
+          }
+        } catch (syncError: any) {
+          console.warn('Unexpected bodyshot sync error after active headshot update:', syncError);
+          Alert.alert(
+            'Body Shot Notice',
+            'Headshot is active, but we could not sync your body shot.'
+          );
+        }
+      })();
     } catch (error) {
       console.error('Failed to set active headshot:', error);
       Alert.alert('Error', 'Could not set headshot as active');
@@ -1041,6 +1086,50 @@ export function useHairAndMakeup() {
       setCustomDescription(snapshot.customDescription);
     }
   };
+
+  const handleShareToFeed = React.useCallback(
+    async (caption?: string, visibility: 'public' | 'followers' | 'private_link' | 'private' | 'inherit' = 'public') => {
+      if (!user?.id) {
+        Alert.alert('Error', 'You must be signed in to share.');
+        return;
+      }
+
+      const imageId = previewVariation?.image_id ?? previewImageId;
+      if (!imageId) {
+        Alert.alert('Error', 'No headshot is selected to share.');
+        return;
+      }
+
+      const { error } = await createHeadshotPost(user.id, imageId, caption, visibility);
+      if (error) {
+        Alert.alert('Error', 'Failed to share headshot');
+        return;
+      }
+      Alert.alert('Shared!', 'Your headshot has been posted to your feed.');
+    },
+    [previewVariation, previewImageId, user?.id]
+  );
+
+  const applySnapshot = React.useCallback(
+    (snapshot: {
+      hairPresetIds?: string[];
+      makeupPresetIds?: string[];
+      customDescription?: string;
+      accessorySubcategory?: string | null;
+      jewellerySubcategory?: string | null;
+      advancedFields?: Record<string, string>;
+    }) => {
+      setSelectedHair(snapshot.hairPresetIds ?? []);
+      setSelectedMakeup(snapshot.makeupPresetIds ?? []);
+      setCustomDescription(snapshot.customDescription ?? '');
+      setAccessorySubcategory(snapshot.accessorySubcategory ?? null);
+      setJewellerySubcategory(snapshot.jewellerySubcategory ?? null);
+      if (snapshot.advancedFields) {
+        setAdvancedFields({ ...emptyAdvanced, ...snapshot.advancedFields });
+      }
+    },
+    []
+  );
 
   const handlePreviewPress = () => {
     if (previewImageUrl) {
@@ -1061,14 +1150,32 @@ export function useHairAndMakeup() {
     setEditorOpen(false);
   };
 
-  /** Lightweight index change for swipe gestures — only updates the visual
-   *  preview without resetting variation/editor/selfie-upload state. */
+  /** Keep preview selection in sync with the visible slider item. */
   const handleSwipeIndexChange = React.useCallback(
     (item: { id: string; url: string | null }) => {
       setPreviewImageId(item.id);
       setPreviewImageUrl(item.url || null);
+      if (selfieImageId && item.id === selfieImageId) {
+        setPreviewVariationId(null);
+        setPreviewSource('selfie');
+        return;
+      }
+
+      const matchedVariation =
+        variations.find(
+          (variation) => variation.image_id === item.id && variation.status === 'complete'
+        ) || null;
+
+      if (matchedVariation) {
+        setPreviewVariationId(matchedVariation.id);
+        setPreviewSource('variation');
+        return;
+      }
+
+      setPreviewVariationId(null);
+      setPreviewSource('headshot');
     },
-    [],
+    [selfieImageId, variations],
   );
 
   const handleNavigateGeneration = (direction: 'back' | 'forward') => {
@@ -1196,5 +1303,7 @@ export function useHairAndMakeup() {
     drawingCanvasRef,
     currentDrawColor,
     handleApplyTemplateSelections,
+    handleShareToFeed,
+    applySnapshot,
   };
 }

@@ -54,7 +54,7 @@ export default function ItemDetailScreen() {
   }>();
   const timeline = traceIdParam && isPerfLogsEnabled() ? continueTimeline(traceIdParam) : null;
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const isReadOnly = readOnly === 'true';
 
   // Data loading with polling
@@ -216,7 +216,7 @@ export default function ItemDetailScreen() {
 
   const closeMenu = () => setShowMenu(false);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <View style={commonStyles.loadingContainer}>
         <LoadingSpinner size="large" text="Loading item..." />

@@ -32,6 +32,7 @@ interface PostMenuModalProps {
   onArchiveOutfit?: (outfitId: string) => void;
   onDeletePost: (postId: string) => void;
   onTryOnOutfit: (outfitId: string, imageUrl: string | null) => void;
+  onApplyLook?: (variationId: string, inputSnapshotJson: any) => void;
   onUnfollow: (userId: string) => void;
   getImageUrl?: (outfitId: string) => string | null;
 }
@@ -49,6 +50,7 @@ export const PostMenuModal = ({
   onArchiveOutfit,
   onDeletePost,
   onTryOnOutfit,
+  onApplyLook,
   onUnfollow,
   getImageUrl,
 }: PostMenuModalProps) => {
@@ -56,7 +58,9 @@ export const PostMenuModal = ({
 
   const post = feedItem.type === 'post' ? feedItem.post! : feedItem.repost!.original_post!;
   const isOutfit = post.entity_type === 'outfit';
+  const isHeadshot = post.entity_type === 'headshot';
   const entity = feedItem.entity?.outfit || feedItem.entity?.lookbook;
+  const headshotEntity = feedItem.entity?.headshot;
   const isOwnPost = feedItem.type === 'post' && post.owner_user_id === currentUserId;
   const ownerId = post.owner_user_id;
 
@@ -65,9 +69,9 @@ export const PostMenuModal = ({
     if (!buttonPosition) return {};
 
     const menuItemHeight = 50;
-    let itemCount = isOwnPost 
+    let itemCount = isOwnPost
       ? (isOutfit && entity ? 3 : 1)
-      : (isOutfit && entity ? 1 : 0);
+      : ((isOutfit && entity ? 1 : 0) + (isHeadshot && headshotEntity?.variation_id ? 1 : 0));
     
     // Add unfollow option if following the owner
     if (!isOwnPost && isFollowingOwner) {
@@ -177,6 +181,18 @@ export const PostMenuModal = ({
                   <Text style={[styles.menuItemText, styles.menuItemTextPrimary]}>
                     {tryingOnOutfit ? 'Generating...' : 'Try on Outfit'}
                   </Text>
+                </TouchableOpacity>
+              )}
+              {isHeadshot && headshotEntity?.variation_id && onApplyLook && (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    onClose();
+                    onApplyLook(headshotEntity.variation_id!, headshotEntity.input_snapshot_json);
+                  }}
+                >
+                  <Ionicons name="color-wand-outline" size={18} color="#007AFF" />
+                  <Text style={[styles.menuItemText, styles.menuItemTextPrimary]}>Apply This Look</Text>
                 </TouchableOpacity>
               )}
               {isFollowingOwner && (

@@ -1095,8 +1095,9 @@ export default function WardrobeScreen() {
   const handleModalOpenDetail = () => {
     if (!selectedItem) return;
     const itemIds = filteredItems.map((item) => item.id).join(',');
-    setShowItemModal(false);
     router.push(`/wardrobe/item/${selectedItem.id}?itemIds=${itemIds}`);
+    // Dismiss after navigation starts so only the slide-up animation is visible
+    setTimeout(() => setShowItemModal(false), 50);
   };
 
   const handleModalEdit = () => {

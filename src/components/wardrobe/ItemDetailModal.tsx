@@ -3,15 +3,15 @@
  * Quick view modal for wardrobe items
  */
 
-import React from 'react';
-import { Modal, View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { Dimensions, Modal, View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { ImagePlaceholder, PrimaryButton } from '@/components/shared';
+import { ImagePlaceholder } from '@/components/shared';
+import { DropdownMenuModal, DropdownMenuItem } from '@/components/shared/modals';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
-import { createCommonStyles } from '@/styles/commonStyles';
 import { WardrobeItem } from '@/lib/wardrobe';
 
 const { spacing, borderRadius, typography } = theme;
@@ -41,7 +41,10 @@ export default function ItemDetailModal({
 }: ItemDetailModalProps) {
   const colors = useThemeColors();
   const styles = createStyles(colors);
-  const commonStyles = createCommonStyles(colors);
+  const [showMenu, setShowMenu] = useState(false);
+  const screenHeight = Dimensions.get('window').height;
+
+  const hasMenuItems = isOwner && (onEdit || onDelete);
 
   if (!item) return null;
 
@@ -55,6 +58,18 @@ export default function ItemDetailModal({
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
+          {/* Expand bar */}
+          {onOpenDetail && (
+            <TouchableOpacity
+              style={styles.expandBar}
+              onPress={onOpenDetail}
+              activeOpacity={0.6}
+              hitSlop={{ top: 8, bottom: 8, left: 40, right: 40 }}
+            >
+              <View style={styles.expandBarHandle} />
+            </TouchableOpacity>
+          )}
+
           {/* Header */}
           <View style={styles.header}>
             {onAddToOutfit && (
@@ -65,24 +80,18 @@ export default function ItemDetailModal({
             )}
 
             <View style={styles.actions}>
-              {onOpenDetail && (
-                <TouchableOpacity style={styles.actionButton} onPress={onOpenDetail}>
-                  <Ionicons name="open-outline" size={20} color={colors.textPrimary} />
+              {hasMenuItems ? (
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => setShowMenu(true)}
+                >
+                  <Ionicons name="ellipsis-vertical" size={20} color={colors.textPrimary} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.actionButton} onPress={onClose}>
+                  <Ionicons name="close" size={22} color={colors.textPrimary} />
                 </TouchableOpacity>
               )}
-              {onEdit && isOwner && (
-                <TouchableOpacity style={styles.actionButton} onPress={onEdit}>
-                  <Ionicons name="create-outline" size={20} color={colors.textPrimary} />
-                </TouchableOpacity>
-              )}
-              {onDelete && isOwner && (
-                <TouchableOpacity style={styles.actionButton} onPress={onDelete}>
-                  <Ionicons name="trash-outline" size={20} color={colors.error} />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity style={styles.actionButton} onPress={onClose}>
-                <Ionicons name="close" size={22} color={colors.textPrimary} />
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -105,6 +114,36 @@ export default function ItemDetailModal({
           </View>
         </Pressable>
       </Pressable>
+
+      {/* Three-dots dropdown menu */}
+      <DropdownMenuModal
+        visible={showMenu}
+        onClose={() => setShowMenu(false)}
+        align="right"
+        topOffset={screenHeight * 0.15 + 80}
+      >
+        {onEdit && isOwner && (
+          <DropdownMenuItem
+            label="Edit"
+            icon="create-outline"
+            onPress={() => {
+              setShowMenu(false);
+              onEdit();
+            }}
+          />
+        )}
+        {onDelete && isOwner && (
+          <DropdownMenuItem
+            label="Delete"
+            icon="trash-outline"
+            danger
+            onPress={() => {
+              setShowMenu(false);
+              onDelete();
+            }}
+          />
+        )}
+      </DropdownMenuModal>
     </Modal>
   );
 }
@@ -122,12 +161,23 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingBottom: spacing.xl,
     maxHeight: '85%',
   },
+  expandBar: {
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandBarHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.borderLight,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,

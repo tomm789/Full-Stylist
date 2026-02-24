@@ -94,6 +94,7 @@ export function DiscoverGrid({
     } else if (post.entity_type === 'lookbook') {
       router.push(`/lookbooks/${post.entity_id}`);
     }
+    // headshot posts: owner_user_id is always set, so handled above
   };
 
   const handleOwnerPress = (item: FeedItem) => {
@@ -104,15 +105,21 @@ export function DiscoverGrid({
   };
 
   const renderGridItem = ({ item }: { item: FeedItem }) => {
+    const isHeadshot = item.post?.entity_type === 'headshot';
     const entity = item.entity?.outfit || item.entity?.lookbook;
-    if (!entity) return null;
+    const headshotEntity = item.entity?.headshot;
 
-    const imageUrl = images.get(entity.id);
+    // Headshot rows can be valid even when enrichment fails; fall back to post.entity_id.
+    const fallbackHeadshotId = isHeadshot ? item.post?.entity_id || null : null;
+    const entityId = isHeadshot ? (headshotEntity?.id || fallbackHeadshotId) : entity?.id || null;
+    if (!entityId) return null;
+
+    const imageUrl = images.get(entityId);
     const isOutfit = item.post?.entity_type === 'outfit';
-    const isSelected = Boolean(isOutfit && selectedIds?.has(entity.id));
+    const isSelected = Boolean(isOutfit && selectedIds?.has(entityId));
 
     const handlePress = () => {
-      if (selectionMode && isOutfit && onToggleSelection) {
+      if (selectionMode && isOutfit && entity && onToggleSelection) {
         onToggleSelection(entity.id, imageUrl || null);
         return;
       }
@@ -123,6 +130,12 @@ export function DiscoverGrid({
       if (!isOutfit || !onItemLongPress) return;
       onItemLongPress(item);
     };
+
+    const placeholderIcon = item.post?.entity_type === 'lookbook'
+      ? 'albums-outline'
+      : item.post?.entity_type === 'headshot'
+        ? 'person-circle-outline'
+        : 'shirt-outline';
 
     return (
       <TouchableOpacity
@@ -142,7 +155,7 @@ export function DiscoverGrid({
         ) : (
           <View style={postGridStyles.gridImagePlaceholder}>
             <Ionicons
-              name={item.post?.entity_type === 'lookbook' ? 'albums-outline' : 'shirt-outline'}
+              name={placeholderIcon}
               size={28}
               color={colors.textTertiary}
             />

@@ -221,7 +221,7 @@ export default function OnboardingScreen() {
           onSkip={handleSelfieSkip}
           processing={selfieUpload.generating}
           uploadedUri={selfieUpload.uploadedUri}
-          onPickCamera={() => selfieUpload.pickImage(true)}
+          onPickCamera={() => selfieUpload.pickHeadshotCameraImage()}
           onPickLibrary={() => selfieUpload.pickImage(false)}
           onUndo={selfieUpload.clearImage}
           onAccept={handleSelfieAccept}
@@ -233,8 +233,8 @@ export default function OnboardingScreen() {
           onSkip={handleBodyShotSkip}
           processing={mirrorUpload.generating}
           uploadedUri={mirrorUpload.uploadedUri}
-          onPickCamera={() => mirrorUpload.pickImage(true)}
-          onPickLibrary={() => mirrorUpload.pickImage(false)}
+          onPickCamera={() => mirrorUpload.pickBodyShotCameraImage()}
+          onPickLibrary={() => mirrorUpload.pickHeadshotLibraryImage()}
           onUndo={mirrorUpload.clearImage}
           onAccept={handleMirrorAccept}
         />

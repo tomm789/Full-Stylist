@@ -16,6 +16,7 @@ interface UseDiscoverFeedProps {
 interface UseDiscoverFeedReturn {
   discoverFeed: FeedItem[];
   discoverImages: Map<string, string | null>;
+  headshotImages: Map<string, string | null>;
   loading: boolean;
   refresh: () => Promise<void>;
   loadMore: () => Promise<void>;
@@ -69,6 +70,7 @@ export function useDiscoverFeed({
 }: UseDiscoverFeedProps): UseDiscoverFeedReturn {
   const [discoverFeed, setDiscoverFeed] = useState<FeedItem[]>([]);
   const [discoverImages, setDiscoverImages] = useState<Map<string, string | null>>(new Map());
+  const [headshotImages, setHeadshotImages] = useState<Map<string, string | null>>(new Map());
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
 
@@ -124,6 +126,30 @@ export function useDiscoverFeed({
       } else {
         setDiscoverImages(newImageCache);
       }
+
+      // Build headshot image URL map from entity data
+      const newHeadshotCache = new Map<string, string | null>();
+      feedItems.forEach(item => {
+        if (item.post?.entity_type === 'headshot' && item.entity?.headshot) {
+          const h = item.entity.headshot;
+          if (h.storage_key) {
+            const { data } = supabase.storage
+              .from(h.storage_bucket || 'user-images')
+              .getPublicUrl(h.storage_key);
+            newHeadshotCache.set(h.id, data.publicUrl);
+          } else {
+            newHeadshotCache.set(h.id, null);
+          }
+        }
+      });
+
+      if (append) {
+        const mergedHeadshots = new Map(headshotImages);
+        newHeadshotCache.forEach((url, id) => mergedHeadshots.set(id, url));
+        setHeadshotImages(mergedHeadshots);
+      } else {
+        setHeadshotImages(newHeadshotCache);
+      }
     } catch (error) {
       console.error('Error loading discover feed:', error);
     } finally {
@@ -148,6 +174,7 @@ export function useDiscoverFeed({
   return {
     discoverFeed,
     discoverImages,
+    headshotImages,
     loading,
     refresh,
     loadMore,

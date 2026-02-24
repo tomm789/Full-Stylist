@@ -33,6 +33,12 @@ export {
   createAndTriggerJob,
 } from './execution';
 
+// Re-export headshot/bodyshot sync helpers
+export {
+  syncBodyshotAfterActiveHeadshotSet,
+  type SyncActiveHeadshotBodyshotResult,
+} from './headshotBodyshotSync';
+
 // Re-export from types
 export {
   triggerAutoTag,

@@ -760,6 +760,68 @@ async function compositeOutfitGrid(imageInputs) {
 }
 
 /**
+ * Optimizes an image before sending it to Gemini.
+ * This reduces upload payload size and can lower generation latency.
+ *
+ * @param {{base64: string, mimeType?: string}|string} imageInput
+ * @param {{maxWidth?: number, maxHeight?: number, quality?: number}} options
+ * @returns {Promise<{base64: string, mimeType: string}>}
+ */
+async function optimizeGeminiInput(imageInput, options = {}) {
+  const {
+    maxWidth = 1536,
+    maxHeight = 2048,
+    quality = 82
+  } = options;
+
+  try {
+    let base64;
+    let mimeType = "image/jpeg";
+
+    if (typeof imageInput === "string") {
+      base64 = imageInput;
+    } else if (imageInput && typeof imageInput === "object" && imageInput.base64) {
+      base64 = imageInput.base64;
+      mimeType = imageInput.mimeType || mimeType;
+    } else {
+      throw new Error("Invalid image input");
+    }
+
+    const rawBase64 = base64.replace(/^data:image\/\w+;base64,/, "");
+    const inputBuffer = Buffer.from(rawBase64, "base64");
+    const optimizedBuffer = await sharp(inputBuffer)
+      .rotate()
+      .resize(maxWidth, maxHeight, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .jpeg({
+        quality,
+        mozjpeg: true,
+      })
+      .toBuffer();
+
+    const optimizedBase64 = optimizedBuffer.toString("base64");
+    console.log(
+      `[optimizeGeminiInput] ${mimeType} -> image/jpeg | bytes ${inputBuffer.length} -> ${optimizedBuffer.length}`
+    );
+    return {
+      base64: optimizedBase64,
+      mimeType: "image/jpeg",
+    };
+  } catch (error) {
+    console.warn("[optimizeGeminiInput] Failed, using original input:", error.message || error);
+    if (typeof imageInput === "string") {
+      return { base64: imageInput, mimeType: "image/jpeg" };
+    }
+    return {
+      base64: imageInput?.base64 || "",
+      mimeType: imageInput?.mimeType || "image/jpeg",
+    };
+  }
+}
+
+/**
  * Optimizes a Gemini-generated image by resizing and compressing it.
  * Converts the base64 input to a Buffer, resizes to max width 1024px (maintaining aspect ratio),
  * converts to JPEG with quality 80 and mozjpeg compression, then returns as base64 string.
@@ -820,6 +882,7 @@ module.exports = {
   uploadImageToStorage,
   callGeminiAPI,
   compositeOutfitGrid,
+  optimizeGeminiInput,
   optimizeGeminiOutput,
   createPerformanceTracker,
   createTimingTracker,

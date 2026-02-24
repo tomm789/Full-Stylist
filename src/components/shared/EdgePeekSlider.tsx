@@ -174,7 +174,7 @@ function EdgePeekSliderInner<T>({
           showsHorizontalScrollIndicator={false}
           decelerationRate="fast"
           snapToInterval={snapInterval}
-          snapToAlignment="center"
+          snapToAlignment="start"
           initialScrollIndex={Math.max(0, Math.min(data.length - 1, initialIndex))}
           onScroll={handleScroll}
           onMomentumScrollEnd={handleMomentumEnd}

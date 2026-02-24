@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { uploadAndCreateImage, uploadImageToStorage, uriToBlob } from '@/lib/utils/image-helpers';
+import { uploadAndCreateImage, uriToBlob } from '@/lib/utils/image-helpers';
 import { supabase } from '@/lib/supabase';
 import { updateUserProfile } from '@/lib/user';
 import {
@@ -38,6 +38,7 @@ interface UseImageGenerationReturn {
   ) => Promise<void>;
   pickHeadshotCameraImage: () => Promise<void>;
   pickHeadshotLibraryImage: () => Promise<void>;
+  pickBodyShotCameraImage: () => Promise<void>;
   clearImage: () => void;
   generateHeadshot: (
     userId: string,
@@ -165,6 +166,10 @@ export function useImageGeneration(): UseImageGenerationReturn {
     await pickImage(true, { cameraType: 'front', allowsEditing: false });
   };
 
+  const pickBodyShotCameraImage = async () => {
+    await pickImage(true, { allowsEditing: false });
+  };
+
   const pickHeadshotLibraryImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -271,40 +276,23 @@ export function useImageGeneration(): UseImageGenerationReturn {
         Platform.OS === 'web'
           ? uploadedBlob
           : { uri: uploadedUri as string, mimeType: 'image/jpeg' };
-      const uploadResult = await uploadImageToStorage(
+      const { data: uploadedImage, error: uploadError } = await uploadAndCreateImage(
         userId,
         uploadSource,
-        `selfie-${stamp}.jpg`
+        `selfie-${stamp}.jpg`,
+        'upload'
       );
-      console.log('Upload done, error:', !!uploadResult.error);
-      
-      if (uploadResult.error) throw uploadResult.error;
+      console.log('Upload done, error:', !!uploadError);
+      if (uploadError || !uploadedImage) {
+        throw uploadError || new Error('Failed to upload selfie');
+      }
 
       setLoadingMessage('Creating headshot job...');
-
-      console.log('-> Creating image record...');
-      const { data: imageRecord, error: imageError } = await supabase
-        .from('images')
-        .insert({
-          owner_user_id: userId,
-          storage_bucket: 'media',
-          storage_key: uploadResult.data.path,
-          mime_type: 'image/jpeg',
-          source: 'upload',
-        })
-        .select()
-        .single();
-
-      console.log('Image record done, error:', !!imageError);
-
-      if (imageError || !imageRecord) {
-        throw imageError || new Error('Failed to create image record');
-      }
 
       console.log('-> Creating job...');
       const { data: job, error: jobError } = await triggerHeadshotGenerate(
         userId,
-        imageRecord.id,
+        uploadedImage.imageId,
         hairStyle,
         makeupStyle
       );
@@ -422,34 +410,21 @@ export function useImageGeneration(): UseImageGenerationReturn {
         Platform.OS === 'web'
           ? uploadedBlob
           : { uri: uploadedUri as string, mimeType: 'image/jpeg' };
-      const uploadResult = await uploadImageToStorage(
+      const { data: uploadedImage, error: uploadError } = await uploadAndCreateImage(
         userId,
         uploadSource,
-        `body-${stamp}.jpg`
+        `body-${stamp}.jpg`,
+        'upload'
       );
-      if (uploadResult.error) throw uploadResult.error;
+      if (uploadError || !uploadedImage) {
+        throw uploadError || new Error('Failed to upload body photo');
+      }
 
       setLoadingMessage('Creating studio model job...');
 
-      const { data: imageRecord, error: imageError } = await supabase
-        .from('images')
-        .insert({
-          owner_user_id: userId,
-          storage_bucket: 'media',
-          storage_key: uploadResult.data.path,
-          mime_type: 'image/jpeg',
-          source: 'upload',
-        })
-        .select()
-        .single();
-
-      if (imageError || !imageRecord) {
-        throw imageError || new Error('Failed to create image record');
-      }
-
       const { data: job, error: jobError } = await triggerBodyShotGenerate(
         userId,
-        imageRecord.id,
+        uploadedImage.imageId,
         headshotId
       );
 
@@ -611,6 +586,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     pickImage,
     pickHeadshotCameraImage,
     pickHeadshotLibraryImage,
+    pickBodyShotCameraImage,
     clearImage,
     generateHeadshot,
     generateBodyShot,

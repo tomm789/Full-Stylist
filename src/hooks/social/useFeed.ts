@@ -31,6 +31,7 @@ interface UseFeedReturn {
   feed: FeedItem[];
   outfitImages: Map<string, string | null>;
   lookbookImages: Map<string, any>;
+  headshotImages: Map<string, string | null>;
   engagementCounts: Record<string, EngagementCounts>;
   setEngagementCounts: React.Dispatch<React.SetStateAction<Record<string, EngagementCounts>>>;
   followStatuses: Map<string, boolean>;
@@ -175,6 +176,7 @@ export function useFeed({
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [outfitImages, setOutfitImages] = useState<Map<string, string | null>>(new Map());
   const [lookbookImages, setLookbookImages] = useState<Map<string, any>>(new Map());
+  const [headshotImages, setHeadshotImages] = useState<Map<string, string | null>>(new Map());
   const [engagementCounts, setEngagementCounts] = useState<Record<string, EngagementCounts>>({});
   const [followStatuses, setFollowStatuses] = useState<Map<string, boolean>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -324,6 +326,24 @@ export function useFeed({
       );
 
       setLookbookImages(lookbookImageCache);
+
+      // Build headshot image URL map from entity data (storage info already attached)
+      const headshotImageCache = new Map<string, string | null>();
+      filteredFeed.forEach(item => {
+        const post = item.type === 'post' ? item.post : item.repost?.original_post;
+        if (post?.entity_type === 'headshot' && item.entity?.headshot) {
+          const h = item.entity.headshot;
+          if (h.storage_key) {
+            const { data } = supabase.storage
+              .from(h.storage_bucket || 'user-images')
+              .getPublicUrl(h.storage_key);
+            headshotImageCache.set(h.id, data.publicUrl);
+          } else {
+            headshotImageCache.set(h.id, null);
+          }
+        }
+      });
+      setHeadshotImages(headshotImageCache);
     } catch (error) {
       console.error('Error loading feed:', error);
     } finally {
@@ -343,6 +363,7 @@ export function useFeed({
     feed,
     outfitImages,
     lookbookImages,
+    headshotImages,
     engagementCounts,
     setEngagementCounts,
     followStatuses,

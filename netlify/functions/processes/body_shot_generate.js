@@ -10,6 +10,7 @@ const {
   downloadImageFromStorage,
   uploadImageToStorage,
   callGeminiAPI,
+  optimizeGeminiInput,
   resolveModelFromSettings,
   getGeminiApiVersion,
   DEFAULT_BODY_MODEL
@@ -63,6 +64,18 @@ async function processBodyShotGenerate(input, supabase, userId, perfTracker = nu
     downloadImageFromStorage(supabase, headId, timingTracker),
     downloadImageFromStorage(supabase, bodyId, timingTracker)
   ]);
+
+  const [optimizedHeadResult, optimizedBodyResult] = await Promise.all([
+    optimizeGeminiInput(headResult, { maxWidth: 1024, maxHeight: 1024, quality: 82 }),
+    optimizeGeminiInput(bodyResult, { maxWidth: 1536, maxHeight: 2048, quality: 82 })
+  ]);
+  console.log("[BodyShotGenerate] Gemini input compression complete", {
+    job_id: jobId,
+    head_chars_before: headResult.base64.length,
+    head_chars_after: optimizedHeadResult.base64.length,
+    body_chars_before: bodyResult.base64.length,
+    body_chars_after: optimizedBodyResult.base64.length
+  });
   const { data: userSettings } = await supabase
     .from("user_settings")
     .select("ai_model_preference, ai_model_body_shot_generate")
@@ -78,7 +91,7 @@ async function processBodyShotGenerate(input, supabase, userId, perfTracker = nu
   console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, apiVersion });
   const studioModelB64 = await callGeminiAPI(
     PROMPTS.BODY_COMPOSITE,
-    [headResult, bodyResult],
+    [optimizedHeadResult, optimizedBodyResult],
     model,
     "IMAGE",
     perfTracker,
