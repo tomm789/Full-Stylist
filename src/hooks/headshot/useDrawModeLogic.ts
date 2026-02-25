@@ -324,36 +324,11 @@ export function useDrawModeLogic({
 
   const runGenerate = async (colorMap: DrawnColorEntry[]) => {
     setCapturing(true);
-    let compositeBase64: string | null = null;
-
-    if (hasDrawnColors && previewImageUrl) {
-      try {
-        const bgBase64 = await new Promise<string>((resolve, reject) => {
-          fetch(previewImageUrl)
-            .then((r) => r.blob())
-            .then((blob) => {
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                const result = reader.result as string;
-                resolve(result.split(',')[1]);
-              };
-              reader.onerror = reject;
-              reader.readAsDataURL(blob);
-            })
-            .catch(reject);
-        });
-        compositeBase64 =
-          (await drawingCanvasRef.current?.makeCompositeSnapshot(bgBase64, canvasWidth, canvasHeight)) ?? null;
-      } catch (e) {
-        console.warn('[DrawMode] Composite failed, falling back to mask-only', e);
-        compositeBase64 = (await drawingCanvasRef.current?.makeMaskSnapshot()) ?? null;
-      }
-    } else if (hasDrawnColors) {
-      compositeBase64 = (await drawingCanvasRef.current?.makeMaskSnapshot()) ?? null;
-    }
-
+    const maskBase64 = hasDrawnColors
+      ? ((await drawingCanvasRef.current?.makeMaskSnapshot()) ?? null)
+      : null;
     setCapturing(false);
-    onGenerate(compositeBase64, colorMap);
+    onGenerate(maskBase64, colorMap);
     onClose?.();
   };
 

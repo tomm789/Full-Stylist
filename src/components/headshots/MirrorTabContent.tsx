@@ -68,11 +68,6 @@ interface MirrorTabContentProps {
   // Selections
   hasSelections: boolean;
 
-  // Edit modal control (lifted to screen to coordinate with draw mode)
-  editModalVisible: boolean;
-  setEditModalVisible: (v: boolean) => void;
-  onEditModalClose: () => void;
-
   // Edit tab state (passed through to EditTabModal)
   editTab: EditTab;
   setEditTab: (tab: EditTab) => void;
@@ -124,9 +119,6 @@ export default function MirrorTabContent({
   setIsDrawModeOpen,
   handlePickCamera,
   hasSelections,
-  editModalVisible,
-  setEditModalVisible,
-  onEditModalClose,
   editTab,
   setEditTab,
   categoryPills,
@@ -161,6 +153,8 @@ export default function MirrorTabContent({
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const commonStyles = createCommonStyles(colors);
 
+  const [editModalVisible, setEditModalVisible] = React.useState(false);
+
   const presetGridGap = spacing.sm;
   const presetTileSize = (windowWidth - 2 * spacing.lg - 2 * spacing.sm - 3 * presetGridGap) / 4;
 
@@ -170,7 +164,7 @@ export default function MirrorTabContent({
       setEditTab(tab as EditTab);
       setEditModalVisible(true);
     },
-    [setEditTab, setEditModalVisible]
+    [setEditTab]
   );
 
   return (
@@ -317,7 +311,7 @@ export default function MirrorTabContent({
       {/* Edit tab content modal */}
       <EditTabModal
         visible={editModalVisible}
-        onClose={onEditModalClose}
+        onClose={() => setEditModalVisible(false)}
         editTab={editTab}
         categoryPills={categoryPills}
         isCustomCategory={isCustomCategory}

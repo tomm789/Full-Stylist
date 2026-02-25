@@ -33,6 +33,8 @@ export function useCanvasLayout({
   const [outfitCanvasTrimStatuses, setOutfitCanvasTrimStatuses] =
     useState<OutfitCanvasTrimStatusMap>({});
   const trimInFlightIdsRef = useRef<Set<string>>(new Set());
+  // Mirror of outfitCanvasTrimStatuses read inside the fetch effect without causing a dep loop (O-13)
+  const trimStatusesRef = useRef<OutfitCanvasTrimStatusMap>({});
 
   // ── Initialise default layouts when the creator expands ────────────────────
 
@@ -51,9 +53,17 @@ export function useCanvasLayout({
   }, [isCreatorExpanded, selectedOutfitItems]);
 
   // ── Prune layout/trim state when items are removed from the selection ───────
+  // O-09: merged into one effect (one Set construction, one render)
+  // O-02: also clears trimInFlightIdsRef so re-added items can fetch again
 
   useEffect(() => {
     const selectedSet = new Set(selectedOutfitItems);
+
+    // Clear in-flight guard for any deselected items (O-02)
+    for (const id of trimInFlightIdsRef.current) {
+      if (!selectedSet.has(id)) trimInFlightIdsRef.current.delete(id);
+    }
+
     setOutfitCanvasLayouts((prev) => {
       let changed = false;
       const next: OutfitCanvasLayoutMap = {};
@@ -63,10 +73,7 @@ export function useCanvasLayout({
       }
       return changed ? next : prev;
     });
-  }, [selectedOutfitItems]);
 
-  useEffect(() => {
-    const selectedSet = new Set(selectedOutfitItems);
     setOutfitCanvasTrims((prev) => {
       let changed = false;
       const next: OutfitCanvasTrimMap = {};
@@ -76,10 +83,7 @@ export function useCanvasLayout({
       }
       return changed ? next : prev;
     });
-  }, [selectedOutfitItems]);
 
-  useEffect(() => {
-    const selectedSet = new Set(selectedOutfitItems);
     setOutfitCanvasTrimStatuses((prev) => {
       let changed = false;
       const next: OutfitCanvasTrimStatusMap = {};
@@ -126,6 +130,9 @@ export function useCanvasLayout({
     });
   }, [outfitCanvasTrims, selectedOutfitItems]);
 
+  // Keep trimStatusesRef in sync so the fetch effect can read current statuses (O-13)
+  useEffect(() => { trimStatusesRef.current = outfitCanvasTrimStatuses; }, [outfitCanvasTrimStatuses]);
+
   // ── Fetch canvas trim metadata ──────────────────────────────────────────────
 
   useEffect(() => {
@@ -135,9 +142,9 @@ export function useCanvasLayout({
     const requestIds = selectedOutfitItems.filter(
       (itemId) =>
         !outfitCanvasTrims[itemId] &&
-        (!outfitCanvasTrimStatuses[itemId] ||
-          outfitCanvasTrimStatuses[itemId] === 'idle' ||
-          outfitCanvasTrimStatuses[itemId] === 'pending') &&
+        (!trimStatusesRef.current[itemId] ||
+          trimStatusesRef.current[itemId] === 'idle' ||
+          trimStatusesRef.current[itemId] === 'pending') &&
         !trimInFlightIdsRef.current.has(itemId)
     );
     if (requestIds.length === 0) return;
@@ -231,7 +238,7 @@ export function useCanvasLayout({
       controller.abort();
       requestIds.forEach((itemId) => trimInFlightIdsRef.current.delete(itemId));
     };
-  }, [isCreatorExpanded, outfitCanvasTrims, selectedOutfitItems, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isCreatorExpanded, outfitCanvasTrims, selectedOutfitItems, userId]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -318,17 +325,29 @@ export function useCanvasLayout({
     return next;
   }, [isCreatorExpanded, outfitCanvasTrimStatuses, outfitCanvasTrims, selectedOutfitItems]);
 
-  const hasCustomCreatorLayout =
-    Object.keys(activeOutfitCanvasLayouts).length > 0 ||
-    Object.keys(activeOutfitCanvasTrims).length > 0;
+  const hasCustomCreatorLayout = useMemo(
+    () =>
+      Object.keys(activeOutfitCanvasLayouts).length > 0 ||
+      Object.keys(activeOutfitCanvasTrims).length > 0,
+    [activeOutfitCanvasLayouts, activeOutfitCanvasTrims]
+  );
 
-  const unresolvedTrimCount = selectedOutfitItems.filter((itemId) => {
-    const status = activeOutfitCanvasTrimStatuses[itemId];
-    return status === 'idle' || status === 'pending';
-  }).length;
-  const successTrimCount = selectedOutfitItems.filter(
-    (itemId) => activeOutfitCanvasTrimStatuses[itemId] === 'success'
-  ).length;
+  const unresolvedTrimCount = useMemo(
+    () =>
+      selectedOutfitItems.filter((itemId) => {
+        const status = activeOutfitCanvasTrimStatuses[itemId];
+        return status === 'idle' || status === 'pending';
+      }).length,
+    [selectedOutfitItems, activeOutfitCanvasTrimStatuses]
+  );
+
+  const successTrimCount = useMemo(
+    () =>
+      selectedOutfitItems.filter(
+        (itemId) => activeOutfitCanvasTrimStatuses[itemId] === 'success'
+      ).length,
+    [selectedOutfitItems, activeOutfitCanvasTrimStatuses]
+  );
   const isCanvasPreparing =
     isCreatorExpanded &&
     selectedOutfitItems.length > 0 &&

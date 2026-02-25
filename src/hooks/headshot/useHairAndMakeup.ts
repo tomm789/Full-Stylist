@@ -1,77 +1,58 @@
 /**
  * useHairAndMakeup
- * Top-level hook for the Hair & Make-Up screen.
- * Composes usePresetSelection, useHeadshotSessionData, useHeadshotGeneration,
- *   useVariationNavigation, useHeadshotImageActions, and useActiveHeadshotActions.
- * Owns: tab state, preview state, modal state, animations, and remaining action handlers.
+ * Top-level composition hook for the Hair & Make-Up screen.
+ * Composes: usePresetSelection, useHeadshotSessionData, useHeadshotGeneration,
+ *           useVariationNavigation, useHeadshotImageActions, useActiveHeadshotActions,
+ *           usePresetDisplay, useGenerationAnimation.
+ * Owns: tab state, preview state, modal state, and remaining action handlers.
  */
 
 import React, { useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Easing } from 'react-native';
+import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfileImages, useImageGeneration } from '@/hooks/profile';
-import { hairPresets } from '@/lib/headshot/hairPresets';
-import { makeupPresets } from '@/lib/headshot/makeupPresets';
-import type { PresetCategory } from '@/lib/headshot/presetTypes';
-import type { PresetOption } from '@/lib/headshot/presetTypes';
-import type { HeadshotGenerationVariation } from '@/lib/headshot/generation';
 import { createHeadshotPost } from '@/lib/posts';
 import type { HeadshotDrawingCanvasRef } from '@/components/headshots/HeadshotDrawingCanvas';
 import { getDrawColour } from '@/lib/headshot/drawingColors';
 import { updateUserSettings } from '@/lib/settings';
+import {
+  EMPTY_ADVANCED,
+  type PageTab,
+  type PreviewSource,
+  type TabId,
+  type EditTab,
+} from '@/lib/headshot/hairAndMakeupTypes';
 import { usePresetSelection } from './usePresetSelection';
 import { useHeadshotSessionData, clearHairMakeupSessionVisited } from './useHeadshotSessionData';
 import { useHeadshotGeneration } from './useHeadshotGeneration';
 import { useVariationNavigation } from './useVariationNavigation';
 import { useHeadshotImageActions } from './useHeadshotImageActions';
 import { useActiveHeadshotActions } from './useActiveHeadshotActions';
-import type { SelectionPill } from '@/components/headshots/HeadshotCreatorContainer';
+import { usePresetDisplay } from './usePresetDisplay';
+import { useGenerationAnimation } from './useGenerationAnimation';
+import type { HeadshotGenerationVariation } from '@/lib/headshot/generation';
 
 // Re-export so AuthContext can import from this module (unchanged public API).
 export { clearHairMakeupSessionVisited };
 
-// ── Exported types and constants ───────────────────────────────────────────────
-// Kept here because usePresetSelection, the screen, and other modules import them.
-
-export type TabId = 'hair' | 'makeup';
-export type EditTab = 'quick' | TabId | 'accessories' | 'jewellery' | 'advanced';
-
-export type ExpandableSubcategory = { id: string; name: string };
-
-export const ACCESSORY_SUBCATEGORIES: ExpandableSubcategory[] = [
-  { id: 'hair-accessories', name: 'Hair Accessories' },
-  { id: 'hats-caps', name: 'Hats & Caps' },
-  { id: 'sunglasses', name: 'Sunglasses' },
-  { id: 'scarves', name: 'Scarves' },
-];
-
-export const JEWELLERY_SUBCATEGORIES: ExpandableSubcategory[] = [
-  { id: 'earrings', name: 'Earrings' },
-  { id: 'necklaces', name: 'Necklaces' },
-];
-
-export const ADVANCED_FIELDS = [
-  { id: 'hairstyle-length', label: 'Hairstyle & Length', placeholder: 'e.g., long wavy layers with side part' },
-  { id: 'hair-color', label: 'Hair Color', placeholder: 'e.g., warm caramel balayage' },
-  { id: 'foundation-base', label: 'Foundation & Base', placeholder: 'e.g., dewy finish, light coverage' },
-  { id: 'eyeshadow', label: 'Eyeshadow Styles', placeholder: 'e.g., warm brown smoky eye' },
-  { id: 'eyeliner', label: 'Eyeliner Styles', placeholder: 'e.g., thin winged liner' },
-  { id: 'blush', label: 'Blush Placements', placeholder: 'e.g., soft draping on cheekbones' },
-  { id: 'lip-styles', label: 'Lip Styles', placeholder: 'e.g., glossy nude lip' },
-  { id: 'eyebrows', label: 'Eyebrow Styles', placeholder: 'e.g., fluffy brushed-up brows' },
-  { id: 'fake-tan', label: 'Fake Tan', placeholder: 'e.g., subtle golden glow' },
-  { id: 'lip-filler', label: 'Lip Filler', placeholder: 'e.g., natural-looking subtle enhancement' },
-  { id: 'botox', label: 'Botox', placeholder: 'e.g., smooth forehead, natural expression' },
-] as const;
-
-export type ViewMode = 'grid' | 'face';
-/** @deprecated Use ViewMode and EditTab separately */
-export type LegacyViewMode = 'grid' | 'face' | TabId;
-export type PreviewSource = 'none' | 'selfie' | 'headshot' | 'variation' | 'upload';
-export type PageTab = 'grid' | 'mirror' | 'following' | 'inspiration';
-
-const DEFAULT_HAIR_CATEGORY_ID = 'long-hairstyles';
+// Re-export types/constants that other modules still import from here.
+// The canonical source is now @/lib/headshot/hairAndMakeupTypes.
+export type {
+  TabId,
+  EditTab,
+  PreviewSource,
+  PageTab,
+  ExpandableSubcategory,
+  ViewMode,
+  LegacyViewMode,
+} from '@/lib/headshot/hairAndMakeupTypes';
+export {
+  ACCESSORY_SUBCATEGORIES,
+  JEWELLERY_SUBCATEGORIES,
+  ADVANCED_FIELDS,
+  DEFAULT_HAIR_CATEGORY_ID,
+} from '@/lib/headshot/hairAndMakeupTypes';
 
 // ── Hook ───────────────────────────────────────────────────────────────────────
 
@@ -85,12 +66,11 @@ export function useHairAndMakeup() {
   } = useProfileImages({ userId: user?.id });
   const selfieUpload = useImageGeneration();
 
-  // ── Tab / view state ────────────────────────────────────────────────────────
+  // ── Tab / view state ─────────────────────────────────────────────────────────
+
   const [pageTab, setPageTab] = useState<PageTab>('mirror');
   const [editTab, setEditTab] = useState<EditTab>('quick');
-  const [selectedHairCategory, setSelectedHairCategory] = useState<string | null>(
-    DEFAULT_HAIR_CATEGORY_ID
-  );
+  const [selectedHairCategory, setSelectedHairCategory] = useState<string | null>('long-hairstyles');
   const [selectedMakeupCategory, setSelectedMakeupCategory] = useState<string | null>(null);
 
   const activeTab: TabId = editTab === 'hair' || editTab === 'makeup' ? editTab : 'hair';
@@ -99,14 +79,16 @@ export function useHairAndMakeup() {
   const setActiveCategoryId =
     editTab === 'hair' ? setSelectedHairCategory : setSelectedMakeupCategory;
 
-  // ── Preview / image state ───────────────────────────────────────────────────
+  // ── Preview / image state ────────────────────────────────────────────────────
+
   const [baseImageId, setBaseImageId] = useState<string | null>(null);
   const [previewImageId, setPreviewImageId] = useState<string | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [previewVariationId, setPreviewVariationId] = useState<string | null>(null);
   const [previewSource, setPreviewSource] = useState<PreviewSource>('none');
 
-  // ── Modal / UI state ────────────────────────────────────────────────────────
+  // ── Modal / UI state ─────────────────────────────────────────────────────────
+
   const [editorOpen, setEditorOpen] = useState(false);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -130,7 +112,7 @@ export function useHairAndMakeup() {
     return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
   }, [user]);
 
-  // ── Sub-hooks ───────────────────────────────────────────────────────────────
+  // ── Sub-hooks ────────────────────────────────────────────────────────────────
 
   const preset = usePresetSelection({ editTab, activeTab, activeCategoryId });
 
@@ -191,8 +173,6 @@ export function useHairAndMakeup() {
     refreshImages,
   });
 
-  // ── Variation navigation ────────────────────────────────────────────────────
-
   const {
     sessionId,
     variations,
@@ -206,9 +186,10 @@ export function useHairAndMakeup() {
     setVariationUrls,
   } = sessionData;
 
-  const previewVariation = previewVariationId
-    ? variations.find((v) => v.id === previewVariationId) || null
-    : null;
+  const previewVariation = useMemo(
+    () => (previewVariationId ? variations.find((v) => v.id === previewVariationId) ?? null : null),
+    [variations, previewVariationId]
+  );
 
   const varNav = useVariationNavigation({
     variations,
@@ -224,14 +205,15 @@ export function useHairAndMakeup() {
     resolveImageUrl,
   });
 
-  // ── Image actions ───────────────────────────────────────────────────────────
+  const canShare =
+    (previewSource === 'variation' || previewSource === 'headshot') && Boolean(previewImageUrl);
 
   const imageActions = useHeadshotImageActions({
     userId: user?.id ?? null,
     previewImageId,
     previewVariationId,
     previewImageUrl,
-    canShare: false, // derived below — passed after canShare is computed
+    canShare,
     selfieImageId,
     selfieImageUrl,
     sessionId,
@@ -245,106 +227,20 @@ export function useHairAndMakeup() {
     setVariationUrls,
   });
 
-  // ── Active headshot ─────────────────────────────────────────────────────────
-
   const { handleSetAsActiveHeadshot } = useActiveHeadshotActions({
     userId: user?.id ?? null,
     previewImageId,
   });
 
-  // ── Preset category / display derived values ────────────────────────────────
+  const presetDisplay = usePresetDisplay({ editTab, activeTab, activeCategoryId });
 
-  const presets = useMemo<PresetCategory[]>(
-    () => (activeTab === 'hair' ? hairPresets : makeupPresets),
-    [activeTab]
-  );
+  const animation = useGenerationAnimation({ generating: generation.generating });
 
-  const categoryPills = useMemo<PresetCategory[]>(() => {
-    if (editTab !== 'hair' && editTab !== 'makeup') return [];
-    const excludeIds =
-      editTab === 'hair' ? ['hair-length', 'hair-color'] : ['major-aesthetics'];
-    const filtered = presets.filter((c) => !excludeIds.includes(c.id));
-
-    if (editTab !== 'hair') return filtered;
-    const preferredOrder = [DEFAULT_HAIR_CATEGORY_ID, 'medium-hairstyles', 'short-hairstyles'];
-    const preferred = preferredOrder
-      .map((id) => filtered.find((c) => c.id === id))
-      .filter((c): c is PresetCategory => Boolean(c));
-    const remaining = filtered.filter((c) => !preferredOrder.includes(c.id));
-    return [...preferred, ...remaining];
-  }, [editTab, presets]);
-
-  const quickTabHairPresets = useMemo<PresetCategory | null>(
-    () => hairPresets.find((c) => c.id === 'hair-length') || null,
-    []
-  );
-
-  const quickTabMakeupPresets = useMemo<PresetCategory | null>(
-    () => makeupPresets.find((c) => c.id === 'major-aesthetics') || null,
-    []
-  );
-
-  const quickTabPresets = useMemo<PresetCategory | null>(() => {
-    if (editTab !== 'quick') {
-      const targetId = editTab === 'hair' ? 'hair-length' : 'major-aesthetics';
-      return presets.find((c) => c.id === targetId) || null;
-    }
-    return null;
-  }, [editTab, presets]);
-
-  const hairColorCategory = useMemo<PresetCategory | null>(() => {
-    if (editTab !== 'quick' && editTab !== 'hair') return null;
-    return hairPresets.find((c) => c.id === 'hair-color') || null;
-  }, [editTab]);
-
-  const activeCategory = useMemo(() => {
-    if (editTab !== 'hair' && editTab !== 'makeup') return null;
-    if (presets.length === 0) return null;
-    if (activeCategoryId === 'custom') return null;
-    const found = presets.find((c) => c.id === activeCategoryId);
-    return found || presets[0];
-  }, [editTab, presets, activeCategoryId]);
-
-  const handleInfoPress = (option: PresetOption) => {
-    Alert.alert(option.title, option.description);
-  };
-
-  // ── Generation animation ────────────────────────────────────────────────────
-
-  const generatePulse = React.useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    if (!generation.generating) {
-      generatePulse.stopAnimation();
-      generatePulse.setValue(0);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(generatePulse, {
-          toValue: 1,
-          duration: 600,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(generatePulse, {
-          toValue: 0,
-          duration: 600,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [generation.generating, generatePulse]);
-
-  // ── Derived preview flags ───────────────────────────────────────────────────
+  // ── Derived preview flags ────────────────────────────────────────────────────
 
   const previewHasImage = Boolean(previewImageUrl);
   const previewIsGenerated =
     (previewSource === 'variation' || previewSource === 'headshot') && previewHasImage;
-  const canShare = previewIsGenerated && previewHasImage;
   const previewIsSaved = !!previewVariation?.is_saved;
   const previewIsSavedImage =
     (previewSource === 'variation' && previewIsSaved) || previewSource === 'headshot';
@@ -354,24 +250,10 @@ export function useHairAndMakeup() {
   const showUploadButton = !previewIsGenerated;
   const isStyleDisabled = selfieUpload.generating || generation.generating;
   const isGenerateDisabled = !preset.isDirty || generation.generating;
-
-  const generateOverlayOpacity = generatePulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.0, 0.65],
-  });
-  const generateIconScale = generatePulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.12],
-  });
-  const generateIconOpacity = generatePulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0.7],
-  });
-
   const showHeadshotGrid = pageTab === 'grid';
   const showFacePreview = pageTab === 'mirror';
 
-  // ── Action handlers ─────────────────────────────────────────────────────────
+  // ── Action handlers ──────────────────────────────────────────────────────────
 
   const handlePickCamera = () => {
     if (selfieUpload.generating) return;
@@ -472,7 +354,14 @@ export function useHairAndMakeup() {
     [previewVariation, previewImageId, user?.id]
   );
 
-  const emptyAdvanced = Object.fromEntries(ADVANCED_FIELDS.map((f) => [f.id, '']));
+  const {
+    setSelectedHair,
+    setSelectedMakeup,
+    setCustomDescription,
+    setAccessorySubcategory,
+    setJewellerySubcategory,
+    setAdvancedFields,
+  } = preset;
 
   const applySnapshot = React.useCallback(
     (snapshot: {
@@ -483,17 +372,16 @@ export function useHairAndMakeup() {
       jewellerySubcategory?: string | null;
       advancedFields?: Record<string, string>;
     }) => {
-      preset.setSelectedHair(snapshot.hairPresetIds ?? []);
-      preset.setSelectedMakeup(snapshot.makeupPresetIds ?? []);
-      preset.setCustomDescription(snapshot.customDescription ?? '');
-      preset.setAccessorySubcategory(snapshot.accessorySubcategory ?? null);
-      preset.setJewellerySubcategory(snapshot.jewellerySubcategory ?? null);
+      setSelectedHair(snapshot.hairPresetIds ?? []);
+      setSelectedMakeup(snapshot.makeupPresetIds ?? []);
+      setCustomDescription(snapshot.customDescription ?? '');
+      setAccessorySubcategory(snapshot.accessorySubcategory ?? null);
+      setJewellerySubcategory(snapshot.jewellerySubcategory ?? null);
       if (snapshot.advancedFields) {
-        preset.setAdvancedFields({ ...emptyAdvanced, ...snapshot.advancedFields });
+        setAdvancedFields({ ...EMPTY_ADVANCED, ...snapshot.advancedFields });
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [setSelectedHair, setSelectedMakeup, setCustomDescription, setAccessorySubcategory, setJewellerySubcategory, setAdvancedFields]
   );
 
   const handlePreviewPress = () => {
@@ -515,55 +403,29 @@ export function useHairAndMakeup() {
     setEditorOpen(false);
   };
 
-  const handleSwipeIndexChange = React.useCallback(
-    (item: { id: string; url: string | null }) => {
-      setPreviewImageId(item.id);
-      setPreviewImageUrl(item.url || null);
-      if (selfieImageId && item.id === selfieImageId) {
-        setPreviewVariationId(null);
-        setPreviewSource('selfie');
-        return;
-      }
-      const matchedVariation =
-        variations.find((v) => v.image_id === item.id && v.status === 'complete') || null;
-      if (matchedVariation) {
-        setPreviewVariationId(matchedVariation.id);
-        setPreviewSource('variation');
-        return;
-      }
-      setPreviewVariationId(null);
-      setPreviewSource('headshot');
-    },
-    [selfieImageId, variations]
-  );
-
-  // ── Return ──────────────────────────────────────────────────────────────────
+  // ── Return ───────────────────────────────────────────────────────────────────
 
   return {
-    // Navigation
+    // ── Navigation ──────────────────────────────────────────────────────────
     navigation,
-    // Page-level tabs
+
+    // ── Page / tab state ─────────────────────────────────────────────────────
     pageTab,
     setPageTab,
     showHeadshotGrid,
     showFacePreview,
-    // Edit tabs
     editTab,
     setEditTab,
     activeTab,
-    // Category selectors
     activeCategoryId,
     setActiveCategoryId,
     setSelectedHairCategory,
     setSelectedMakeupCategory,
-    presets,
-    categoryPills,
-    quickTabPresets,
-    quickTabHairPresets,
-    quickTabMakeupPresets,
-    hairColorCategory,
-    activeCategory,
-    // Preset selection (spread from sub-hook)
+
+    // ── Preset display (usePresetDisplay) ────────────────────────────────────
+    ...presetDisplay,
+
+    // ── Preset selection (usePresetSelection) ────────────────────────────────
     selectedHair: preset.selectedHair,
     selectedMakeup: preset.selectedMakeup,
     customDescription: preset.customDescription,
@@ -584,13 +446,14 @@ export function useHairAndMakeup() {
     customDescriptionCopy: preset.customDescriptionCopy,
     customPlaceholder: preset.customPlaceholder,
     isDirty: preset.isDirty,
-    // Session / data (from sub-hook)
+
+    // ── Identity / session ───────────────────────────────────────────────────
+    userId: user?.id ?? null,
     selfieImageId,
     selfieImageUrl,
-    // Identity
-    userId: user?.id ?? null,
+
+    // ── Preview / image state ────────────────────────────────────────────────
     baseImageId,
-    // Preview
     activeImageVariation,
     previewImageUrl,
     previewImageId,
@@ -599,15 +462,15 @@ export function useHairAndMakeup() {
     previewSource,
     showUploadButton,
     showDeletePreview,
-    // Generation (from sub-hook)
+
+    // ── Generation (useHeadshotGeneration + useGenerationAnimation) ──────────
     generating: generation.generating,
     isStyleDisabled,
     isGenerateDisabled,
-    generateOverlayOpacity,
-    generateIconScale,
-    generateIconOpacity,
+    ...animation,
     handleGenerateVariation: generation.handleGenerateVariation,
-    // Variation navigation (from sub-hook)
+
+    // ── Variation navigation (useVariationNavigation) ────────────────────────
     completedVariations: varNav.completedVariations,
     previewGenerationIndex: varNav.previewGenerationIndex,
     showGenerationNav: varNav.showGenerationNav,
@@ -615,7 +478,8 @@ export function useHairAndMakeup() {
     canNavigateForward: varNav.canNavigateForward,
     canShare,
     handleNavigateGeneration: varNav.handleNavigateGeneration,
-    // Handlers
+
+    // ── Action handlers ──────────────────────────────────────────────────────
     handlePickCamera,
     handlePickLibrary,
     handleUndo,
@@ -626,9 +490,12 @@ export function useHairAndMakeup() {
     handleSetAsActiveHeadshot,
     handlePreviewPress,
     handleHeadshotSelect,
-    handleSwipeIndexChange,
-    handleInfoPress,
-    // Modals
+    handleSwipeIndexChange: varNav.handleSwipeIndexChange,
+    handleApplyTemplateSelections,
+    handleShareToFeed,
+    applySnapshot,
+
+    // ── Modals ───────────────────────────────────────────────────────────────
     policyModalVisible: generation.policyModalVisible,
     policyMessage: generation.policyMessage,
     setPolicyModalVisible: generation.setPolicyModalVisible,
@@ -641,18 +508,17 @@ export function useHairAndMakeup() {
     lightboxUrl,
     showFaceMenu,
     setShowFaceMenu,
-    // Draw mode
+
+    // ── Draw mode ────────────────────────────────────────────────────────────
     isDrawModeOpen,
     setIsDrawModeOpen,
     drawingCanvasRef,
     currentDrawColor,
-    // Supplemental
+
+    // ── Supplemental ─────────────────────────────────────────────────────────
     allHeadshots,
     headshotImageUrl,
     profileInitials,
     selfieUpload,
-    handleApplyTemplateSelections,
-    handleShareToFeed,
-    applySnapshot,
   };
 }

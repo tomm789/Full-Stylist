@@ -108,12 +108,6 @@ export default function HairAndMakeUpScreen() {
     return state.selectedIds.find((id) => ids.has(id)) ?? null;
   }, [hairLengthOptions, state.selectedIds]);
 
-  // Edit modal state lifted here so handleOpenCategoryEditor (from DrawModeInline) can open it
-  const [editModalVisible, setEditModalVisible] = React.useState(false);
-  const handleCloseEditModal = React.useCallback(() => {
-    setEditModalVisible(false);
-  }, []);
-
   const { dialogLine1Opacity, dialogLine2Opacity, dialogLine3Opacity, dialogLine4Opacity } =
     useGenerationDialogAnimation(state.generating);
 
@@ -317,9 +311,6 @@ export default function HairAndMakeUpScreen() {
             setIsDrawModeOpen={state.setIsDrawModeOpen}
             handlePickCamera={state.handlePickCamera}
             hasSelections={state.hasSelections}
-            editModalVisible={editModalVisible}
-            setEditModalVisible={setEditModalVisible}
-            onEditModalClose={handleCloseEditModal}
             editTab={state.editTab}
             setEditTab={state.setEditTab}
             categoryPills={state.categoryPills}

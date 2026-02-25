@@ -21,7 +21,7 @@ import {
   isGeminiPolicyBlockError,
   triggerHeadshotGenerateWithPrompt,
 } from '@/lib/ai-jobs';
-import type { PreviewSource } from './useHairAndMakeup';
+import type { PreviewSource } from '@/lib/headshot/hairAndMakeupTypes';
 
 type DrawnColorEntry = { hex: string; customPrompt?: string };
 
@@ -129,8 +129,8 @@ export function useHeadshotGeneration({
       jewellerySubcategory,
       advancedFields,
     };
-    const promptText = buildHairMakeupPrompt(inputSnapshot);
-    const hasPresetPrompt = Boolean(promptText.trim());
+    const promptText = buildHairMakeupPrompt(inputSnapshot) || null;
+    const hasPresetPrompt = Boolean(promptText?.trim());
     const hasMaskPrompts = Boolean(
       maskColorMap?.some((entry) => Boolean(entry.customPrompt?.trim()))
     );

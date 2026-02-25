@@ -15,7 +15,7 @@ import {
 import { getVariationByImageId } from '@/lib/headshot/generation';
 import { getPublicImageUrl } from '@/lib/images';
 import { getUserSettings } from '@/lib/settings';
-import type { PreviewSource } from './useHairAndMakeup';
+import type { PreviewSource } from '@/lib/headshot/hairAndMakeupTypes';
 
 /**
  * Session-scoped flag: true after the user has visited the hair & makeup screen this session.

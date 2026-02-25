@@ -158,3 +158,18 @@ export async function updateHeadshotGenerationVariation(
     console.warn('updateHeadshotGenerationVariation failed', error);
   }
 }
+
+export async function setActiveHeadshot(
+  userId: string,
+  headshotImageId: string
+): Promise<{ error: unknown | null }> {
+  const { error } = await supabase
+    .from('user_settings')
+    .update({
+      headshot_image_id: headshotImageId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId)
+    .single();
+  return { error };
+}

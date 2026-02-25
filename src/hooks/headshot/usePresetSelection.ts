@@ -15,7 +15,7 @@ import {
   JEWELLERY_SUBCATEGORIES,
   type EditTab,
   type TabId,
-} from './useHairAndMakeup';
+} from '@/lib/headshot/hairAndMakeupTypes';
 
 // ── Internal preset utility functions ────────────────────────────────────────
 

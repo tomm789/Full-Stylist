@@ -1,7 +1,7 @@
 /**
  * useHeadshotImageActions
  * File I/O and sharing actions for the Hair & Make-Up screen.
- * Owns: handleDeletePreviewImage, handleSharePreview, getShareableUri.
+ * Owns: handleDeletePreviewImage, handleSharePreview.
  */
 
 import { Alert, Platform, Share } from 'react-native';
@@ -128,5 +128,5 @@ export function useHeadshotImageActions({
     setVariationUrls,
   ]);
 
-  return { getShareableUri, handleSharePreview, handleDeletePreviewImage };
+  return { handleSharePreview, handleDeletePreviewImage };
 }

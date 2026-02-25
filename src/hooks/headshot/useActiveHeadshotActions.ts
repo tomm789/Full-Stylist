@@ -7,7 +7,7 @@
 
 import { Alert } from 'react-native';
 import { useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { setActiveHeadshot } from '@/lib/headshot/generation';
 import { waitForAIJobCompletion, syncBodyshotAfterActiveHeadshotSet } from '@/lib/ai-jobs';
 
 export type UseActiveHeadshotActionsParams = {
@@ -22,15 +22,7 @@ export function useActiveHeadshotActions({
   const handleSetAsActiveHeadshot = useCallback(async () => {
     if (!userId || !previewImageId) return;
     try {
-      const { error } = await supabase
-        .from('user_settings')
-        .update({
-          headshot_image_id: previewImageId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', userId)
-        .single();
-
+      const { error } = await setActiveHeadshot(userId, previewImageId);
       if (error) throw error;
       Alert.alert('Success', 'Headshot set as active');
 

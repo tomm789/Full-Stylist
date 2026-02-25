@@ -22,6 +22,9 @@ import {
   UIManager,
   useWindowDimensions,
   View,
+  type StyleProp,
+  type ViewStyle,
+  type ImageStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -249,12 +252,12 @@ const createStyles = (colors: ThemeColors, cellSize: number) =>
 interface PanelItemCardProps {
   item: SelectedItem;
   onRemove: (id: string) => void;
-  cardStyle: object;
+  cardStyle: StyleProp<ViewStyle>;
   placeholderIconSize: number;
   removeIconSize: number;
-  imageStyle: object;
-  placeholderStyle: object;
-  removeButtonStyle: object;
+  imageStyle: StyleProp<ImageStyle>;
+  placeholderStyle: StyleProp<ViewStyle>;
+  removeButtonStyle: StyleProp<ViewStyle>;
   errorColor: string;
 }
 
@@ -293,15 +296,15 @@ interface PanelCategoryCardProps {
   category: WardrobeCategory;
   isSelected: boolean;
   onPress: () => void;
-  cardStyle: object;
-  selectedStyle: object;
+  cardStyle: StyleProp<ViewStyle>;
+  selectedStyle: StyleProp<ViewStyle>;
   iconSize: number;
   addIconSize: number;
   primaryColor: string;
   secondaryColor: string;
   blackColor: string;
-  plusIconStyle: object;
-  plusIconOverlayStyle: object;
+  plusIconStyle: StyleProp<ViewStyle>;
+  plusIconOverlayStyle: StyleProp<ViewStyle>;
 }
 
 function PanelCategoryCard({
@@ -392,10 +395,11 @@ export default function OutfitCreatorPanel({
       Animated.timing(mountAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
       Animated.timing(opacityAnim, { toValue: 1, duration: 280, useNativeDriver: true }),
     ]).start();
-  }, [mountAnim, opacityAnim]);
+  }, []); // refs are stable — effect runs once on mount (O-15)
 
-  const availableCategories = categories.filter(
-    (cat) => !selectedCategoryIds?.has(cat.id),
+  const availableCategories = useMemo(
+    () => categories.filter((cat) => !selectedCategoryIds?.has(cat.id)),
+    [categories, selectedCategoryIds]
   );
 
   const panelHeight = isExpanded ? expandedHeight : PANEL_COLLAPSED_HEIGHT;

@@ -5,8 +5,9 @@
  *       navigation flags (canNavigateBack, canNavigateForward, etc.).
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { HeadshotGenerationVariation } from '@/lib/headshot/generation';
+import type { PreviewSource } from '@/lib/headshot/hairAndMakeupTypes';
 
 export type UseVariationNavigationParams = {
   variations: HeadshotGenerationVariation[];
@@ -18,7 +19,7 @@ export type UseVariationNavigationParams = {
   setPreviewImageId: (id: string | null) => void;
   setPreviewImageUrl: (url: string | null) => void;
   setPreviewVariationId: (id: string | null) => void;
-  setPreviewSource: (source: 'none' | 'selfie' | 'headshot' | 'variation' | 'upload') => void;
+  setPreviewSource: (source: PreviewSource) => void;
   resolveImageUrl: (imageId: string) => Promise<string | null>;
 };
 
@@ -51,7 +52,7 @@ export function useVariationNavigation({
     return completedVariations.findIndex((v) => v.id === previewVariationId);
   }, [completedVariations, previewVariationId]);
 
-  const setPreviewFromVariation = async (variation: HeadshotGenerationVariation) => {
+  const setPreviewFromVariation = useCallback(async (variation: HeadshotGenerationVariation) => {
     const imageId = variation.image_id;
     if (!imageId) return;
     let imageUrl = variationUrls.get(imageId) || null;
@@ -70,9 +71,11 @@ export function useVariationNavigation({
     setPreviewImageUrl(imageUrl);
     setPreviewVariationId(variation.id);
     setPreviewSource('variation');
-  };
+  }, [variationUrls, resolveImageUrl, setVariationUrls, setPreviewImageId, setPreviewImageUrl, setPreviewVariationId, setPreviewSource]);
 
-  const handleNavigateGeneration = (direction: 'back' | 'forward') => {
+  // completedVariations is newest-first: index 0 = most recent.
+  // 'back' = older (index + 1), 'forward' = newer (index - 1).
+  const handleNavigateGeneration = useCallback((direction: 'back' | 'forward') => {
     if (completedVariations.length === 0) return;
     if (previewGenerationIndex === -1) {
       if (direction === 'back') void setPreviewFromVariation(completedVariations[0]);
@@ -82,7 +85,7 @@ export function useVariationNavigation({
       direction === 'back' ? previewGenerationIndex + 1 : previewGenerationIndex - 1;
     const nextVariation = completedVariations[nextIndex];
     if (nextVariation) void setPreviewFromVariation(nextVariation);
-  };
+  }, [completedVariations, previewGenerationIndex, setPreviewFromVariation]);
 
   const showGenerationNav = completedVariations.length > 0;
   const canNavigateBack =
@@ -90,6 +93,30 @@ export function useVariationNavigation({
       ? completedVariations.length > 0
       : previewGenerationIndex < completedVariations.length - 1;
   const canNavigateForward = previewGenerationIndex > 0;
+
+  // Handles swiping to a different image in the face carousel.
+  // Resolves whether the item is a selfie, a completed variation, or a saved headshot.
+  const handleSwipeIndexChange = useCallback(
+    (item: { id: string; url: string | null }) => {
+      setPreviewImageId(item.id);
+      setPreviewImageUrl(item.url || null);
+      if (selfieImageId && item.id === selfieImageId) {
+        setPreviewVariationId(null);
+        setPreviewSource('selfie');
+        return;
+      }
+      const matchedVariation =
+        variations.find((v) => v.image_id === item.id && v.status === 'complete') || null;
+      if (matchedVariation) {
+        setPreviewVariationId(matchedVariation.id);
+        setPreviewSource('variation');
+        return;
+      }
+      setPreviewVariationId(null);
+      setPreviewSource('headshot');
+    },
+    [selfieImageId, variations, setPreviewImageId, setPreviewImageUrl, setPreviewVariationId, setPreviewSource]
+  );
 
   return {
     completedVariations,
@@ -99,5 +126,6 @@ export function useVariationNavigation({
     canNavigateForward,
     setPreviewFromVariation,
     handleNavigateGeneration,
+    handleSwipeIndexChange,
   };
 }
