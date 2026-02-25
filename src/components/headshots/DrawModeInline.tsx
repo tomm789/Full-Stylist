@@ -73,27 +73,16 @@ export default function DrawModeInline({
   const styles = StyleSheet.create({
     ...sharedStyles,
     root: { flex: 1 as const, paddingTop: topInset },
-    controlsRow: {
-      ...sharedStyles.controlsRow,
-      justifyContent: 'space-between',
-    },
     controlsSide: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
     },
     controlsTitle: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      top: 0,
-      bottom: 0,
-      textAlign: 'center',
-      textAlignVertical: 'center',
-      includeFontPadding: false,
       color: colors.textPrimary,
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '600',
+      marginHorizontal: 2,
     },
   });
   const controlsBottomInset = 140;
@@ -123,12 +112,13 @@ export default function DrawModeInline({
           <TouchableOpacity onPress={onClose} style={styles.controlButton} hitSlop={8}>
             <Ionicons name="close" size={20} color={colors.textPrimary} />
           </TouchableOpacity>
+          <Text style={styles.controlsTitle}>Draw</Text>
           <TouchableOpacity onPress={() => draw.setInfoVisible(true)} style={styles.controlButton} hitSlop={8}>
             <Ionicons name="information-circle-outline" size={20} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.controlsTitle}>Draw Mode</Text>
+        <View style={styles.controlSpacer} />
 
         <View style={styles.controlsSide}>
           <TouchableOpacity

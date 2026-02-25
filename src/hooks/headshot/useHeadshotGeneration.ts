@@ -130,9 +130,16 @@ export function useHeadshotGeneration({
       advancedFields,
     };
     const promptText = buildHairMakeupPrompt(inputSnapshot);
+    const hasPresetPrompt = Boolean(promptText.trim());
+    const hasMaskPrompts = Boolean(
+      maskColorMap?.some((entry) => Boolean(entry.customPrompt?.trim()))
+    );
 
-    if (!promptText.trim()) {
-      Alert.alert('Add Details', 'Select a preset or add a custom description.');
+    if (!hasPresetPrompt && !hasMaskPrompts) {
+      Alert.alert(
+        'Add Details',
+        'Add at least one preset/custom description or a draw instruction.'
+      );
       return;
     }
 
@@ -177,6 +184,10 @@ export function useHeadshotGeneration({
         } else {
           console.warn('[HairMakeup] Mask upload failed — continuing without mask. Error:', maskError);
         }
+      }
+
+      if (!hasPresetPrompt && hasMaskPrompts && !maskStoragePath) {
+        throw new Error('Failed to upload draw mask. Please try again.');
       }
 
       const { data: job, error: jobError } = await triggerHeadshotGenerateWithPrompt(
