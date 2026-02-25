@@ -268,8 +268,9 @@ export function useDrawModeLogic({
   };
 
   // --- Generate ---
+  const hasDrawnColors = drawnColorHexes.length > 0;
   const hasAnyPrompt = drawnColorHexes.some((hex) => Boolean(colorSettings[hex]?.customPrompt?.trim()));
-  const canGenerate = hasStrokes && hasAnyPrompt && !generating && !capturing;
+  const canGenerate = hasDrawnColors && hasAnyPrompt && !generating && !capturing;
   const generateLabel = capturing
     ? 'Capturing…'
     : generating
@@ -325,7 +326,7 @@ export function useDrawModeLogic({
     setCapturing(true);
     let compositeBase64: string | null = null;
 
-    if (hasStrokes && previewImageUrl) {
+    if (hasDrawnColors && previewImageUrl) {
       try {
         const bgBase64 = await new Promise<string>((resolve, reject) => {
           fetch(previewImageUrl)
@@ -347,7 +348,7 @@ export function useDrawModeLogic({
         console.warn('[DrawMode] Composite failed, falling back to mask-only', e);
         compositeBase64 = (await drawingCanvasRef.current?.makeMaskSnapshot()) ?? null;
       }
-    } else if (hasStrokes) {
+    } else if (hasDrawnColors) {
       compositeBase64 = (await drawingCanvasRef.current?.makeMaskSnapshot()) ?? null;
     }
 

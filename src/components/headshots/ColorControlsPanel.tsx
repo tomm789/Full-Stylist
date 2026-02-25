@@ -30,6 +30,7 @@ type ColorControlsPanelProps = {
   onPromptChange: (hex: string, text: string) => void;
   focusPromptHex?: string | null;
   onFocusPromptHandled?: () => void;
+  bottomInset?: number;
 };
 
 export default function ColorControlsPanel({
@@ -40,6 +41,7 @@ export default function ColorControlsPanel({
   onPromptChange,
   focusPromptHex,
   onFocusPromptHandled,
+  bottomInset = 0,
 }: ColorControlsPanelProps) {
   const colors = useThemeColors();
   const styles = StyleSheet.create(createColorControlsStyles(colors));
@@ -50,6 +52,10 @@ export default function ColorControlsPanel({
     inputRefs.current[focusPromptHex]?.focus();
     onFocusPromptHandled?.();
   }, [focusPromptHex, onFocusPromptHandled]);
+  const orderedColorHexes = React.useMemo(() => {
+    if (!drawnColorHexes.includes(activeColor)) return drawnColorHexes;
+    return [activeColor, ...drawnColorHexes.filter((hex) => hex !== activeColor)];
+  }, [drawnColorHexes, activeColor]);
 
   return (
     <View style={styles.colorControlsSection}>
@@ -84,11 +90,12 @@ export default function ColorControlsPanel({
       {drawnColorHexes.length > 0 && (
         <ScrollView
           style={styles.colorPanelsScroll}
+          contentContainerStyle={{ paddingBottom: bottomInset }}
           bounces={false}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {drawnColorHexes.map((hex) => (
+          {orderedColorHexes.map((hex) => (
             <View key={hex} style={styles.colorSettingsPanel}>
               <View style={styles.colorPromptRow}>
                 <View style={[styles.activeColorSwatch, styles.activeColorSwatchTopAligned, { backgroundColor: hex }]} />

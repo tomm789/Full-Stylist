@@ -19,7 +19,6 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -63,19 +62,18 @@ export default function DrawModeInline({
   drawingCanvasRef,
 }: DrawModeInlineProps) {
   const colors = useThemeColors();
-  const { height: screenHeight } = useWindowDimensions();
 
   // Measure container width via onLayout
   const [containerWidth, setContainerWidth] = useState(0);
   const canvasWidth = containerWidth;
-  const canvasHeight =
-    containerWidth > 0 ? Math.min(containerWidth * (4 / 3), screenHeight * 0.52) : 0;
+  const canvasHeight = containerWidth > 0 ? containerWidth * (4 / 3) : 0;
 
   const sharedStyles = createDrawModeStyles(colors, canvasWidth, canvasHeight);
   const styles = StyleSheet.create({
     ...sharedStyles,
     root: { flex: 1 as const },
   });
+  const controlsBottomInset = 140;
 
   const draw = useDrawModeLogic({
     previewImageUrl,
@@ -170,10 +168,11 @@ export default function DrawModeInline({
         onPromptChange={draw.handlePromptChange}
         focusPromptHex={draw.focusPromptHex}
         onFocusPromptHandled={() => draw.setFocusPromptHex(null)}
+        bottomInset={controlsBottomInset}
       />
 
       {/* ── Selections + generate ── */}
-      {draw.hasStrokes && (
+      {draw.drawnColorHexes.length > 0 && (
         <>
           {hasSelections && (
             <HeadshotCreatorContainer
