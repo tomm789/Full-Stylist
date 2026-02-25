@@ -3,7 +3,7 @@
  * Horizontal scrolling occasion pills for filtering outfits.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { PillButton } from '@/components/shared';
 import { theme } from '@/styles';
@@ -26,7 +26,7 @@ export default function OccasionPills({
   onClear,
 }: OccasionPillsProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   if (occasions.length === 0) return null;
 

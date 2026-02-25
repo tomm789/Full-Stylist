@@ -4,7 +4,7 @@
  * Renders a horizontal track with tappable tick marks and labels.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -41,7 +41,7 @@ export default function HairLengthSlider({
   onSelect,
 }: HairLengthSliderProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const selectedIndex = selectedId
     ? options.findIndex((o) => o.id === selectedId)

@@ -3,7 +3,7 @@
  * Quick view modal for wardrobe items
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Dimensions, Modal, View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,7 +40,7 @@ export default function ItemDetailModal({
   onDelete,
 }: ItemDetailModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [showMenu, setShowMenu] = useState(false);
   const screenHeight = Dimensions.get('window').height;
 

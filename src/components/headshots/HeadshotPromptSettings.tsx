@@ -20,7 +20,7 @@ type HeadshotPromptSettingsProps = {
 
 export default function HeadshotPromptSettings({ variation }: HeadshotPromptSettingsProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const resolved = useMemo(() => {
     if (!variation?.input_snapshot_json) return null;

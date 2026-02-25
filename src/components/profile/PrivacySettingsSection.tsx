@@ -3,7 +3,7 @@
  * Privacy-related settings section for account settings
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { UserSettings } from '@/lib/settings';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -24,7 +24,7 @@ export function PrivacySettingsSection({
   onUpdateSetting,
 }: PrivacySettingsSectionProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <>

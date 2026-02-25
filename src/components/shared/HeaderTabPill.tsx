@@ -4,7 +4,7 @@
  * and one active tab shown as inner pill with icon + label.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
@@ -28,7 +28,7 @@ export default function HeaderTabPill({
   onPress,
 }: HeaderTabPillProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.outer}>

@@ -4,7 +4,7 @@
  * Web-only component using react-easy-crop
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { Platform, Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Cropper, { Area } from 'react-easy-crop';
 import { getCroppedImg } from '@/utils/canvasUtils';
@@ -29,7 +29,7 @@ export default function ImageCropper({
   onDone,
 }: ImageCropperProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);

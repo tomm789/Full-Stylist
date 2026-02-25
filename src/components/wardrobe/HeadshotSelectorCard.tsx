@@ -4,7 +4,7 @@
  * Tappable to open headshot selector modal
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,7 +50,7 @@ export default function HeadshotSelectorCard({
   onSelect,
 }: HeadshotSelectorCardProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <TouchableOpacity

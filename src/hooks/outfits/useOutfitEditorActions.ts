@@ -1,10 +1,10 @@
 /**
  * useOutfitEditorActions Hook
- * Actions and handlers for outfit editor screen
+ * Actions and handlers for outfit editor screen.
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Alert, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -19,18 +19,13 @@ import {
 } from '@/lib/ai-jobs';
 import { setInitialCoverDataUri } from '@/lib/outfits/initialCoverCache';
 import { toDataUri } from '@/lib/images/dataUri';
-import {
-  outfitDescriptionToGenerationMessages,
-  runDescriptionMessageDrip,
-  type OutfitDescription,
-} from '@/lib/outfits/outfitDescriptionMessages';
+import { runDescriptionMessageDrip } from '@/lib/outfits/outfitDescriptionMessages';
 import { getUserSettings } from '@/lib/settings';
-import { generateClothingGrid } from '@/utils/clothing-grid';
 import { supabase } from '@/lib/supabase';
-import { uploadBase64ImageToStorage } from '@/lib/utils/image-helpers';
 import { startTimeline } from '@/lib/perf/timeline';
-
-const DESCRIPTION_POLL_MAX_MS = 30_000;
+import { generateAndUploadGrid } from '@/lib/outfits/generateAndUploadGrid';
+import { useDescriptionPolling } from '@/lib/outfits/useDescriptionPolling';
+import { useItemRevealAnimation } from '@/hooks/outfits/useItemRevealAnimation';
 
 interface UseOutfitEditorActionsProps {
   outfitId: string;
@@ -92,120 +87,28 @@ export function useOutfitEditorActions({
   // Action states
   const [saving, setSaving] = useState(false);
   const [rendering, setRendering] = useState(false);
-  const [generationPhase, setGenerationPhase] = useState<
-    'items' | 'analysis' | 'finalizing'
-  >('items');
-  const [revealedItemsCount, setRevealedItemsCount] = useState(0);
-  const [completedItemsCount, setCompletedItemsCount] = useState(0);
+  const [generationPhase, setGenerationPhase] = useState<'items' | 'analysis' | 'finalizing'>(
+    'items'
+  );
   const [activeMessage, setActiveMessage] = useState<any>(null);
 
-  const descriptionPollingInterval = useRef<NodeJS.Timeout | null>(null);
-  const descriptionPollingStartedAtRef = useRef<number | null>(null);
-  const descriptionPollingOutfitIdRef = useRef<string | null>(null);
-  const itemRevealInterval = useRef<NodeJS.Timeout | null>(null);
+  // ── Shared animation + polling hooks ────────────────────────────────────────
+  const revealAnimation = useItemRevealAnimation({ setPhase: setGenerationPhase });
 
-  const clearDescriptionPoll = useCallback(() => {
-    if (itemRevealInterval.current) {
-      clearInterval(itemRevealInterval.current);
-      itemRevealInterval.current = null;
-    }
-    if (descriptionPollingInterval.current) {
-      clearInterval(descriptionPollingInterval.current);
-      descriptionPollingInterval.current = null;
-      const oid = descriptionPollingOutfitIdRef.current;
-      descriptionPollingStartedAtRef.current = null;
-      descriptionPollingOutfitIdRef.current = null;
-      if (oid) {
-        console.debug('[outfit_render_timing] description_poll_stopped', { outfitId: oid, reason: 'cleanup' });
-      }
-    }
-  }, []);
+  const descriptionPolling = useDescriptionPolling({
+    onSuccess: (_description, messages) => {
+      setGenerationPhase('analysis');
+      runDescriptionMessageDrip(messages, setActiveMessage, setGenerationPhase);
+      onDescriptionReady?.();
+    },
+  });
 
-  useEffect(() => {
-    return () => clearDescriptionPoll();
-  }, [clearDescriptionPoll]);
+  const stopAll = useCallback(() => {
+    revealAnimation.stop();
+    descriptionPolling.stop();
+  }, [revealAnimation.stop, descriptionPolling.stop]);
 
-  const startDescriptionPolling = useCallback((outfitId: string) => {
-    if (descriptionPollingInterval.current != null) return;
-    descriptionPollingStartedAtRef.current = Date.now();
-    descriptionPollingOutfitIdRef.current = outfitId;
-    console.debug('[outfit_render_timing] description_poll_started', { outfitId });
-
-    descriptionPollingInterval.current = setInterval(async () => {
-      const started = descriptionPollingStartedAtRef.current;
-      const elapsed = started != null ? Date.now() - started : 0;
-      if (elapsed >= DESCRIPTION_POLL_MAX_MS) {
-        if (descriptionPollingInterval.current) {
-          clearInterval(descriptionPollingInterval.current);
-          descriptionPollingInterval.current = null;
-        }
-        descriptionPollingStartedAtRef.current = null;
-        descriptionPollingOutfitIdRef.current = null;
-        console.debug('[outfit_render_timing] description_poll_timeout', { outfitId, elapsedMs: elapsed });
-        return;
-      }
-      try {
-        const { data: outfitData } = await supabase
-          .from('outfits')
-          .select('description, occasions, style_tags, season, description_generated_at')
-          .eq('id', outfitId)
-          .maybeSingle();
-
-        if (outfitData?.description_generated_at) {
-          if (descriptionPollingInterval.current) {
-            clearInterval(descriptionPollingInterval.current);
-            descriptionPollingInterval.current = null;
-          }
-          descriptionPollingStartedAtRef.current = null;
-          descriptionPollingOutfitIdRef.current = null;
-          console.debug('[outfit_render_timing] description_poll_stopped', { outfitId, reason: 'success' });
-
-          const description: OutfitDescription = {
-            description: outfitData.description ?? '',
-            occasions: outfitData.occasions ?? [],
-            styleTags: outfitData.style_tags ?? [],
-            season: outfitData.season ?? 'all-season',
-          };
-          const messages = outfitDescriptionToGenerationMessages(description);
-          setGenerationPhase('analysis');
-          runDescriptionMessageDrip(messages, setActiveMessage, setGenerationPhase);
-          onDescriptionReady?.();
-        }
-      } catch (e) {
-        console.error('[OutfitEditor] Description polling error:', e);
-      }
-    }, 500);
-  }, []);
-
-  type EditorGenerationItem = { id: string; title: string; orderIndex: number };
-
-  const startItemRevealAnimation = useCallback((items: EditorGenerationItem[]) => {
-    setRevealedItemsCount(-1);
-    setCompletedItemsCount(-1);
-    setGenerationPhase('items');
-
-    let currentRevealed = -1;
-    let currentCompleted = -1;
-
-    itemRevealInterval.current = setInterval(() => {
-      if (currentRevealed < items.length - 1) {
-        currentRevealed++;
-        setRevealedItemsCount(currentRevealed);
-        if (currentRevealed > 0) {
-          currentCompleted = currentRevealed - 1;
-          setCompletedItemsCount(currentCompleted);
-        }
-      } else {
-        currentCompleted = items.length - 1;
-        setCompletedItemsCount(currentCompleted);
-        setTimeout(() => setGenerationPhase('analysis'), 500);
-        if (itemRevealInterval.current) {
-          clearInterval(itemRevealInterval.current);
-          itemRevealInterval.current = null;
-        }
-      }
-    }, 500);
-  }, []);
+  // ── Item picker ──────────────────────────────────────────────────────────────
 
   const openItemPicker = useCallback(
     async (categoryId: string) => {
@@ -265,6 +168,8 @@ export function useOutfitEditorActions({
     [setOutfitItems]
   );
 
+  // ── Save ─────────────────────────────────────────────────────────────────────
+
   const handleSave = useCallback(async () => {
     if (!user) return;
 
@@ -276,12 +181,7 @@ export function useOutfitEditorActions({
           Alert.alert(
             'Success',
             'Outfit saved! You can now generate the outfit image.',
-            [
-              {
-                text: 'OK',
-                onPress: () => router.replace(`/outfits/${savedOutfitId}`),
-              },
-            ]
+            [{ text: 'OK', onPress: () => router.replace(`/outfits/${savedOutfitId}`) }]
           );
         } else {
           Alert.alert('Success', 'Outfit saved!');
@@ -294,6 +194,8 @@ export function useOutfitEditorActions({
     }
   }, [user, isNew, saveOutfit, router]);
 
+  // ── Render ───────────────────────────────────────────────────────────────────
+
   const handleRender = useCallback(async () => {
     if (!user || outfitItems.size === 0) {
       Alert.alert('Error', 'Please add items to the outfit before rendering');
@@ -302,12 +204,9 @@ export function useOutfitEditorActions({
 
     setRendering(true);
     setGenerationPhase('items');
-    setRevealedItemsCount(0);
-    setCompletedItemsCount(0);
     setActiveMessage(null);
 
     try {
-      // Save outfit first
       const savedOutfitId = await saveOutfit();
       if (!savedOutfitId) {
         Alert.alert('Error', 'Failed to save outfit before rendering');
@@ -315,78 +214,51 @@ export function useOutfitEditorActions({
         return;
       }
 
-      // Client-side grid generation (web only)
-      let stackedImageId = null;
-      const canClientStack =
-        Platform.OS === 'web' && typeof document !== 'undefined' && typeof Image !== 'undefined';
-      if (!canClientStack) {
-        console.warn('[OutfitEditor] Client grid generation unavailable; falling back to server stacking');
-      } else {
-        try {
-          const itemsToStack = Array.from(outfitItems.values());
-          const imageUrls = itemsToStack.map((item) => {
-            const url = itemImageUrls.get(item.id);
-            if (!url) throw new Error(`No image URL for item ${item.id}`);
-            return url;
-          });
+      // Client-side grid generation: resolve image URLs from the cached map
+      let stackedImageId: string | null = null;
+      const itemsToStack = Array.from(outfitItems.values());
+      const imageUrls: string[] = [];
+      let missingUrl = false;
 
-          console.log(`[OutfitEditor] Generating grid for ${imageUrls.length} items...`);
-          const gridBase64 = await generateClothingGrid(imageUrls);
-          console.log(`[OutfitEditor] Grid generated successfully, base64 length: ${gridBase64.length}`);
+      for (const item of itemsToStack) {
+        const url = itemImageUrls.get(item.id);
+        if (!url) { missingUrl = true; break; }
+        imageUrls.push(url);
+      }
 
-          // Convert base64 to Blob and upload to storage
-          // Upload to Supabase storage
-          const timestamp = Date.now();
-          const fileName = `grid-${timestamp}.jpg`;
-          const storagePath = `${user.id}/ai/stacked/${fileName}`;
-          const { data: uploadDataResult, error: uploadError } = await uploadBase64ImageToStorage(
-            'media',
-            storagePath,
-            gridBase64,
-            'image/jpeg'
-          );
-
-          if (uploadError || !uploadDataResult) {
-            throw new Error(`Failed to upload grid image: ${uploadError?.message || 'Unknown error'}`);
-          }
-
-          console.log(`[OutfitEditor] Grid uploaded successfully. Storage path: ${uploadDataResult.path}`);
-          stackedImageId = uploadDataResult.path;
-        } catch (gridError) {
-          console.warn('[OutfitEditor] Client-side grid generation failed:', gridError);
+      if (!missingUrl && imageUrls.length > 0) {
+        const gridResult = await generateAndUploadGrid(imageUrls, user.id);
+        stackedImageId = gridResult?.storagePath ?? null;
+        if (stackedImageId) {
+          console.log(`[OutfitEditor] Grid uploaded successfully: ${stackedImageId}`);
         }
       }
 
       // Prepare items for render job
-      const selected = Array.from(outfitItems.entries()).map(
-        ([categoryId, item]) => {
-          const categoryName = categoryId
-            ? categories.find((c) => c.id === categoryId)?.name || ''
-            : '';
-          return {
+      const selected = Array.from(outfitItems.entries()).map(([categoryId, item]) => {
+        const categoryName = categoryId
+          ? categories.find((c) => c.id === categoryId)?.name || ''
+          : '';
+        return {
+          category: categoryName,
+          category_id: categoryId || null,
+          subcategory_id: item.subcategory_id || null,
+          wardrobe_item_id: item.id,
+          text_snapshot: {
+            title: item.title || '',
+            description: item.description || '',
+            brand: item.brand || '',
+            color_primary: item.color_primary || '',
             category: categoryName,
             category_id: categoryId || null,
             subcategory_id: item.subcategory_id || null,
-            wardrobe_item_id: item.id,
-            text_snapshot: {
-              title: item.title || '',
-              description: item.description || '',
-              brand: item.brand || '',
-              color_primary: item.color_primary || '',
-              category: categoryName,
-              category_id: categoryId || null,
-              subcategory_id: item.subcategory_id || null,
-            },
-          };
-        }
-      );
+          },
+        };
+      });
 
       const { data: userSettings } = await getUserSettings(user.id);
       if (!userSettings?.body_shot_image_id) {
-        Alert.alert(
-          'Setup Required',
-          'Please upload a body photo before generating outfits.'
-        );
+        Alert.alert('Setup Required', 'Please upload a body photo before generating outfits.');
         setRendering(false);
         return;
       }
@@ -399,20 +271,15 @@ export function useOutfitEditorActions({
       const timeline = startTimeline('outfit_render_editor');
       timeline.mark('generate_press');
 
-      // Create render job
-      const { data: renderJob, error } = await createAIJob(
-        user.id,
-        'outfit_render',
-        {
-          user_id: user.id,
-          outfit_id: savedOutfitId,
-          stacked_image_id: stackedImageId,
-          selected,
-          prompt: notes.trim() || undefined,
-          body_shot_image_id: userSettings.body_shot_image_id,
-          model_preference: modelPreference,
-        }
-      );
+      const { data: renderJob, error } = await createAIJob(user.id, 'outfit_render', {
+        user_id: user.id,
+        outfit_id: savedOutfitId,
+        stacked_image_id: stackedImageId,
+        selected,
+        prompt: notes.trim() || undefined,
+        body_shot_image_id: userSettings.body_shot_image_id,
+        model_preference: modelPreference,
+      });
 
       if (error || !renderJob) {
         Alert.alert('Error', 'Failed to start render job');
@@ -433,14 +300,15 @@ export function useOutfitEditorActions({
       }
       timeline.mark('execution_triggered');
 
-      clearDescriptionPoll();
-      const editorItems: EditorGenerationItem[] = Array.from(outfitItems.values()).map((item, index) => ({
+      stopAll();
+
+      const editorItems = Array.from(outfitItems.values()).map((item, index) => ({
         id: item.id,
         title: item.title || `Item ${index + 1}`,
         orderIndex: index,
       }));
-      startItemRevealAnimation(editorItems);
-      startDescriptionPolling(savedOutfitId);
+      revealAnimation.start(editorItems);
+      descriptionPolling.start(savedOutfitId);
 
       timeline.mark('poll_start');
       const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
@@ -451,7 +319,7 @@ export function useOutfitEditorActions({
         'outfit_render'
       );
 
-      clearDescriptionPoll();
+      stopAll();
 
       if (pollError || !completedJob) {
         timeline.mark('poll_timeout');
@@ -496,7 +364,9 @@ export function useOutfitEditorActions({
       }
 
       setRendering(false);
-      const query = timeline.traceId ? `?renderTraceId=${encodeURIComponent(timeline.traceId)}` : '';
+      const query = timeline.traceId
+        ? `?renderTraceId=${encodeURIComponent(timeline.traceId)}`
+        : '';
       router.push(`/outfits/${savedOutfitId}/view${query}`);
       timeline.mark('navigate_to_view');
       console.debug('[outfit_render_timing] navigate_to_view_at', {
@@ -506,7 +376,7 @@ export function useOutfitEditorActions({
       });
     } catch (error: any) {
       console.error('Render error:', error);
-      clearDescriptionPoll();
+      stopAll();
       Alert.alert('Error', error.message || 'An unexpected error occurred');
       setRendering(false);
     }
@@ -518,10 +388,12 @@ export function useOutfitEditorActions({
     notes,
     saveOutfit,
     router,
-    clearDescriptionPoll,
-    startDescriptionPolling,
-    startItemRevealAnimation,
+    stopAll,
+    revealAnimation,
+    descriptionPolling,
   ]);
+
+  // ── Delete ───────────────────────────────────────────────────────────────────
 
   const handleDelete = useCallback(() => {
     if (!user || !outfit || isNew) return;
@@ -536,7 +408,6 @@ export function useOutfitEditorActions({
           try {
             const { archiveOutfit } = await import('@/lib/outfits');
             const { error } = await archiveOutfit(user.id, outfit.id);
-
             if (error) throw error;
             Alert.alert('Success', 'Outfit archived');
             router.back();
@@ -564,8 +435,8 @@ export function useOutfitEditorActions({
     saving,
     rendering,
     generationPhase,
-    revealedItemsCount,
-    completedItemsCount,
+    revealedItemsCount: revealAnimation.revealedItemsCount,
+    completedItemsCount: revealAnimation.completedItemsCount,
     activeMessage,
     handleSave,
     handleRender,

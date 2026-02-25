@@ -3,7 +3,7 @@
  * Horizontal slider for navigating between items
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { ImagePlaceholder } from '@/components/shared';
@@ -33,7 +33,7 @@ export default function NavigationSlider({
   style,
 }: NavigationSliderProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const scrollRef = useRef<ScrollView>(null);
   const currentIndex = items.findIndex((item) => item.id === currentItemId);

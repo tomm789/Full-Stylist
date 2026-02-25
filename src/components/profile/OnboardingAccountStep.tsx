@@ -3,7 +3,7 @@
  * Account setup step in onboarding - matches overall onboarding styling
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -47,7 +47,7 @@ export function OnboardingAccountStep({
   onComplete,
 }: OnboardingAccountStepProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -24,7 +24,7 @@ import type { ThemeColors } from '@/styles/themes';
 
 export default function AccountSettingsScreen() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const {
     settings,

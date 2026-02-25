@@ -3,7 +3,7 @@
  * Screen for adding new wardrobe items with AI analysis
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -32,7 +32,7 @@ const { spacing, borderRadius, typography } = theme;
 export default function AddItemScreen() {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { action, imageUri } = useLocalSearchParams<{ action?: string; imageUri?: string }>();
   const didAutoActionRef = useRef(false);

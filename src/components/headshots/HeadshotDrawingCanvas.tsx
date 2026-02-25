@@ -6,11 +6,18 @@
  */
 
 import React, { useImperativeHandle } from 'react';
+import type { SharedValue } from 'react-native-reanimated';
 
-export type DrawnColorEntry = { hex: string; label: string };
+export type DrawnColorEntry = {
+  hex: string;
+  label: string;
+  categoryId?: string;
+  customPrompt?: string;
+};
 
 export type HeadshotDrawingCanvasRef = {
   makeMaskSnapshot: () => Promise<string | null>;
+  makeCompositeSnapshot: (bgBase64: string, width: number, height: number) => Promise<string | null>;
   getDrawnColorMap: () => DrawnColorEntry[];
   undo: () => void;
   redo: () => void;
@@ -26,8 +33,10 @@ export type HeadshotDrawingCanvasRef = {
 export type HeadshotDrawingCanvasProps = {
   drawingEnabled: boolean;
   currentColor: string;
-  strokeWidth?: number;
   onStrokeChange?: (hasStrokes: boolean, canUndo: boolean, canRedo: boolean) => void;
+  viewScale?: SharedValue<number>;
+  viewTranslateX?: SharedValue<number>;
+  viewTranslateY?: SharedValue<number>;
 };
 
 const HeadshotDrawingCanvas = React.forwardRef<
@@ -36,6 +45,7 @@ const HeadshotDrawingCanvas = React.forwardRef<
 >((_props, ref) => {
   useImperativeHandle(ref, () => ({
     makeMaskSnapshot: async () => null,
+    makeCompositeSnapshot: async () => null,
     getDrawnColorMap: () => [],
     undo: () => {},
     redo: () => {},

@@ -3,7 +3,7 @@
  * Reusable search bar with filter and add buttons
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   TextInput,
@@ -42,7 +42,7 @@ export default function SearchBar({
   ...textInputProps
 }: SearchBarProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={[styles.container, containerStyle]}>

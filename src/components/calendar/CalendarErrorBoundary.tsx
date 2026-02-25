@@ -3,7 +3,7 @@
  * Catches errors in calendar components and displays fallback UI
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -57,7 +57,7 @@ interface CalendarErrorFallbackProps {
 
 export function CalendarErrorFallback({ error, onReset }: CalendarErrorFallbackProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.container}>

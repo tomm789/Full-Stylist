@@ -3,7 +3,7 @@
  * Multi-step onboarding flow for new users
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -33,7 +33,7 @@ const { spacing, borderRadius, typography } = theme;
 
 export default function OnboardingScreen() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
 

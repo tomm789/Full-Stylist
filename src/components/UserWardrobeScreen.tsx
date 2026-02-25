@@ -46,7 +46,7 @@ export default function UserWardrobeScreen({
   onExternalRefresh,
 }: UserWardrobeScreenProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
   const { categories } = useCategories();

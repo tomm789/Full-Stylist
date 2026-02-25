@@ -3,7 +3,7 @@
  * Circular avatar button for header actions.
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { TouchableOpacity, StyleSheet, Text, View, Image } from 'react-native';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -29,7 +29,7 @@ export default function HeaderAvatarButton({
   borderless = false,
 }: HeaderAvatarButtonProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const label = initials.slice(0, 2).toUpperCase();
   const [imageError, setImageError] = useState(false);
 

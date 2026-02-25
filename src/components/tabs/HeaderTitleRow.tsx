@@ -6,7 +6,7 @@
  * but callers can override it with any Ionicon via leftIcon / onLeftAction.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -46,7 +46,7 @@ export default function HeaderTitleRow({
   hideCalendar,
 }: HeaderTitleRowProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
 
   const isHidden = hideLeftIcon ?? hideCalendar ?? false;

@@ -43,7 +43,7 @@ const PAGE_SIZE = 30;
 export default function FollowingScreen() {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { user } = useAuth();
   const { id: userId } = useLocalSearchParams<{ id: string }>();

@@ -3,7 +3,7 @@
  * View outfit details with social engagement
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useMemo, useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -55,7 +55,7 @@ import type { ThemeColors } from '@/styles/themes';
 export default function OutfitViewScreen() {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const {
     id,
     outfitIds,

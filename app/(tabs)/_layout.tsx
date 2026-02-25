@@ -341,7 +341,7 @@ export default function TabsLayout() {
 
 function TabsLayoutInner() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const pathname = usePathname();
   const { session, loading, signOut } = useAuth();

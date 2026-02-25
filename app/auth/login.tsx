@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { theme } from '@/styles';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -149,6 +150,8 @@ export default function LoginScreen() {
   );
 }
 
+const { borderRadius, spacing } = theme;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -185,9 +188,12 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#000',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: borderRadius.round,
+    minHeight: spacing.huge + spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
   buttonText: {

@@ -10,7 +10,7 @@
  * new code should use the split pair above.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -53,7 +53,7 @@ export function HeaderSearchMenu({
   placeholder = 'Search...',
 }: HeaderSearchMenuProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   return (
@@ -121,7 +121,7 @@ export function ConnectedHeaderSearchTitle() {
   const pathname = usePathname();
   const { unreadCount } = useNotifications();
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const transition = useState(new Animated.Value(1))[0];
   const headerSearch = getHeaderSearch(pathname);
   void headerSearchVersion;
@@ -258,7 +258,7 @@ export function ConnectedHeaderSearchTitle() {
  */
 export function ConnectedHeaderSearchRight() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { getHeaderSearch, headerSearchVersion } = useHeaderSearch();
   const pathname = usePathname();
   const headerSearch = getHeaderSearch(pathname);

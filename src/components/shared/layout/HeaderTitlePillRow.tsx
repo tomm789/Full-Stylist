@@ -3,7 +3,7 @@
  * Shared header row with title + right action pill.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/styles';
@@ -39,7 +39,7 @@ export default function HeaderTitlePillRow({
   centerSlot,
 }: HeaderTitlePillRowProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
 
   return (

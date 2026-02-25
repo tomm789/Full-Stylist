@@ -3,7 +3,7 @@
  * Generic accordion wrapper for filter sections
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
@@ -26,7 +26,7 @@ export function FilterAccordionSection({
   children,
 }: FilterAccordionSectionProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.section}>

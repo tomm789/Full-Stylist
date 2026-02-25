@@ -3,7 +3,7 @@
  * Page indicator dots for carousels
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -25,7 +25,7 @@ export default function IndicatorDots({
   style,
 }: IndicatorDotsProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   if (variant === 'numeric') {
     return (

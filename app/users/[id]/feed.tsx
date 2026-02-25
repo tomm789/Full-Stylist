@@ -4,7 +4,7 @@
  * Supports three-dots menu, try-on, comments, and find-similar.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -27,7 +27,7 @@ import type { ThemeColors } from '@/styles/themes';
 export default function UserFeedScreen() {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
   const { id: userId, postId } = useLocalSearchParams<{ id: string; postId?: string }>();

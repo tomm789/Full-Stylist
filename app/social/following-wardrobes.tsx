@@ -3,7 +3,7 @@
  * View wardrobes of users you follow
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -158,7 +158,7 @@ export default function FollowingWardrobesScreen({
   selectedSubcategoryId = null,
 }: FollowingWardrobesScreenProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const commonStyles = createCommonStyles(colors);
   const { user } = useAuth();
   const router = useRouter();

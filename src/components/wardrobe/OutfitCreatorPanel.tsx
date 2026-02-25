@@ -6,9 +6,12 @@
  * Expanded:  drag handle + tab bar + "Outfit" grid or "Advanced" canvas.
  *
  * Height transitions use LayoutAnimation (triggered by the caller before changing isExpanded).
+ *
+ * Private sub-components PanelItemCard and PanelCategoryCard eliminate the ~130 lines of
+ * duplication between the collapsed-row and expanded-grid rendering paths.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Platform,
@@ -241,6 +244,105 @@ const createStyles = (colors: ThemeColors, cellSize: number) =>
     },
   });
 
+// ── Private sub-components ────────────────────────────────────────────────────
+
+interface PanelItemCardProps {
+  item: SelectedItem;
+  onRemove: (id: string) => void;
+  cardStyle: object;
+  placeholderIconSize: number;
+  removeIconSize: number;
+  imageStyle: object;
+  placeholderStyle: object;
+  removeButtonStyle: object;
+  errorColor: string;
+}
+
+function PanelItemCard({
+  item,
+  onRemove,
+  cardStyle,
+  placeholderIconSize,
+  removeIconSize,
+  imageStyle,
+  placeholderStyle,
+  removeButtonStyle,
+  errorColor,
+}: PanelItemCardProps) {
+  return (
+    <View style={cardStyle}>
+      {item.imageUrl ? (
+        <Image source={{ uri: item.imageUrl }} style={imageStyle} contentFit="cover" />
+      ) : (
+        <View style={placeholderStyle}>
+          <ImagePlaceholder text="" iconSize={placeholderIconSize} />
+        </View>
+      )}
+      <TouchableOpacity
+        style={removeButtonStyle}
+        onPress={() => onRemove(item.id)}
+        hitSlop={{ top: 4, right: 4, bottom: 4, left: 4 }}
+      >
+        <Ionicons name="close-circle" size={removeIconSize} color={errorColor} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+interface PanelCategoryCardProps {
+  category: WardrobeCategory;
+  isSelected: boolean;
+  onPress: () => void;
+  cardStyle: object;
+  selectedStyle: object;
+  iconSize: number;
+  addIconSize: number;
+  primaryColor: string;
+  secondaryColor: string;
+  blackColor: string;
+  plusIconStyle: object;
+  plusIconOverlayStyle: object;
+}
+
+function PanelCategoryCard({
+  category,
+  isSelected,
+  onPress,
+  cardStyle,
+  selectedStyle,
+  iconSize,
+  addIconSize,
+  primaryColor,
+  secondaryColor,
+  blackColor,
+  plusIconStyle,
+  plusIconOverlayStyle,
+}: PanelCategoryCardProps) {
+  return (
+    <TouchableOpacity
+      style={[cardStyle, isSelected && selectedStyle]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <WardrobeCategoryIcon
+        categoryName={category.name}
+        size={iconSize}
+        color={isSelected ? primaryColor : secondaryColor}
+      />
+      <View style={plusIconStyle}>
+        <Ionicons
+          name="add-circle"
+          size={addIconSize}
+          color={blackColor}
+          style={plusIconOverlayStyle}
+        />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function OutfitCreatorPanel({
   isExpanded,
   onToggleExpanded,
@@ -271,7 +373,7 @@ export default function OutfitCreatorPanel({
   // column gap: spacing.sm = 8
   const cellSize = Math.floor((screenWidth - 32 - 2 - 24 - 8) / 2);
 
-  const styles = createStyles(colors, cellSize);
+  const styles = useMemo(() => createStyles(colors, cellSize), [colors, cellSize]);
 
   const [activeTab, setActiveTab] = useState<TabId>('outfit');
 
@@ -348,73 +450,51 @@ export default function OutfitCreatorPanel({
           {/* ── Tab content ────────────────────────────────────────────── */}
           <View style={styles.contentArea}>
             {activeTab === 'outfit' ? (
-              <ScrollView
-                style={styles.gridScroll}
-                showsVerticalScrollIndicator={false}
-              >
-              <View style={styles.gridContent}>
-                {/* Headshot */}
-                <View style={styles.itemCard}>
-                  <HeadshotSelectorCard
-                    headshotUrl={currentHeadshotUrl}
-                    onSelect={onHeadshotSelect}
-                  />
-                </View>
-
-                {/* Selected items */}
-                {selectedItems.map((item) => (
-                  <View key={item.id} style={styles.itemCard}>
-                    {item.imageUrl ? (
-                      <Image
-                        source={{ uri: item.imageUrl }}
-                        style={styles.itemImage}
-                        contentFit="cover"
-                      />
-                    ) : (
-                      <View style={styles.itemImagePlaceholder}>
-                        <ImagePlaceholder text="" iconSize={24} />
-                      </View>
-                    )}
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => onRemoveItem(item.id)}
-                      hitSlop={{ top: 4, right: 4, bottom: 4, left: 4 }}
-                    >
-                      <Ionicons name="close-circle" size={20} color={colors.error} />
-                    </TouchableOpacity>
+              <ScrollView style={styles.gridScroll} showsVerticalScrollIndicator={false}>
+                <View style={styles.gridContent}>
+                  {/* Headshot */}
+                  <View style={styles.itemCard}>
+                    <HeadshotSelectorCard
+                      headshotUrl={currentHeadshotUrl}
+                      onSelect={onHeadshotSelect}
+                    />
                   </View>
-                ))}
 
-                {/* Category shortcuts */}
-                {availableCategories.map((category) => {
-                  const isSelected = selectedCategoryId === category.id;
-                  return (
-                    <TouchableOpacity
+                  {/* Selected items */}
+                  {selectedItems.map((item) => (
+                    <PanelItemCard
+                      key={item.id}
+                      item={item}
+                      onRemove={onRemoveItem}
+                      cardStyle={styles.itemCard}
+                      placeholderIconSize={24}
+                      removeIconSize={20}
+                      imageStyle={styles.itemImage}
+                      placeholderStyle={styles.itemImagePlaceholder}
+                      removeButtonStyle={styles.removeButton}
+                      errorColor={colors.error}
+                    />
+                  ))}
+
+                  {/* Category shortcuts */}
+                  {availableCategories.map((category) => (
+                    <PanelCategoryCard
                       key={category.id}
-                      style={[
-                        styles.categoryCard,
-                        isSelected && styles.categoryCardSelected,
-                      ]}
+                      category={category}
+                      isSelected={selectedCategoryId === category.id}
                       onPress={() => onCategorySelect(category.id)}
-                      activeOpacity={0.7}
-                    >
-                      <WardrobeCategoryIcon
-                        categoryName={category.name}
-                        size={28}
-                        color={isSelected ? colors.primary : colors.textSecondary}
-                      />
-                      <View style={styles.categoryPlusIcon}>
-                        <Ionicons
-                          name="add-circle"
-                          size={16}
-                          color={colors.black}
-                          style={styles.plusIconOverlay}
-                        />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+                      cardStyle={styles.categoryCard}
+                      selectedStyle={styles.categoryCardSelected}
+                      iconSize={28}
+                      addIconSize={16}
+                      primaryColor={colors.primary}
+                      secondaryColor={colors.textSecondary}
+                      blackColor={colors.black}
+                      plusIconStyle={styles.categoryPlusIcon}
+                      plusIconOverlayStyle={styles.plusIconOverlay}
+                    />
+                  ))}
+                </View>
               </ScrollView>
             ) : (
               <OutfitCreatorCanvas
@@ -444,56 +524,37 @@ export default function OutfitCreatorPanel({
           />
 
           {selectedItems.map((item) => (
-            <View key={item.id} style={styles.itemCardRow}>
-              {item.imageUrl ? (
-                <Image
-                  source={{ uri: item.imageUrl }}
-                  style={styles.itemImage}
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={styles.itemImagePlaceholder}>
-                  <ImagePlaceholder text="" iconSize={20} />
-                </View>
-              )}
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => onRemoveItem(item.id)}
-                hitSlop={{ top: 4, right: 4, bottom: 4, left: 4 }}
-              >
-                <Ionicons name="close-circle" size={18} color={colors.error} />
-              </TouchableOpacity>
-            </View>
+            <PanelItemCard
+              key={item.id}
+              item={item}
+              onRemove={onRemoveItem}
+              cardStyle={styles.itemCardRow}
+              placeholderIconSize={20}
+              removeIconSize={18}
+              imageStyle={styles.itemImage}
+              placeholderStyle={styles.itemImagePlaceholder}
+              removeButtonStyle={styles.removeButton}
+              errorColor={colors.error}
+            />
           ))}
 
-          {availableCategories.map((category) => {
-            const isSelected = selectedCategoryId === category.id;
-            return (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryCardRow,
-                  isSelected && styles.categoryCardSelected,
-                ]}
-                onPress={() => onCategorySelect(category.id)}
-                activeOpacity={0.7}
-              >
-                <WardrobeCategoryIcon
-                  categoryName={category.name}
-                  size={22}
-                  color={isSelected ? colors.primary : colors.textSecondary}
-                />
-                <View style={styles.categoryPlusIcon}>
-                  <Ionicons
-                    name="add-circle"
-                    size={14}
-                    color={colors.black}
-                    style={styles.plusIconOverlay}
-                  />
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+          {availableCategories.map((category) => (
+            <PanelCategoryCard
+              key={category.id}
+              category={category}
+              isSelected={selectedCategoryId === category.id}
+              onPress={() => onCategorySelect(category.id)}
+              cardStyle={styles.categoryCardRow}
+              selectedStyle={styles.categoryCardSelected}
+              iconSize={22}
+              addIconSize={14}
+              primaryColor={colors.primary}
+              secondaryColor={colors.textSecondary}
+              blackColor={colors.black}
+              plusIconStyle={styles.categoryPlusIcon}
+              plusIconOverlayStyle={styles.plusIconOverlay}
+            />
+          ))}
         </ScrollView>
       )}
     </Animated.View>

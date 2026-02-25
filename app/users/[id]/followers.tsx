@@ -3,7 +3,7 @@
  * List of users following the profile.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -43,7 +43,7 @@ const PAGE_SIZE = 30;
 export default function FollowersScreen() {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { user } = useAuth();
   const { id: userId } = useLocalSearchParams<{ id: string }>();

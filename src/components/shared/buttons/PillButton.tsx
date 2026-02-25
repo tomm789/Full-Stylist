@@ -3,7 +3,7 @@
  * Reusable pill-shaped button for categories, filters, tags
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -50,7 +50,7 @@ export default function PillButton({
   ...props
 }: PillButtonProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const isVertical = layout === 'vertical';
 

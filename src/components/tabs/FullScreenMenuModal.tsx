@@ -68,7 +68,7 @@ export function FullScreenMenuModal({
   onQueryChange,
 }: FullScreenMenuModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
   const { user } = useAuth();

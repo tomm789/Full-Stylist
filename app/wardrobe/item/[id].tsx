@@ -3,7 +3,7 @@
  * View and manage a single wardrobe item
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -43,7 +43,7 @@ import type { ThemeColors } from '@/styles/themes';
 
 export default function ItemDetailScreen() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const commonStyles = createCommonStyles(colors);
   const { id, itemIds, readOnly, traceId: traceIdParam } = useLocalSearchParams<{
     id: string;

@@ -3,7 +3,7 @@
  * Shared header row for Wardrobe/Outfits search.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
@@ -61,7 +61,7 @@ export default function SearchHeaderRow({
   onProfile,
 }: SearchHeaderRowProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const showFilter = showFilterProp ?? !centerSlot;
 

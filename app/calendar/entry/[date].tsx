@@ -34,7 +34,7 @@ const { spacing, borderRadius, typography } = theme;
 
 export default function CalendarEntryScreen() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();

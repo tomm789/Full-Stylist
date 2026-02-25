@@ -21,16 +21,20 @@ import {
   Skia,
   useCanvasRef,
   Fill,
+  PaintStyle,
+  StrokeCap,
+  StrokeJoin,
   type SkPath,
 } from '@shopify/react-native-skia';
 import type { SharedValue } from 'react-native-reanimated';
 import type { HeadshotDrawingCanvasRef, HeadshotDrawingCanvasProps, DrawnColorEntry } from './HeadshotDrawingCanvas';
 import { DRAW_COLOUR_MAP } from '@/lib/headshot/drawingColors';
 
+const FIXED_STROKE_WIDTH = 4;
+
 type Stroke = {
   path: SkPath;
   color: string;
-  strokeWidth: number;
 };
 
 const HeadshotDrawingCanvas = React.forwardRef<
@@ -43,7 +47,7 @@ const HeadshotDrawingCanvas = React.forwardRef<
     /** Current pan offset Y shared value from the parent's pan gesture. */
     viewTranslateY?: SharedValue<number>;
   }
->(({ drawingEnabled, currentColor, strokeWidth = 12, onStrokeChange, viewScale, viewTranslateX, viewTranslateY }, ref) => {
+>(({ drawingEnabled, currentColor, onStrokeChange, viewScale, viewTranslateX, viewTranslateY }, ref) => {
   const canvasRef = useCanvasRef();
   const [completedStrokes, setCompletedStrokes] = useState<Stroke[]>([]);
   const [undoneStrokes, setUndoneStrokes] = useState<Stroke[]>([]);
@@ -52,11 +56,9 @@ const HeadshotDrawingCanvas = React.forwardRef<
 
   const activePathRef = useRef<SkPath | null>(null);
   const activeColorRef = useRef<string>(currentColor);
-  const activeWidthRef = useRef<number>(strokeWidth);
 
-  // Keep refs current so draw callbacks always see the latest values
+  // Keep ref current so draw callbacks always see the latest value
   activeColorRef.current = currentColor;
-  activeWidthRef.current = strokeWidth;
 
   // Notify parent whenever stroke state changes
   const notifyParent = (
@@ -99,6 +101,7 @@ const HeadshotDrawingCanvas = React.forwardRef<
       }
       return result;
     },
+
     makeMaskSnapshot: async (): Promise<string | null> => {
       if (completedStrokes.length === 0) return null;
       setMaskMode(true);
@@ -108,6 +111,43 @@ const HeadshotDrawingCanvas = React.forwardRef<
       if (!image) return null;
       return image.encodeToBase64();
     },
+
+    makeCompositeSnapshot: async (bgBase64: string, width: number, height: number): Promise<string | null> => {
+      if (completedStrokes.length === 0) return null;
+      try {
+        // Decode background image
+        const data = Skia.Data.fromBase64(bgBase64);
+        const bgImage = Skia.Image.MakeImageFromEncoded(data);
+        if (!bgImage) return null;
+
+        // Create off-screen surface at canvas dimensions
+        const surface = Skia.Surface.Make(width, height);
+        if (!surface) return null;
+        const canvas = surface.getCanvas();
+
+        // Draw background image scaled to fill surface
+        const srcRect = Skia.XYWHRect(0, 0, bgImage.width(), bgImage.height());
+        const dstRect = Skia.XYWHRect(0, 0, width, height);
+        canvas.drawImageRect(bgImage, srcRect, dstRect, Skia.Paint());
+
+        // Draw all strokes on top at full opacity
+        for (const stroke of completedStrokes) {
+          const paint = Skia.Paint();
+          paint.setColor(Skia.Color(stroke.color));
+          paint.setStyle(PaintStyle.Stroke);
+          paint.setStrokeWidth(FIXED_STROKE_WIDTH);
+          paint.setStrokeCap(StrokeCap.Round);
+          paint.setStrokeJoin(StrokeJoin.Round);
+          canvas.drawPath(stroke.path, paint);
+        }
+
+        return surface.makeImageSnapshot().encodeToBase64();
+      } catch (e) {
+        console.warn('[HeadshotDrawingCanvas] makeCompositeSnapshot failed:', e);
+        return null;
+      }
+    },
+
     undo: () => {
       setCompletedStrokes((prev) => {
         if (prev.length === 0) return prev;
@@ -141,20 +181,19 @@ const HeadshotDrawingCanvas = React.forwardRef<
       const path = Skia.Path.Make();
       path.moveTo(cx, cy);
       activePathRef.current = path;
-      setCurrentStroke({ path, color: activeColorRef.current, strokeWidth: activeWidthRef.current });
+      setCurrentStroke({ path, color: activeColorRef.current });
     },
     handleDrawUpdate: (x: number, y: number) => {
       if (!activePathRef.current) return;
       const { x: cx, y: cy } = toCanvasCoord(x, y);
       activePathRef.current.lineTo(cx, cy);
-      setCurrentStroke({ path: activePathRef.current, color: activeColorRef.current, strokeWidth: activeWidthRef.current });
+      setCurrentStroke({ path: activePathRef.current, color: activeColorRef.current });
     },
     handleDrawEnd: () => {
       if (!activePathRef.current) return;
       const finished: Stroke = {
         path: activePathRef.current,
         color: activeColorRef.current,
-        strokeWidth: activeWidthRef.current,
       };
       setUndoneStrokes([]);
       setCompletedStrokes((prev) => [...prev, finished]);
@@ -175,7 +214,7 @@ const HeadshotDrawingCanvas = React.forwardRef<
             path={stroke.path}
             color={stroke.color}
             style="stroke"
-            strokeWidth={stroke.strokeWidth}
+            strokeWidth={FIXED_STROKE_WIDTH}
             strokeCap="round"
             strokeJoin="round"
           />
@@ -186,7 +225,7 @@ const HeadshotDrawingCanvas = React.forwardRef<
             path={currentStroke.path}
             color={currentStroke.color}
             style="stroke"
-            strokeWidth={currentStroke.strokeWidth}
+            strokeWidth={FIXED_STROKE_WIDTH}
             strokeCap="round"
             strokeJoin="round"
           />

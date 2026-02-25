@@ -3,7 +3,7 @@
  * Full-screen loading overlay with optional message
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Modal,
   View,
@@ -32,7 +32,7 @@ export default function LoadingOverlay({
   style,
 }: LoadingOverlayProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (!visible) return null;
 
   return (

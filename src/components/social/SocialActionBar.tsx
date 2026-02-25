@@ -3,7 +3,7 @@
  * Like, comment, repost, save, and find similar buttons
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { EngagementCounts } from '@/hooks/social';
@@ -37,7 +37,7 @@ export default function SocialActionBar({
   reposting = false,
 }: SocialActionBarProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.actionRow}>
       {/* Like */}

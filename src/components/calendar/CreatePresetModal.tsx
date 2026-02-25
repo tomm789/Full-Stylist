@@ -3,7 +3,7 @@
  * Modal for creating a new slot preset
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { Input, PrimaryButton } from '@/components/shared';
 import { theme } from '@/styles';
@@ -28,7 +28,7 @@ export function CreatePresetModal({
   onClose,
 }: CreatePresetModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Modal
       visible={visible}

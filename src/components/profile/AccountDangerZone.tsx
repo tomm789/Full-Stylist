@@ -3,7 +3,7 @@
  * Sign out, deactivate, and delete account actions
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, typography } from '@/styles';
@@ -18,7 +18,7 @@ interface AccountDangerZoneProps {
 
 export function AccountDangerZone({ onSignOut, onDeactivate, onDelete }: AccountDangerZoneProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Account</Text>

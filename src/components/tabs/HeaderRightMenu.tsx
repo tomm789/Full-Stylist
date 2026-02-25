@@ -3,7 +3,7 @@
  * Right header menu with notifications and menu icon
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -21,7 +21,7 @@ const { spacing, borderRadius, typography } = theme;
 
 export function HeaderRightMenu() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { unreadCount } = useNotifications();
 

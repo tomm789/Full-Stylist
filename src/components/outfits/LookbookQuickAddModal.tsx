@@ -3,7 +3,7 @@
  * Bottom sheet listing existing lookbooks + create-new option for quick tab pinning.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -43,7 +43,7 @@ export default function LookbookQuickAddModal({
   onCreateNew,
 }: LookbookQuickAddModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Add Lookbook Tab" maxHeight="60%">

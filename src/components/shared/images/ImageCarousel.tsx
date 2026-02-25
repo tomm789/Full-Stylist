@@ -3,7 +3,7 @@
  * Reusable horizontal scrolling image carousel with indicators
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -47,7 +47,7 @@ export default function ImageCarousel({
   style,
 }: ImageCarouselProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const width = containerWidth || Math.min(Dimensions.get('window').width, 630);
 

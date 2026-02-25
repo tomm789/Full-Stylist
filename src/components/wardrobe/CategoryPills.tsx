@@ -3,7 +3,7 @@
  * Horizontal scrolling category pills with inline expandable subcategories
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -66,7 +66,7 @@ export default function CategoryPills({
   style,
 }: CategoryPillsProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const flatListRef = useRef<FlatList>(null);
 
   const sortedCategories = React.useMemo(() => {

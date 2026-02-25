@@ -3,14 +3,14 @@
  * Future: slide-down search surface anchored to the header search pill.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 
 export default function SearchModalPlaceholder() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return <View style={styles.container} />;
 }

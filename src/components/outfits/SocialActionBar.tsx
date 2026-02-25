@@ -3,7 +3,7 @@
  * Action bar with like, comment, and save buttons
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
@@ -34,7 +34,7 @@ export default function SocialActionBar({
   onSave,
 }: SocialActionBarProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <View style={styles.actionRow}>

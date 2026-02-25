@@ -4,7 +4,7 @@
  * When compact, shows only thumbs in bottom-right corner (after feedback already given).
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -53,7 +53,7 @@ export function AIGenerationFeedback({
   compact = false,
 }: AIGenerationFeedbackProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [submitting, setSubmitting] = useState(false);
   const [showThumbsDownModal, setShowThumbsDownModal] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<FeedbackTag>>(new Set());

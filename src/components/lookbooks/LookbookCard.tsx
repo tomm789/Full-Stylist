@@ -3,7 +3,7 @@
  * Card for displaying a lookbook with thumbnail and play button
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { Lookbook } from '@/lib/lookbooks';
@@ -29,7 +29,7 @@ export default function LookbookCard({
   onPlayPress,
 }: LookbookCardProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       {loading ? (

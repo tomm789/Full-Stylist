@@ -5,7 +5,7 @@
  * Positioned above the CreatorBar when headshot creator mode is active.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
@@ -74,7 +74,7 @@ export default function HeadshotCreatorContainer({
   onRemoveSelection,
 }: HeadshotCreatorContainerProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const slideAnim = useRef(new Animated.Value(300)).current;
 
   useEffect(() => {

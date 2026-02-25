@@ -3,7 +3,7 @@
  * Displays category slots with selected items for outfit building
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -36,7 +36,7 @@ export default function CategorySlotSelector({
   onRemoveItem,
 }: CategorySlotSelectorProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Category Slots</Text>

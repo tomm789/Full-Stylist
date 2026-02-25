@@ -3,7 +3,7 @@
  * Modal showing outfit generation progress with item checking and analysis
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -56,7 +56,7 @@ export default function GenerationProgressModal({
   perfMode = false,
 }: GenerationProgressModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (perfMode) {
     return (
       <Modal

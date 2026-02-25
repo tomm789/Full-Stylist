@@ -3,7 +3,7 @@
  * Reusable select/dropdown component with expandable options
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -49,7 +49,7 @@ export default function Select({
 }: SelectProps) {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [expanded, setExpanded] = useState(false);
 
   const selectedOption = options.find((opt) => opt.value === value);

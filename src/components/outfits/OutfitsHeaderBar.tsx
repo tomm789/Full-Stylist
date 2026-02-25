@@ -3,7 +3,7 @@
  * View toggle + SearchBar for Outfits screen. Tabs are in the header via HeaderTabPill.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, typography, spacing } from '@/styles';
@@ -38,7 +38,7 @@ export default function OutfitsHeaderBar({
   showSearch,
 }: OutfitsHeaderBarProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.container}>

@@ -34,7 +34,7 @@ export default function CalendarContinuousGrid({
   viewportHeight,
 }: CalendarContinuousGridProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const days = useMemo(() => {
     const list: Date[] = [];
     const cursor = new Date(startDate);

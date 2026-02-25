@@ -3,7 +3,7 @@
  * Modal for selecting wardrobe items for outfit
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { WardrobeItem } from '@/lib/wardrobe';
@@ -32,7 +32,7 @@ export default function ItemPickerModal({
   title = 'Select Item',
 }: ItemPickerModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <BottomSheet visible={visible} onClose={onClose} title={title}>
       <FlatList

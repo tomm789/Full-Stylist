@@ -3,7 +3,7 @@
  * Section for displaying and submitting comments
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -29,7 +29,7 @@ export default function CommentSection({
   onSubmit,
 }: CommentSectionProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 

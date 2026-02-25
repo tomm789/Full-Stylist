@@ -1,266 +1,250 @@
 /**
- * HeadshotSelectorModal Component
- * Full-screen modal for selecting headshot with custom header
- * Shows grid of available headshots with active state styling
- * Supports multiple action buttons: Save, Save as Draft, Clear, Close
+ * HeadshotSelectorModal
+ * Full-screen modal for selecting a headshot, handling body shot sync,
+ * and optionally capturing a new mirror selfie.
+ * Views: grid → detail (checking/activated/needs_body_shot) → camera → generating
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import {
   Modal,
   View,
-  StyleSheet,
   TouchableOpacity,
-  FlatList,
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  Text,
 } from 'react-native';
-import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from 'react-native';
-import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
-import { PrimaryButton, DropdownMenuModal, DropdownMenuItem } from '@/components/shared';
+import { supabase } from '@/lib/supabase';
+import { GridView } from './headshot-selector/GridView';
+import { DetailView } from './headshot-selector/DetailView';
+import { CameraView } from './headshot-selector/CameraView';
+import { GeneratingView } from './headshot-selector/GeneratingView';
+import { createStyles, type Headshot } from './headshot-selector/styles';
 
-const { spacing, borderRadius, typography, shadows } = theme;
+// ── State machine ─────────────────────────────────────────────────────────────
 
-interface Headshot {
-  id: string;
-  url: string | null;
-}
+type ModalScreen =
+  | { screen: 'grid' }
+  | { screen: 'detail'; status: 'checking' | 'activated' | 'needs_body_shot' }
+  | { screen: 'camera'; preview: string | null }
+  | { screen: 'generating' };
+
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface HeadshotSelectorModalProps {
   visible: boolean;
+  userId: string;
   currentHeadshotId: string | null;
+  currentBodyShotId: string | null;
   headshots: Headshot[];
   onClose: () => void;
-  onSave: (headshotId: string) => Promise<void>;
-  onSaveAsDraft?: (headshotId: string) => Promise<void>;
-  onClearSelection?: () => Promise<void>;
+  onCheckHeadshot: (headshotId: string) => Promise<'activated' | 'needs_body_shot' | 'error'>;
+  onGenerateBodyShot: (headshotId: string, mirrorSelfieImageId: string) => void;
+  onSkipBodyShot: (headshotId: string, onActivated: () => void, onGenerating: () => void) => void;
+  onNewHeadshot?: () => void;
   loading?: boolean;
 }
 
-const createStyles = (colors: ThemeColors) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      height: 56,
-      paddingHorizontal: spacing.lg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      backgroundColor: colors.background,
-    },
-    headerLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-      flex: 1,
-    },
-    backButton: {
-      padding: spacing.xs,
-    },
-    headerTitle: {
-      fontSize: typography.fontSize.lg,
-      fontWeight: typography.fontWeight.semibold,
-      color: colors.textPrimary,
-    },
-    headerRight: {
-      justifyContent: 'center',
-      alignItems: 'flex-end',
-    },
-    menuButton: {
-      padding: spacing.xs,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    gridContent: {
-      padding: spacing.lg,
-      paddingBottom: spacing.xl,
-    },
-    columnWrapper: {
-      gap: spacing.md,
-      marginBottom: spacing.md,
-    },
-    gridItem: {
-      flex: 1,
-      aspectRatio: 1,
-      borderRadius: borderRadius.md,
-      overflow: 'hidden',
-      backgroundColor: colors.backgroundSecondary,
-      ...shadows.sm,
-    },
-    gridImage: {
-      width: '100%',
-      height: '100%',
-    },
-    gridImagePlaceholder: {
-      width: '100%',
-      height: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.backgroundTertiary,
-    },
-    checkmarkBadge: {
-      position: 'absolute',
-      top: spacing.sm,
-      right: spacing.sm,
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: colors.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      ...shadows.md,
-    },
-    loadingOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.3)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-  });
+// ── Upload helper ─────────────────────────────────────────────────────────────
+
+async function uploadMirrorSelfie(
+  userId: string,
+  uri: string
+): Promise<{ imageId: string | null; error: string | null }> {
+  try {
+    const timestamp = Date.now();
+    const filePath = `body_shots/${userId}/${timestamp}.jpg`;
+
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('media')
+      .upload(filePath, blob, { contentType: 'image/jpeg', upsert: false });
+
+    if (uploadError || !uploadData) {
+      return { imageId: null, error: uploadError?.message || 'Upload failed' };
+    }
+
+    const { data: publicUrlData } = supabase.storage.from('media').getPublicUrl(filePath);
+
+    const { data: imageRow, error: imageError } = await supabase
+      .from('images')
+      .insert({
+        owner_user_id: userId,
+        storage_path: filePath,
+        url: publicUrlData.publicUrl,
+        type: 'body_shot',
+      })
+      .select('id')
+      .single();
+
+    if (imageError || !imageRow) {
+      return { imageId: null, error: imageError?.message || 'Failed to record image' };
+    }
+
+    return { imageId: imageRow.id, error: null };
+  } catch (e: any) {
+    return { imageId: null, error: e?.message || 'Unknown upload error' };
+  }
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function HeadshotSelectorModal({
   visible,
+  userId,
   currentHeadshotId,
+  currentBodyShotId,
   headshots,
   onClose,
-  onSave,
-  onSaveAsDraft,
-  onClearSelection,
+  onCheckHeadshot,
+  onGenerateBodyShot,
+  onSkipBodyShot,
+  onNewHeadshot,
   loading = false,
 }: HeadshotSelectorModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
-  const [selectedHeadshotId, setSelectedHeadshotId] = useState<string | null>(
-    currentHeadshotId
-  );
-  const [isSaving, setIsSaving] = useState(false);
-  const [showActionMenu, setShowActionMenu] = useState(false);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
-  // Update selectedHeadshotId when modal opens
-  React.useEffect(() => {
-    if (visible) {
-      setSelectedHeadshotId(currentHeadshotId);
+  const [modalScreen, setModalScreen] = useState<ModalScreen>({ screen: 'grid' });
+  const [selectedHeadshot, setSelectedHeadshot] = useState<Headshot | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const autoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Reset on close
+  useEffect(() => {
+    if (!visible) {
+      if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
+      setModalScreen({ screen: 'grid' });
+      setSelectedHeadshot(null);
+      setIsUploading(false);
     }
-  }, [visible, currentHeadshotId]);
+  }, [visible]);
 
-  const handleSave = useCallback(async () => {
-    if (!selectedHeadshotId || selectedHeadshotId === currentHeadshotId) {
-      onClose();
-      return;
+  // Auto-close 1200ms after activation
+  useEffect(() => {
+    if (modalScreen.screen === 'detail' && modalScreen.status === 'activated') {
+      autoCloseTimer.current = setTimeout(onClose, 1200);
     }
+    return () => {
+      if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
+    };
+  }, [modalScreen, onClose]);
 
-    setIsSaving(true);
-    try {
-      await onSave(selectedHeadshotId);
-      setIsSaving(false);
-      onClose();
-    } catch (error) {
-      console.error('Failed to save headshot:', error);
-      setIsSaving(false);
-    }
-  }, [selectedHeadshotId, currentHeadshotId, onSave, onClose]);
+  // ── Handlers ───────────────────────────────────────────────────────────────
 
-  const handleSaveAsDraft = useCallback(async () => {
-    if (!selectedHeadshotId || !onSaveAsDraft) {
-      return;
-    }
+  const handleGridTap = useCallback(
+    async (headshot: Headshot) => {
+      setSelectedHeadshot(headshot);
+      setModalScreen({ screen: 'detail', status: 'checking' });
 
-    setShowActionMenu(false);
-    setIsSaving(true);
-    try {
-      await onSaveAsDraft(selectedHeadshotId);
-      setIsSaving(false);
-    } catch (error) {
-      console.error('Failed to save headshot as draft:', error);
-      setIsSaving(false);
-    }
-  }, [selectedHeadshotId, onSaveAsDraft]);
-
-  const handleClearSelection = useCallback(async () => {
-    if (!onClearSelection) {
-      return;
-    }
-
-    setShowActionMenu(false);
-    setIsSaving(true);
-    try {
-      await onClearSelection();
-      setSelectedHeadshotId(null);
-      setIsSaving(false);
-    } catch (error) {
-      console.error('Failed to clear selection:', error);
-      setIsSaving(false);
-    }
-  }, [onClearSelection]);
-
-  const handleClose = useCallback(() => {
-    setShowActionMenu(false);
-    onClose();
-  }, [onClose]);
-
-  const hasSelection = selectedHeadshotId && selectedHeadshotId !== currentHeadshotId;
-  const canSaveAsDraft = selectedHeadshotId !== null;
-  const hasMultipleActions = Boolean(onSaveAsDraft) || Boolean(onClearSelection);
-
-  const renderGridItem = useCallback(
-    ({ item }: { item: Headshot }) => {
-      const isActive = selectedHeadshotId === item.id;
-
-      return (
-        <TouchableOpacity
-          style={styles.gridItem}
-          onPress={() => setSelectedHeadshotId(item.id)}
-          activeOpacity={0.85}
-        >
-          {item.url ? (
-            <Image
-              source={{ uri: item.url }}
-              style={styles.gridImage}
-              contentFit="cover"
-            />
-          ) : (
-            <View style={styles.gridImagePlaceholder}>
-              <Ionicons
-                name="image-outline"
-                size={32}
-                color={colors.textTertiary}
-              />
-            </View>
-          )}
-
-          {isActive && (
-            <View style={styles.checkmarkBadge}>
-              <Ionicons name="checkmark" size={16} color={colors.white} />
-            </View>
-          )}
-        </TouchableOpacity>
-      );
+      const result = await onCheckHeadshot(headshot.id);
+      if (result === 'activated') {
+        setModalScreen({ screen: 'detail', status: 'activated' });
+      } else if (result === 'needs_body_shot') {
+        setModalScreen({ screen: 'detail', status: 'needs_body_shot' });
+      } else {
+        setModalScreen({ screen: 'grid' });
+      }
     },
-    [selectedHeadshotId, colors, styles]
+    [onCheckHeadshot]
   );
 
-  const keyExtractor = useCallback((item: Headshot) => item.id, []);
+  const handleYes = useCallback(async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Camera Permission',
+        'Camera access is required to take a mirror selfie. Please enable it in Settings.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    setModalScreen({ screen: 'camera', preview: null });
+  }, []);
+
+  const handleCameraCapture = useCallback(async () => {
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.85,
+      cameraType: ImagePicker.CameraType.back,
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setModalScreen({ screen: 'camera', preview: result.assets[0].uri });
+    }
+  }, []);
+
+  const handleCameraAccept = useCallback(async () => {
+    if (modalScreen.screen !== 'camera' || !modalScreen.preview || !selectedHeadshot) return;
+    const preview = modalScreen.preview;
+
+    setIsUploading(true);
+    const { imageId, error } = await uploadMirrorSelfie(userId, preview);
+    setIsUploading(false);
+
+    if (!imageId || error) {
+      Alert.alert('Upload Failed', error || 'Failed to upload your selfie. Please try again.');
+      return;
+    }
+
+    onGenerateBodyShot(selectedHeadshot.id, imageId);
+    setModalScreen({ screen: 'generating' });
+  }, [modalScreen, selectedHeadshot, userId, onGenerateBodyShot]);
+
+  const handleCameraUndo = useCallback(() => {
+    setModalScreen({ screen: 'camera', preview: null });
+  }, []);
+
+  const handleSkip = useCallback(() => {
+    if (!selectedHeadshot) return;
+    onSkipBodyShot(
+      selectedHeadshot.id,
+      () => setModalScreen({ screen: 'detail', status: 'activated' }),
+      () => setModalScreen({ screen: 'generating' })
+    );
+  }, [selectedHeadshot, onSkipBodyShot]);
+
+  const handleBack = useCallback(() => {
+    switch (modalScreen.screen) {
+      case 'grid':
+        onClose();
+        break;
+      case 'detail':
+        setModalScreen({ screen: 'grid' });
+        break;
+      case 'camera':
+        setModalScreen({ screen: 'detail', status: 'needs_body_shot' });
+        break;
+      case 'generating':
+        onClose();
+        break;
+    }
+  }, [modalScreen, onClose]);
+
+  const getHeaderTitle = () => {
+    switch (modalScreen.screen) {
+      case 'grid': return 'Headshots';
+      case 'detail': return 'Headshot';
+      case 'camera': return 'Mirror Selfie';
+      case 'generating': return 'Generating';
+    }
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <Modal
       visible={visible}
       transparent={false}
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={handleBack}
     >
       <SafeAreaView style={styles.container}>
         {/* Header */}
@@ -268,106 +252,74 @@ export default function HeadshotSelectorModal({
           <View style={styles.headerLeft}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={onClose}
+              onPress={handleBack}
               hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
             >
               <Ionicons
-                name="chevron-back"
+                name={modalScreen.screen === 'grid' ? 'close' : 'chevron-back'}
                 size={24}
                 color={colors.primary}
               />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Select Headshot</Text>
+            <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
           </View>
 
           <View style={styles.headerRight}>
-            {hasMultipleActions && (canSaveAsDraft || hasSelection) ? (
-              // Show dropdown menu for multiple actions
-              <>
-                <TouchableOpacity
-                  style={styles.menuButton}
-                  onPress={() => setShowActionMenu(true)}
-                  disabled={isSaving || loading}
-                  hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-                >
-                  <Ionicons
-                    name="ellipsis-vertical"
-                    size={20}
-                    color={colors.primary}
-                  />
-                </TouchableOpacity>
-
-                <DropdownMenuModal
-                  visible={showActionMenu}
-                  onClose={() => setShowActionMenu(false)}
-                  topOffset={60}
-                  align="right"
-                >
-                  {hasSelection && (
-                    <>
-                      <DropdownMenuItem
-                        label="Save"
-                        icon="checkmark-done-outline"
-                        onPress={handleSave}
-                        disabled={isSaving || loading}
-                      />
-                      <View style={{ height: 1, backgroundColor: colors.borderLight, marginVertical: spacing.xs }} />
-                    </>
-                  )}
-
-                  {onSaveAsDraft && canSaveAsDraft && (
-                    <DropdownMenuItem
-                      label="Save as Draft"
-                      icon="bookmark-outline"
-                      onPress={handleSaveAsDraft}
-                      disabled={isSaving || loading}
-                    />
-                  )}
-
-                  {onClearSelection && (
-                    <DropdownMenuItem
-                      label="Clear Selection"
-                      icon="close-circle-outline"
-                      onPress={handleClearSelection}
-                      disabled={isSaving || loading}
-                      danger
-                    />
-                  )}
-
-                  <View style={{ height: 1, backgroundColor: colors.borderLight, marginVertical: spacing.xs }} />
-
-                  <DropdownMenuItem
-                    label="Close"
-                    icon="chevron-back-outline"
-                    onPress={handleClose}
-                  />
-                </DropdownMenuModal>
-              </>
-            ) : hasSelection ? (
-              // Show simple Save button if no multiple actions
-              <PrimaryButton
-                title="Save"
-                onPress={handleSave}
-                disabled={isSaving || loading}
-                size="small"
-                loading={isSaving}
-              />
-            ) : null}
+            {modalScreen.screen === 'grid' && onNewHeadshot && (
+              <TouchableOpacity
+                style={styles.newHeadshotButton}
+                onPress={onNewHeadshot}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              >
+                <Ionicons name="add" size={24} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+            {modalScreen.screen === 'detail' && modalScreen.status === 'activated' && (
+              <TouchableOpacity
+                style={styles.selectButton}
+                onPress={onClose}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.selectButtonText}>Select Headshot</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
-        {/* Grid */}
-        <FlatList
-          data={headshots}
-          renderItem={renderGridItem}
-          keyExtractor={keyExtractor}
-          numColumns={3}
-          columnWrapperStyle={styles.columnWrapper}
-          contentContainerStyle={styles.gridContent}
-          scrollEnabled={true}
-        />
+        {/* Sub-views */}
+        {modalScreen.screen === 'grid' && (
+          <GridView
+            headshots={headshots}
+            currentHeadshotId={currentHeadshotId}
+            loading={loading}
+            onSelect={handleGridTap}
+          />
+        )}
 
-        {(isSaving || loading) && (
+        {modalScreen.screen === 'detail' && selectedHeadshot && (
+          <DetailView
+            headshot={selectedHeadshot}
+            status={modalScreen.status}
+            onYes={handleYes}
+            onSkip={handleSkip}
+          />
+        )}
+
+        {modalScreen.screen === 'camera' && (
+          <CameraView
+            cameraUri={modalScreen.preview}
+            isUploading={isUploading}
+            onCapture={handleCameraCapture}
+            onAccept={handleCameraAccept}
+            onUndo={handleCameraUndo}
+          />
+        )}
+
+        {modalScreen.screen === 'generating' && <GeneratingView onContinue={onClose} />}
+
+        {/* Loading overlay (grid initial load) */}
+        {loading && modalScreen.screen === 'grid' && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>

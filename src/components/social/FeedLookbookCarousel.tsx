@@ -3,7 +3,7 @@
  * Carousel for lookbooks in feed
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -38,7 +38,7 @@ export default function FeedLookbookCarousel({
   loading = false,
 }: FeedLookbookCarouselProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
 

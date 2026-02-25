@@ -3,7 +3,7 @@
  * Allows selection of items for each category slot
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -39,7 +39,7 @@ export default function CategorySelector({
   style,
 }: CategorySelectorProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={[styles.container, style]}>

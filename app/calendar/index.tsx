@@ -39,7 +39,6 @@ import {
 } from '@/lib/calendar/dateUtils';
 import { CALENDAR_CONFIG } from '@/lib/calendar/config';
 import { MonthNavigator } from '@/components/calendar';
-import CalendarDaySheet from '@/components/calendar/CalendarDaySheet';
 import CalendarWeekHeader from '@/components/calendar/CalendarWeekHeader';
 import CalendarContinuousGrid from '@/components/calendar/CalendarContinuousGrid';
 import { HeaderActionIcons, LoadingSpinner } from '@/components/shared';
@@ -54,7 +53,7 @@ const { spacing, typography } = theme;
 export default function CalendarScreen() {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -64,8 +63,6 @@ export default function CalendarScreen() {
 
   const [activeMonthDate, setActiveMonthDate] = useState<Date>(() => new Date());
   const [rangeCenterDate, setRangeCenterDate] = useState<Date>(() => new Date());
-  const [activeDayKey, setActiveDayKey] = useState<string | null>(null);
-  const [showDaySheet, setShowDaySheet] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [months, setMonths] = useState<Date[]>(() => {
     const today = new Date();
@@ -308,8 +305,7 @@ export default function CalendarScreen() {
 
   const handleDayPress = (date: Date) => {
     const dateKey = date.toISOString().split('T')[0];
-    setActiveDayKey(dateKey);
-    setShowDaySheet(true);
+    router.push(`/calendar/day/${dateKey}` as any);
   };
 
   if (error) {
@@ -438,14 +434,6 @@ export default function CalendarScreen() {
           viewportHeight={viewportHeight}
         />
       </Animated.ScrollView>
-
-      <CalendarDaySheet
-        visible={showDaySheet}
-        dateKey={activeDayKey}
-        userId={user?.id}
-        onClose={() => setShowDaySheet(false)}
-        onChangeDate={(nextKey) => setActiveDayKey(nextKey)}
-      />
     </LinearGradient>
   );
 }

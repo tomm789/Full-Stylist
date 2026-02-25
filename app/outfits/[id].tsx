@@ -3,7 +3,7 @@
  * Create and edit outfits with AI generation
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -39,7 +39,7 @@ const { spacing } = theme;
 
 export default function OutfitEditorScreen() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const commonStyles = createCommonStyles(colors);
   const { id, items: itemsParam } = useLocalSearchParams<{
     id: string;

@@ -3,7 +3,7 @@
  * Reusable text input with consistent styling
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   TextInput,
   View,
@@ -40,7 +40,7 @@ export default function Input({
 }: InputProps) {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [isFocused, setIsFocused] = useState(false);
 
   const handleFocus = (e: any) => {

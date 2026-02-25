@@ -47,7 +47,7 @@ export default function CalendarDaySheet({
   onChangeDate,
 }: CalendarDaySheetProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const sheetHeight = useRef(new Animated.Value(SCREEN_HEIGHT * 0.82)).current;

@@ -3,7 +3,7 @@
  * Reusable bottom sheet modal
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Modal,
   View,
@@ -47,7 +47,7 @@ export default function BottomSheet({
 }: BottomSheetProps) {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Modal
       visible={visible}

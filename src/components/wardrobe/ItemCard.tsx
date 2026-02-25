@@ -4,7 +4,7 @@
  * Memoized for performance
  */
 
-import React, { memo } from 'react';
+import React, { useMemo, memo } from 'react';
 import {
   View,
   Text,
@@ -46,7 +46,7 @@ function ItemCard({
   showFavorite = true,
 }: ItemCardProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleFavoritePress = (e: any) => {
     e.stopPropagation();

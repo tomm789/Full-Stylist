@@ -6,7 +6,7 @@
  * AFTER: ~200 lines (70% reduction)
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -40,7 +40,7 @@ const { spacing, typography } = theme;
 export default function LookbooksScreen() {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
 

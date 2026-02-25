@@ -281,7 +281,7 @@ export default function OutfitCreatorCanvas({
   onSendBackward,
 }: OutfitCreatorCanvasProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const sizeRef = useRef({ width: 1, height: 1 });
   const dragStartLayoutRef = useRef<Record<string, OutfitCanvasItemLayout>>({});
   const resizeStartLayoutRef = useRef<Record<string, OutfitCanvasItemLayout>>({});

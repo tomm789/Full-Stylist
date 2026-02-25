@@ -218,7 +218,7 @@ const GENERATION_SETTINGS: Array<{
 
 export default function AISettingsScreen() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { settings, loading, saving, updateModel, updateLock, updateMany, lockedKeys } = useAISettings();
 

@@ -3,7 +3,7 @@
  * View and comment on feedback thread
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -24,7 +24,7 @@ import type { ThemeColors } from '@/styles/themes';
 
 export default function FeedbackThreadDetailScreen() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const commonStyles = createCommonStyles(colors);
   const { user } = useAuth();
   const router = useRouter();

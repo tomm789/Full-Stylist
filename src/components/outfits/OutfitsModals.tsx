@@ -3,7 +3,7 @@
  * Composes all modals used in Outfits screen.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, Modal, Text, View, StyleSheet } from 'react-native';
 import { SortModal } from '@/components/outfits';
 import type { SortOption, SortOrder } from '@/hooks/outfits';
@@ -162,7 +162,7 @@ export default function OutfitsModals({
   onAddToExistingLookbook,
 }: OutfitsModalsProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <>
       <SortModal

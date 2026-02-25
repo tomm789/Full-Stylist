@@ -3,7 +3,7 @@
  * Add menu button and modal for tabs header
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,7 +21,7 @@ interface HeaderAddMenuProps {
 
 export function HeaderAddMenu({ title }: HeaderAddMenuProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { openDateSelector } = useCalendarEntryFlow();
 

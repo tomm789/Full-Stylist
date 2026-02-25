@@ -3,7 +3,7 @@
  * Modal for creating a new lookbook or adding outfits to an existing one.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -65,7 +65,7 @@ export default function LookbookPickerModal({
   onAddToExisting,
 }: LookbookPickerModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const disableCreate =
     lookbookSaving || selectedOutfitCount === 0 || !lookbookTitle.trim();
   const disableAddExisting =

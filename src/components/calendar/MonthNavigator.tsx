@@ -3,7 +3,7 @@
  * Month navigation header with prev/next buttons
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -34,7 +34,7 @@ const monthNames = [
 
 export default function MonthNavigator({ currentDate, onNavigate, onToday }: MonthNavigatorProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const month = currentDate.getMonth();
   const year = currentDate.getFullYear();
 

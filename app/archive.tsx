@@ -39,7 +39,7 @@ type ArchiveTab = 'outfits' | 'lookbooks' | 'wardrobe';
 export default function ArchiveScreen() {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ArchiveTab>('outfits');

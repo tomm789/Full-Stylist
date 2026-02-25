@@ -3,7 +3,7 @@
  * Full-screen slideshow modal with controls
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -46,7 +46,7 @@ export default function SlideshowModal({
   onToggleAutoPlay,
 }: SlideshowModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (!visible || outfits.length === 0) return null;
 
   const currentOutfit = outfits[currentIndex];

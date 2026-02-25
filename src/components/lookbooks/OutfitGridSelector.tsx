@@ -3,7 +3,7 @@
  * Grid of selectable outfit cards
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
@@ -32,6 +32,8 @@ const OutfitCard = React.memo(
     isSelected: boolean;
     onToggle: (id: string) => void;
   }) => {
+    const colors = useThemeColors();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     return (
       <TouchableOpacity
         style={[postGridStyles.gridItem, styles.card]}
@@ -65,8 +67,6 @@ export default function OutfitGridSelector({
   imageUrls,
   onToggle,
 }: OutfitGridSelectorProps) {
-  const colors = useThemeColors();
-  const styles = createStyles(colors);
   return (
     <PostGrid
       data={outfits}

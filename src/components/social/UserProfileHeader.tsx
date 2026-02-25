@@ -3,7 +3,7 @@
  * View another user's profile with outfits and lookbooks
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -59,7 +59,7 @@ type TabType = 'outfits' | 'lookbooks';
 
 export default function UserProfileScreen() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const commonStyles = createCommonStyles(colors);
   const { user } = useAuth();
   const router = useRouter();

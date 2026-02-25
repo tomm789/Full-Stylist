@@ -3,7 +3,7 @@
  * Compact action pill for header right side.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
@@ -29,7 +29,7 @@ export default function HeaderActionPill({
   unreadCount = 0,
 }: HeaderActionPillProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.container}>

@@ -8,7 +8,7 @@
  * Models the same expand/collapse UX as OutfitCreatorPanel.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   LayoutAnimation,
@@ -180,7 +180,7 @@ export default function LookbookCreatorPanel({
   const cellWidth = Math.floor((panelWidth - spacing.md * 2 - spacing.sm * 2) / 3);
   const cellHeight = Math.floor(cellWidth * (4 / 3));
 
-  const styles = createStyles(colors, cellWidth);
+  const styles = useMemo(() => createStyles(colors, cellWidth), [colors, cellWidth]);
 
   // Expanded height: show ~2 rows of cells comfortably, capped at 60% of screen
   const expandedHeight = Math.min(

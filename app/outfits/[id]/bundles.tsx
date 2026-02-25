@@ -40,7 +40,7 @@ type SaleMode = 'items_only' | 'bundle_only' | 'both';
 export default function CreateBundleScreen() {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();

@@ -3,7 +3,7 @@
  * Generate full-body studio model photo from photo + headshot
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,7 +29,7 @@ const { spacing, borderRadius, typography } = theme;
 
 export default function NewBodyshotScreen() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const {
     headshots,

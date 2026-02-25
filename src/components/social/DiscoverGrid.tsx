@@ -4,7 +4,7 @@
  * Shows public posts from all users (same grid layout as ProfileTabs)
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -72,7 +72,7 @@ export function DiscoverGrid({
   showOwnerOverlay = true,
 }: DiscoverGridProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
 
   const handlePostPress = (item: FeedItem) => {

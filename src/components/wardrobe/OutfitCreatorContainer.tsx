@@ -3,7 +3,7 @@
  * Displays selected items and category shortcuts for quick filtering during outfit creation
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -133,7 +133,7 @@ export default function OutfitCreatorContainer({
   selectedCategoryIds,
 }: OutfitCreatorContainerProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const slideAnim = useRef(new Animated.Value(300)).current;
 
   useEffect(() => {

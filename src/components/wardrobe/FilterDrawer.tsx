@@ -3,7 +3,7 @@
  * Bottom sheet with all filter options for wardrobe
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
 import { BottomSheet, PrimaryButton, FilterPillGroup, FilterAccordionSection } from '@/components/shared';
 import { theme } from '@/styles';
@@ -48,7 +48,7 @@ export default function FilterDrawer({
   availableTags = [],
 }: FilterDrawerProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 

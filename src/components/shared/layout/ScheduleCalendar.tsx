@@ -3,7 +3,7 @@
  * Calendar view for scheduling outfits
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -28,7 +28,7 @@ export default function ScheduleCalendar({
   scheduledDates = [],
 }: ScheduleCalendarProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();

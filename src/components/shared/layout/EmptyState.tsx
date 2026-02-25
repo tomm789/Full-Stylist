@@ -3,7 +3,7 @@
  * Reusable empty state with icon, message, and optional action
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PrimaryButton from '../buttons/PrimaryButton';
@@ -35,7 +35,7 @@ export default function EmptyState({
 }: EmptyStateProps) {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={[commonStyles.emptyContainer, style]}>

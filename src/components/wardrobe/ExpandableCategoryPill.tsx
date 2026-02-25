@@ -3,7 +3,7 @@
  * A category pill that expands inline to reveal subcategory pills when selected.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -40,7 +40,7 @@ export default function ExpandableCategoryPill({
   onSelectSubcategory,
 }: ExpandableCategoryPillProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleCategoryPress = () => {
     if (selected) {

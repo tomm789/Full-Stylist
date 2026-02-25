@@ -3,7 +3,7 @@
  * Select entry status (planned/worn/skipped)
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -23,7 +23,7 @@ export default function StatusSelector({
   disabled = false,
 }: StatusSelectorProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const statuses: Array<'planned' | 'worn' | 'skipped'> = ['planned', 'worn', 'skipped'];
 
   return (

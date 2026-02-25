@@ -25,7 +25,7 @@ export default function OutfitScheduleSection({
   userId,
 }: OutfitScheduleSectionProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [scheduledDates, setScheduledDates] = useState<Date[]>([]);
   const [scheduledEntries, setScheduledEntries] = useState<Record<string, CalendarEntry>>({});

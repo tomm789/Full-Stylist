@@ -3,7 +3,7 @@
  * Display outfit in feed with optional try-on badge
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { theme } from '@/styles';
@@ -28,7 +28,7 @@ export default function FeedOutfitCard({
   loading = false,
 }: FeedOutfitCardProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       {loading || !imageUrl ? (

@@ -4,7 +4,7 @@
  * Requires typing "DELETE" to confirm
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -31,7 +31,7 @@ export function DeleteAccountModal({
   onConfirm,
 }: DeleteAccountModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [confirmText, setConfirmText] = useState('');
   const [loading, setLoading] = useState(false);
 

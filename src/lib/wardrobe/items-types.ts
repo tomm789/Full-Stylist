@@ -3,6 +3,11 @@
  * Type definitions for wardrobe items
  */
 
+export interface Headshot {
+  id: string;
+  url: string | null;
+}
+
 export interface WardrobeItem {
   id: string;
   wardrobe_id: string;

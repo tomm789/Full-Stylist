@@ -106,6 +106,13 @@ export default function RootLayout() {
                 <Stack.Screen name="marketplace" />
                 <Stack.Screen name="notifications" />
                 <Stack.Screen name="search" />
+                <Stack.Screen
+                  name="calendar/day/[date]"
+                  options={{
+                    presentation: 'modal',
+                    animation: 'slide_from_bottom',
+                  }}
+                />
                 <Stack.Screen name="users/[id]" />
                 <Stack.Screen name="account-settings" />
                 <Stack.Screen name="feedback/index" />

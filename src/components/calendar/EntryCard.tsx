@@ -3,7 +3,7 @@
  * Calendar entry card with reorder buttons and quick actions
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { CalendarEntry, CalendarSlotPreset } from '@/lib/calendar';
@@ -43,7 +43,7 @@ export default function EntryCard({
   onStatusChange,
 }: EntryCardProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const getPresetName = (): string => {
     if (entry.slot_preset_id) {
       const preset = slotPresets.find((p) => p.id === entry.slot_preset_id);

@@ -5,7 +5,7 @@
  * Used by both outfit creator (wardrobe) and headshot creator (hair & makeup).
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { View, TouchableOpacity, StyleSheet, Text, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, shadows } from '@/styles';
@@ -19,6 +19,7 @@ interface CreatorBarProps {
   onGenerate: () => void;
   onOptions?: () => void;
   isGenerating?: boolean;
+  disabled?: boolean;
   showOptionsButton?: boolean;
   icon?: string;
 }
@@ -28,12 +29,14 @@ export default function CreatorBar({
   onGenerate,
   onOptions,
   isGenerating = false,
+  disabled = false,
   showOptionsButton = true,
   icon = 'sparkles',
 }: CreatorBarProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const isDisabled = isGenerating || disabled;
 
   useEffect(() => {
     Animated.timing(opacityAnim, {
@@ -44,12 +47,12 @@ export default function CreatorBar({
   }, [opacityAnim]);
 
   return (
-    <Animated.View style={[styles.container, { opacity: opacityAnim }]}>
+    <Animated.View style={[styles.container, { opacity: opacityAnim }, isDisabled && styles.containerDisabled]}>
       <View style={styles.inner}>
         <TouchableOpacity
           style={styles.generateButton}
           onPress={onGenerate}
-          disabled={isGenerating}
+          disabled={isDisabled}
           activeOpacity={0.7}
         >
           <Ionicons
@@ -67,7 +70,7 @@ export default function CreatorBar({
           <TouchableOpacity
             style={styles.optionsButton}
             onPress={onOptions}
-            disabled={isGenerating}
+            disabled={isDisabled}
             activeOpacity={0.7}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           >
@@ -93,6 +96,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.primary,
     ...shadows.lg,
+  },
+  containerDisabled: {
+    opacity: 0.5,
   },
   inner: {
     flexDirection: 'row',

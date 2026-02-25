@@ -3,7 +3,7 @@
  * View and manage calendar entries for a specific day
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -34,7 +34,7 @@ const { spacing, borderRadius } = theme;
 export default function CalendarDayScreen() {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { date } = useLocalSearchParams<{
     date: string | string[];
   }>();
@@ -76,7 +76,15 @@ export default function CalendarDayScreen() {
     newDate.setDate(currentDate.getDate() + offset);
 
     const newDateKey = newDate.toISOString().split('T')[0];
-    router.replace(`/calendar/day/${newDateKey}`);
+    router.replace(`/calendar/day/${newDateKey}` as any);
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack?.()) {
+      router.back();
+    } else {
+      router.replace('/calendar' as any);
+    }
   };
 
   if (!dateKey) {
@@ -100,7 +108,7 @@ export default function CalendarDayScreen() {
       {/* Header */}
       <CalendarDayHeader
         date={dateKey}
-        onBack={() => router.back()}
+        onBack={handleBack}
         onNavigateDay={navigateToAdjacentDay}
       />
 
@@ -184,9 +192,12 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   addButton: {
     backgroundColor: colors.black,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
+    borderRadius: borderRadius.round,
+    minHeight: spacing.huge + spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + spacing.xs / 2,
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.xl + spacing.lg,
   },
   addButtonText: {

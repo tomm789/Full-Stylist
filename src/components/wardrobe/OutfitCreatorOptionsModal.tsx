@@ -3,7 +3,7 @@
  * Modal for additional outfit creator options (save as draft, clear selection, etc.)
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Modal, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from 'react-native';
@@ -37,7 +37,7 @@ export default function OutfitCreatorOptionsModal({
   onClearSelection,
 }: OutfitCreatorOptionsModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const options: MenuOption[] = [];
 
@@ -55,7 +55,7 @@ export default function OutfitCreatorOptionsModal({
 
   if (onSaveAsDraft) {
     options.push({
-      id: 'save-draft',
+      id: 'save_draft',
       label: 'Save as Draft',
       icon: 'bookmark-outline',
       onPress: () => {

@@ -3,7 +3,7 @@
  * Grid of outfits for selection
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
@@ -27,7 +27,7 @@ export default function OutfitGridPicker({
   onSelectOutfit,
 }: OutfitGridPickerProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (outfits.length === 0) {
     return (
       <View style={styles.container}>

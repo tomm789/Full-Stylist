@@ -3,7 +3,7 @@
  * Mirror selfie capture step in onboarding
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -40,7 +40,7 @@ export function OnboardingBodyShotStep({
   onAccept,
 }: OnboardingBodyShotStepProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView

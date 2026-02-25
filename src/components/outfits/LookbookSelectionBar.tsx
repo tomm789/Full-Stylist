@@ -6,7 +6,7 @@
  * Mirrors the OutfitCreatorPanel + CreatorBar pattern used in the wardrobe screen.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { typography, spacing } from '@/styles';
 import { LookbookCreatorPanel } from '@/components/lookbooks';
@@ -41,7 +41,7 @@ export default function LookbookSelectionBar({
   hintMessage,
 }: LookbookSelectionBarProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Local ordered list — preserves user-defined drag order while tracking
   // external selection changes (additions/removals from the outfit grid).

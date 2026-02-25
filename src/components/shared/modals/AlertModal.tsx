@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Modal, Pressable, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -27,7 +27,7 @@ export function AlertModal({
   onClose,
 }: AlertModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const handleDismiss = onClose ?? onPrimary;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleDismiss}>

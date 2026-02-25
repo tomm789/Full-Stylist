@@ -3,7 +3,7 @@
  * Card for displaying an outfit in grid view
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -43,7 +43,7 @@ const OutfitCard = React.memo(
     style,
   }: OutfitCardProps) => {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
     return (
       <TouchableOpacity
         style={[postGridStyles.gridItem, style]}

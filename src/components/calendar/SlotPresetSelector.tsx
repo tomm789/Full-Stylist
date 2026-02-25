@@ -3,7 +3,7 @@
  * Select slot preset with option to create new ones
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CalendarSlotPreset } from '@/lib/calendar';
 import { theme } from '@/styles';
@@ -26,7 +26,7 @@ export default function SlotPresetSelector({
   onCreatePreset,
 }: SlotPresetSelectorProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Slot Preset</Text>

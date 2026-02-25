@@ -3,7 +3,7 @@
  * Discover public outfits from all users
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -35,7 +35,7 @@ interface PublicOutfit {
 export default function ExploreScreen() {
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
   const [outfits, setOutfits] = useState<PublicOutfit[]>([]);

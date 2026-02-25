@@ -3,7 +3,7 @@
  * Bar showing selected outfits for lookbook creation
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,7 +31,7 @@ export default function LookbookCreatorBar({
   onExit,
 }: LookbookCreatorBarProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <View style={styles.bar}>

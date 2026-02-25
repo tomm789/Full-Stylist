@@ -3,7 +3,7 @@
  * Renders a single feed item with outfit/lookbook and social actions
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,7 +33,7 @@ export default function FeedCard({
   caption,
 }: FeedCardProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const post = item.type === 'post' ? item.post : item.repost?.original_post;
   if (!post) return null;
 

@@ -3,7 +3,7 @@
  * Modal form for adding/editing calendar entries
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -66,7 +66,7 @@ export function CalendarDayEntryForm({
   onCreatePreset,
 }: CalendarDayEntryFormProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Modal
       visible={visible}

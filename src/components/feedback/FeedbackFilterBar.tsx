@@ -3,7 +3,7 @@
  * Category and status filters for feedback threads
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { PillButton } from '@/components/shared';
 import { theme } from '@/styles';
@@ -35,7 +35,7 @@ export function FeedbackFilterBar({
   onStatusChange,
 }: FeedbackFilterBarProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <View style={styles.filterRow}>

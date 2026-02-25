@@ -3,7 +3,7 @@
  * Display a headshot in the social feed (3:4 aspect ratio, no try-on badge)
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -29,7 +29,7 @@ export default function HeadshotFeedCard({
   onPress,
 }: HeadshotFeedCardProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={onPress ? 0.85 : 1}>

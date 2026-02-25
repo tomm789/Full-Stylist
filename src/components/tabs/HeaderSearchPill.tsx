@@ -60,7 +60,7 @@ export default function HeaderSearchPill({
   onProfile,
 }: HeaderSearchPillProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const inputRef = useRef<TextInput>(null);
   const widthAnim = useRef(new Animated.Value(expanded && inlineSearchEnabled ? 1 : 0)).current;
 

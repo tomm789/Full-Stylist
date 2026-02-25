@@ -3,7 +3,7 @@
  * Shared pill-style tab row with optional filter icon and add button.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PillButton } from '@/components/shared';
@@ -54,7 +54,7 @@ export default function TabPillsRow({
   leadingIcon = 'options-outline',
 }: TabPillsRowProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.pillRow}>

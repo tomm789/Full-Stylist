@@ -3,7 +3,7 @@
  * Shared right-side header icon group (add, search, notifications).
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
@@ -33,7 +33,7 @@ export default function HeaderActionIcons({
   unreadCount = 0,
 }: HeaderActionIconsProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.container}>

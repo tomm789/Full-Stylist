@@ -3,7 +3,7 @@
  * Feed-style card for a user's own outfit with schedule status.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,7 +43,7 @@ const MyOutfitFeedCard = React.memo(
     onSchedulePress,
   }: MyOutfitFeedCardProps) => {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
     const engagement = useSocialEngagement('outfit', outfit.id, userId);
 
     return (

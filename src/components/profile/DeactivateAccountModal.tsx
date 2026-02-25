@@ -4,7 +4,7 @@
  * Account data is preserved for 90 days and can be reactivated by signing in
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -30,7 +30,7 @@ export function DeactivateAccountModal({
   onConfirm,
 }: DeactivateAccountModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {

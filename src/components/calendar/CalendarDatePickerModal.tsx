@@ -48,7 +48,7 @@ export default function CalendarDatePickerModal({
   onSelectDate,
 }: CalendarDatePickerModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [modalCurrentDate, setModalCurrentDate] = useState(initialDate ?? new Date());
 
   useEffect(() => {

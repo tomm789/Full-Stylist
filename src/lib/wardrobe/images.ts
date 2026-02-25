@@ -165,6 +165,29 @@ export function buildWardrobeItemsImageUrlCache(
 }
 
 /**
+ * Fetch wardrobe item image storage keys for canvas trim processing.
+ * Returns image links with type, sort_order and storage_key joined from the images table.
+ */
+export async function fetchWardrobeItemImageKeys(
+  itemIds: string[]
+): Promise<{
+  data: Array<{ wardrobe_item_id: string; type: string; sort_order: number; images: { storage_key: string } }>;
+  error: any;
+}> {
+  if (itemIds.length === 0) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from('wardrobe_item_images')
+    .select(`
+      wardrobe_item_id,
+      type,
+      sort_order,
+      images!inner(storage_key)
+    `)
+    .in('wardrobe_item_id', itemIds);
+  return { data: (data as any) ?? [], error };
+}
+
+/**
  * Add image to wardrobe item
  */
 export async function addImageToWardrobeItem(

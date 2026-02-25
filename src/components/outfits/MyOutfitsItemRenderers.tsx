@@ -3,7 +3,7 @@
  * Helpers for rendering my outfits grid/feed items.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
@@ -51,7 +51,7 @@ export function MyOutfitGridItem({
   onActivateSelection,
 }: GridItemProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const handlePress = () => {
     if (selectionMode) {
       onSelect(item.id, imageUrl);

@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import type { FlatList } from 'react-native';
-import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -59,14 +59,13 @@ import { HeaderTabPill } from '@/components/shared';
 import { OutfitsTabIcon } from '@/components/icons/tabs';
 import HeaderTitleRow from '@/components/tabs/HeaderTitleRow';
 import HeaderIconButton from '@/components/shared/layout/HeaderIconButton';
-import { useTabSearch } from '@/contexts/TabSearchContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTabSearchRegistration } from '@/hooks/useTabSearchRegistration';
+import { useSearchResultNavigation } from '@/hooks/useSearchResultNavigation';
+import { useOutfitsTabState, type OutfitsTab } from '@/hooks/outfits/useOutfitsTabState';
 
-type OutfitsTab = 'my_outfits' | 'explore' | 'following' | 'lookbooks' | `lookbook_${string}`;
-type ViewMode = 'grid' | 'feed';
 const SHOW_VIEW_TOGGLE = false;
 const CREATOR_BAR_HEIGHT = 60;
-// Matches panelBottomOffset in LookbookSelectionBar
 const LOOKBOOK_PANEL_BOTTOM_OFFSET = spacing.xl + CREATOR_BAR_HEIGHT + spacing.sm;
 const STATUS_LABELS: Record<OutfitScheduleStatus, string> = {
   planned: 'Planned',
@@ -81,11 +80,8 @@ export default function OutfitsScreen() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const pathname = usePathname();
-  const { registerTabSearch, clearTabSearch } = useTabSearch();
   const { setTabBarDimmed, setTabBarOpacity } = useFloatingTabBar();
   const isFocused = useIsFocused();
-  const { tab } = useLocalSearchParams<{ tab?: string }>();
   const { width: windowWidth } = useWindowDimensions();
   const showTabLabels = windowWidth >= layout.containerMaxWidth;
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
@@ -99,13 +95,6 @@ export default function OutfitsScreen() {
     loading: searchLoading,
   } = useSearch({ userId: user?.id });
   const [showSortModal, setShowSortModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<OutfitsTab>('my_outfits');
-  const [tabViews, setTabViews] = useState<Record<OutfitsTab, ViewMode>>({
-    my_outfits: 'grid',
-    explore: 'grid',
-    following: 'grid',
-    lookbooks: 'grid',
-  });
   const [openOutfitMenuId, setOpenOutfitMenuId] = useState<string | null>(null);
   const {
     headerHeight,
@@ -172,13 +161,25 @@ export default function OutfitsScreen() {
     loadingLookbooks: loadingAvailableLookbooks,
   } = useLookbookTabs({ userId: user?.id });
 
+  // ── Tab state ─────────────────────────────────────────────────────────────────
+  const {
+    activeTab,
+    setActiveTab,
+    coreTab,
+    activeView,
+    setActiveView,
+    headerPillActiveId,
+    isLookbooksActive,
+    handleTabChange,
+  } = useOutfitsTabState({ pinnedLookbooks });
+
   const [showLookbookAddModal, setShowLookbookAddModal] = useState(false);
 
   const handleSelectLookbookFromModal = useCallback((id: string, title: string) => {
     addLookbookTab(id, title);
     setActiveTab(`lookbook_${id}`);
     setSelectionMode(true);
-  }, [addLookbookTab, setSelectionMode]);
+  }, [addLookbookTab, setActiveTab, setSelectionMode]);
 
   const handleCreateNewFromModal = useCallback(() => {
     setSelectionMode(true);
@@ -188,23 +189,9 @@ export default function OutfitsScreen() {
   const handleRemoveLookbookTab = useCallback((id: string) => {
     removeLookbookTab(id);
     setActiveTab('my_outfits');
-  }, [removeLookbookTab]);
+  }, [removeLookbookTab, setActiveTab]);
 
-  React.useEffect(() => {
-    if (!tab) return;
-    const nextTab = Array.isArray(tab) ? tab[0] : tab;
-    if (nextTab === 'my_outfits' || nextTab === 'explore' || nextTab === 'following' || nextTab === 'lookbooks') {
-      setActiveTab(nextTab);
-    }
-  }, [tab]);
-
-  // Filters state
-  const {
-    filters,
-    updateFilter,
-    getSortLabel,
-  } = useOutfitFilters([]);
-
+  // ── Search overlay ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!searchOpenRef.current && searchOverlayOpen) {
       setSearchSelectedFilter('outfit');
@@ -212,37 +199,26 @@ export default function OutfitsScreen() {
     searchOpenRef.current = searchOverlayOpen;
   }, [searchOverlayOpen, setSearchSelectedFilter]);
 
-  useEffect(() => {
-    registerTabSearch(
-      {
-        query: globalSearchQuery,
-        open: searchOverlayOpen,
-        onQueryChange: setGlobalSearchQuery,
-        onOpen: () => setSearchOverlayOpen(true),
-        onClose: () => setSearchOverlayOpen(false),
-        setDefaultFilter: () => setSearchSelectedFilter('outfit'),
-      },
-      pathname
-    );
-
-    return () => {
-      clearTabSearch(pathname);
-    };
-  }, [
-    clearTabSearch,
-    globalSearchQuery,
-    pathname,
-    registerTabSearch,
-    searchOverlayOpen,
-    setGlobalSearchQuery,
+  useTabSearchRegistration({
+    query: globalSearchQuery,
+    open: searchOverlayOpen,
+    onQueryChange: setGlobalSearchQuery,
+    setSearchOverlayOpen,
     setSearchSelectedFilter,
-  ]);
+    defaultFilter: 'outfit',
+  });
 
-  // Search overlay is driven by local header state
+  const { handleSearchResultPress } = useSearchResultNavigation();
 
   const { presets, createPreset } = useSlotPresets({ userId: user?.id });
 
-  // Load outfits with filters
+  // ── Load outfits ──────────────────────────────────────────────────────────────
+  const {
+    filters,
+    updateFilter,
+    getSortLabel,
+  } = useOutfitFilters([]);
+
   const { outfits, imageCache, loading, refreshing, refresh } = useOutfits({
     userId: user?.id,
     searchQuery: filters.searchQuery,
@@ -251,7 +227,6 @@ export default function OutfitsScreen() {
     sortOrder: filters.sortOrder,
   });
 
-  // Use filtered outfits from the hook
   const { filteredOutfits } = useOutfitFilters(outfits);
   const outfitIds = React.useMemo(() => outfits.map((outfit) => outfit.id), [outfits]);
 
@@ -272,7 +247,7 @@ export default function OutfitsScreen() {
     statusLabels: STATUS_LABELS,
   });
 
-  // Social feeds (Explore + Following)
+  // ── Social feeds ──────────────────────────────────────────────────────────────
   const {
     feed,
     outfitImages,
@@ -352,22 +327,10 @@ export default function OutfitsScreen() {
     modals.setFollowStatuses(feedFollowStatuses);
   }, [feedFollowStatuses, modals]);
 
-  // Narrow tab for hooks that only understand the three fixed tabs
-  const coreTab: 'my_outfits' | 'explore' | 'following' =
-    activeTab.startsWith('lookbook_') || activeTab === 'lookbooks'
-      ? 'my_outfits'
-      : (activeTab as 'my_outfits' | 'explore' | 'following');
-
-  const activeView = tabViews[coreTab];
-  const setActiveView = (view: ViewMode) => {
-    setTabViews((prev) => ({
-      ...prev,
-      [activeTab]: view,
-    }));
-  };
   const handleRepostWithRefresh = async (postId: string) => {
     await handleRepost(postId, refreshFeed);
   };
+
   const {
     activeFeedItems,
     applySavedFilter,
@@ -421,6 +384,7 @@ export default function OutfitsScreen() {
     setMenuButtonPosition: modals.setMenuButtonPosition,
     setOpenMenuPostId: modals.setOpenMenuPostId,
   });
+
   const { availableOccasions, toggleOccasion, filteredOutfitsWithOccasions } =
     useOutfitsDerivedFilters({
       activeTab: coreTab,
@@ -435,6 +399,7 @@ export default function OutfitsScreen() {
       getOutfitId: (outfit) => outfit.id,
       getOutfitOccasions: (outfit) => outfit.occasions,
     });
+
   const myOutfitsFeedRef = useRef<FlatList<any>>(null);
   const [pendingMyOutfitId, setPendingMyOutfitId] = useState<string | null>(null);
   const {
@@ -450,17 +415,10 @@ export default function OutfitsScreen() {
     setPendingId: setPendingMyOutfitId,
   });
 
-  const handleTabChange = (tab: OutfitsTab) => {
-    const nextTab =
-      tab === 'lookbooks' && pinnedLookbooks.length > 0
-        ? (`lookbook_${pinnedLookbooks[0].id}` as OutfitsTab)
-        : tab;
-    setActiveTab(nextTab);
-    setTabViews((prev) => ({ ...prev, [nextTab]: 'grid' }));
-  };
-
-  const headerPillActiveId = activeTab.startsWith('lookbook_') ? 'lookbooks' : activeTab;
-  const isLookbooksActive = activeTab === 'lookbooks' || activeTab.startsWith('lookbook_');
+  React.useEffect(() => {
+    setHeaderVisible(true);
+    resetScroll();
+  }, [activeTab, resetScroll, setHeaderVisible]);
 
   const onRefresh = async () => {
     setFollowingRefreshing(true);
@@ -541,15 +499,11 @@ export default function OutfitsScreen() {
       userId: user?.id,
     });
 
-  React.useEffect(() => {
-    setHeaderVisible(true);
-    resetScroll();
-  }, [activeTab, resetScroll, setHeaderVisible]);
-
   const selectedOutfitsForBar = useSelectedOutfitsBar(
     selectedOutfitIds,
     selectedOutfitImages
   );
+
   const {
     sortState,
     postMenuState,
@@ -616,12 +570,10 @@ export default function OutfitsScreen() {
     },
   });
 
-  // Bottom padding to allow scroll content to clear floating UI elements
   const listBottomPadding = selectionMode
     ? LOOKBOOK_PANEL_BOTTOM_OFFSET + LOOKBOOK_PANEL_COLLAPSED_HEIGHT + spacing.sm
     : spacing.xl + CREATOR_BAR_HEIGHT + spacing.md + insets.bottom;
 
-  // Loading state
   if (loading && outfits.length === 0) {
     return (
       <View style={commonStyles.loadingContainer}>
@@ -630,22 +582,24 @@ export default function OutfitsScreen() {
     );
   }
 
-  const handleSearchResultPress = (result: (typeof searchFilteredResults)[0]) => {
-    switch (result.type) {
-      case 'user':
-        router.push(`/users/${result.id}`);
-        break;
-      case 'outfit':
-        router.push(`/outfits/${result.id}`);
-        break;
-      case 'lookbook':
-        router.push(`/lookbooks/${result.id}`);
-        break;
-      case 'wardrobe_item':
-        router.push(`/wardrobe/item/${result.id}`);
-        break;
-    }
-  };
+  // Shared props for the My Outfits / Lookbook tab view
+  const myOutfitsTabProps = {
+    data: filteredOutfitsWithOccasions,
+    renderGridItem: renderMyOutfitGridItem,
+    renderFeedItem: renderMyOutfitFeedItem,
+    listRef: myOutfitsFeedRef,
+    onScroll: handleGridScroll,
+    scrollEventThrottle: 16,
+    onLayout: handleMyOutfitsLayout,
+    onScrollToIndexFailed: handleMyOutfitsScrollToIndexFailed,
+    refreshing,
+    onRefresh: refresh,
+    feedListStyle: styles.feedListWrapper,
+    feedContentStyle: [styles.feedList, { paddingBottom: listBottomPadding }],
+    gridContentContainerStyle: { paddingBottom: listBottomPadding },
+    searchQuery: filters.searchQuery,
+    showFavoritesOnly: filters.showFavoritesOnly,
+  } as const;
 
   return (
     <View style={styles.container}>
@@ -740,46 +694,11 @@ export default function OutfitsScreen() {
             onAction={() => setShowLookbookAddModal(true)}
           />
         </View>
-      ) : activeTab.startsWith('lookbook_') ? (
+      ) : activeTab.startsWith('lookbook_') || activeTab === 'my_outfits' ? (
         <View style={commonStyles.container}>
           <OutfitsMyOutfitsTab
-            data={filteredOutfitsWithOccasions}
-            activeView="grid"
-            renderGridItem={renderMyOutfitGridItem}
-            renderFeedItem={renderMyOutfitFeedItem}
-            listRef={myOutfitsFeedRef}
-            onScroll={handleGridScroll}
-            scrollEventThrottle={16}
-            onLayout={handleMyOutfitsLayout}
-            onScrollToIndexFailed={handleMyOutfitsScrollToIndexFailed}
-            refreshing={refreshing}
-            onRefresh={refresh}
-            feedListStyle={styles.feedListWrapper}
-            feedContentStyle={[styles.feedList, { paddingBottom: listBottomPadding }]}
-            gridContentContainerStyle={{ paddingBottom: listBottomPadding }}
-            searchQuery={filters.searchQuery}
-            showFavoritesOnly={filters.showFavoritesOnly}
-          />
-        </View>
-      ) : activeTab === 'my_outfits' ? (
-        <View style={commonStyles.container}>
-          <OutfitsMyOutfitsTab
-            data={filteredOutfitsWithOccasions}
-            activeView={activeView}
-            renderGridItem={renderMyOutfitGridItem}
-            renderFeedItem={renderMyOutfitFeedItem}
-            listRef={myOutfitsFeedRef}
-            onScroll={handleGridScroll}
-            scrollEventThrottle={16}
-            onLayout={handleMyOutfitsLayout}
-            onScrollToIndexFailed={handleMyOutfitsScrollToIndexFailed}
-            refreshing={refreshing}
-            onRefresh={refresh}
-            feedListStyle={styles.feedListWrapper}
-            feedContentStyle={[styles.feedList, { paddingBottom: listBottomPadding }]}
-            gridContentContainerStyle={{ paddingBottom: listBottomPadding }}
-            searchQuery={filters.searchQuery}
-            showFavoritesOnly={filters.showFavoritesOnly}
+            {...myOutfitsTabProps}
+            activeView={activeTab.startsWith('lookbook_') ? 'grid' : activeView}
           />
         </View>
       ) : activeTab === 'explore' ? (
@@ -897,7 +816,11 @@ export default function OutfitsScreen() {
           onRemoveOutfit={toggleOutfitSelection}
           onExit={exitSelectionMode}
           onOpenPicker={() => setLookbookPickerVisible(true)}
-          hintMessage={selectedOutfitIds.size === 0 ? 'Long press an outfit to add it to your lookbook' : undefined}
+          hintMessage={
+            selectedOutfitIds.size === 0
+              ? 'Long press an outfit to add it to your lookbook'
+              : undefined
+          }
         />
       )}
     </View>

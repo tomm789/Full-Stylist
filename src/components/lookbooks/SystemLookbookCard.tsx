@@ -3,7 +3,7 @@
  * Card for displaying system lookbooks (favorites, recent, top)
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { SystemLookbookData } from '@/hooks/lookbooks';
@@ -25,7 +25,7 @@ export default function SystemLookbookCard({
   onPlayPress,
 }: SystemLookbookCardProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       {lookbook.coverImageUrl ? (

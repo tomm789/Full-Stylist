@@ -3,7 +3,7 @@
  * Generate professional headshot from selfie
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -30,7 +30,7 @@ const { spacing, borderRadius, typography } = theme;
 
 export default function NewHeadshotScreen() {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
   const [hairStyle, setHairStyle] = useState('');

@@ -3,7 +3,7 @@
  * Modal for sorting and filtering outfits — uses shared filter UI components
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
 import {
   BottomSheet,
@@ -64,7 +64,7 @@ export default function SortModal({
   onResetFilters,
 }: SortModalProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['sortBy', 'order'])

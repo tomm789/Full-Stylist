@@ -3,7 +3,7 @@
  * Slides in the search results panel from the right.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { Animated, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -34,7 +34,7 @@ export default function SearchOverlay({
   onResultPress,
 }: SearchOverlayProps) {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const anim = useRef(new Animated.Value(open ? 1 : 0)).current;
 
   useEffect(() => {
