@@ -27,7 +27,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { theme } from '@/styles';
 import { useDrawModeLogic } from '@/hooks/headshot/useDrawModeLogic';
 import { createDrawModeStyles } from '@/styles/drawModeStyles';
 import HeadshotDrawingCanvas, { type HeadshotDrawingCanvasRef, type DrawnColorEntry } from './HeadshotDrawingCanvas';
@@ -45,6 +44,7 @@ export type DrawModeInlineProps = {
   generating: boolean;
   onGenerate: (maskBase64: string | null, colorMap: DrawnColorEntry[]) => void;
   onRemoveSelection: (id: string) => void;
+  topInset?: number;
   /** Ref managed by the parent (useHairAndMakeup); shared with generation flow. */
   drawingCanvasRef: React.RefObject<HeadshotDrawingCanvasRef>;
 };
@@ -59,6 +59,7 @@ export default function DrawModeInline({
   generating,
   onGenerate,
   onRemoveSelection,
+  topInset = 0,
   drawingCanvasRef,
 }: DrawModeInlineProps) {
   const colors = useThemeColors();
@@ -71,7 +72,29 @@ export default function DrawModeInline({
   const sharedStyles = createDrawModeStyles(colors, canvasWidth, canvasHeight);
   const styles = StyleSheet.create({
     ...sharedStyles,
-    root: { flex: 1 as const },
+    root: { flex: 1 as const, paddingTop: topInset },
+    controlsRow: {
+      ...sharedStyles.controlsRow,
+      justifyContent: 'space-between',
+    },
+    controlsSide: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    controlsTitle: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      textAlign: 'center',
+      textAlignVertical: 'center',
+      includeFontPadding: false,
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
   });
   const controlsBottomInset = 140;
 
@@ -96,34 +119,38 @@ export default function DrawModeInline({
     >
       {/* ── Controls row ── */}
       <View style={styles.controlsRow}>
-        <TouchableOpacity onPress={onClose} style={styles.controlButton} hitSlop={8}>
-          <Ionicons name="close" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => draw.setInfoVisible(true)} style={styles.controlButton} hitSlop={8}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={styles.controlsSide}>
+          <TouchableOpacity onPress={onClose} style={styles.controlButton} hitSlop={8}>
+            <Ionicons name="close" size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => draw.setInfoVisible(true)} style={styles.controlButton} hitSlop={8}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
 
-        <View style={styles.controlSpacer} />
+        <Text style={styles.controlsTitle}>Draw Mode</Text>
 
-        <TouchableOpacity
-          onPress={draw.handleUndo}
-          disabled={!draw.canUndo}
-          style={[styles.controlButton, !draw.canUndo && styles.controlButtonDisabled]}
-          hitSlop={8}
-        >
-          <Ionicons name="arrow-undo-outline" size={20} color={draw.canUndo ? colors.textPrimary : colors.textTertiary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={draw.handleRedo}
-          disabled={!draw.canRedo}
-          style={[styles.controlButton, !draw.canRedo && styles.controlButtonDisabled]}
-          hitSlop={8}
-        >
-          <Ionicons name="arrow-redo-outline" size={20} color={draw.canRedo ? colors.textPrimary : colors.textTertiary} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={draw.handleClear} style={styles.controlButton} hitSlop={8}>
-          <Ionicons name="trash-outline" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={styles.controlsSide}>
+          <TouchableOpacity
+            onPress={draw.handleUndo}
+            disabled={!draw.canUndo}
+            style={[styles.controlButton, !draw.canUndo && styles.controlButtonDisabled]}
+            hitSlop={8}
+          >
+            <Ionicons name="arrow-undo-outline" size={20} color={draw.canUndo ? colors.textPrimary : colors.textTertiary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={draw.handleRedo}
+            disabled={!draw.canRedo}
+            style={[styles.controlButton, !draw.canRedo && styles.controlButtonDisabled]}
+            hitSlop={8}
+          >
+            <Ionicons name="arrow-redo-outline" size={20} color={draw.canRedo ? colors.textPrimary : colors.textTertiary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={draw.handleClear} style={styles.controlButton} hitSlop={8}>
+            <Ionicons name="trash-outline" size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* ── Image + canvas (rendered only after container width is known) ── */}

@@ -19,8 +19,6 @@ const { spacing, borderRadius, typography } = theme;
 export const createColorControlsStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     colorControlsSection: {
-      flex: 1,
-      minHeight: 0,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.borderLight,
     },
@@ -56,8 +54,8 @@ export const createColorControlsStyles = (colors: ThemeColors) =>
     },
     // Row B: stacked per-colour panels
     colorPanelsScroll: {
-      flex: 1,
-      minHeight: 0,
+      flexGrow: 0,
+      maxHeight: 260,
     },
     colorSettingsPanel: {
       paddingHorizontal: spacing.md,
