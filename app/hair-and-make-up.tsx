@@ -110,28 +110,9 @@ export default function HairAndMakeUpScreen() {
 
   // Edit modal state lifted here so handleOpenCategoryEditor (from DrawModeInline) can open it
   const [editModalVisible, setEditModalVisible] = React.useState(false);
-  const drawModeWasOpen = React.useRef(false);
-
   const handleCloseEditModal = React.useCallback(() => {
     setEditModalVisible(false);
-    if (drawModeWasOpen.current) {
-      drawModeWasOpen.current = false;
-      state.setIsDrawModeOpen(true);
-    }
-  }, [state.setIsDrawModeOpen]);
-
-  const handleOpenCategoryEditor = React.useCallback((categoryId: string) => {
-    const isHair = categoryId === 'hair';
-    drawModeWasOpen.current = true;
-    state.setIsDrawModeOpen(false);
-    state.setEditTab(isHair ? 'hair' : 'makeup');
-    if (isHair) {
-      state.setSelectedHairCategory(categoryId);
-    } else {
-      state.setSelectedMakeupCategory(categoryId);
-    }
-    setEditModalVisible(true);
-  }, [state]);
+  }, []);
 
   const { dialogLine1Opacity, dialogLine2Opacity, dialogLine3Opacity, dialogLine4Opacity } =
     useGenerationDialogAnimation(state.generating);
@@ -310,8 +291,6 @@ export default function HairAndMakeUpScreen() {
             generating={state.generating}
             onGenerate={state.handleGenerateVariation}
             onRemoveSelection={state.handleRemoveCreatorSelection}
-            onOpenCategoryEditor={handleOpenCategoryEditor}
-            onApplyTemplateSelections={state.handleApplyTemplateSelections}
             drawingCanvasRef={state.drawingCanvasRef}
           />
         )}
@@ -365,9 +344,6 @@ export default function HairAndMakeUpScreen() {
             hairLengthOptions={hairLengthOptions}
             selectedHairLengthId={selectedHairLengthId}
             floatingBarClearance={floatingBarClearance}
-            drawModeWasOpenRef={drawModeWasOpen}
-            setSelectedHairCategory={state.setSelectedHairCategory}
-            setSelectedMakeupCategory={state.setSelectedMakeupCategory}
           />
         )}
 

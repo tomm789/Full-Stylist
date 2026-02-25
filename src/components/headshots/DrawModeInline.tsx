@@ -3,7 +3,7 @@
  * Draw mode UI rendered inline within the My Mirror tab — no Modal wrapper.
  *
  * Layout (top → bottom):
- *   Controls: back | undo | redo | clear | spacer | save | templates | info
+ *   Controls: close | info | spacer | undo | redo | clear
  *   Image + Skia canvas (pinch-to-zoom, 2-finger pan)
  *   Color selector row (8 color circles)
  *   Active color settings panels (scrollable, stacked per drawn color)
@@ -29,14 +29,12 @@ import { Image as ExpoImage } from 'expo-image';
 
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { theme } from '@/styles';
-import { supabase } from '@/lib/supabase';
 import { useDrawModeLogic } from '@/hooks/headshot/useDrawModeLogic';
 import { createDrawModeStyles } from '@/styles/drawModeStyles';
 import HeadshotDrawingCanvas, { type HeadshotDrawingCanvasRef, type DrawnColorEntry } from './HeadshotDrawingCanvas';
 import HeadshotCreatorContainer, { type SelectionPill } from './HeadshotCreatorContainer';
 import ColorControlsPanel from './ColorControlsPanel';
 import CreatorBar from '../shared/CreatorBar';
-import BottomSheet from '../shared/modals/BottomSheet';
 
 export type DrawModeInlineProps = {
   onClose: () => void;
@@ -48,12 +46,6 @@ export type DrawModeInlineProps = {
   generating: boolean;
   onGenerate: (maskBase64: string | null, colorMap: DrawnColorEntry[]) => void;
   onRemoveSelection: (id: string) => void;
-  onOpenCategoryEditor: (categoryId: string) => void;
-  onApplyTemplateSelections?: (snapshot: {
-    hairPresetIds: string[];
-    makeupPresetIds: string[];
-    customDescription?: string;
-  }) => void;
   /** Ref managed by the parent (useHairAndMakeup); shared with generation flow. */
   drawingCanvasRef: React.RefObject<HeadshotDrawingCanvasRef>;
 };
@@ -68,8 +60,6 @@ export default function DrawModeInline({
   generating,
   onGenerate,
   onRemoveSelection,
-  onOpenCategoryEditor,
-  onApplyTemplateSelections,
   drawingCanvasRef,
 }: DrawModeInlineProps) {
   const colors = useThemeColors();
@@ -98,7 +88,6 @@ export default function DrawModeInline({
     canvasWidth,
     canvasHeight,
     onGenerate,
-    onApplyTemplateSelections,
     // No onClose — user stays in draw mode until they tap the back button
   });
 
@@ -110,8 +99,13 @@ export default function DrawModeInline({
       {/* ── Controls row ── */}
       <View style={styles.controlsRow}>
         <TouchableOpacity onPress={onClose} style={styles.controlButton} hitSlop={8}>
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
+          <Ionicons name="close" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
+        <TouchableOpacity onPress={() => draw.setInfoVisible(true)} style={styles.controlButton} hitSlop={8}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+
+        <View style={styles.controlSpacer} />
 
         <TouchableOpacity
           onPress={draw.handleUndo}
@@ -132,27 +126,6 @@ export default function DrawModeInline({
         <TouchableOpacity onPress={draw.handleClear} style={styles.controlButton} hitSlop={8}>
           <Ionicons name="trash-outline" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-
-        <View style={styles.controlSpacer} />
-
-        <TouchableOpacity
-          onPress={draw.handleSave}
-          style={styles.controlButton}
-          hitSlop={8}
-          disabled={draw.saving}
-        >
-          <Ionicons
-            name={draw.saving ? 'hourglass-outline' : 'save-outline'}
-            size={20}
-            color={draw.saving ? colors.textSecondary : colors.textPrimary}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={draw.handleOpenTemplateBrowser} style={styles.controlButton} hitSlop={8}>
-          <Ionicons name="folder-open-outline" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => draw.setInfoVisible(true)} style={styles.controlButton} hitSlop={8}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
       </View>
 
       {/* ── Image + canvas (rendered only after container width is known) ── */}
@@ -168,14 +141,6 @@ export default function DrawModeInline({
                 />
               ) : (
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.backgroundTertiary }]} />
-              )}
-
-              {draw.templateMaskUrl && (
-                <ExpoImage
-                  source={{ uri: draw.templateMaskUrl }}
-                  style={[StyleSheet.absoluteFill, { opacity: 0.45 }]}
-                  contentFit="cover"
-                />
               )}
 
               <HeadshotDrawingCanvas
@@ -202,9 +167,9 @@ export default function DrawModeInline({
         drawnColorHexes={draw.drawnColorHexes}
         colorSettings={draw.colorSettings}
         onColorSelect={draw.setActiveColor}
-        onToggleCategory={draw.toggleCategoryForColor}
         onPromptChange={draw.handlePromptChange}
-        onOpenCategoryEditor={onOpenCategoryEditor}
+        focusPromptHex={draw.focusPromptHex}
+        onFocusPromptHandled={() => draw.setFocusPromptHex(null)}
       />
 
       {/* ── Selections + generate ── */}
@@ -233,11 +198,9 @@ export default function DrawModeInline({
             <Text style={styles.infoBody}>
               {`1. Select a color from the row below the image.\n\n`}
               {`2. Draw on the image to mark the areas you want the AI to modify.\n\n`}
-              {`3. Tap a category icon to associate the color with a makeup or hair type.\n\n`}
-              {`4. Tap the gear icon on a selected category to choose a specific preset.\n\n`}
-              {`5. Optionally add a custom description for each color in the text field.\n\n`}
-              {`6. Pinch to zoom in for precision. Double-tap to reset.\n\n`}
-              {`7. Tap Generate — the AI will use your drawing as placement guidance.`}
+              {`3. Add a custom instruction for each color in the text field below.\n\n`}
+              {`4. Pinch to zoom in for precision. Double-tap to reset.\n\n`}
+              {`5. Tap Generate — the AI will use your color + instruction pairings as placement guidance.`}
             </Text>
             <TouchableOpacity style={styles.infoClose} onPress={() => draw.setInfoVisible(false)}>
               <Text style={styles.infoCloseText}>Got it</Text>
@@ -245,46 +208,6 @@ export default function DrawModeInline({
           </View>
         </TouchableOpacity>
       </Modal>
-
-      {/* ── Template browser ── */}
-      <BottomSheet
-        visible={draw.templateBrowserVisible}
-        onClose={() => draw.setTemplateBrowserVisible(false)}
-        title="Saved Templates"
-      >
-        {draw.loadingTemplates ? (
-          <Text style={styles.templateEmpty}>Loading…</Text>
-        ) : draw.templates.length === 0 ? (
-          <Text style={styles.templateEmpty}>No saved templates for this image yet.</Text>
-        ) : (
-          draw.templates.map((t) => (
-            <TouchableOpacity
-              key={t.id}
-              style={styles.templateRow}
-              onPress={() => draw.handleLoadTemplate(t)}
-            >
-              <ExpoImage
-                source={{
-                  uri: supabase.storage
-                    .from(t.mask_storage_bucket)
-                    .getPublicUrl(t.mask_storage_path).data.publicUrl,
-                }}
-                style={styles.templateThumb}
-                contentFit="cover"
-              />
-              <View style={styles.templateInfo}>
-                <Text style={styles.templateDate}>
-                  {new Date(t.created_at).toLocaleDateString(undefined, {
-                    month: 'short', day: 'numeric', year: 'numeric',
-                  })}
-                </Text>
-                {t.name && <Text style={styles.templateName}>{t.name}</Text>}
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-            </TouchableOpacity>
-          ))
-        )}
-      </BottomSheet>
     </View>
   );
 }

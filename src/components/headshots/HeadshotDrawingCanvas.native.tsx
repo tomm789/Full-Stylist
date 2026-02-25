@@ -170,6 +170,14 @@ const HeadshotDrawingCanvas = React.forwardRef<
       setCurrentStroke(null);
       activePathRef.current = null;
     },
+    clearColor: (hex: string) => {
+      setCompletedStrokes((prev) => prev.filter((stroke) => stroke.color !== hex));
+      setUndoneStrokes((prev) => prev.filter((stroke) => stroke.color !== hex));
+      setCurrentStroke((prev) => (prev?.color === hex ? null : prev));
+      if (activePathRef.current && activeColorRef.current === hex) {
+        activePathRef.current = null;
+      }
+    },
     get canUndo() { return completedStrokes.length > 0; },
     get canRedo() { return undoneStrokes.length > 0; },
     get hasStrokes() { return completedStrokes.length > 0; },

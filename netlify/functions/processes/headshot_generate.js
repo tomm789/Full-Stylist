@@ -85,7 +85,13 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
   if (maskResult) {
     const colorLines = Array.isArray(mask_color_map) && mask_color_map.length > 0
       ? mask_color_map
-          .map(({ hex, label }) => `  - ${hex} (${label}): apply the ${label.toLowerCase()}-related changes from the instructions above to the corresponding area of Image 1`)
+          .map(({ hex, customPrompt }) => {
+            const promptForColor = (customPrompt || '').trim();
+            if (!promptForColor) {
+              return `  - ${hex}: no specific instruction was provided for this color; make minimal, conservative edits only in this region`;
+            }
+            return `  - ${hex}: "${promptForColor}" (apply this instruction only to the ${hex} regions in Image 2)`;
+          })
           .join('\n')
       : '  - All colored regions: apply the requested changes to the corresponding areas of Image 1';
 

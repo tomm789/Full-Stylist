@@ -208,7 +208,7 @@ export async function triggerHeadshotGenerateWithPrompt(
     skipUserSettingsUpdate?: boolean;
     maskStoragePath?: string;
     maskStorageBucket?: string;
-    maskColorMap?: Array<{ hex: string; label: string }>;
+    maskColorMap?: Array<{ hex: string; customPrompt?: string }>;
   }
 ): Promise<QueryResult<AIJob>> {
   return createAIJob(userId, 'headshot_generate', {

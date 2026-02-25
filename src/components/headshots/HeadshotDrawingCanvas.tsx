@@ -22,6 +22,7 @@ export type HeadshotDrawingCanvasRef = {
   undo: () => void;
   redo: () => void;
   clear: () => void;
+  clearColor: (hex: string) => void;
   canUndo: boolean;
   canRedo: boolean;
   hasStrokes: boolean;
@@ -50,6 +51,7 @@ const HeadshotDrawingCanvas = React.forwardRef<
     undo: () => {},
     redo: () => {},
     clear: () => {},
+    clearColor: () => {},
     canUndo: false,
     canRedo: false,
     hasStrokes: false,

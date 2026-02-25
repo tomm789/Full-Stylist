@@ -26,7 +26,6 @@ import type { HeadshotDrawingCanvasRef, DrawnColorEntry } from '@/components/hea
 import type { SelectionPill } from '@/components/headshots/HeadshotCreatorContainer';
 
 export type ColorSettings = {
-  categoryId?: string;
   customPrompt?: string;
 };
 
@@ -72,6 +71,7 @@ export function useDrawModeLogic({
   const [canRedo, setCanRedo] = useState(false);
   const [hasStrokes, setHasStrokes] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [focusPromptHex, setFocusPromptHex] = useState<string | null>(null);
 
   // --- Overlay state ---
   const [infoVisible, setInfoVisible] = useState(false);
@@ -260,19 +260,6 @@ export function useDrawModeLogic({
   };
 
   // --- Color settings ---
-  const toggleCategoryForColor = (categoryId: string, hex: string) => {
-    setColorSettings((prev) => {
-      const current = prev[hex] ?? {};
-      return {
-        ...prev,
-        [hex]: {
-          ...current,
-          categoryId: current.categoryId === categoryId ? undefined : categoryId,
-        },
-      };
-    });
-  };
-
   const handlePromptChange = (hex: string, text: string) => {
     setColorSettings((prev) => ({
       ...prev,
@@ -289,6 +276,51 @@ export function useDrawModeLogic({
     : `Generate${creatorSelections.length > 0 ? ` (${creatorSelections.length})` : ''}`;
 
   const handleGenerate = async () => {
+    const drawnColors = drawingCanvasRef.current?.getDrawnColorMap() ?? [];
+    const colorMap: DrawnColorEntry[] = drawnColors.map((entry) => ({
+      ...entry,
+      customPrompt: colorSettings[entry.hex]?.customPrompt?.trim(),
+    }));
+    const missingPromptColor = colorMap.find((entry) => !entry.customPrompt);
+    if (missingPromptColor) {
+      Alert.alert(
+        'Missing instructions',
+        `You have not entered instructions for ${missingPromptColor.label}, this may generate inaccurate results. What would you like to do?`,
+        [
+          {
+            text: 'Clear color from mask',
+            style: 'destructive',
+            onPress: () => {
+              drawingCanvasRef.current?.clearColor(missingPromptColor.hex);
+              setColorSettings((prev) => {
+                const next = { ...prev };
+                delete next[missingPromptColor.hex];
+                return next;
+              });
+            },
+          },
+          {
+            text: 'Add instructions',
+            onPress: () => {
+              setActiveColor(missingPromptColor.hex);
+              setFocusPromptHex(missingPromptColor.hex);
+            },
+          },
+          {
+            text: 'Generate anyway',
+            onPress: () => {
+              void runGenerate(colorMap);
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    await runGenerate(colorMap);
+  };
+
+  const runGenerate = async (colorMap: DrawnColorEntry[]) => {
     setCapturing(true);
     let compositeBase64: string | null = null;
 
@@ -318,13 +350,6 @@ export function useDrawModeLogic({
       compositeBase64 = (await drawingCanvasRef.current?.makeMaskSnapshot()) ?? null;
     }
 
-    const drawnColors = drawingCanvasRef.current?.getDrawnColorMap() ?? [];
-    const colorMap: DrawnColorEntry[] = drawnColors.map((entry) => ({
-      ...entry,
-      categoryId: colorSettings[entry.hex]?.categoryId,
-      customPrompt: colorSettings[entry.hex]?.customPrompt,
-    }));
-
     setCapturing(false);
     onGenerate(compositeBase64, colorMap);
     onClose?.();
@@ -336,6 +361,8 @@ export function useDrawModeLogic({
     setActiveColor,
     colorSettings,
     drawnColorHexes,
+    focusPromptHex,
+    setFocusPromptHex,
     canUndo,
     canRedo,
     hasStrokes,
@@ -365,7 +392,6 @@ export function useDrawModeLogic({
     handleSave,
     handleOpenTemplateBrowser,
     handleLoadTemplate,
-    toggleCategoryForColor,
     handlePromptChange,
     handleGenerate,
     resetState,

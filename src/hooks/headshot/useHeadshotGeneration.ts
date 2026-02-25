@@ -23,7 +23,7 @@ import {
 } from '@/lib/ai-jobs';
 import type { PreviewSource } from './useHairAndMakeup';
 
-type DrawnColorEntry = { hex: string; label: string };
+type DrawnColorEntry = { hex: string; customPrompt?: string };
 
 export type UseHeadshotGenerationParams = {
   userId: string | null;
@@ -188,7 +188,12 @@ export function useHeadshotGeneration({
           skipUserSettingsUpdate: true,
           maskStoragePath,
           maskStorageBucket,
-          maskColorMap: maskStoragePath ? maskColorMap : undefined,
+          maskColorMap: maskStoragePath
+            ? maskColorMap?.map((entry) => ({
+                hex: entry.hex,
+                customPrompt: entry.customPrompt,
+              }))
+            : undefined,
         }
       );
 

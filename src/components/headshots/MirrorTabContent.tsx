@@ -105,10 +105,6 @@ interface MirrorTabContentProps {
   // Bottom clearance
   floatingBarClearance: number;
 
-  // Draw mode interaction
-  drawModeWasOpenRef: React.MutableRefObject<boolean>;
-  setSelectedHairCategory: (id: string) => void;
-  setSelectedMakeupCategory: (id: string | null) => void;
 }
 
 export default function MirrorTabContent({
@@ -159,9 +155,6 @@ export default function MirrorTabContent({
   hairLengthOptions,
   selectedHairLengthId,
   floatingBarClearance,
-  drawModeWasOpenRef,
-  setSelectedHairCategory,
-  setSelectedMakeupCategory,
 }: MirrorTabContentProps) {
   const colors = useThemeColors();
   const { width: windowWidth } = useWindowDimensions();

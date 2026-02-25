@@ -3,8 +3,8 @@
  * Shared color selector UI used by both DrawModeModal and DrawModeInline.
  *
  * Row A — horizontal scrollable row of colour circles (one per draw colour).
- * Row B — scrollable stack of per-drawn-colour settings panels, each with:
- *   - colour swatch + category icon row (tap = select, gear = open preset editor)
+ * Row B — scrollable stack of per-drawn-colour settings panels:
+ *   - colour swatch label
  *   - custom prompt text input
  */
 
@@ -17,33 +17,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createColorControlsStyles } from '@/styles/drawModeStyles';
-import { DRAW_COLOUR_ORDER, getDrawColour } from '@/lib/headshot/drawingColors';
+import { DRAW_COLOUR_MAP, DRAW_COLOUR_ORDER, getDrawColour } from '@/lib/headshot/drawingColors';
 import type { ColorSettings } from '@/hooks/headshot/useDrawModeLogic';
-
-/** Ionicons name for each draw category. */
-const CATEGORY_ICONS: Record<string, string> = {
-  'lip-styles':       'water-outline',
-  'eyeliner-styles':  'eye-outline',
-  'eyeshadow-styles': 'glasses-outline',
-  'blush-placements': 'heart-outline',
-  'foundation-base':  'layers-outline',
-  'eyebrow-styles':   'remove-outline',
-  'major-aesthetics': 'star-outline',
-  'hair':             'cut-outline',
-};
 
 type ColorControlsPanelProps = {
   activeColor: string;
   drawnColorHexes: string[];
   colorSettings: Record<string, ColorSettings>;
   onColorSelect: (hex: string) => void;
-  onToggleCategory: (categoryId: string, hex: string) => void;
   onPromptChange: (hex: string, text: string) => void;
-  onOpenCategoryEditor: (categoryId: string) => void;
+  focusPromptHex?: string | null;
+  onFocusPromptHandled?: () => void;
 };
 
 export default function ColorControlsPanel({
@@ -51,12 +38,19 @@ export default function ColorControlsPanel({
   drawnColorHexes,
   colorSettings,
   onColorSelect,
-  onToggleCategory,
   onPromptChange,
-  onOpenCategoryEditor,
+  focusPromptHex,
+  onFocusPromptHandled,
 }: ColorControlsPanelProps) {
   const colors = useThemeColors();
   const styles = StyleSheet.create(createColorControlsStyles(colors));
+  const inputRefs = React.useRef<Record<string, TextInput | null>>({});
+
+  React.useEffect(() => {
+    if (!focusPromptHex) return;
+    inputRefs.current[focusPromptHex]?.focus();
+    onFocusPromptHandled?.();
+  }, [focusPromptHex, onFocusPromptHandled]);
 
   return (
     <View style={styles.colorControlsSection}>
@@ -98,50 +92,19 @@ export default function ColorControlsPanel({
           {drawnColorHexes.map((hex) => (
             <View key={hex} style={styles.colorSettingsPanel}>
 
-              {/* B1: colour swatch + category icons */}
+              {/* B1: colour swatch + label */}
               <View style={styles.colorSettingsTopRow}>
                 <View style={[styles.activeColorSwatch, { backgroundColor: hex }]} />
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.categoryIconsContent}
-                >
-                  {DRAW_COLOUR_ORDER.map((categoryId) => {
-                    const iconName = CATEGORY_ICONS[categoryId];
-                    const isSelected = colorSettings[hex]?.categoryId === categoryId;
-                    return (
-                      <View key={categoryId} style={styles.categoryIconWrapper}>
-                        <TouchableOpacity
-                          style={[
-                            styles.categoryIconButton,
-                            isSelected && { borderColor: hex, backgroundColor: hex + '22' },
-                          ]}
-                          onPress={() => onToggleCategory(categoryId, hex)}
-                          hitSlop={4}
-                        >
-                          <Ionicons
-                            name={iconName as any}
-                            size={16}
-                            color={isSelected ? hex : colors.textSecondary}
-                          />
-                        </TouchableOpacity>
-                        {isSelected && (
-                          <TouchableOpacity
-                            style={styles.categoryGearBadge}
-                            onPress={() => onOpenCategoryEditor(categoryId)}
-                            hitSlop={4}
-                          >
-                            <Ionicons name="settings-outline" size={9} color={colors.white} />
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    );
-                  })}
-                </ScrollView>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                  {Object.values(DRAW_COLOUR_MAP).find((entry) => entry.colour === hex)?.label ?? hex}
+                </Text>
               </View>
 
               {/* B2: custom prompt text area */}
               <TextInput
+                ref={(ref) => {
+                  inputRefs.current[hex] = ref;
+                }}
                 style={styles.colorPromptInput}
                 placeholder="Describe what to do here…"
                 placeholderTextColor={colors.textTertiary}

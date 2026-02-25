@@ -233,9 +233,9 @@ export default function DrawModeModal({
             drawnColorHexes={draw.drawnColorHexes}
             colorSettings={draw.colorSettings}
             onColorSelect={draw.setActiveColor}
-            onToggleCategory={draw.toggleCategoryForColor}
             onPromptChange={draw.handlePromptChange}
-            onOpenCategoryEditor={onOpenCategoryEditor}
+            focusPromptHex={draw.focusPromptHex}
+            onFocusPromptHandled={() => draw.setFocusPromptHex(null)}
           />
 
           {/* ── Selections + generate ── */}
@@ -266,11 +266,9 @@ export default function DrawModeModal({
             <Text style={styles.infoBody}>
               {`1. Select a color from the row below the image.\n\n`}
               {`2. Draw on the image to mark the areas you want the AI to modify.\n\n`}
-              {`3. Tap a category icon to associate the color with a makeup or hair type.\n\n`}
-              {`4. Tap the gear icon on a selected category to choose a specific preset.\n\n`}
-              {`5. Optionally add a custom description for each color in the text field.\n\n`}
-              {`6. Pinch to zoom in for precision. Double-tap to reset.\n\n`}
-              {`7. Tap Generate — the AI will use your drawing as placement guidance.`}
+              {`3. Add a custom instruction for each color in the text field below.\n\n`}
+              {`4. Pinch to zoom in for precision. Double-tap to reset.\n\n`}
+              {`5. Tap Generate — the AI will use your color + instruction pairings as placement guidance.`}
             </Text>
             <TouchableOpacity style={styles.infoClose} onPress={() => draw.setInfoVisible(false)}>
               <Text style={styles.infoCloseText}>Got it</Text>
