@@ -27,7 +27,9 @@ export const createColorControlsStyles = (colors: ThemeColors) =>
       flexShrink: 0,
     },
     colorSelectorContent: {
-      paddingHorizontal: spacing.md,
+      flexGrow: 1,
+      justifyContent: 'center',
+      paddingHorizontal: spacing.sm,
       paddingVertical: spacing.sm,
       gap: spacing.sm,
       alignItems: 'center',
@@ -58,13 +60,12 @@ export const createColorControlsStyles = (colors: ThemeColors) =>
     colorSettingsPanel: {
       paddingHorizontal: spacing.md,
       paddingBottom: spacing.sm,
-      gap: spacing.xs,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.borderLight,
     },
-    colorSettingsTopRow: {
+    colorPromptRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       gap: spacing.sm,
       paddingTop: spacing.sm,
     },
@@ -74,32 +75,8 @@ export const createColorControlsStyles = (colors: ThemeColors) =>
       borderRadius: 11,
       flexShrink: 0,
     },
-    categoryIconsContent: {
-      gap: spacing.xs,
-      alignItems: 'center',
-    },
-    categoryIconWrapper: {
-      position: 'relative',
-    },
-    categoryIconButton: {
-      width: 34,
-      height: 34,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: borderRadius.sm,
-      borderWidth: 1.5,
-      borderColor: colors.borderLight,
-    },
-    categoryGearBadge: {
-      position: 'absolute',
-      top: -4,
-      right: -4,
-      width: 16,
-      height: 16,
-      borderRadius: 8,
-      backgroundColor: colors.textSecondary,
-      alignItems: 'center',
-      justifyContent: 'center',
+    activeColorSwatchTopAligned: {
+      marginTop: spacing.xs,
     },
     colorPromptInput: {
       borderWidth: 1,
@@ -111,6 +88,9 @@ export const createColorControlsStyles = (colors: ThemeColors) =>
       color: colors.textPrimary,
       minHeight: 52,
       textAlignVertical: 'top',
+    },
+    colorPromptInputInline: {
+      flex: 1,
     },
   });
 

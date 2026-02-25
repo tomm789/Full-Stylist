@@ -137,7 +137,7 @@ export default function DrawModeInline({
                 <ExpoImage
                   source={{ uri: previewImageUrl }}
                   style={StyleSheet.absoluteFill}
-                  contentFit="contain"
+                  contentFit="cover"
                 />
               ) : (
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.backgroundTertiary }]} />
@@ -173,7 +173,7 @@ export default function DrawModeInline({
       />
 
       {/* ── Selections + generate ── */}
-      {(hasSelections || draw.hasStrokes) && (
+      {draw.hasStrokes && (
         <>
           {hasSelections && (
             <HeadshotCreatorContainer

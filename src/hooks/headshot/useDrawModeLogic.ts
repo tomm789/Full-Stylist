@@ -268,7 +268,8 @@ export function useDrawModeLogic({
   };
 
   // --- Generate ---
-  const canGenerate = (hasSelections || hasStrokes) && !generating && !capturing;
+  const hasAnyPrompt = drawnColorHexes.some((hex) => Boolean(colorSettings[hex]?.customPrompt?.trim()));
+  const canGenerate = hasStrokes && hasAnyPrompt && !generating && !capturing;
   const generateLabel = capturing
     ? 'Capturing…'
     : generating

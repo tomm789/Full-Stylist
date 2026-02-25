@@ -4,7 +4,7 @@
  *
  * Row A — horizontal scrollable row of colour circles (one per draw colour).
  * Row B — scrollable stack of per-drawn-colour settings panels:
- *   - colour swatch label
+ *   - colour swatch
  *   - custom prompt text input
  */
 
@@ -12,7 +12,6 @@ import React from 'react';
 import {
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -20,7 +19,7 @@ import {
 
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createColorControlsStyles } from '@/styles/drawModeStyles';
-import { DRAW_COLOUR_MAP, DRAW_COLOUR_ORDER, getDrawColour } from '@/lib/headshot/drawingColors';
+import { DRAW_COLOUR_ORDER, getDrawColour } from '@/lib/headshot/drawingColors';
 import type { ColorSettings } from '@/hooks/headshot/useDrawModeLogic';
 
 type ColorControlsPanelProps = {
@@ -91,28 +90,21 @@ export default function ColorControlsPanel({
         >
           {drawnColorHexes.map((hex) => (
             <View key={hex} style={styles.colorSettingsPanel}>
-
-              {/* B1: colour swatch + label */}
-              <View style={styles.colorSettingsTopRow}>
-                <View style={[styles.activeColorSwatch, { backgroundColor: hex }]} />
-                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                  {Object.values(DRAW_COLOUR_MAP).find((entry) => entry.colour === hex)?.label ?? hex}
-                </Text>
+              <View style={styles.colorPromptRow}>
+                <View style={[styles.activeColorSwatch, styles.activeColorSwatchTopAligned, { backgroundColor: hex }]} />
+                <TextInput
+                  ref={(ref) => {
+                    inputRefs.current[hex] = ref;
+                  }}
+                  style={[styles.colorPromptInput, styles.colorPromptInputInline]}
+                  placeholder="Describe what to do here…"
+                  placeholderTextColor={colors.textTertiary}
+                  value={colorSettings[hex]?.customPrompt ?? ''}
+                  onChangeText={(text) => onPromptChange(hex, text)}
+                  multiline
+                  numberOfLines={2}
+                />
               </View>
-
-              {/* B2: custom prompt text area */}
-              <TextInput
-                ref={(ref) => {
-                  inputRefs.current[hex] = ref;
-                }}
-                style={styles.colorPromptInput}
-                placeholder="Describe what to do here…"
-                placeholderTextColor={colors.textTertiary}
-                value={colorSettings[hex]?.customPrompt ?? ''}
-                onChangeText={(text) => onPromptChange(hex, text)}
-                multiline
-                numberOfLines={2}
-              />
             </View>
           ))}
         </ScrollView>
