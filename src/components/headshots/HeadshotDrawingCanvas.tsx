@@ -15,6 +15,12 @@ export type DrawnColorEntry = {
   customPrompt?: string;
 };
 
+export type DrawMaskMeta = {
+  contentFit: 'cover' | 'contain';
+  canvasWidth: number;
+  canvasHeight: number;
+};
+
 export type HeadshotDrawingCanvasRef = {
   makeMaskSnapshot: () => Promise<string | null>;
   makeCompositeSnapshot: (bgBase64: string, width: number, height: number) => Promise<string | null>;

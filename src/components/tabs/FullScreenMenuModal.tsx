@@ -258,11 +258,16 @@ export function FullScreenMenuModal({
               placeholderTextColor={colors.textTertiary}
               style={styles.menuSearchInput}
               autoCorrect={false}
+              blurOnSubmit
             />
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           <TouchableOpacity
             style={styles.refreshRow}
             onPress={async () => {

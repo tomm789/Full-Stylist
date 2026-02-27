@@ -86,7 +86,12 @@ export default function NewHeadshotScreen() {
           leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         />
 
-        <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
+        <ScrollView
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           {!uploadedUri ? (
             <View style={styles.uploadSection}>
               <Text style={styles.sectionTitle}>Take or Upload a Photo</Text>

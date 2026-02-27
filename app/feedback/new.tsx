@@ -10,6 +10,8 @@ import {
   TextInput,
   StyleSheet,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
   TouchableOpacity,
   Alert,
   SafeAreaView,
@@ -102,7 +104,11 @@ export default function NewFeedbackScreen() {
         }
       />
 
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}
+      >
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Category Selection */}
         <View style={styles.section}>
           <Text style={styles.label}>Category</Text>
@@ -183,6 +189,7 @@ export default function NewFeedbackScreen() {
           </View>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -191,6 +198,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  keyboardView: {
+    flex: 1,
   },
   scrollContainer: {
     flex: 1,

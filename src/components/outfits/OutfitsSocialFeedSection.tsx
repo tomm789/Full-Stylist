@@ -121,6 +121,8 @@ export default function OutfitsSocialFeedSection({
       style={styles.feedListWrapper}
       contentContainerStyle={[styles.feedList, contentContainerStyle]}
       onLayout={onLayout}
+      onScroll={onScroll}
+      scrollEventThrottle={scrollEventThrottle}
       onScrollToIndexFailed={onScrollToIndexFailed}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

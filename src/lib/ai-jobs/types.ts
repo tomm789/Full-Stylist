@@ -209,6 +209,9 @@ export async function triggerHeadshotGenerateWithPrompt(
     maskStoragePath?: string;
     maskStorageBucket?: string;
     maskColorMap?: Array<{ hex: string; customPrompt?: string }>;
+    maskRenderFit?: 'cover' | 'contain';
+    maskRenderWidth?: number;
+    maskRenderHeight?: number;
   }
 ): Promise<QueryResult<AIJob>> {
   return createAIJob(userId, 'headshot_generate', {
@@ -219,6 +222,9 @@ export async function triggerHeadshotGenerateWithPrompt(
     mask_storage_path: options?.maskStoragePath,
     mask_storage_bucket: options?.maskStorageBucket,
     mask_color_map: options?.maskColorMap,
+    mask_render_fit: options?.maskRenderFit,
+    mask_render_width: options?.maskRenderWidth,
+    mask_render_height: options?.maskRenderHeight,
   });
 }
 

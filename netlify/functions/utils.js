@@ -760,6 +760,86 @@ async function compositeOutfitGrid(imageInputs) {
 }
 
 /**
+ * Composes a draw mask directly onto a portrait so Gemini receives one image
+ * with guides already aligned to facial features.
+ *
+ * @param {{base64: string, mimeType?: string}} selfieImage
+ * @param {{base64: string, mimeType?: string}} maskImage
+ * @param {{fit?: "cover"|"contain", width?: number, height?: number}} options
+ * @returns {Promise<{base64: string, mimeType: "image/png"}>}
+ */
+async function composeHeadshotWithMask(selfieImage, maskImage, options = {}) {
+  const fit = options.fit === "contain" ? "contain" : "cover";
+
+  if (!selfieImage?.base64 || !maskImage?.base64) {
+    throw new Error("composeHeadshotWithMask requires selfie and mask base64 data");
+  }
+
+  const selfieBuffer = Buffer.from(selfieImage.base64.replace(/^data:image\/\w+;base64,/, ""), "base64");
+  const maskBuffer = Buffer.from(maskImage.base64.replace(/^data:image\/\w+;base64,/, ""), "base64");
+
+  const maskMeta = await sharp(maskBuffer).metadata();
+  const targetWidth = Number.isFinite(options.width) && options.width > 0
+    ? Math.max(1, Math.round(options.width))
+    : (maskMeta.width || 0);
+  const targetHeight = Number.isFinite(options.height) && options.height > 0
+    ? Math.max(1, Math.round(options.height))
+    : (maskMeta.height || 0);
+
+  if (!targetWidth || !targetHeight) {
+    throw new Error("Unable to resolve composite dimensions for headshot mask overlay");
+  }
+
+  const normalizedSelfie = await sharp(selfieBuffer)
+    .rotate()
+    .resize(targetWidth, targetHeight, {
+      fit,
+      position: "center",
+    })
+    .png()
+    .toBuffer();
+
+  const rawMask = await sharp(maskBuffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const { data, info } = rawMask;
+  for (let i = 0; i < data.length; i += info.channels) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    // make black backdrop transparent, keep user guide strokes opaque
+    if (r <= 8 && g <= 8 && b <= 8) {
+      data[i + 3] = 0;
+    } else {
+      data[i + 3] = 255;
+    }
+  }
+
+  const transparentMask = await sharp(data, {
+    raw: {
+      width: info.width,
+      height: info.height,
+      channels: info.channels,
+    },
+  })
+    .resize(targetWidth, targetHeight, { fit: "fill" })
+    .png()
+    .toBuffer();
+
+  const composed = await sharp(normalizedSelfie)
+    .composite([{ input: transparentMask, left: 0, top: 0 }])
+    .png()
+    .toBuffer();
+
+  return {
+    base64: composed.toString("base64"),
+    mimeType: "image/png",
+  };
+}
+
+/**
  * Optimizes an image before sending it to Gemini.
  * This reduces upload payload size and can lower generation latency.
  *
@@ -882,6 +962,7 @@ module.exports = {
   uploadImageToStorage,
   callGeminiAPI,
   compositeOutfitGrid,
+  composeHeadshotWithMask,
   optimizeGeminiInput,
   optimizeGeminiOutput,
   createPerformanceTracker,

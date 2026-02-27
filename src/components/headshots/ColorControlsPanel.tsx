@@ -10,6 +10,7 @@
 
 import React from 'react';
 import {
+  Dimensions,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -30,6 +31,8 @@ type ColorControlsPanelProps = {
   onPromptChange: (hex: string, text: string) => void;
   focusPromptHex?: string | null;
   onFocusPromptHandled?: () => void;
+  keyboardVisible?: boolean;
+  keyboardHeight?: number;
   bottomInset?: number;
 };
 
@@ -41,17 +44,50 @@ export default function ColorControlsPanel({
   onPromptChange,
   focusPromptHex,
   onFocusPromptHandled,
+  keyboardVisible = false,
+  keyboardHeight = 0,
   bottomInset = 0,
 }: ColorControlsPanelProps) {
   const colors = useThemeColors();
   const styles = StyleSheet.create(createColorControlsStyles(colors));
+  const scrollRef = React.useRef<ScrollView | null>(null);
   const inputRefs = React.useRef<Record<string, TextInput | null>>({});
+  const scrollYRef = React.useRef(0);
+  const [activePromptHex, setActivePromptHex] = React.useState<string | null>(null);
+
+  const ensurePromptVisible = React.useCallback(
+    (hex: string) => {
+      if (!keyboardVisible || keyboardHeight <= 0) return;
+      const input = inputRefs.current[hex];
+      if (!input || typeof input.measureInWindow !== 'function') return;
+
+      input.measureInWindow((_x, y, _w, h) => {
+        const keyboardTop = Dimensions.get('window').height - keyboardHeight;
+        const overlap = y + h + 14 - keyboardTop;
+        if (overlap > 0) {
+          scrollRef.current?.scrollTo({
+            y: Math.max(0, scrollYRef.current + overlap),
+            animated: true,
+          });
+        }
+      });
+    },
+    [keyboardVisible, keyboardHeight],
+  );
 
   React.useEffect(() => {
     if (!focusPromptHex) return;
     inputRefs.current[focusPromptHex]?.focus();
+    setActivePromptHex(focusPromptHex);
     onFocusPromptHandled?.();
   }, [focusPromptHex, onFocusPromptHandled]);
+
+  React.useEffect(() => {
+    if (!keyboardVisible || !activePromptHex) return;
+    const timer = setTimeout(() => ensurePromptVisible(activePromptHex), 36);
+    return () => clearTimeout(timer);
+  }, [keyboardVisible, activePromptHex, ensurePromptVisible]);
+
   const orderedColorHexes = React.useMemo(() => {
     if (!drawnColorHexes.includes(activeColor)) return drawnColorHexes;
     return [activeColor, ...drawnColorHexes.filter((hex) => hex !== activeColor)];
@@ -89,14 +125,23 @@ export default function ColorControlsPanel({
       {/* Row B: stacked per-drawn-colour settings panels */}
       {drawnColorHexes.length > 0 && (
         <ScrollView
+          ref={scrollRef}
           style={styles.colorPanelsScroll}
           contentContainerStyle={{ paddingBottom: bottomInset }}
           bounces={false}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          scrollEventThrottle={16}
+          onScroll={(event) => {
+            scrollYRef.current = event.nativeEvent.contentOffset.y;
+          }}
         >
           {orderedColorHexes.map((hex) => (
-            <View key={hex} style={styles.colorSettingsPanel}>
+            <View
+              key={hex}
+              style={styles.colorSettingsPanel}
+            >
               <View style={styles.colorPromptRow}>
                 <View style={[styles.activeColorSwatch, styles.activeColorSwatchTopAligned, { backgroundColor: hex }]} />
                 <TextInput
@@ -108,7 +153,12 @@ export default function ColorControlsPanel({
                   placeholderTextColor={colors.textTertiary}
                   value={colorSettings[hex]?.customPrompt ?? ''}
                   onChangeText={(text) => onPromptChange(hex, text)}
+                  onFocus={() => {
+                    setActivePromptHex(hex);
+                    ensurePromptVisible(hex);
+                  }}
                   multiline
+                  blurOnSubmit={false}
                   numberOfLines={2}
                 />
               </View>

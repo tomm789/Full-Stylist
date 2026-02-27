@@ -53,6 +53,7 @@ export default function SearchBar({
         onChangeText={onChangeText}
         placeholderTextColor={colors.textPlaceholder}
         autoCapitalize="none"
+        blurOnSubmit
         {...textInputProps}
       />
 

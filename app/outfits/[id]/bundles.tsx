@@ -198,6 +198,8 @@ export default function CreateBundleScreen() {
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <Text style={styles.sectionTitle}>Outfit: {outfit?.title || 'Untitled'}</Text>
         <Text style={styles.description}>

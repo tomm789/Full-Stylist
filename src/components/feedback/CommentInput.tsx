@@ -34,6 +34,7 @@ export function CommentInput({
         value={commentBody}
         onChangeText={onCommentBodyChange}
         multiline
+        blurOnSubmit={false}
         maxLength={500}
         editable={!submittingComment}
       />

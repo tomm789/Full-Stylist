@@ -85,6 +85,8 @@ export default function MyOutfitsSection({
         style={feedListStyle}
         contentContainerStyle={feedContentStyle}
         onLayout={onLayout}
+        onScroll={onScroll}
+        scrollEventThrottle={scrollEventThrottle}
         onScrollToIndexFailed={onScrollToIndexFailed}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />

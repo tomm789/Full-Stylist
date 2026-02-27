@@ -45,6 +45,8 @@ export default function SearchResultsPanel({
           )}
           keyExtractor={(item) => `${item.type}-${item.id}`}
           contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           ListEmptyComponent={
             searchQuery.trim().length > 0 ? (
               <View style={styles.emptyContainer}>

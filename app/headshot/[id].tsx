@@ -178,7 +178,12 @@ export default function HeadshotDetailScreen() {
           />
         </DropdownMenuModal>
 
-        <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
+        <ScrollView
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           <View style={styles.imageContainer}>
             <ExpoImage
               source={{ uri: headshot.url }}

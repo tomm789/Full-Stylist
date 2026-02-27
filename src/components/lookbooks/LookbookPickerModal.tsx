@@ -90,6 +90,7 @@ export default function LookbookPickerModal({
               value={lookbookTitle}
               onChangeText={onChangeTitle}
               maxLength={100}
+              blurOnSubmit
             />
             <Text style={styles.lookbookLabel}>Description</Text>
             <TextInput
@@ -98,6 +99,7 @@ export default function LookbookPickerModal({
               value={lookbookDescription}
               onChangeText={onChangeDescription}
               multiline
+              blurOnSubmit={false}
               numberOfLines={3}
               maxLength={500}
             />
@@ -181,6 +183,8 @@ export default function LookbookPickerModal({
                   </View>
                 }
                 style={styles.lookbookPickerList}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
               />
             )}
             <TouchableOpacity

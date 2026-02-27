@@ -67,6 +67,7 @@ export function HeadshotSection({
           value={hairStyle}
           onChangeText={onHairStyleChange}
           editable={!generating}
+          blurOnSubmit
         />
         <Text style={styles.inputHint}>
           Describe your desired hairstyle or leave blank to keep original
@@ -79,6 +80,7 @@ export function HeadshotSection({
           value={makeupStyle}
           onChangeText={onMakeupStyleChange}
           editable={!generating}
+          blurOnSubmit
         />
         <Text style={styles.inputHint}>
           Describe your desired makeup or leave blank for natural look

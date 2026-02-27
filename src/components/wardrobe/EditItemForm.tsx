@@ -37,6 +37,7 @@ export function EditItemForm({
           onChangeText={onTitleChange}
           placeholder="Item title"
           placeholderTextColor="#999"
+          blurOnSubmit
         />
       </View>
 
@@ -61,6 +62,7 @@ export function EditItemForm({
           onChangeText={onBrandChange}
           placeholder="Brand name"
           placeholderTextColor="#999"
+          blurOnSubmit
         />
       </View>
 
@@ -72,6 +74,7 @@ export function EditItemForm({
           onChangeText={onSizeChange}
           placeholder="Size"
           placeholderTextColor="#999"
+          blurOnSubmit
         />
       </View>
     </View>

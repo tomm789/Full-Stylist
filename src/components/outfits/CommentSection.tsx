@@ -55,6 +55,7 @@ export default function CommentSection({
           onChangeText={setCommentText}
           editable={!submitting}
           multiline
+          blurOnSubmit={false}
           placeholderTextColor={colors.textPlaceholder}
         />
         <TouchableOpacity

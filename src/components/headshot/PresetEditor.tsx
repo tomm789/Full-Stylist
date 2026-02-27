@@ -80,7 +80,11 @@ export default function PresetEditor({
 
       {presets.length > 0 && (
         <View style={styles.categoryPills}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={styles.categoryPillsRow}>
               {presets.map((category) => (
                 <PillButton

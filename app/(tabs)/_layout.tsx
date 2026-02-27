@@ -262,6 +262,7 @@ function FloatingTabBar(
               style={[floatingTabBarStyles.searchInput, { color: colors.textPrimary }]}
               autoCorrect={false}
               returnKeyType="search"
+              blurOnSubmit
             />
             <TouchableOpacity
               onPress={() => props.onTabSearchToggle?.(false)}

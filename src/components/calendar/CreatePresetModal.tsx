@@ -4,7 +4,13 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+} from 'react-native';
 import { Input, PrimaryButton } from '@/components/shared';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';

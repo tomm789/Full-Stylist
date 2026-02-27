@@ -94,7 +94,11 @@ export const EditLookbookModal = ({
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.content}>
+        <ScrollView
+          style={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           {/* Title */}
           <View style={styles.section}>
             <Text style={styles.label}>Title *</Text>
@@ -104,6 +108,7 @@ export const EditLookbookModal = ({
               onChangeText={setEditTitle}
               placeholder="Enter lookbook title"
               editable={!saving}
+              blurOnSubmit
             />
           </View>
 
@@ -116,6 +121,7 @@ export const EditLookbookModal = ({
               onChangeText={setEditDescription}
               placeholder="Enter description (optional)"
               multiline
+              blurOnSubmit={false}
               numberOfLines={4}
               editable={!saving}
             />

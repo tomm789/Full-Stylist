@@ -136,6 +136,8 @@ export default function OutfitEditorScreen() {
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <Input
           label="Title"

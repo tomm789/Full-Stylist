@@ -147,6 +147,8 @@ export default function HeaderSearchPill({
             placeholderTextColor={colors.textPlaceholder}
             autoCapitalize="none"
             returnKeyType="search"
+            blurOnSubmit
+            onSubmitEditing={() => inputRef.current?.blur()}
             editable={expanded}
           />
         </Animated.View>

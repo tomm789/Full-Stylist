@@ -40,7 +40,11 @@ export function AddAttributeModal({
   return (
     <View style={styles.addAttributeModal}>
       <Text style={styles.modalTitle}>Add Attribute</Text>
-      <ScrollView style={styles.definitionsList}>
+      <ScrollView
+        style={styles.definitionsList}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         {attributeDefinitions.map((def) => (
           <TouchableOpacity
             key={def.key}
@@ -66,6 +70,7 @@ export function AddAttributeModal({
         value={newAttributeValue}
         onChangeText={onAttributeValueChange}
         placeholder="Enter value"
+        blurOnSubmit
       />
       <View style={styles.modalActions}>
         <TouchableOpacity style={styles.modalButton} onPress={onCancel}>

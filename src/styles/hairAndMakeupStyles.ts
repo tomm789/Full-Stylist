@@ -31,6 +31,10 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: {
     paddingBottom: spacing.massive,
   },
+  headerContainer: {
+    overflow: 'hidden',
+    backgroundColor: colors.background,
+  },
   historyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -44,7 +48,7 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   facePreviewSection: {
     width: '100%',
-    gap: spacing.md,
+    gap: 0,
   },
   faceEmptyCard: {
     width: '100%',
@@ -684,29 +688,50 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     textAlign: 'center',
   },
   // Draw mode toggle button
-  drawModeButton: {
-    alignSelf: 'flex-start',
+  drawControlsSection: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    gap: spacing.sm,
+  },
+  drawControlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.round,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.backgroundSecondary,
+    justifyContent: 'space-between',
+  },
+  drawControlsLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  drawControlsMiddleSpacer: {
+    flex: 1,
+  },
+  drawNewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs / 2,
   },
-  drawModeButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  drawModeButtonLabel: {
-    fontSize: typography.fontSize.sm,
+  drawNewButtonLabel: {
     color: colors.textSecondary,
+    fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
   },
-  drawModeButtonLabelActive: {
-    color: colors.textLight,
+  drawNotesContainer: {
+    gap: spacing.sm,
+  },
+  drawNoteField: {
+    gap: spacing.xs,
+  },
+  drawAdvancedContainer: {
+    gap: spacing.md,
+  },
+  drawNoteLabel: {
+    color: colors.textSecondary,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
   },
   // Generation loading
   generatingScrollView: {

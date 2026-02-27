@@ -9,6 +9,7 @@ const {
   downloadImageFromStorage,
   uploadImageToStorage,
   callGeminiAPI,
+  composeHeadshotWithMask,
   resolveModelFromSettings,
   getGeminiApiVersion,
   DEFAULT_IMAGE_MODEL
@@ -39,6 +40,9 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
     mask_storage_path,
     mask_storage_bucket,
     mask_color_map,
+    mask_render_fit,
+    mask_render_width,
+    mask_render_height,
   } = input;
   if (!selfie_image_id) {
     throw new Error("Missing selfie_image_id");
@@ -66,7 +70,7 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
       .from(mask_storage_bucket)
       .download(mask_storage_path);
     if (maskError || !maskBlob) {
-      console.warn(`[processHeadshotGenerate] Failed to download mask: ${maskError?.message}`);
+      throw new Error(`Failed to download mask: ${maskError?.message || "unknown error"}`);
     } else {
       const maskBuffer = Buffer.from(await maskBlob.arrayBuffer());
       const maskBase64 = maskBuffer.toString('base64');
@@ -90,12 +94,12 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
             if (!promptForColor) {
               return `  - ${hex}: no specific instruction was provided for this color; make minimal, conservative edits only in this region`;
             }
-            return `  - ${hex}: "${promptForColor}" (apply this instruction only to the ${hex} regions in Image 2)`;
+            return `  - ${hex}: "${promptForColor}" (apply this only where the ${hex} guide color is drawn on the portrait)`;
           })
           .join('\n')
-      : '  - All colored regions: apply the requested changes to the corresponding areas of Image 1';
+      : '  - All colored guide regions: apply the requested changes only in those marked areas';
 
-    prompt += `\n\nImage 2 is a spatial mask that maps directly onto Image 1 — treat it as a semi-transparent overlay placed on top of the portrait. Each colored region in Image 2 marks the area of the face or hair in Image 1 where a specific change should be applied:\n${colorLines}\nThe strokes are rough hand-drawn guides, not precise boundaries. Use the colored regions to understand approximately where on the face or hair each change should occur. Apply only the changes indicated, and leave every part of Image 1 that is not covered by a colored region completely unchanged.`;
+    prompt += `\n\nThe input portrait already includes the user's color guide strokes drawn directly on top of the face and hair:\n${colorLines}\nTreat these strokes as rough spatial guidance, not precise boundaries. Apply only the requested edits in the corresponding colored regions, and keep all unmarked areas unchanged.`;
   }
 
   const { data: userSettings } = await supabase
@@ -111,8 +115,17 @@ async function processHeadshotGenerate(input, supabase, userId, perfTracker = nu
   const apiVersion = getGeminiApiVersion(model);
   console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, apiVersion });
   console.log(`[processHeadshotGenerate] Calling Gemini API with prompt length: ${prompt.length}`);
-  // Build the image array: always include selfie; add mask when present
-  const geminiImages = maskResult ? [selfieResult, maskResult] : [selfieResult];
+  // Build a single Gemini input image. If mask exists, hard-fail on any compose issue.
+  let geminiInputImage = selfieResult;
+  if (maskResult) {
+    console.log("[processHeadshotGenerate] Compositing mask onto selfie before Gemini call");
+    geminiInputImage = await composeHeadshotWithMask(selfieResult, maskResult, {
+      fit: mask_render_fit,
+      width: mask_render_width,
+      height: mask_render_height,
+    });
+  }
+  const geminiImages = [geminiInputImage];
 
   // Generate the headshot via Gemini - pass full result object to include mime-type
   const headshotB64 = await callGeminiAPI(

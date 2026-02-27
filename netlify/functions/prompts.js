@@ -75,11 +75,11 @@ const PROMPTS = {
     Professional studio headshot. 
     SUBJECT: The person in the image.
     CLOTHING: Wearing a simple white ribbed singlet (wife beater).
-    STYLE DIRECTION:
+    MODIFICATIONS:
     ${styleNotes}
-    CRITICAL: Maintain the EXACT framing, zoom level, and head angle of the original image.
-    STYLE: Photorealistic, 8k, soft lighting, light grey/white background.
-    OUTPUT: Professional headshot suitable for fashion photography.
+    CRITICAL: Realistic headshot framing, zoom level, and head angle of the subject. Ensure only the head and shoulders are in frame.
+    STYLE: Photorealistic, 8k, soft lighting. Infinite, solid pure white background.
+    OUTPUT: Professional headshot taken in a photography studio.
   `,
 
   // Compose a head on a body to produce a full-body composite

@@ -54,6 +54,8 @@ export function OnboardingAccountStep({
         style={styles.scrollContainer}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {/* Header Section */}
         <View style={styles.headerSection}>
@@ -85,6 +87,7 @@ export function OnboardingAccountStep({
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!loading}
+                blurOnSubmit
               />
             </View>
             <Text style={styles.hint}>
@@ -109,6 +112,7 @@ export function OnboardingAccountStep({
                 placeholder="Your name"
                 placeholderTextColor={colors.textPlaceholder}
                 editable={!loading}
+                blurOnSubmit
               />
             </View>
           </View>

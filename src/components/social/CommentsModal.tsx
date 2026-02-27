@@ -69,7 +69,11 @@ export const CommentsModal = ({
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.commentsList}>
+        <ScrollView
+          style={styles.commentsList}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           {comments.length === 0 ? (
             <Text style={styles.noComments}>No comments yet</Text>
           ) : (
@@ -105,6 +109,7 @@ export const CommentsModal = ({
             value={commentText}
             onChangeText={setCommentText}
             multiline
+            blurOnSubmit={false}
           />
           <TouchableOpacity
             style={styles.sendButton}

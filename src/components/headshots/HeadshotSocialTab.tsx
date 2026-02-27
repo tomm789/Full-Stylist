@@ -4,8 +4,8 @@
  * 3-column grid → tapping navigates to the user's feed screen (scoped to that post).
  */
 
-import React, { useRef, useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 import { DiscoverGrid } from '@/components/social/DiscoverGrid';
 import { PostMenuModal, CommentsModal } from '@/components/social';
@@ -19,12 +19,18 @@ interface HeadshotSocialTabProps {
   activeTab: 'following' | 'inspiration';
   currentUserId: string | undefined;
   onApplyLook: (variationId: string, inputSnapshotJson: any) => void;
+  onScroll?: (event: any) => void;
+  scrollEventThrottle?: number;
+  contentContainerStyle?: ViewStyle;
 }
 
 export default function HeadshotSocialTab({
   activeTab,
   currentUserId,
   onApplyLook,
+  onScroll,
+  scrollEventThrottle = 16,
+  contentContainerStyle,
 }: HeadshotSocialTabProps) {
   const router = useRouter();
 
@@ -100,6 +106,9 @@ export default function HeadshotSocialTab({
         }
         emptyIcon="sparkles-outline"
         showOwnerOverlay
+        onScroll={onScroll}
+        scrollEventThrottle={scrollEventThrottle}
+        contentContainerStyle={contentContainerStyle}
       />
 
       <PostMenuModal

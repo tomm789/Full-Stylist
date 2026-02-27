@@ -114,6 +114,7 @@ export function AIModelSection({
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
+              blurOnSubmit
             />
             <View style={styles.passwordButtons}>
               <TouchableOpacity
@@ -194,6 +195,7 @@ export function AIModelSection({
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
+              blurOnSubmit
             />
             <View style={styles.passwordButtons}>
               <TouchableOpacity

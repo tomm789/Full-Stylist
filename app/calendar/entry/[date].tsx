@@ -9,6 +9,8 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
   TouchableOpacity,
   TextInput,
   Alert,
@@ -188,7 +190,11 @@ export default function CalendarEntryScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}
+      >
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} keyboardShouldPersistTaps="handled">
         <SlotPresetSelector
           presets={presets}
           selectedPresetId={selectedPreset}
@@ -232,6 +238,7 @@ export default function CalendarEntryScreen() {
           />
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <CreatePresetModal
         visible={showCreatePresetModal}
@@ -282,6 +289,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
     marginTop: spacing.xs / 2,
+  },
+  keyboardView: {
+    flex: 1,
   },
   content: {
     flex: 1,

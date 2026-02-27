@@ -115,6 +115,7 @@ export function AttributeEditor({
                         }))
                       }
                       placeholder="Enter value"
+                      blurOnSubmit
                     />
                     <TouchableOpacity onPress={() => onDeleteAttribute(attr.id)}>
                       <Ionicons name="trash-outline" size={18} color="#FF3B30" />

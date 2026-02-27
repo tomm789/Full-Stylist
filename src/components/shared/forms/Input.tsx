@@ -36,6 +36,8 @@ export default function Input({
   style,
   onFocus,
   onBlur,
+  blurOnSubmit,
+  multiline,
   ...props
 }: InputProps) {
   const colors = useThemeColors();
@@ -52,6 +54,8 @@ export default function Input({
     setIsFocused(false);
     onBlur?.(e);
   };
+  const isMultiline = Boolean(multiline);
+  const resolvedBlurOnSubmit = blurOnSubmit ?? !isMultiline;
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -71,6 +75,8 @@ export default function Input({
         placeholderTextColor={colors.textPlaceholder}
         onFocus={handleFocus}
         onBlur={handleBlur}
+        multiline={multiline}
+        blurOnSubmit={resolvedBlurOnSubmit}
         {...props}
       />
       {error && <Text style={styles.errorText}>{error}</Text>}
