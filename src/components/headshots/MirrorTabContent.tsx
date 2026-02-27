@@ -1,9 +1,10 @@
 /**
  * MirrorTabContent
  * Renders the full "My Mirror" tab UI when draw mode is NOT active:
- *   - Edit-tab pill row
- *   - Image slider with generation dialog / prompt settings
- *   - EditTabModal bottom sheet
+ *   - Image slider
+ *   - Controls row: [Quick/Advanced toggle] [New]  [spacer]  [Draw]
+ *   - Inline Quick fields (custom description) OR inline Advanced fields
+ *   - EditTabModal bottom sheet (opened via header category pills)
  *
  * Extracted from hair-and-make-up.tsx to keep the screen file thin.
  */
@@ -11,19 +12,19 @@
 import React from 'react';
 import {
   Animated,
-  LayoutAnimation,
   Platform,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
-  UIManager,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { PillButton, EdgePeekSlider } from '@/components/shared';
-import HeadshotSlideItem from '@/components/headshots/HeadshotSlideItem';
+import { EdgePeekSlider, PillButton } from '@/components/shared';
+import IconSegmentedToggle from '@/components/shared/buttons/IconSegmentedToggle';
 import HeadshotPromptSettings from '@/components/headshots/HeadshotPromptSettings';
+import AdvancedFieldsPanel from '@/components/headshots/AdvancedFieldsPanel';
 import EditTabModal from '@/components/headshots/EditTabModal';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
@@ -33,11 +34,12 @@ import type { EditTab } from '@/hooks/headshot/useHairAndMakeup';
 import type { HeadshotGenerationVariation } from '@/lib/headshot/generation';
 import type { PresetCategory } from '@/lib/headshot/presetTypes';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 const { spacing } = theme;
+
+const QUICK_ADVANCED_OPTIONS = [
+  { value: 'quick', label: 'Quick', icon: 'flash-outline' as const },
+  { value: 'advanced', label: 'Advanced', icon: 'options-outline' as const },
+];
 
 interface MirrorTabContentProps {
   // Image slider
@@ -100,6 +102,13 @@ interface MirrorTabContentProps {
   // Bottom clearance
   floatingBarClearance: number;
 
+  // Scroll / header coordination
+  onScroll?: (event: any) => void;
+  scrollEventThrottle?: number;
+
+  // Edit tab request from header pill row
+  editTabRequest?: EditTab | null;
+  onEditTabRequestHandled?: () => void;
 }
 
 export default function MirrorTabContent({
@@ -147,6 +156,10 @@ export default function MirrorTabContent({
   hairLengthOptions,
   selectedHairLengthId,
   floatingBarClearance,
+  onScroll,
+  scrollEventThrottle = 16,
+  editTabRequest = null,
+  onEditTabRequestHandled,
 }: MirrorTabContentProps) {
   const colors = useThemeColors();
   const { width: windowWidth } = useWindowDimensions();
@@ -154,107 +167,59 @@ export default function MirrorTabContent({
   const commonStyles = createCommonStyles(colors);
 
   const [editModalVisible, setEditModalVisible] = React.useState(false);
+  const [viewMode, setViewMode] = React.useState<'quick' | 'advanced'>('quick');
+
+  // Quick mode: separate hair + makeup description fields
+  const [inlineHairDesc, setInlineHairDesc] = React.useState('');
+  const [inlineMakeupDesc, setInlineMakeupDesc] = React.useState('');
+
+  // Sync the two inline fields into the single customDescription for generation
+  const handleHairDescChange = React.useCallback((text: string) => {
+    setInlineHairDesc(text);
+    const combined = [text.trim(), inlineMakeupDesc.trim()].filter(Boolean).join('. ');
+    setCustomDescription(combined);
+  }, [inlineMakeupDesc, setCustomDescription]);
+
+  const handleMakeupDescChange = React.useCallback((text: string) => {
+    setInlineMakeupDesc(text);
+    const combined = [inlineHairDesc.trim(), text.trim()].filter(Boolean).join('. ');
+    setCustomDescription(combined);
+  }, [inlineHairDesc, setCustomDescription]);
+
+  // Open modal when header pill row requests a tab change
+  React.useEffect(() => {
+    if (editTabRequest) {
+      setEditModalVisible(true);
+      onEditTabRequestHandled?.();
+    }
+  }, [editTabRequest, onEditTabRequestHandled]);
 
   const presetGridGap = spacing.sm;
   const presetTileSize = (windowWidth - 2 * spacing.lg - 2 * spacing.sm - 3 * presetGridGap) / 4;
 
-  const handleEditTabChange = React.useCallback(
-    (tab: string) => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setEditTab(tab as EditTab);
-      setEditModalVisible(true);
-    },
-    [setEditTab]
-  );
-
   return (
     <>
-      {/* Tab pills row: below header, above image slider */}
-      <View style={styles.pillRowStack}>
-        <View style={styles.tabPills}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.tabPillsRow}>
-              <PillButton
-                label="Quick"
-                icon="flash-outline"
-                selected={editTab === 'quick'}
-                onPress={() => handleEditTabChange('quick')}
-                size="medium"
-                variant="default"
-                layout="vertical"
-              />
-              <PillButton
-                label="Hair"
-                icon="cut-outline"
-                selected={editTab === 'hair'}
-                onPress={() => handleEditTabChange('hair')}
-                size="medium"
-                variant="default"
-                layout="vertical"
-              />
-              <PillButton
-                label="Make-Up"
-                icon="color-palette-outline"
-                selected={editTab === 'makeup'}
-                onPress={() => handleEditTabChange('makeup')}
-                size="medium"
-                variant="default"
-                layout="vertical"
-              />
-              <PillButton
-                label="Accessories"
-                icon="glasses-outline"
-                selected={editTab === 'accessories'}
-                onPress={() => handleEditTabChange('accessories')}
-                size="medium"
-                variant="default"
-                layout="vertical"
-              />
-              <PillButton
-                label="Jewellery"
-                icon="diamond-outline"
-                selected={editTab === 'jewellery'}
-                onPress={() => handleEditTabChange('jewellery')}
-                size="medium"
-                variant="default"
-                layout="vertical"
-              />
-              <PillButton
-                label="Advanced"
-                icon="options-outline"
-                selected={editTab === 'advanced'}
-                onPress={() => handleEditTabChange('advanced')}
-                size="medium"
-                variant="default"
-                layout="vertical"
-              />
-            </View>
-          </ScrollView>
-        </View>
-      </View>
-
       <ScrollView
-        style={generating ? styles.generatingScrollView : undefined}
+        style={{ flex: 1 }}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: hasSelections ? spacing.massive + 140 : floatingBarClearance },
         ]}
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={scrollEventThrottle}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
-        {/* Image slider then prompt details */}
-        <View
-          style={[
-            styles.facePreviewSection,
-            commonStyles.sectionTopPadding,
-          ]}
-        >
+        {/* Image slider */}
+        <View style={styles.facePreviewSection}>
           {headshots.length > 0 ? (
             <EdgePeekSlider
               data={headshots}
               keyExtractor={keyExtractor}
-              itemWidthRatio={0.78}
+              itemWidthRatio={1}
               aspectRatio={3 / 4}
-              gap={2}
+              gap={0}
               initialIndex={activeFaceIndex}
               activeIndex={activeFaceIndex}
               extraData={activeFaceIndex}
@@ -275,7 +240,8 @@ export default function MirrorTabContent({
               </TouchableOpacity>
             </View>
           )}
-          {generating ? (
+
+          {generating && (
             <View style={styles.generatingDialog}>
               <Animated.Text style={[styles.dialogLine, { opacity: dialogLine1Opacity }]}>
                 Ooo...
@@ -290,25 +256,97 @@ export default function MirrorTabContent({
                 Ready?
               </Animated.Text>
             </View>
-          ) : (
-            <>
-              {previewHasImage && Platform.OS !== 'web' && (
-                <TouchableOpacity
-                  style={styles.drawModeButton}
-                  onPress={() => setIsDrawModeOpen(true)}
-                  accessibilityLabel="Open draw mode"
-                >
-                  <Ionicons name="pencil-outline" size={16} color={colors.textSecondary} />
-                  <Text style={styles.drawModeButtonLabel}>Draw</Text>
-                </TouchableOpacity>
-              )}
-              <HeadshotPromptSettings variation={activeImageVariation} />
-            </>
           )}
         </View>
+
+        {!generating && (
+          <>
+          {/* Controls row: [toggle + New]  [spacer]  [Draw] */}
+          <View style={styles.mirrorControlsRow}>
+            <View style={styles.mirrorControlsLeft}>
+              <IconSegmentedToggle
+                options={QUICK_ADVANCED_OPTIONS}
+                value={viewMode}
+                onChange={(v) => setViewMode(v as 'quick' | 'advanced')}
+                showLabelWhenActiveOnly
+              />
+              <TouchableOpacity
+                style={styles.mirrorNewButton}
+                onPress={handlePickCamera}
+                disabled={isStyleDisabled}
+              >
+                <Ionicons name="camera-outline" size={22} color={colors.textSecondary} />
+                <Text style={styles.mirrorNewButtonLabel}>New</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flex: 1 }} />
+
+            {previewHasImage && Platform.OS !== 'web' && (
+              <PillButton
+                label="Draw"
+                icon="pencil-outline"
+                variant="primary"
+                selected
+                onPress={() => setIsDrawModeOpen(true)}
+                size="medium"
+              />
+            )}
+          </View>
+
+          {/* Inline fields */}
+          <View style={styles.mirrorInlineFields}>
+            {viewMode === 'quick' ? (
+              <>
+                <View style={styles.customHeader}>
+                  <Text style={styles.customHint}>Hair Description</Text>
+                  <TouchableOpacity
+                    style={styles.infoIconButton}
+                    onPress={() => setInfoModalVisible(true)}
+                  >
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={18}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+                <TextInput
+                  style={styles.customInput}
+                  placeholder="e.g., long wavy hair with soft layers, curtain bangs"
+                  placeholderTextColor={colors.textTertiary}
+                  multiline
+                  blurOnSubmit={false}
+                  value={inlineHairDesc}
+                  onChangeText={handleHairDescChange}
+                />
+                <View style={[styles.customHeader, { marginTop: 12 }]}>
+                  <Text style={styles.customHint}>Make-up Description</Text>
+                </View>
+                <TextInput
+                  style={styles.customInput}
+                  placeholder="e.g., soft glam with glossy lips, warm brown smoky eye"
+                  placeholderTextColor={colors.textTertiary}
+                  multiline
+                  blurOnSubmit={false}
+                  value={inlineMakeupDesc}
+                  onChangeText={handleMakeupDescChange}
+                />
+              </>
+            ) : (
+              <AdvancedFieldsPanel
+                advancedFields={advancedFields}
+                setAdvancedField={setAdvancedField}
+              />
+            )}
+          </View>
+
+          <HeadshotPromptSettings variation={activeImageVariation} />
+        </>
+        )}
       </ScrollView>
 
-      {/* Edit tab content modal */}
+      {/* Edit tab content modal (opened via header category pills) */}
       <EditTabModal
         visible={editModalVisible}
         onClose={() => setEditModalVisible(false)}

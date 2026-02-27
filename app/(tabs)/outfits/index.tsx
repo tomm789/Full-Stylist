@@ -57,10 +57,8 @@ import { useSearch } from '@/hooks';
 import SearchOverlay from '@/components/search/SearchOverlay';
 import { HeaderTabPill } from '@/components/shared';
 import { OutfitsTabIcon } from '@/components/icons/tabs';
-import HeaderTitleRow from '@/components/tabs/HeaderTitleRow';
-import HeaderIconButton from '@/components/shared/layout/HeaderIconButton';
+import SearchHeaderRow from '@/components/search/SearchHeaderRow';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTabSearchRegistration } from '@/hooks/useTabSearchRegistration';
 import { useSearchResultNavigation } from '@/hooks/useSearchResultNavigation';
 import { useOutfitsTabState, type OutfitsTab } from '@/hooks/outfits/useOutfitsTabState';
 
@@ -85,7 +83,6 @@ export default function OutfitsScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const showTabLabels = windowWidth >= layout.containerMaxWidth;
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
-  const searchOpenRef = useRef(false);
   const {
     searchQuery: globalSearchQuery,
     setSearchQuery: setGlobalSearchQuery,
@@ -192,21 +189,11 @@ export default function OutfitsScreen() {
   }, [removeLookbookTab, setActiveTab]);
 
   // ── Search overlay ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!searchOpenRef.current && searchOverlayOpen) {
-      setSearchSelectedFilter('outfit');
-    }
-    searchOpenRef.current = searchOverlayOpen;
-  }, [searchOverlayOpen, setSearchSelectedFilter]);
-
-  useTabSearchRegistration({
-    query: globalSearchQuery,
-    open: searchOverlayOpen,
-    onQueryChange: setGlobalSearchQuery,
-    setSearchOverlayOpen,
-    setSearchSelectedFilter,
-    defaultFilter: 'outfit',
-  });
+  const handleSearchToggle = useCallback((open: boolean) => {
+    if (open) setSearchSelectedFilter('outfit');
+    setSearchOverlayOpen(open);
+    if (!open) setGlobalSearchQuery('');
+  }, [setSearchSelectedFilter, setSearchOverlayOpen, setGlobalSearchQuery]);
 
   const { handleSearchResultPress } = useSearchResultNavigation();
 
@@ -415,10 +402,12 @@ export default function OutfitsScreen() {
     setPendingId: setPendingMyOutfitId,
   });
 
+  // Reset header visibility + scroll tracking when switching tabs
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     setHeaderVisible(true);
     resetScroll();
-  }, [activeTab, resetScroll, setHeaderVisible]);
+  }, [activeTab]);
 
   const onRefresh = async () => {
     setFollowingRefreshing(true);
@@ -632,43 +621,41 @@ export default function OutfitsScreen() {
         showOccasionPills={!isLookbooksActive}
         hideTabs={searchOverlayOpen}
         searchHeader={
-          <View style={[styles.searchHeaderRow, { paddingTop: insets.top + spacing.sm }]}>
-            <HeaderTitleRow
-              title="Outfits"
-              leftIcon={isLookbooksActive ? 'add' : 'calendar-outline'}
-              onLeftAction={
-                isLookbooksActive
-                  ? () => setShowLookbookAddModal(true)
-                  : () => router.push('/calendar' as any)
-              }
-              centerSlot={
-                <HeaderTabPill
-                  pills={[
-                    {
-                      id: 'my_outfits',
-                      label: 'My Outfits',
-                      icon: 'shirt-outline',
-                      iconComponent: ({ size, color }) => (
-                        <OutfitsTabIcon width={size} height={size} color={color} fill={color} />
-                      ),
-                    },
-                    { id: 'explore', label: 'Explore', icon: 'compass-outline' },
-                    { id: 'following', label: 'Following', icon: 'people-outline' },
-                    { id: 'lookbooks', label: 'Lookbooks', icon: 'book-outline' },
-                  ]}
-                  activeId={headerPillActiveId}
-                  onPress={(id) => handleTabChange(id as OutfitsTab)}
-                />
-              }
-              rightSlot={
-                <HeaderIconButton
-                  icon="notifications-outline"
-                  onPress={() => router.push('/notifications' as any)}
-                  accessibilityLabel="Notifications"
-                />
-              }
-            />
-          </View>
+          <SearchHeaderRow
+            title="Outfits"
+            leftIcon={isLookbooksActive ? 'add' : 'calendar-outline'}
+            onLeftAction={
+              isLookbooksActive
+                ? () => setShowLookbookAddModal(true)
+                : () => router.push('/calendar' as any)
+            }
+            centerSlot={
+              <HeaderTabPill
+                pills={[
+                  {
+                    id: 'my_outfits',
+                    label: 'My Outfits',
+                    icon: 'shirt-outline',
+                    iconComponent: ({ size, color }) => (
+                      <OutfitsTabIcon width={size} height={size} color={color} fill={color} />
+                    ),
+                  },
+                  { id: 'explore', label: 'Explore', icon: 'compass-outline' },
+                  { id: 'following', label: 'Following', icon: 'people-outline' },
+                  { id: 'lookbooks', label: 'Lookbooks', icon: 'book-outline' },
+                ]}
+                activeId={headerPillActiveId}
+                onPress={(id) => handleTabChange(id as OutfitsTab)}
+              />
+            }
+            searchQuery={globalSearchQuery}
+            onSearchChange={setGlobalSearchQuery}
+            onSearchToggle={handleSearchToggle}
+            searchOpen={searchOverlayOpen}
+            placeholder="Search outfits..."
+            rightIcon="notifications-outline"
+            onRightAction={() => router.push('/notifications' as any)}
+          />
         }
       />
 
@@ -684,23 +671,34 @@ export default function OutfitsScreen() {
         onResultPress={handleSearchResultPress}
       />
 
-      {activeTab === 'lookbooks' && pinnedLookbooks.length === 0 ? (
+      {activeTab === 'lookbooks' && pinnedLookbooks.length === 0 && availableLookbooks.length === 0 && !loadingAvailableLookbooks ? (
         <View style={[commonStyles.container, styles.loadingContainer]}>
           <EmptyState
             icon="book-outline"
             title="Your lookbooks"
-            message="Add a lookbook to get started."
-            actionLabel="Add lookbook"
+            message="Create your first lookbook to organize your outfits."
+            actionLabel="Create lookbook"
+            onAction={() => {
+              setSelectionMode(true);
+              setLookbookPickerVisible(true);
+            }}
+          />
+        </View>
+      ) : activeTab === 'lookbooks' && pinnedLookbooks.length === 0 ? (
+        <View style={[commonStyles.container, styles.loadingContainer]}>
+          <EmptyState
+            icon="book-outline"
+            title="Your lookbooks"
+            message="Select a lookbook to view its outfits."
+            actionLabel="Select lookbook"
             onAction={() => setShowLookbookAddModal(true)}
           />
         </View>
       ) : activeTab.startsWith('lookbook_') || activeTab === 'my_outfits' ? (
-        <View style={commonStyles.container}>
-          <OutfitsMyOutfitsTab
-            {...myOutfitsTabProps}
-            activeView={activeTab.startsWith('lookbook_') ? 'grid' : activeView}
-          />
-        </View>
+        <OutfitsMyOutfitsTab
+          {...myOutfitsTabProps}
+          activeView={activeTab.startsWith('lookbook_') ? 'grid' : activeView}
+        />
       ) : activeTab === 'explore' ? (
         <OutfitsSocialTab
           activeView={activeView}

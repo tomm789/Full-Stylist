@@ -8,9 +8,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   TouchableOpacity,
   TextInput,
   Alert,
@@ -27,6 +24,7 @@ import {
   CreatePresetModal,
 } from '@/components/calendar';
 import { LoadingSpinner, PrimaryButton } from '@/components/shared';
+import { KeyboardAwareScreen } from '@/components/shared/layout';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -190,11 +188,12 @@ export default function CalendarEntryScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardView}
+      <KeyboardAwareScreen
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
+        dismissOnTap
       >
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} keyboardShouldPersistTaps="handled">
         <SlotPresetSelector
           presets={presets}
           selectedPresetId={selectedPreset}
@@ -223,6 +222,7 @@ export default function CalendarEntryScreen() {
             value={editNotes}
             onChangeText={setEditNotes}
             multiline
+            blurOnSubmit={false}
             numberOfLines={3}
             editable={!saving}
           />
@@ -237,8 +237,7 @@ export default function CalendarEntryScreen() {
             fullWidth
           />
         </View>
-      </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScreen>
 
       <CreatePresetModal
         visible={showCreatePresetModal}
@@ -289,9 +288,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
     marginTop: spacing.xs / 2,
-  },
-  keyboardView: {
-    flex: 1,
   },
   content: {
     flex: 1,

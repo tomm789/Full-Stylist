@@ -10,7 +10,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   View,
-  StyleSheet,
   Alert,
   Platform,
   Animated,
@@ -73,79 +72,15 @@ import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
 import { createCommonStyles } from '@/styles/commonStyles';
-import type { ThemeColors } from '@/styles/themes';
+import { createStyles } from './wardrobe.styles';
 import { useSearch } from '@/hooks';
 import SearchOverlay from '@/components/search/SearchOverlay';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
 import { Ionicons } from '@expo/vector-icons';
-import HeaderTitleRow from '@/components/tabs/HeaderTitleRow';
-import HeaderAvatarButton from '@/components/shared/layout/HeaderAvatarButton';
+import SearchHeaderRow from '@/components/search/SearchHeaderRow';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTabSearchRegistration } from '@/hooks/useTabSearchRegistration';
 import { useSearchResultNavigation } from '@/hooks/useSearchResultNavigation';
-
-const createStyles = (colors: ThemeColors) =>
-  StyleSheet.create({
-    headerContainer: {
-      overflow: 'hidden',
-      backgroundColor: colors.background,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: theme.spacing.lg,
-      paddingBottom: theme.spacing.sm,
-      backgroundColor: colors.background,
-    },
-    placeholderContainer: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    filterAndCategoriesRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      borderBottomWidth: 1,
-      borderBottomColor: colors.borderLight,
-      backgroundColor: colors.backgroundDark,
-    },
-    filterButton: {
-      marginLeft: theme.spacing.sm,
-      marginRight: theme.spacing.xs,
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.backgroundDark,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    filterButtonActive: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    draftButton: {
-      marginLeft: theme.spacing.sm,
-      marginRight: theme.spacing.xs,
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      borderWidth: 1,
-      borderColor: colors.primary,
-      backgroundColor: colors.backgroundDark,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    edgeSwipeGestureZone: {
-      position: 'absolute',
-      left: 0,
-      bottom: 0,
-      width: 28,
-      backgroundColor: 'transparent',
-      zIndex: 50,
-    },
-  });
 
 const CREATOR_BAR_HEIGHT = 60;
 
@@ -187,7 +122,7 @@ export default function WardrobeScreen() {
 
   const { width: searchOverlayWidth, height: windowHeight } = useWindowDimensions();
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
-  const searchOpenRef = useRef(false);
+
   const cameraNavLockRef = useRef(false);
 
   // ── Sub-hooks ────────────────────────────────────────────────────────────────
@@ -347,21 +282,11 @@ export default function WardrobeScreen() {
     loading: searchLoading,
   } = useSearch({ userId: user?.id });
 
-  useEffect(() => {
-    if (!searchOpenRef.current && searchOverlayOpen) {
-      setSearchSelectedFilter('wardrobe_item');
-    }
-    searchOpenRef.current = searchOverlayOpen;
-  }, [searchOverlayOpen, setSearchSelectedFilter]);
-
-  useTabSearchRegistration({
-    query: globalSearchQuery,
-    open: searchOverlayOpen,
-    onQueryChange: setGlobalSearchQuery,
-    setSearchOverlayOpen,
-    setSearchSelectedFilter,
-    defaultFilter: 'wardrobe_item',
-  });
+  const handleSearchToggle = useCallback((open: boolean) => {
+    if (open) setSearchSelectedFilter('wardrobe_item');
+    setSearchOverlayOpen(open);
+    if (!open) setGlobalSearchQuery('');
+  }, [setSearchSelectedFilter, setSearchOverlayOpen, setGlobalSearchQuery]);
 
   // ── Effects ──────────────────────────────────────────────────────────────────
 
@@ -672,7 +597,7 @@ export default function WardrobeScreen() {
         style={[
           styles.headerContainer,
           {
-            height: headerReady ? headerHeight : undefined,
+            height: headerHeight,
             opacity: headerOpacity,
             transform: [{ translateY: headerTranslate }],
           },
@@ -680,39 +605,37 @@ export default function WardrobeScreen() {
         pointerEvents={uiHidden ? 'none' : 'auto'}
       >
         <View onLayout={handleHeaderLayout}>
-          <View style={[styles.headerRow, { paddingTop: insets.top + theme.spacing.sm }]}>
-            <HeaderTitleRow
-              title="Wardrobe"
-              leftIcon="camera-outline"
-              onLeftAction={handleOpenCamera}
-              centerSlot={
-                <HeaderTabPill
-                  pills={[
-                    {
-                      id: 'my',
-                      label: 'My Wardrobe',
-                      icon: 'shirt-outline',
-                      iconComponent: ({ size, color }) => (
-                        <WardrobeTabIcon width={size} height={size} color={color} fill={color} />
-                      ),
-                    },
-                    { id: 'following', label: 'Following', icon: 'people-outline' },
-                    { id: 'discover', label: 'Discover', icon: 'compass-outline' },
-                  ]}
-                  activeId={activeTab}
-                  onPress={(id) => setActiveTab(id as 'my' | 'following' | 'discover')}
-                />
-              }
-              rightSlot={
-                <HeaderAvatarButton
-                  uri={bodyShot.currentHeadshotUrl ?? undefined}
-                  initials={user?.email?.slice(0, 2).toUpperCase() ?? undefined}
-                  onPress={() => router.push('/(tabs)/profile' as any)}
-                  inline
-                />
-              }
-            />
-          </View>
+          <SearchHeaderRow
+            title="Wardrobe"
+            leftIcon="camera-outline"
+            onLeftAction={handleOpenCamera}
+            centerSlot={
+              <HeaderTabPill
+                pills={[
+                  {
+                    id: 'my',
+                    label: 'My Wardrobe',
+                    icon: 'shirt-outline',
+                    iconComponent: ({ size, color }) => (
+                      <WardrobeTabIcon width={size} height={size} color={color} fill={color} />
+                    ),
+                  },
+                  { id: 'following', label: 'Following', icon: 'people-outline' },
+                  { id: 'discover', label: 'Discover', icon: 'compass-outline' },
+                ]}
+                activeId={activeTab}
+                onPress={(id) => setActiveTab(id as 'my' | 'following' | 'discover')}
+              />
+            }
+            searchQuery={globalSearchQuery}
+            onSearchChange={setGlobalSearchQuery}
+            onSearchToggle={handleSearchToggle}
+            searchOpen={searchOverlayOpen}
+            placeholder="Search wardrobe..."
+            avatarUri={bodyShot.currentHeadshotUrl ?? undefined}
+            avatarInitials={user?.email?.slice(0, 2).toUpperCase() ?? undefined}
+            onProfile={() => router.push('/(tabs)/profile' as any)}
+          />
 
           {/* Filter icon + Category Pills row */}
           <View style={styles.filterAndCategoriesRow}>

@@ -23,6 +23,7 @@ export interface SelectionPill {
 interface HeadshotCreatorContainerProps {
   selections: SelectionPill[];
   onRemoveSelection: (id: string) => void;
+  bottomOffset?: number;
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
@@ -72,6 +73,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
 export default function HeadshotCreatorContainer({
   selections,
   onRemoveSelection,
+  bottomOffset = 0,
 }: HeadshotCreatorContainerProps) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -86,7 +88,7 @@ export default function HeadshotCreatorContainer({
   }, [slideAnim]);
 
   return (
-    <Animated.View style={[styles.container, { transform: [{ translateX: slideAnim }] }]}>
+    <Animated.View style={[styles.container, { bottom: spacing.xl + 60 + spacing.md + bottomOffset, transform: [{ translateX: slideAnim }] }]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

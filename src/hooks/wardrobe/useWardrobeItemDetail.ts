@@ -3,7 +3,7 @@
  * Load and manage wardrobe item detail data with polling
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import {
   getActiveProductShotJob,
@@ -22,6 +22,8 @@ import { getWardrobeItemImages, updateWardrobeItem } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { useWardrobeItemData } from './useWardrobeItemData';
 import { useWardrobeItemPolling } from './useWardrobeItemPolling';
+import { useWardrobeItemDisplay } from './useWardrobeItemDisplay';
+import { usePeriodicRefresh } from './usePeriodicRefresh';
 import { getInitialItemData, setInitialItemData, getPendingItemJob, clearPendingItemJob } from '@/lib/wardrobe/initialItemCache';
 import { toDataUri } from '@/lib/images/dataUri';
 import { checkFeedbackExistsForJob } from '@/lib/ai-feedback';
@@ -77,8 +79,6 @@ export function useWardrobeItemDetail({
   const [renderJobId, setRenderJobId] = useState<string | null>(null);
   const [generateJobId, setGenerateJobId] = useState<string | null>(null);
   const [generationFailed, setGenerationFailed] = useState(false);
-  /** Which image to show first in carousel (image_id). Default: uploaded; switch to generated when available. */
-  const [activeImageId, setActiveImageId] = useState<string | null>(null);
 
   // Log "first time generated fields available" once per job
   const didLogGeneratedFieldsRef = useRef(false);
@@ -95,77 +95,21 @@ export function useWardrobeItemDetail({
   // Data loading
   const data = useWardrobeItemData({ itemId });
 
-  // Periodic refresh refs
-  const periodicImageRefreshRef = useRef<NodeJS.Timeout | null>(null);
-  const periodicImageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const periodicAttributeRefreshRef = useRef<NodeJS.Timeout | null>(null);
-  const periodicAttributeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Display ordering (active image + reorder)
+  const { activeImageId, setActiveImageId, displayImagesOrdered } = useWardrobeItemDisplay(data.displayImages);
 
-  // Start periodic image refresh (fallback when no job)
-  const startPeriodicImageRefresh = () => {
-    if (periodicImageRefreshRef.current) {
-      clearInterval(periodicImageRefreshRef.current);
-    }
-    if (periodicImageTimeoutRef.current) {
-      clearTimeout(periodicImageTimeoutRef.current);
-    }
-
-    periodicImageRefreshRef.current = setInterval(async () => {
-      if (!itemId) return;
-      await data.refreshImages();
-    }, 3000);
-
-    periodicImageTimeoutRef.current = setTimeout(() => {
-      if (periodicImageRefreshRef.current) {
-        clearInterval(periodicImageRefreshRef.current);
-        periodicImageRefreshRef.current = null;
-      }
-      setIsGeneratingProductShot(false);
-    }, 90000);
-  };
-
-  const stopPeriodicImageRefresh = () => {
-    if (periodicImageRefreshRef.current) {
-      clearInterval(periodicImageRefreshRef.current);
-      periodicImageRefreshRef.current = null;
-    }
-    if (periodicImageTimeoutRef.current) {
-      clearTimeout(periodicImageTimeoutRef.current);
-      periodicImageTimeoutRef.current = null;
-    }
-  };
-
-  // Start periodic attribute refresh (fallback when no job)
-  const startPeriodicAttributeRefresh = () => {
-    if (periodicAttributeRefreshRef.current) {
-      clearInterval(periodicAttributeRefreshRef.current);
-    }
-    if (periodicAttributeTimeoutRef.current) {
-      clearTimeout(periodicAttributeTimeoutRef.current);
-    }
-
-    periodicAttributeRefreshRef.current = setInterval(async () => {
-      await data.refreshAttributes();
-    }, 5000);
-
-    periodicAttributeTimeoutRef.current = setTimeout(() => {
-      if (periodicAttributeRefreshRef.current) {
-        clearInterval(periodicAttributeRefreshRef.current);
-        periodicAttributeRefreshRef.current = null;
-      }
-    }, 120000);
-  };
-
-  const stopPeriodicAttributeRefresh = () => {
-    if (periodicAttributeRefreshRef.current) {
-      clearInterval(periodicAttributeRefreshRef.current);
-      periodicAttributeRefreshRef.current = null;
-    }
-    if (periodicAttributeTimeoutRef.current) {
-      clearTimeout(periodicAttributeTimeoutRef.current);
-      periodicAttributeTimeoutRef.current = null;
-    }
-  };
+  // Periodic refresh (fallback polling for images and attributes)
+  const {
+    startPeriodicImageRefresh,
+    stopPeriodicImageRefresh,
+    startPeriodicAttributeRefresh,
+    stopPeriodicAttributeRefresh,
+    stopPeriodicRefresh,
+  } = usePeriodicRefresh(itemId, userId, {
+    refreshImages: data.refreshImages,
+    refreshAttributes: data.refreshAttributes,
+    onImageRefreshTimeout: () => setIsGeneratingProductShot(false),
+  });
 
   // Product shot polling
   const productShotPolling = useWardrobeItemPolling({
@@ -579,8 +523,7 @@ export function useWardrobeItemDetail({
     });
 
     return () => {
-      stopPeriodicImageRefresh();
-      stopPeriodicAttributeRefresh();
+      stopPeriodicRefresh();
       productShotPolling.stopPolling();
       autoTagPolling.stopPolling();
       batchJobPolling.stopPolling();
@@ -599,38 +542,6 @@ export function useWardrobeItemDetail({
       stopPeriodicImageRefresh();
     }
   }, [data.displayImages, isGeneratingProductShot]);
-
-  // Single source of truth for which image is "active" in carousel: prefer generated (product_shot) when present
-  useEffect(() => {
-    const imgs = data.displayImages;
-    if (!imgs?.length) return;
-    const productShot = imgs.find((i) => i.type === 'product_shot');
-    const generatedIndex = productShot ? imgs.findIndex((i) => i.type === 'product_shot') : -1;
-    const newActiveId = productShot ? productShot.image_id : imgs[0].image_id;
-    setActiveImageId((prev) => {
-      if (prev === newActiveId) return prev;
-      if (__DEV__) {
-        console.log('[ItemCarousel] activeImageId changed', {
-          from: prev,
-          to: newActiveId,
-          generatedIndex,
-          hasProductShot: !!productShot,
-        });
-      }
-      return newActiveId;
-    });
-  }, [data.displayImages]);
-
-  // Reorder so active image is first; carousel shows index 0 = active
-  const displayImagesOrdered = useMemo(() => {
-    const imgs = data.displayImages;
-    if (!imgs?.length || !activeImageId) return imgs;
-    const activeIndex = imgs.findIndex((i) => i.image_id === activeImageId);
-    if (activeIndex <= 0) return imgs;
-    const active = imgs[activeIndex];
-    const rest = imgs.filter((_, idx) => idx !== activeIndex);
-    return [active, ...rest];
-  }, [data.displayImages, activeImageId]);
 
   return {
     item: data.item,

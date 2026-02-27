@@ -13,7 +13,6 @@ import {
   PanResponder,
   SafeAreaView,
   ScrollView,
-  StyleSheet,
   TextInput,
   Text as RNText,
   TouchableOpacity,
@@ -24,12 +23,13 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { borderRadius, spacing, typography, shadows } from '@/styles/theme';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import HeaderSearchPill from '@/components/tabs/HeaderSearchPill';
 import SearchOverlay from '@/components/search/SearchOverlay';
 import { useSearch } from '@/hooks';
-import type { ThemeColors } from '@/styles/themes';
+import { createStyles } from './FullScreenMenuModal.styles';
+import { MenuGrid } from './MenuGrid';
+import { MenuActionList } from './MenuActionList';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 80;
@@ -295,77 +295,18 @@ export function FullScreenMenuModal({
             </View>
           </TouchableOpacity>
 
-          {filteredGridItems.length > 0 && (
-            <View style={styles.section}>
-              {!!gridTitle && <RNText style={styles.sectionTitle}>{gridTitle}</RNText>}
-              <View style={styles.grid}>
-                {filteredGridItems.map((item) => (
-                  <TouchableOpacity
-                    key={item.key}
-                    style={styles.gridCard}
-                    onPress={item.onPress}
-                    activeOpacity={0.85}
-                  >
-                    <View style={styles.gridIconWrap}>
-                      <Ionicons
-                        name={item.icon}
-                        size={20}
-                        color={item.tone === 'destructive' ? colors.error : colors.textPrimary}
-                      />
-                    </View>
-                    <RNText
-                      style={[
-                        styles.gridCardTitle,
-                        item.tone === 'destructive' && styles.cardTitleDestructive,
-                      ]}
-                    >
-                      {item.label}
-                    </RNText>
-                    {!!item.description && (
-                      <RNText style={styles.gridCardDescription}>{item.description}</RNText>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
+          <MenuGrid
+            title={gridTitle}
+            items={filteredGridItems}
+            styles={styles}
+            colors={colors}
+          />
 
-          {filteredActionItems.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.cardGroup}>
-                {filteredActionItems.map((item) => (
-                  <TouchableOpacity
-                    key={item.key}
-                    style={styles.card}
-                    onPress={item.onPress}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.cardIconWrap}>
-                      <Ionicons
-                        name={item.icon}
-                        size={20}
-                        color={item.tone === 'destructive' ? colors.error : colors.textPrimary}
-                      />
-                    </View>
-                    <View style={styles.cardTextWrap}>
-                      <RNText
-                        style={[
-                          styles.cardTitle,
-                          item.tone === 'destructive' && styles.cardTitleDestructive,
-                        ]}
-                      >
-                        {item.label}
-                      </RNText>
-                      {!!item.description && (
-                        <RNText style={styles.cardDescription}>{item.description}</RNText>
-                      )}
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
+          <MenuActionList
+            items={filteredActionItems}
+            styles={styles}
+            colors={colors}
+          />
         </ScrollView>
 
         <SearchOverlay
@@ -390,194 +331,3 @@ export function FullScreenMenuModal({
     </Animated.View>
   );
 }
-
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.backgroundSecondary,
-    zIndex: 50,
-  },
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.background,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  menuCollapseButton: {
-    padding: spacing.xs,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 'auto',
-  },
-  searchHeaderPillWrap: {
-    flex: 1,
-    minWidth: 0,
-    marginLeft: spacing.sm,
-  },
-  title: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  headerIcon: {
-    position: 'relative',
-    padding: spacing.sm,
-    marginHorizontal: spacing.xs,
-  },
-  menuSearchRow: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  menuSearchWrap: {
-    height: 42,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: borderRadius.round,
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.backgroundSecondary,
-  },
-  menuSearchInput: {
-    flex: 1,
-    fontSize: typography.fontSize.sm,
-    color: colors.textPrimary,
-    paddingVertical: 0,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.massive + spacing.huge,
-    gap: spacing.lg,
-  },
-  refreshRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    ...shadows.sm,
-  },
-  refreshIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.round,
-    backgroundColor: colors.backgroundTertiary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  refreshTextWrap: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  refreshTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  refreshDescription: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-  },
-  section: {
-    gap: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    color: colors.textSecondary,
-  },
-  cardGroup: {
-    gap: spacing.sm,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  gridCard: {
-    width: '48%',
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    gap: spacing.xs,
-    ...shadows.sm,
-  },
-  gridIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.round,
-    backgroundColor: colors.backgroundTertiary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gridCardTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  gridCardDescription: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    ...shadows.sm,
-  },
-  cardIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.round,
-    backgroundColor: colors.backgroundTertiary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  cardTextWrap: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  cardTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  cardTitleDestructive: {
-    color: colors.error,
-  },
-  cardDescription: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-  },
-});

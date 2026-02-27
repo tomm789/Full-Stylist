@@ -6,8 +6,8 @@
 
 import React, { useMemo } from 'react';
 import {
+  Animated,
   Modal,
-  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -22,12 +22,13 @@ import HeadshotSocialTab from '@/components/headshots/HeadshotSocialTab';
 import HeadshotSlideItem from '@/components/headshots/HeadshotSlideItem';
 import DrawModeInline from '@/components/headshots/DrawModeInline';
 import MirrorTabContent from '@/components/headshots/MirrorTabContent';
+import MirrorCategoryPillsRow from '@/components/headshots/MirrorCategoryPillsRow';
 import ShareToFeedModal from '@/components/headshots/ShareToFeedModal';
 import { HeaderTitlePillRow } from '@/components/shared/layout';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import ErrorModal from '@/components/ErrorModal';
-import { useHairAndMakeup } from '@/hooks/headshot';
+import { useHairAndMakeup, type EditTab } from '@/hooks/headshot';
 import { useApplyLook, getPendingApplyLookSnapshot } from '@/hooks/headshot/useApplyLook';
 import { useGenerationDialogAnimation } from '@/hooks/headshot/useGenerationDialogAnimation';
 import CreatorBar from '@/components/shared/CreatorBar';
@@ -42,6 +43,8 @@ import { theme } from '@/styles';
 import { createCommonStyles } from '@/styles/commonStyles';
 import { createStyles } from '@/styles/hairAndMakeupStyles';
 import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
+import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
+import { useKeyboardInsets } from '@/hooks/ui/useKeyboardInsets';
 
 const { spacing } = theme;
 
@@ -54,7 +57,27 @@ export default function HairAndMakeUpScreen() {
   const { variationId, returnToWardrobe } = useLocalSearchParams<{ variationId?: string; returnToWardrobe?: string }>();
   const { applyLook } = useApplyLook();
   const [showShareModal, setShowShareModal] = React.useState(false);
+  const [mirrorEditTabRequest, setMirrorEditTabRequest] = React.useState<EditTab | null>(null);
   const returnToWardrobeRef = React.useRef(returnToWardrobe === '1');
+
+  const { setTabBarOpacity, setTabBarDimmed } = useFloatingTabBar();
+  const { keyboardVisible, bottomInset: kbBottomInset } = useKeyboardInsets();
+
+  const {
+    headerHeight,
+    headerOpacity,
+    headerTranslate,
+    headerReady,
+    uiHidden,
+    handleHeaderLayout,
+    handleScroll: handleHeaderScroll,
+    setHeaderVisible,
+    resetScroll,
+  } = useHideHeaderOnScroll({
+    onVisibilityChange: (visible, timing) => {
+      setTabBarDimmed(!visible, { hideDuration: timing.hideDuration, showDuration: timing.showDuration });
+    },
+  });
 
   // If redirected from wardrobe (returnToWardrobe=1), open on the mirror tab immediately
   React.useEffect(() => {
@@ -151,23 +174,46 @@ export default function HairAndMakeUpScreen() {
     }
   }, [state.isStyleDisabled, state.handlePickCamera]);
 
-  const { setTabBarOpacity } = useFloatingTabBar();
+  const isFullscreenDraw = state.pageTab === 'mirror' && state.isDrawModeOpen;
+  const isGenerateActive = state.pageTab === 'mirror' && state.hasSelections && !state.isDrawModeOpen;
 
   // Hide/show tab bar based on creator mode
   React.useEffect(() => {
     if (!isFocused) {
       setTabBarOpacity(1);
-    } else if (state.isDrawModeOpen || state.hasSelections) {
+      setTabBarDimmed(false);
+    } else if (state.isDrawModeOpen || isGenerateActive) {
       setTabBarOpacity(0);
     } else {
       setTabBarOpacity(1);
     }
-  }, [isFocused, state.isDrawModeOpen, state.hasSelections, setTabBarOpacity]);
+  }, [isFocused, state.isDrawModeOpen, isGenerateActive, setTabBarOpacity, setTabBarDimmed]);
 
   // Restore tab bar on unmount
   React.useEffect(() => {
-    return () => setTabBarOpacity(1);
-  }, [setTabBarOpacity]);
+    return () => {
+      setTabBarOpacity(1);
+      setTabBarDimmed(false);
+    };
+  }, [setTabBarOpacity, setTabBarDimmed]);
+
+  // Reset header + scroll tracking when tab changes
+  React.useEffect(() => {
+    setHeaderVisible(true);
+    resetScroll();
+  }, [state.pageTab]);
+
+  // Mirror tab: offset-based hide/show (no delta tracking — prevents bounce loop on short content)
+  const handleMirrorScroll = React.useCallback((event: any) => {
+    const offsetY = event?.nativeEvent?.contentOffset?.y ?? 0;
+    if (offsetY <= 0) {
+      setHeaderVisible(true);
+      return;
+    }
+    if (offsetY > 20) {
+      setHeaderVisible(false);
+    }
+  }, [setHeaderVisible]);
 
   const cameraSwipe = useEdgeSwipe({
     direction: 'left',
@@ -199,12 +245,15 @@ export default function HairAndMakeUpScreen() {
     [state.handlePreviewPress, handleMenuPress, state.generating, state.generateOverlayOpacity, state.previewIsGenerated, state.handleRestoreSelfie, state.isStyleDisabled],
   );
 
+  const handleMirrorCategorySelect = React.useCallback((tab: EditTab) => {
+    state.setEditTab(tab);
+    setMirrorEditTabRequest(tab);
+  }, [state.setEditTab]);
+
   const handleHeadshotPress = (item: { id: string; url: string | null }) => {
     state.handleHeadshotSelect(item);
     state.setPageTab('mirror');
   };
-  const isFullscreenDraw = state.pageTab === 'mirror' && state.isDrawModeOpen;
-
   const renderHeadshotGridItem = ({ item }: { item: { id: string; url: string | null } }) => (
     <TouchableOpacity
       style={postGridStyles.gridItem}
@@ -229,28 +278,44 @@ export default function HairAndMakeUpScreen() {
     <PanGestureHandler enabled={cameraSwipe.enabled} onGestureEvent={cameraSwipe.onGestureEvent}>
       <View style={commonStyles.container}>
         {!isFullscreenDraw && (
-          <HeaderTitlePillRow
-            title="Hair & Make-Up"
-            onCamera={state.handlePickCamera}
-            onNotifications={() => router.push('/notifications' as any)}
-            onProfile={() => router.push('/profile' as any)}
-            avatarUri={state.headshotImageUrl}
-            avatarInitials={state.profileInitials}
-            unreadCount={unreadCount}
-            cameraDisabled={state.isStyleDisabled}
-            centerSlot={
-              <HeaderTabPill
-                pills={[
-                  { id: 'grid', label: 'Grid', icon: 'grid-outline' },
-                  { id: 'mirror', label: 'My Mirror', icon: 'person-circle-outline' },
-                  { id: 'following', label: 'Following', icon: 'people-outline' },
-                  { id: 'inspiration', label: 'Inspiration', icon: 'sparkles-outline' },
-                ]}
-                activeId={state.pageTab}
-                onPress={(id) => state.setPageTab(id as 'grid' | 'mirror' | 'following' | 'inspiration')}
+          <Animated.View
+            style={[styles.headerContainer, { height: headerHeight, opacity: headerOpacity, transform: [{ translateY: headerTranslate }] }]}
+            pointerEvents={uiHidden ? 'none' : 'auto'}
+          >
+            <View onLayout={handleHeaderLayout}>
+              <HeaderTitlePillRow
+                title="Hair & Make-Up"
+                onCamera={state.handlePickCamera}
+                onNotifications={() => router.push('/notifications' as any)}
+                onProfile={() => router.push('/profile' as any)}
+                avatarUri={state.headshotImageUrl}
+                avatarInitials={state.profileInitials}
+                unreadCount={unreadCount}
+                cameraDisabled={state.isStyleDisabled}
+                centerSlot={
+                  <HeaderTabPill
+                    pills={[
+                      { id: 'grid', label: 'Grid', icon: 'grid-outline' },
+                      { id: 'mirror', label: 'My Mirror', icon: 'person-circle-outline' },
+                      { id: 'following', label: 'Following', icon: 'people-outline' },
+                      { id: 'inspiration', label: 'Inspiration', icon: 'sparkles-outline' },
+                    ]}
+                    activeId={state.pageTab}
+                    onPress={(id) => state.setPageTab(id as 'grid' | 'mirror' | 'following' | 'inspiration')}
+                  />
+                }
               />
-            }
-          />
+            </View>
+          </Animated.View>
+        )}
+
+        {!isFullscreenDraw && state.pageTab === 'mirror' && (
+          <View style={headerHeight !== undefined && headerHeight === 0 ? { paddingTop: insets.top } : undefined}>
+            <MirrorCategoryPillsRow
+              editTab={state.editTab}
+              onSelectTab={handleMirrorCategorySelect}
+            />
+          </View>
         )}
 
         {/* Following / Inspiration feeds */}
@@ -264,17 +329,14 @@ export default function HairAndMakeUpScreen() {
 
         {/* Grid tab: show only image grid */}
         {!isFullscreenDraw && state.pageTab === 'grid' && (
-          <ScrollView
-            contentContainerStyle={[styles.content, { paddingBottom: floatingBarClearance }]}
-            showsVerticalScrollIndicator={false}
-          >
-            <PostGrid
-              data={state.allHeadshots}
-              keyExtractor={(item) => item.id}
-              renderItem={renderHeadshotGridItem}
-              scrollEnabled={false}
-            />
-          </ScrollView>
+          <PostGrid
+            data={state.allHeadshots}
+            keyExtractor={(item) => item.id}
+            renderItem={renderHeadshotGridItem}
+            contentContainerStyle={{ paddingBottom: floatingBarClearance }}
+            onScroll={handleHeaderScroll}
+            scrollEventThrottle={16}
+          />
         )}
 
         {isFullscreenDraw && (
@@ -290,6 +352,8 @@ export default function HairAndMakeUpScreen() {
             onRemoveSelection={state.handleRemoveCreatorSelection}
             topInset={insets.top}
             drawingCanvasRef={state.drawingCanvasRef}
+            keyboardVisible={keyboardVisible}
+            keyboardBottomInset={kbBottomInset}
           />
         )}
 
@@ -339,6 +403,10 @@ export default function HairAndMakeUpScreen() {
             hairLengthOptions={hairLengthOptions}
             selectedHairLengthId={selectedHairLengthId}
             floatingBarClearance={floatingBarClearance}
+            onScroll={handleMirrorScroll}
+            scrollEventThrottle={16}
+            editTabRequest={mirrorEditTabRequest}
+            onEditTabRequestHandled={() => setMirrorEditTabRequest(null)}
           />
         )}
 
@@ -427,17 +495,19 @@ export default function HairAndMakeUpScreen() {
         />
 
         {/* Headshot Creator Bar & Container — hidden when draw mode is active (DrawModeInline has its own) */}
-        {state.pageTab === 'mirror' && state.hasSelections && !state.isDrawModeOpen && (
+        {isGenerateActive && (
           <>
             <HeadshotCreatorContainer
               selections={state.creatorSelections}
               onRemoveSelection={state.handleRemoveCreatorSelection}
+              bottomOffset={insets.bottom}
             />
             <CreatorBar
               label={`Generate${state.creatorSelections.length > 0 ? ` (${state.creatorSelections.length})` : ''}`}
               onGenerate={state.handleGenerateVariation}
               isGenerating={state.generating}
               showOptionsButton={false}
+              bottomOffset={insets.bottom}
             />
           </>
         )}

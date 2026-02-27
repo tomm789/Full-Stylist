@@ -13,7 +13,7 @@ import SearchResultsPanel from './SearchResultsPanel';
 interface SearchOverlayProps {
   open: boolean;
   width: number;
-  topOffset?: Animated.Value | number;
+  topOffset?: number;
   searchQuery: string;
   loading: boolean;
   selectedFilter: SearchResultType | 'all';

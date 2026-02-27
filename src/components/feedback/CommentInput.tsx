@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useKeyboardInsets } from '@/hooks/ui/useKeyboardInsets';
 
 interface CommentInputProps {
   commentBody: string;
@@ -26,8 +27,10 @@ export function CommentInput({
   onCommentBodyChange,
   onSubmit,
 }: CommentInputProps) {
+  const { keyboardVisible, bottomInset } = useKeyboardInsets();
+
   return (
-    <View style={styles.commentInputContainer}>
+    <View style={[styles.commentInputContainer, { bottom: keyboardVisible ? bottomInset : 0 }]}>
       <TextInput
         style={styles.commentInput}
         placeholder="Add a comment..."

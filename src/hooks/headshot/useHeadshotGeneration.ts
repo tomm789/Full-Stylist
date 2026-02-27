@@ -22,6 +22,7 @@ import {
   triggerHeadshotGenerateWithPrompt,
 } from '@/lib/ai-jobs';
 import type { PreviewSource } from '@/lib/headshot/hairAndMakeupTypes';
+import type { DrawMaskMeta } from '@/components/headshots/HeadshotDrawingCanvas';
 
 type DrawnColorEntry = { hex: string; customPrompt?: string };
 
@@ -91,7 +92,8 @@ export function useHeadshotGeneration({
 
   const handleGenerateVariation = async (
     maskBase64?: string | null,
-    maskColorMap?: Array<DrawnColorEntry>
+    maskColorMap?: Array<DrawnColorEntry>,
+    maskMeta?: DrawMaskMeta
   ) => {
     if (!userId) return;
     let activeBaseImageId = baseImageId;

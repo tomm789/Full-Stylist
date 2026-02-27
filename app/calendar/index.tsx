@@ -9,7 +9,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
-  StyleSheet,
   ScrollView,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -46,9 +45,9 @@ import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { createCommonStyles } from '@/styles/commonStyles';
-import type { ThemeColors } from '@/styles/themes';
+import { createStyles } from './styles';
 
-const { spacing, typography } = theme;
+const { spacing } = theme;
 
 export default function CalendarScreen() {
   const colors = useThemeColors();
@@ -437,41 +436,3 @@ export default function CalendarScreen() {
     </LinearGradient>
   );
 }
-
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  scroll: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  content: {
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.md,
-    backgroundColor: 'transparent',
-  },
-  headerShell: {
-    backgroundColor: colors.white,
-  },
-  topHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  headerTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-    flexShrink: 1,
-  },
-  headerSpacer: {
-    flex: 1,
-  },
-});

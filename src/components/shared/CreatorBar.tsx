@@ -22,6 +22,7 @@ interface CreatorBarProps {
   disabled?: boolean;
   showOptionsButton?: boolean;
   icon?: string;
+  bottomOffset?: number;
 }
 
 export default function CreatorBar({
@@ -32,6 +33,7 @@ export default function CreatorBar({
   disabled = false,
   showOptionsButton = true,
   icon = 'sparkles',
+  bottomOffset = 0,
 }: CreatorBarProps) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -47,7 +49,7 @@ export default function CreatorBar({
   }, [opacityAnim]);
 
   return (
-    <Animated.View style={[styles.container, { opacity: opacityAnim }, isDisabled && styles.containerDisabled]}>
+    <Animated.View style={[styles.container, { bottom: spacing.xl + bottomOffset, opacity: opacityAnim }, isDisabled && styles.containerDisabled]}>
       <View style={styles.inner}>
         <TouchableOpacity
           style={styles.generateButton}

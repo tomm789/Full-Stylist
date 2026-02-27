@@ -13,6 +13,8 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -76,25 +78,26 @@ export const EditLookbookModal = ({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} disabled={saving}>
-            <Text style={styles.cancelButton}>Cancel</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Lookbook</Text>
-          <TouchableOpacity onPress={handleSave} disabled={saving || !editTitle.trim()}>
-            {saving ? (
-              <ActivityIndicator size="small" color="#007AFF" />
-            ) : (
-              <Text style={[styles.saveButton, !editTitle.trim() && styles.saveButtonDisabled]}>
-                Save
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onClose} disabled={saving}>
+              <Text style={styles.cancelButton}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Edit Lookbook</Text>
+            <TouchableOpacity onPress={handleSave} disabled={saving || !editTitle.trim()}>
+              {saving ? (
+                <ActivityIndicator size="small" color="#007AFF" />
+              ) : (
+                <Text style={[styles.saveButton, !editTitle.trim() && styles.saveButtonDisabled]}>
+                  Save
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
 
-        <ScrollView
+          <ScrollView
           style={styles.content}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
@@ -161,7 +164,8 @@ export const EditLookbookModal = ({
             <Text style={styles.infoText}>{outfitCount} outfit(s) in this lookbook</Text>
           </View>
         </ScrollView>
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

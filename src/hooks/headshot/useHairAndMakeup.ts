@@ -50,6 +50,7 @@ export type {
 export {
   ACCESSORY_SUBCATEGORIES,
   JEWELLERY_SUBCATEGORIES,
+  HAIR_COLOR_TABS,
   ADVANCED_FIELDS,
   DEFAULT_HAIR_CATEGORY_ID,
 } from '@/lib/headshot/hairAndMakeupTypes';

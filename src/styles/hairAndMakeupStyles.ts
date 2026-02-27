@@ -408,6 +408,32 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  mirrorControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  mirrorControlsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  mirrorNewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  mirrorNewButtonLabel: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+  },
+  mirrorInlineFields: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    gap: spacing.md,
+  },
   customHint: {
     color: colors.textSecondary,
     fontSize: typography.fontSize.sm,
@@ -455,9 +481,11 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     maxHeight: '85%',
   },
   editModalScrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
     paddingBottom: spacing.massive,
+  },
+  editModalSection: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
   infoModalOverlay: {
     flex: 1,

@@ -7,7 +7,9 @@ import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -73,9 +75,10 @@ export default function LookbookPickerModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.lookbookPickerOverlay}>
-        <View style={styles.lookbookPickerModal}>
-          <View style={styles.lookbookPickerHeader}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.lookbookPickerOverlay}>
+          <View style={styles.lookbookPickerModal}>
+            <View style={styles.lookbookPickerHeader}>
             <Text style={styles.lookbookPickerTitle}>Add to Lookbook</Text>
             <TouchableOpacity onPress={onClose}>
               <Text style={styles.lookbookPickerClose}>Close</Text>
@@ -199,9 +202,10 @@ export default function LookbookPickerModal({
                 {lookbookSaving ? 'Saving...' : `Add Outfits (${selectedOutfitCount})`}
               </Text>
             </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

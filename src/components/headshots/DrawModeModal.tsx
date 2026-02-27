@@ -34,7 +34,11 @@ import { theme } from '@/styles';
 import { supabase } from '@/lib/supabase';
 import { useDrawModeLogic } from '@/hooks/headshot/useDrawModeLogic';
 import { createDrawModeStyles } from '@/styles/drawModeStyles';
-import HeadshotDrawingCanvas, { type HeadshotDrawingCanvasRef, type DrawnColorEntry } from './HeadshotDrawingCanvas';
+import HeadshotDrawingCanvas, {
+  type HeadshotDrawingCanvasRef,
+  type DrawMaskMeta,
+  type DrawnColorEntry,
+} from './HeadshotDrawingCanvas';
 import HeadshotCreatorContainer, { type SelectionPill } from './HeadshotCreatorContainer';
 import ColorControlsPanel from './ColorControlsPanel';
 import CreatorBar from '../shared/CreatorBar';
@@ -51,7 +55,7 @@ export type DrawModeModalProps = {
   creatorSelections: SelectionPill[];
   hasSelections: boolean;
   generating: boolean;
-  onGenerate: (maskBase64: string | null, colorMap: DrawnColorEntry[]) => void;
+  onGenerate: (maskBase64: string | null, colorMap: DrawnColorEntry[], maskMeta?: DrawMaskMeta) => void;
   onRemoveSelection: (id: string) => void;
   onOpenCategoryEditor: (categoryId: string) => void;
   onApplyTemplateSelections?: (snapshot: {
@@ -116,6 +120,7 @@ export default function DrawModeModal({
     canvasWidth,
     canvasHeight,
     onGenerate,
+    renderContentFit: 'contain',
     onApplyTemplateSelections,
     onClose, // Modal variant: generate → close
   });

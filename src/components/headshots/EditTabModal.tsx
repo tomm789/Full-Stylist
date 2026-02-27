@@ -25,10 +25,11 @@ import HairLengthSlider from '@/components/headshots/HairLengthSlider';
 import PresetGridTile from '@/components/hairAndMakeup/PresetGridTile';
 import ColorPresetTile from '@/components/hairAndMakeup/ColorPresetTile';
 import SubcategoryPillSelector from '@/components/hairAndMakeup/SubcategoryPillSelector';
+import AdvancedFieldsPanel from '@/components/headshots/AdvancedFieldsPanel';
 import {
   ACCESSORY_SUBCATEGORIES,
   JEWELLERY_SUBCATEGORIES,
-  ADVANCED_FIELDS,
+  HAIR_COLOR_TABS,
   type EditTab,
 } from '@/hooks/headshot/useHairAndMakeup';
 import type { PresetCategory } from '@/lib/headshot/presetTypes';
@@ -111,11 +112,15 @@ export default function EditTabModal({
 
   const tabTitle =
     editTab === 'quick' ? 'Quick' :
-    editTab === 'hair' ? 'Hair' :
+    editTab === 'hair' ? 'Hairstyles' :
+    editTab === 'haircolors' ? 'Hair Colors' :
+    editTab === 'aesthetics' ? 'Aesthetics' :
     editTab === 'makeup' ? 'Make-Up' :
     editTab === 'accessories' ? 'Accessories' :
     editTab === 'jewellery' ? 'Jewellery' :
     'Advanced';
+
+  const [hairColorTab, setHairColorTab] = React.useState<string | null>('natural-colors');
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -135,6 +140,7 @@ export default function EditTabModal({
             contentContainerStyle={styles.editModalScrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
           >
             {/* Accessories: subcategory row */}
             {editTab === 'accessories' && (
@@ -153,17 +159,10 @@ export default function EditTabModal({
               />
             )}
             {/* Category pills — only for hair/makeup tabs */}
-            {editTab !== 'accessories' && editTab !== 'jewellery' && editTab !== 'advanced' && categoryPills.length > 0 && (
+            {editTab !== 'haircolors' && editTab !== 'aesthetics' && editTab !== 'accessories' && editTab !== 'jewellery' && editTab !== 'advanced' && categoryPills.length > 0 && (
               <View style={styles.categoryPills}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={styles.categoryPillsRow}>
-                    <PillButton
-                      label="Quick"
-                      selected={isCustomCategory}
-                      onPress={() => setActiveCategoryId('custom')}
-                      size="medium"
-                      variant="default"
-                    />
                     {categoryPills.map((category) => (
                       <PillButton
                         key={category.id}
@@ -184,8 +183,7 @@ export default function EditTabModal({
                 <View
                   style={[
                     styles.categoryCard,
-                    commonStyles.sectionHorizontalPadding,
-                    commonStyles.sectionTopPadding,
+                    styles.editModalSection,
                   ]}
                 >
                   {isCustomCategory ? (
@@ -250,28 +248,32 @@ export default function EditTabModal({
                           ))}
                         </>
                       )}
-                      {/* Custom description */}
-                      <View style={styles.customHeader}>
-                        <Text style={styles.customHint}>{customDescriptionCopy}</Text>
-                        <TouchableOpacity
-                          style={styles.infoIconButton}
-                          onPress={() => setInfoModalVisible(true)}
-                        >
-                          <Ionicons
-                            name="information-circle-outline"
-                            size={18}
-                            color={colors.textSecondary}
+                      {/* Custom description — hidden on makeup Major Aesthetics sub-tab */}
+                      {editTab !== 'makeup' && (
+                        <>
+                          <View style={styles.customHeader}>
+                            <Text style={styles.customHint}>{customDescriptionCopy}</Text>
+                            <TouchableOpacity
+                              style={styles.infoIconButton}
+                              onPress={() => setInfoModalVisible(true)}
+                            >
+                              <Ionicons
+                                name="information-circle-outline"
+                                size={18}
+                                color={colors.textSecondary}
+                              />
+                            </TouchableOpacity>
+                          </View>
+                          <TextInput
+                            style={styles.customInput}
+                            placeholder={customPlaceholder}
+                            placeholderTextColor={colors.textTertiary}
+                            multiline
+                            value={customDescription}
+                            onChangeText={setCustomDescription}
                           />
-                        </TouchableOpacity>
-                      </View>
-                      <TextInput
-                        style={styles.customInput}
-                        placeholder={customPlaceholder}
-                        placeholderTextColor={colors.textTertiary}
-                        multiline
-                        value={customDescription}
-                        onChangeText={setCustomDescription}
-                      />
+                        </>
+                      )}
                     </>
                   ) : (
                     activeCategory?.sections.map((section) => (
@@ -296,43 +298,68 @@ export default function EditTabModal({
                   )}
                 </View>
 
-                {/* Hair Color — always visible when hair or quick tab is active */}
+              </>
+            )}
+
+            {/* Hair Colors tab content */}
+            {editTab === 'haircolors' && (
+              <>
+                <SubcategoryPillSelector
+                  options={HAIR_COLOR_TABS}
+                  selectedId={hairColorTab}
+                  onSelect={(id) => setHairColorTab(id ?? 'natural-colors')}
+                />
                 {hairColorCategory && (
-                  <View
-                    style={[
-                      styles.categoryCard,
-                      commonStyles.sectionHorizontalPadding,
-                      commonStyles.sectionTopPadding,
-                    ]}
-                  >
-                    {hairColorCategory.sections.map((section) => (
-                      <View key={section.id} style={styles.sectionBlock}>
-                        {hairColorCategory.sections.length > 1 && (
-                          <Text style={styles.sectionLabel}>{section.title}</Text>
-                        )}
-                        <View style={[styles.presetGrid, { gap: presetGridGap }]}>
-                          {section.options.map((option) => (
-                            <View key={option.id} style={{ width: presetTileSize, height: presetTileSize }}>
-                              <ColorPresetTile
-                                title={option.title}
-                                isSelected={selectedIds.includes(option.id)}
-                                swatch={HAIR_COLOR_SWATCHES[option.id]}
-                                onPress={() => toggleSelection(option.id)}
-                                onInfoPress={() => handleInfoPress(option)}
-                              />
-                            </View>
-                          ))}
+                  <View style={[styles.categoryCard, styles.editModalSection]}>
+                    {hairColorCategory.sections
+                      .filter((section) => section.id === hairColorTab)
+                      .map((section) => (
+                        <View key={section.id} style={styles.sectionBlock}>
+                          <View style={[styles.presetGrid, { gap: presetGridGap }]}>
+                            {section.options.map((option) => (
+                              <View key={option.id} style={{ width: presetTileSize, height: presetTileSize }}>
+                                <ColorPresetTile
+                                  title={option.title}
+                                  isSelected={selectedIds.includes(option.id)}
+                                  swatch={HAIR_COLOR_SWATCHES[option.id]}
+                                  onPress={() => toggleSelection(option.id)}
+                                  onInfoPress={() => handleInfoPress(option)}
+                                />
+                              </View>
+                            ))}
+                          </View>
                         </View>
-                      </View>
-                    ))}
+                      ))}
                   </View>
                 )}
               </>
             )}
 
+            {/* Aesthetics tab content */}
+            {editTab === 'aesthetics' && quickTabMakeupPresets && (
+              <View style={[styles.categoryCard, styles.editModalSection]}>
+                {quickTabMakeupPresets.sections.map((section) => (
+                  <View key={section.id} style={styles.sectionBlock}>
+                    <View style={[styles.presetGrid, { gap: presetGridGap }]}>
+                      {section.options.map((option) => (
+                        <View key={option.id} style={{ width: presetTileSize, height: presetTileSize }}>
+                          <PresetGridTile
+                            title={option.title}
+                            isSelected={selectedIds.includes(option.id)}
+                            onPress={() => toggleSelection(option.id)}
+                            onInfoPress={() => handleInfoPress(option)}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
             {/* Accessories tab content */}
             {editTab === 'accessories' && (
-              <View style={[styles.categoryCard, commonStyles.sectionHorizontalPadding, commonStyles.sectionTopPadding]}>
+              <View style={[styles.categoryCard, styles.editModalSection]}>
                 {accessorySubcategory ? (
                   <View style={styles.emptySubcategoryContainer}>
                     <Ionicons name="glasses-outline" size={36} color={colors.textTertiary} />
@@ -350,7 +377,7 @@ export default function EditTabModal({
 
             {/* Jewellery tab content */}
             {editTab === 'jewellery' && (
-              <View style={[styles.categoryCard, commonStyles.sectionHorizontalPadding, commonStyles.sectionTopPadding]}>
+              <View style={[styles.categoryCard, styles.editModalSection]}>
                 {jewellerySubcategory ? (
                   <View style={styles.emptySubcategoryContainer}>
                     <Ionicons name="diamond-outline" size={36} color={colors.textTertiary} />
@@ -368,20 +395,11 @@ export default function EditTabModal({
 
             {/* Advanced tab content */}
             {editTab === 'advanced' && (
-              <View style={[styles.categoryCard, commonStyles.sectionHorizontalPadding, commonStyles.sectionTopPadding]}>
-                {ADVANCED_FIELDS.map((field) => (
-                  <View key={field.id} style={styles.sectionBlock}>
-                    <Text style={styles.sectionLabel}>{field.label}</Text>
-                    <TextInput
-                      style={styles.advancedInput}
-                      placeholder={field.placeholder}
-                      placeholderTextColor={colors.textTertiary}
-                      multiline
-                      value={advancedFields[field.id] || ''}
-                      onChangeText={(text) => setAdvancedField(field.id, text)}
-                    />
-                  </View>
-                ))}
+              <View style={[styles.categoryCard, styles.editModalSection]}>
+                <AdvancedFieldsPanel
+                  advancedFields={advancedFields}
+                  setAdvancedField={setAdvancedField}
+                />
               </View>
             )}
           </ScrollView>

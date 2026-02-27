@@ -23,10 +23,28 @@ export default function MirrorCategoryPillsRow({
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.tabPillsRow}>
             <PillButton
-              label="Hair"
+              label="Hairstyles"
               icon="cut-outline"
               selected={editTab === 'hair'}
               onPress={() => onSelectTab('hair')}
+              size="medium"
+              variant="default"
+              layout="vertical"
+            />
+            <PillButton
+              label="Hair Colors"
+              icon="color-fill-outline"
+              selected={editTab === 'haircolors'}
+              onPress={() => onSelectTab('haircolors')}
+              size="medium"
+              variant="default"
+              layout="vertical"
+            />
+            <PillButton
+              label="Aesthetics"
+              icon="sparkles-outline"
+              selected={editTab === 'aesthetics'}
+              onPress={() => onSelectTab('aesthetics')}
               size="medium"
               variant="default"
               layout="vertical"

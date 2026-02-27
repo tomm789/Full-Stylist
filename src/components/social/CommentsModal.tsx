@@ -12,6 +12,8 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Comment, createComment, getComments, getCommentCount } from '@/lib/engagement';
@@ -61,65 +63,67 @@ export const CommentsModal = ({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Comments</Text>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={styles.closeButton}>Close</Text>
-          </TouchableOpacity>
-        </View>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Comments</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Text style={styles.closeButton}>Close</Text>
+            </TouchableOpacity>
+          </View>
 
-        <ScrollView
-          style={styles.commentsList}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
-          {comments.length === 0 ? (
-            <Text style={styles.noComments}>No comments yet</Text>
-          ) : (
-            comments.map((comment) => (
-              <View key={comment.id} style={styles.commentItem}>
-                <View style={styles.commentHeader}>
-                  {comment.user?.avatar_url ? (
-                    <ExpoImage
-                      source={{ uri: comment.user.avatar_url }}
-                      style={styles.commentAvatar}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                    />
-                  ) : (
-                    <View style={styles.commentAvatarFallback} />
-                  )}
-                  <View style={styles.commentContent}>
-                    <Text style={styles.commentAuthor}>
-                      {comment.user?.display_name || comment.user?.handle || 'User'}
-                    </Text>
-                    <Text style={styles.commentBody}>{comment.body}</Text>
+          <ScrollView
+            style={styles.commentsList}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
+            {comments.length === 0 ? (
+              <Text style={styles.noComments}>No comments yet</Text>
+            ) : (
+              comments.map((comment) => (
+                <View key={comment.id} style={styles.commentItem}>
+                  <View style={styles.commentHeader}>
+                    {comment.user?.avatar_url ? (
+                      <ExpoImage
+                        source={{ uri: comment.user.avatar_url }}
+                        style={styles.commentAvatar}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                      />
+                    ) : (
+                      <View style={styles.commentAvatarFallback} />
+                    )}
+                    <View style={styles.commentContent}>
+                      <Text style={styles.commentAuthor}>
+                        {comment.user?.display_name || comment.user?.handle || 'User'}
+                      </Text>
+                      <Text style={styles.commentBody}>{comment.body}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))
-          )}
-        </ScrollView>
+              ))
+            )}
+          </ScrollView>
 
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Add a comment..."
-            value={commentText}
-            onChangeText={setCommentText}
-            multiline
-            blurOnSubmit={false}
-          />
-          <TouchableOpacity
-            style={styles.sendButton}
-            onPress={handleComment}
-            disabled={!commentText.trim()}
-          >
-            <Text style={styles.sendText}>Post</Text>
-          </TouchableOpacity>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Add a comment..."
+              value={commentText}
+              onChangeText={setCommentText}
+              multiline
+              blurOnSubmit={false}
+            />
+            <TouchableOpacity
+              style={styles.sendButton}
+              onPress={handleComment}
+              disabled={!commentText.trim()}
+            >
+              <Text style={styles.sendText}>Post</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

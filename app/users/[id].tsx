@@ -7,7 +7,6 @@ import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   SafeAreaView,
   Animated,
@@ -24,13 +23,10 @@ import UserWardrobeScreen from '@/components/UserWardrobeScreen';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
 import { DiscoverGrid } from '@/components/social';
 import { Header } from '@/components/shared/layout';
-import { theme } from '@/styles';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
-import type { ThemeColors } from '@/styles/themes';
-
-const { spacing, typography } = theme;
+import { createStyles } from './[id]/styles';
 
 type TabType = 'outfits' | 'lookbooks' | 'wardrobe';
 
@@ -243,7 +239,7 @@ export default function UserProfileScreen() {
         style={[
           styles.headerContainer,
           {
-            height: headerReady ? headerHeight : undefined,
+            height: headerHeight,
             opacity: headerOpacity,
             transform: [{ translateY: headerTranslate }],
           },
@@ -333,66 +329,3 @@ export default function UserProfileScreen() {
     </SafeAreaView>
   );
 }
-
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  headerContainer: {
-    overflow: 'hidden',
-    backgroundColor: colors.background,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
-    gap: spacing.sm,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.transparent,
-  },
-  tabActive: {
-    borderBottomColor: colors.textPrimary,
-  },
-  tabText: {
-    fontSize: typography.fontSize.md,
-    color: colors.textTertiary,
-    fontWeight: typography.fontWeight.medium,
-  },
-  tabTextActive: {
-    color: colors.textPrimary,
-    fontWeight: typography.fontWeight.semibold,
-  },
-  headerHandle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-    marginLeft: spacing.xs,
-  },
-  followButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 16,
-  },
-  followButtonDisabled: {
-    opacity: 0.7,
-  },
-  followingButton: {
-    backgroundColor: colors.gray100,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  followButtonText: {
-    color: colors.textLight,
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semibold,
-  },
-  followingButtonText: {
-    color: colors.primary,
-  },
-});

@@ -82,6 +82,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    pointerEvents: 'box-none',
   },
   right: {
     flexDirection: 'row',
@@ -89,6 +90,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     flex: 1,
     justifyContent: 'flex-end',
+    pointerEvents: 'box-none',
   },
   backButton: {
     flexDirection: 'row',

@@ -64,6 +64,7 @@ export const createCommonStyles = (themeColors: ThemeColors) => StyleSheet.creat
     zIndex: 1000,
     paddingTop: layout.headerHeight,
     paddingBottom: spacing.lg,
+    pointerEvents: 'box-none',
   },
   headerTitle: {
     fontSize: typography.fontSize.lg,

@@ -9,3 +9,4 @@ export { HeaderSearchMenu, ConnectedHeaderSearchMenu, ConnectedHeaderSearchTitle
 export { default as HeaderTitleRow } from './HeaderTitleRow';
 export { default as HeaderSearchPill } from './HeaderSearchPill';
 export { FullScreenMenuModal } from './FullScreenMenuModal';
+export { FloatingTabBar } from './FloatingTabBar';

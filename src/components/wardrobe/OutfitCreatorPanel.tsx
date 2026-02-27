@@ -16,51 +16,38 @@ import {
   Animated,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   UIManager,
   useWindowDimensions,
   View,
-  type StyleProp,
-  type ViewStyle,
-  type ImageStyle,
 } from 'react-native';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { ImagePlaceholder, WardrobeCategoryIcon } from '@/components/shared';
-import HeadshotSelectorCard from './HeadshotSelectorCard';
-import OutfitCreatorCanvas from './OutfitCreatorCanvas';
-import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
 import { WardrobeCategory } from '@/lib/wardrobe';
 import type {
   OutfitCanvasItemLayout,
   OutfitCanvasLayoutMap,
   OutfitCanvasTrimMap,
-  OutfitCanvasTrimStatus,
 } from '@/lib/outfits/canvasLayout';
+import HeadshotSelectorCard from './HeadshotSelectorCard';
+import OutfitCreatorCanvas from './OutfitCreatorCanvas';
+import { PanelItemCard, PanelCategoryCard } from './PanelCards';
+import type { SelectedItem } from './PanelCards';
+import {
+  createStyles,
+  PANEL_HANDLE_AREA_HEIGHT,
+  PANEL_COLLAPSED_HEIGHT,
+} from './OutfitCreatorPanel.styles';
+
+export { PANEL_HANDLE_AREA_HEIGHT, PANEL_COLLAPSED_HEIGHT } from './OutfitCreatorPanel.styles';
+export type { SelectedItem } from './PanelCards';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const { spacing, borderRadius, typography } = theme;
-
-export const PANEL_HANDLE_AREA_HEIGHT = 24;
-const TAB_BAR_HEIGHT = 44;
-const ROW_CONTENT_HEIGHT = 76; // paddingVertical(8) + card(60) + paddingVertical(8)
-export const PANEL_COLLAPSED_HEIGHT = PANEL_HANDLE_AREA_HEIGHT + ROW_CONTENT_HEIGHT;
-
 type TabId = 'outfit' | 'advanced';
-
-interface SelectedItem {
-  id: string;
-  imageUrl: string | null;
-  trimStatus: OutfitCanvasTrimStatus;
-}
 
 export interface OutfitCreatorPanelProps {
   // Layout
@@ -88,263 +75,6 @@ export interface OutfitCreatorPanelProps {
   onBringForward: (itemId: string) => void;
   onSendBackward: (itemId: string) => void;
 }
-
-const createStyles = (colors: ThemeColors, cellSize: number) =>
-  StyleSheet.create({
-    panel: {
-      position: 'absolute',
-      left: spacing.lg,
-      right: spacing.lg,
-      backgroundColor: colors.backgroundTertiary,
-      borderRadius: borderRadius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-      shadowColor: colors.black,
-      shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-      overflow: 'visible',
-    },
-    // ── Handle ──────────────────────────────────────────────────────────────
-    handleArea: {
-      height: PANEL_HANDLE_AREA_HEIGHT,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    handle: {
-      width: 36,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: colors.borderLight,
-    },
-    // ── Tab bar ─────────────────────────────────────────────────────────────
-    tabBar: {
-      flexDirection: 'row',
-      height: TAB_BAR_HEIGHT,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    tab: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    tabActive: {
-      borderBottomWidth: 2,
-      borderBottomColor: colors.primary,
-    },
-    tabText: {
-      fontSize: typography.fontSize.sm,
-      color: colors.textSecondary,
-      fontWeight: typography.fontWeight.medium,
-    },
-    tabTextActive: {
-      color: colors.primary,
-      fontWeight: typography.fontWeight.semibold,
-    },
-    // ── Content area ────────────────────────────────────────────────────────
-    contentArea: {
-      flex: 1,
-      overflow: 'visible',
-    },
-    // ── Collapsed row ───────────────────────────────────────────────────────
-    rowScroll: {
-      flex: 1,
-    },
-    rowScrollContent: {
-      gap: spacing.sm,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.sm,
-      alignItems: 'center',
-    },
-    // ── Outfit grid ─────────────────────────────────────────────────────────
-    gridScroll: {
-      flex: 1,
-    },
-    gridContent: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      padding: spacing.md,
-      gap: spacing.sm,
-    },
-    // ── Shared card styles ───────────────────────────────────────────────────
-    itemCard: {
-      width: cellSize,
-      height: cellSize,
-      borderRadius: borderRadius.md,
-      overflow: 'hidden',
-      position: 'relative',
-      backgroundColor: colors.gray200,
-    },
-    itemCardRow: {
-      width: 60,
-      height: 60,
-      borderRadius: borderRadius.md,
-      overflow: 'hidden',
-      position: 'relative',
-      backgroundColor: colors.gray200,
-    },
-    itemImage: {
-      width: '100%',
-      height: '100%',
-    },
-    itemImagePlaceholder: {
-      width: '100%',
-      height: '100%',
-      backgroundColor: colors.gray200,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    removeButton: {
-      position: 'absolute',
-      top: -4,
-      right: -4,
-      backgroundColor: colors.white,
-      borderRadius: 10,
-      shadowColor: colors.black,
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.2,
-      shadowRadius: 2,
-      elevation: 2,
-    },
-    // ── Category shortcut ────────────────────────────────────────────────────
-    categoryCard: {
-      width: cellSize,
-      height: cellSize,
-      borderRadius: borderRadius.md,
-      backgroundColor: colors.backgroundSecondary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      position: 'relative',
-      borderWidth: 1,
-      borderColor: 'transparent',
-    },
-    categoryCardRow: {
-      width: 60,
-      height: 60,
-      borderRadius: borderRadius.md,
-      backgroundColor: colors.backgroundSecondary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      position: 'relative',
-      borderWidth: 1,
-      borderColor: 'transparent',
-    },
-    categoryCardSelected: {
-      borderColor: colors.primary,
-      borderWidth: 2,
-    },
-    categoryPlusIcon: {
-      position: 'absolute',
-      bottom: -2,
-      right: -2,
-      backgroundColor: colors.white,
-      borderRadius: 10,
-    },
-    plusIconOverlay: {
-      padding: 2,
-    },
-  });
-
-// ── Private sub-components ────────────────────────────────────────────────────
-
-interface PanelItemCardProps {
-  item: SelectedItem;
-  onRemove: (id: string) => void;
-  cardStyle: StyleProp<ViewStyle>;
-  placeholderIconSize: number;
-  removeIconSize: number;
-  imageStyle: StyleProp<ImageStyle>;
-  placeholderStyle: StyleProp<ViewStyle>;
-  removeButtonStyle: StyleProp<ViewStyle>;
-  errorColor: string;
-}
-
-function PanelItemCard({
-  item,
-  onRemove,
-  cardStyle,
-  placeholderIconSize,
-  removeIconSize,
-  imageStyle,
-  placeholderStyle,
-  removeButtonStyle,
-  errorColor,
-}: PanelItemCardProps) {
-  return (
-    <View style={cardStyle}>
-      {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={imageStyle} contentFit="cover" />
-      ) : (
-        <View style={placeholderStyle}>
-          <ImagePlaceholder text="" iconSize={placeholderIconSize} />
-        </View>
-      )}
-      <TouchableOpacity
-        style={removeButtonStyle}
-        onPress={() => onRemove(item.id)}
-        hitSlop={{ top: 4, right: 4, bottom: 4, left: 4 }}
-      >
-        <Ionicons name="close-circle" size={removeIconSize} color={errorColor} />
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-interface PanelCategoryCardProps {
-  category: WardrobeCategory;
-  isSelected: boolean;
-  onPress: () => void;
-  cardStyle: StyleProp<ViewStyle>;
-  selectedStyle: StyleProp<ViewStyle>;
-  iconSize: number;
-  addIconSize: number;
-  primaryColor: string;
-  secondaryColor: string;
-  blackColor: string;
-  plusIconStyle: StyleProp<ViewStyle>;
-  plusIconOverlayStyle: StyleProp<ViewStyle>;
-}
-
-function PanelCategoryCard({
-  category,
-  isSelected,
-  onPress,
-  cardStyle,
-  selectedStyle,
-  iconSize,
-  addIconSize,
-  primaryColor,
-  secondaryColor,
-  blackColor,
-  plusIconStyle,
-  plusIconOverlayStyle,
-}: PanelCategoryCardProps) {
-  return (
-    <TouchableOpacity
-      style={[cardStyle, isSelected && selectedStyle]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <WardrobeCategoryIcon
-        categoryName={category.name}
-        size={iconSize}
-        color={isSelected ? primaryColor : secondaryColor}
-      />
-      <View style={plusIconStyle}>
-        <Ionicons
-          name="add-circle"
-          size={addIconSize}
-          color={blackColor}
-          style={plusIconOverlayStyle}
-        />
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
 
 export default function OutfitCreatorPanel({
   isExpanded,

@@ -12,9 +12,9 @@ const { spacing } = theme;
 
 export type OutfitsHeaderSectionProps = {
   headerReady: boolean;
-  headerHeight: Animated.Value | number;
-  headerOpacity: Animated.AnimatedInterpolation<string | number> | number;
-  headerTranslate: Animated.AnimatedInterpolation<string | number> | number;
+  headerHeight: number | undefined;
+  headerOpacity: Animated.Value | number;
+  headerTranslate: Animated.Value | number;
   uiHidden: boolean;
   onHeaderLayout: (event: any) => void;
   activeTab: OutfitsTab;
@@ -81,7 +81,7 @@ export default function OutfitsHeaderSection({
       style={[
         styles.headerContainer,
         {
-          height: headerReady ? headerHeight : undefined,
+          height: headerHeight,
           opacity: headerOpacity,
           transform: [{ translateY: headerTranslate }],
         },

@@ -62,7 +62,7 @@ export function usePresetDisplay({ editTab, activeTab, activeCategoryId }: UsePr
   }, [editTab, presets]);
 
   const hairColorCategory = useMemo<PresetCategory | null>(() => {
-    if (editTab !== 'quick' && editTab !== 'hair') return null;
+    if (editTab !== 'haircolors') return null;
     return hairPresets.find((c) => c.id === 'hair-color') || null;
   }, [editTab]);
 

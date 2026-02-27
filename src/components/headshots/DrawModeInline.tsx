@@ -29,7 +29,11 @@ import { Image as ExpoImage } from 'expo-image';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { useDrawModeLogic } from '@/hooks/headshot/useDrawModeLogic';
 import { createDrawModeStyles } from '@/styles/drawModeStyles';
-import HeadshotDrawingCanvas, { type HeadshotDrawingCanvasRef, type DrawnColorEntry } from './HeadshotDrawingCanvas';
+import HeadshotDrawingCanvas, {
+  type HeadshotDrawingCanvasRef,
+  type DrawMaskMeta,
+  type DrawnColorEntry,
+} from './HeadshotDrawingCanvas';
 import HeadshotCreatorContainer, { type SelectionPill } from './HeadshotCreatorContainer';
 import ColorControlsPanel from './ColorControlsPanel';
 import CreatorBar from '../shared/CreatorBar';
@@ -42,11 +46,13 @@ export type DrawModeInlineProps = {
   creatorSelections: SelectionPill[];
   hasSelections: boolean;
   generating: boolean;
-  onGenerate: (maskBase64: string | null, colorMap: DrawnColorEntry[]) => void;
+  onGenerate: (maskBase64: string | null, colorMap: DrawnColorEntry[], maskMeta?: DrawMaskMeta) => void;
   onRemoveSelection: (id: string) => void;
   topInset?: number;
   /** Ref managed by the parent (useHairAndMakeup); shared with generation flow. */
   drawingCanvasRef: React.RefObject<HeadshotDrawingCanvasRef>;
+  keyboardVisible?: boolean;
+  keyboardBottomInset?: number;
 };
 
 export default function DrawModeInline({
@@ -61,6 +67,8 @@ export default function DrawModeInline({
   onRemoveSelection,
   topInset = 0,
   drawingCanvasRef,
+  keyboardVisible = false,
+  keyboardBottomInset = 0,
 }: DrawModeInlineProps) {
   const colors = useThemeColors();
 
@@ -98,8 +106,12 @@ export default function DrawModeInline({
     canvasWidth,
     canvasHeight,
     onGenerate,
+    renderContentFit: 'cover',
+    keyboardVisible,
     // No onClose — user stays in draw mode until they tap the back button
   });
+
+  const kbOffset = keyboardVisible ? keyboardBottomInset : 0;
 
   return (
     <View
@@ -185,7 +197,8 @@ export default function DrawModeInline({
         onPromptChange={draw.handlePromptChange}
         focusPromptHex={draw.focusPromptHex}
         onFocusPromptHandled={() => draw.setFocusPromptHex(null)}
-        bottomInset={controlsBottomInset}
+        bottomInset={controlsBottomInset + kbOffset}
+        keyboardVisible={keyboardVisible}
       />
 
       {/* ── Selections + generate ── */}
@@ -195,6 +208,7 @@ export default function DrawModeInline({
             <HeadshotCreatorContainer
               selections={creatorSelections}
               onRemoveSelection={onRemoveSelection}
+              bottomOffset={kbOffset}
             />
           )}
           <CreatorBar
@@ -202,6 +216,7 @@ export default function DrawModeInline({
             onGenerate={draw.handleGenerate}
             isGenerating={!draw.canGenerate}
             showOptionsButton={false}
+            bottomOffset={kbOffset}
           />
         </>
       )}

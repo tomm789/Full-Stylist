@@ -5,7 +5,12 @@
  */
 
 export type TabId = 'hair' | 'makeup';
-export type EditTab = 'quick' | TabId | 'accessories' | 'jewellery' | 'advanced';
+export type EditTab = 'quick' | TabId | 'haircolors' | 'aesthetics' | 'accessories' | 'jewellery' | 'advanced';
+
+export const HAIR_COLOR_TABS: ExpandableSubcategory[] = [
+  { id: 'natural-colors', name: 'Natural Colors' },
+  { id: 'dyed-colors', name: 'Dyed Colors' },
+];
 
 export type ExpandableSubcategory = { id: string; name: string };
 

@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent } from 'react-native';
+import { Animated, LayoutAnimation, LayoutChangeEvent, Platform, UIManager } from 'react-native';
+
+// Enable LayoutAnimation on Android (no-op on new architecture / Fabric)
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 type HideHeaderOptions = {
   hideDelta?: number;
@@ -13,7 +18,7 @@ type HideHeaderOptions = {
 };
 
 type HideHeaderResult = {
-  headerHeight: Animated.Value;
+  headerHeight: number | undefined;
   headerOpacity: Animated.Value;
   headerTranslate: Animated.Value;
   headerReady: boolean;
@@ -40,52 +45,68 @@ export function useHideHeaderOnScroll(
   const config = { ...DEFAULTS, ...options };
   const [uiHidden, setUiHidden] = useState(false);
   const [headerReady, setHeaderReady] = useState(false);
+  const [containerHeight, setContainerHeight] = useState<number | undefined>(undefined);
   const headerHeightRef = useRef(0);
-  const headerHeight = useRef(new Animated.Value(0)).current;
   const headerOpacity = useRef(new Animated.Value(1)).current;
   const headerTranslate = useRef(new Animated.Value(0)).current;
   const lastScrollY = useRef(0);
   const uiHiddenRef = useRef(false);
+  const animatingRef = useRef(false);
+  const animGenRef = useRef(0);
+
+  // Store onVisibilityChange in a ref so setHeaderVisible has a stable identity
+  const onVisibilityChangeRef = useRef(options.onVisibilityChange);
+  onVisibilityChangeRef.current = options.onVisibilityChange;
 
   const setHeaderVisible = useCallback(
     (visible: boolean) => {
       if (visible && !uiHiddenRef.current) return;
       if (!visible && uiHiddenRef.current) return;
       uiHiddenRef.current = !visible;
-      setUiHidden(!visible);
-      options.onVisibilityChange?.(visible, {
+      onVisibilityChangeRef.current?.(visible, {
         hideDuration: config.hideDuration,
         showDuration: config.showDuration,
       });
 
-      const heightDuration = visible ? config.showDuration : config.hideDuration;
-      const fadeDuration = visible ? config.showDuration : config.hideDuration;
+      animatingRef.current = true;
+      const gen = ++animGenRef.current;
+      const duration = visible ? config.showDuration : config.hideDuration;
+
+      // Height — LayoutAnimation handles the layout transition natively.
+      // configureNext applies to all layout changes in the next render cycle.
+      LayoutAnimation.configureNext({
+        duration,
+        update: { type: LayoutAnimation.Types.easeInEaseOut },
+      });
+      setContainerHeight(visible ? headerHeightRef.current : 0);
+
+      // Opacity + translate — native driver for smooth 60fps on UI thread
       Animated.parallel([
-        Animated.timing(headerHeight, {
-          toValue: visible ? headerHeightRef.current : 0,
-          duration: heightDuration,
-          useNativeDriver: false,
-        }),
         Animated.timing(headerOpacity, {
           toValue: visible ? 1 : 0,
-          duration: fadeDuration,
-          useNativeDriver: false,
+          duration,
+          useNativeDriver: true,
         }),
         Animated.timing(headerTranslate, {
           toValue: visible ? 0 : config.translateAmount,
-          duration: fadeDuration,
-          useNativeDriver: false,
+          duration,
+          useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(({ finished }) => {
+        if (gen !== animGenRef.current) return;
+        animatingRef.current = false;
+        setUiHidden(uiHiddenRef.current);
+        if (finished && !uiHiddenRef.current) {
+          setContainerHeight(headerHeightRef.current);
+        }
+      });
     },
     [
       config.hideDuration,
       config.showDuration,
       config.translateAmount,
-      headerHeight,
       headerOpacity,
       headerTranslate,
-      options.onVisibilityChange,
     ]
   );
 
@@ -93,9 +114,12 @@ export function useHideHeaderOnScroll(
     (event: LayoutChangeEvent) => {
       const height = event?.nativeEvent?.layout?.height ?? 0;
       if (height <= 0) return;
+      // Always track the latest measured height — the inner View measures
+      // at its natural size even when clipped by overflow: hidden.
       headerHeightRef.current = height;
+      if (animatingRef.current) return;
       if (!uiHiddenRef.current) {
-        headerHeight.setValue(height);
+        setContainerHeight(height);
         headerOpacity.setValue(1);
         headerTranslate.setValue(0);
       }
@@ -103,7 +127,7 @@ export function useHideHeaderOnScroll(
         setHeaderReady(true);
       }
     },
-    [headerHeight, headerOpacity, headerReady, headerTranslate]
+    [headerOpacity, headerReady, headerTranslate]
   );
 
   const handleScroll = useCallback(
@@ -141,17 +165,15 @@ export function useHideHeaderOnScroll(
   // Cleanup all animation listeners on unmount
   useEffect(() => {
     return () => {
-      headerHeight.stopAnimation();
-      headerHeight.removeAllListeners();
       headerOpacity.stopAnimation();
       headerOpacity.removeAllListeners();
       headerTranslate.stopAnimation();
       headerTranslate.removeAllListeners();
     };
-  }, [headerHeight, headerOpacity, headerTranslate]);
+  }, [headerOpacity, headerTranslate]);
 
   return {
-    headerHeight,
+    headerHeight: containerHeight,
     headerOpacity,
     headerTranslate,
     headerReady,

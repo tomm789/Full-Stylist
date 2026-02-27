@@ -10,6 +10,8 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Input, PrimaryButton } from '@/components/shared';
 import { theme } from '@/styles';
@@ -42,30 +44,32 @@ export function CreatePresetModal({
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Create Slot Preset</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Text style={styles.modalClose}>×</Text>
-            </TouchableOpacity>
-          </View>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Create Slot Preset</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Text style={styles.modalClose}>×</Text>
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.modalBody}>
-            <Text style={styles.label}>Preset Name *</Text>
-            <Input
-              value={presetName}
-              onChangeText={onPresetNameChange}
-              placeholder="e.g. Gym, Date Night, Casual"
-            />
-            <PrimaryButton
-              title="Create"
-              onPress={onCreate}
-              disabled={!presetName.trim()}
-            />
+            <View style={styles.modalBody}>
+              <Text style={styles.label}>Preset Name *</Text>
+              <Input
+                value={presetName}
+                onChangeText={onPresetNameChange}
+                placeholder="e.g. Gym, Date Night, Casual"
+              />
+              <PrimaryButton
+                title="Create"
+                onPress={onCreate}
+                disabled={!presetName.trim()}
+              />
+            </View>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

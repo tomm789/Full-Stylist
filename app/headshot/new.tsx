@@ -9,7 +9,6 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Alert,
   SafeAreaView,
@@ -21,7 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useImageGeneration } from '@/hooks/profile';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import ErrorModal from '@/components/ErrorModal';
-import { Header, HeaderIconButton } from '@/components/shared/layout';
+import { Header, HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layout';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -86,11 +85,11 @@ export default function NewHeadshotScreen() {
           leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
         />
 
-        <ScrollView
-          style={styles.scrollContainer}
+        <KeyboardAwareScreen
+          scrollViewStyle={styles.scrollContainer}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          dismissOnTap
         >
           {!uploadedUri ? (
             <View style={styles.uploadSection}>
@@ -154,6 +153,7 @@ export default function NewHeadshotScreen() {
                   onChangeText={setHairStyle}
                   editable={!generating}
                   multiline
+                  blurOnSubmit={false}
                 />
                 <Text style={styles.inputHint}>
                   Describe your desired hairstyle or leave blank to keep original
@@ -167,6 +167,7 @@ export default function NewHeadshotScreen() {
                   onChangeText={setMakeupStyle}
                   editable={!generating}
                   multiline
+                  blurOnSubmit={false}
                 />
                 <Text style={styles.inputHint}>
                   Describe your desired makeup or leave blank for natural look
@@ -185,7 +186,7 @@ export default function NewHeadshotScreen() {
               </TouchableOpacity>
             </View>
           )}
-        </ScrollView>
+        </KeyboardAwareScreen>
       </SafeAreaView>
 
       <PolicyBlockModal

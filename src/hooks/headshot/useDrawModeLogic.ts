@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Keyboard } from 'react-native';
 import { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Gesture } from 'react-native-gesture-handler';
 import type React from 'react';
@@ -22,7 +22,11 @@ import {
   type HeadshotDrawingTemplate,
 } from '@/lib/headshot/drawingTemplates';
 import { DRAW_COLOUR_ORDER, getDrawColour } from '@/lib/headshot/drawingColors';
-import type { HeadshotDrawingCanvasRef, DrawnColorEntry } from '@/components/headshots/HeadshotDrawingCanvas';
+import type {
+  HeadshotDrawingCanvasRef,
+  DrawMaskMeta,
+  DrawnColorEntry,
+} from '@/components/headshots/HeadshotDrawingCanvas';
 import type { SelectionPill } from '@/components/headshots/HeadshotCreatorContainer';
 
 export type ColorSettings = {
@@ -39,7 +43,8 @@ export type UseDrawModeLogicParams = {
   drawingCanvasRef: React.RefObject<HeadshotDrawingCanvasRef>;
   canvasWidth: number;
   canvasHeight: number;
-  onGenerate: (maskBase64: string | null, colorMap: DrawnColorEntry[]) => void;
+  onGenerate: (maskBase64: string | null, colorMap: DrawnColorEntry[], maskMeta?: DrawMaskMeta) => void;
+  renderContentFit?: 'cover' | 'contain';
   onApplyTemplateSelections?: (snapshot: {
     hairPresetIds: string[];
     makeupPresetIds: string[];
@@ -47,6 +52,8 @@ export type UseDrawModeLogicParams = {
   }) => void;
   /** Called after generate. Provide in Modal variant; omit in Inline variant. */
   onClose?: () => void;
+  /** When true, disable draw gesture and allow tap-to-dismiss keyboard. */
+  keyboardVisible?: boolean;
 };
 
 export function useDrawModeLogic({
@@ -60,8 +67,10 @@ export function useDrawModeLogic({
   canvasWidth,
   canvasHeight,
   onGenerate,
+  renderContentFit = 'cover',
   onApplyTemplateSelections,
   onClose,
+  keyboardVisible = false,
 }: UseDrawModeLogicParams) {
   // --- Draw state ---
   const [activeColor, setActiveColor] = useState<string>(getDrawColour(DRAW_COLOUR_ORDER[0]));
@@ -114,10 +123,18 @@ export function useDrawModeLogic({
     .maxPointers(1)
     .runOnJS(true)
     .minDistance(0)
+    .enabled(!keyboardVisible)
     .onBegin((e) => drawingCanvasRef.current?.handleDrawBegin(e.x, e.y))
     .onUpdate((e) => drawingCanvasRef.current?.handleDrawUpdate(e.x, e.y))
     .onEnd(() => drawingCanvasRef.current?.handleDrawEnd())
     .onFinalize(() => drawingCanvasRef.current?.handleDrawEnd());
+
+  // Single tap when keyboard open → dismiss keyboard (instead of drawing)
+  const keyboardDismissGesture = Gesture.Tap()
+    .numberOfTaps(1)
+    .runOnJS(true)
+    .enabled(keyboardVisible)
+    .onEnd(() => Keyboard.dismiss());
 
   // 2-finger pinch → zoom
   const pinchGesture = Gesture.Pinch()
@@ -149,6 +166,7 @@ export function useDrawModeLogic({
 
   const allGestures = Gesture.Simultaneous(
     drawGesture,
+    keyboardDismissGesture,
     pinchGesture,
     panZoomGesture,
     doubleTapGesture,
@@ -328,7 +346,12 @@ export function useDrawModeLogic({
       ? ((await drawingCanvasRef.current?.makeMaskSnapshot()) ?? null)
       : null;
     setCapturing(false);
-    onGenerate(maskBase64, colorMap);
+    const maskMeta: DrawMaskMeta = {
+      contentFit: renderContentFit,
+      canvasWidth,
+      canvasHeight,
+    };
+    onGenerate(maskBase64, colorMap, maskMeta);
     onClose?.();
   };
 

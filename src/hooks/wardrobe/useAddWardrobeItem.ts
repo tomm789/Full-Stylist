@@ -4,13 +4,12 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWardrobe } from './useWardrobe';
 import { useAIJobPolling } from '@/hooks/ai';
+import { useAddWardrobeImages } from './useAddWardrobeImages';
 import { createWardrobeItem } from '@/lib/wardrobe';
 import {
   triggerWardrobeItemGenerate,
@@ -59,43 +58,30 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
   const { user } = useAuth();
   const { wardrobeId, loading: wardrobeLoading } = useWardrobe(user?.id);
 
-  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  // Image selection & cropping (delegated to sub-hook)
+  const {
+    selectedImages,
+    setSelectedImages,
+    handleTakePhoto,
+    handleUploadPhoto,
+    removeImage,
+    addImageFromUri,
+    cropperVisible,
+    cropperImageUri,
+    handleCropperCancel,
+    handleCropperDone,
+  } = useAddWardrobeImages();
+
   const [loading, setLoading] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
   const [analysisStep, setAnalysisStep] = useState<string>('');
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [aiJobId, setAiJobId] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
-  
-  // Cropper state
-  const [cropperVisible, setCropperVisible] = useState(false);
-  const [cropperImageUri, setCropperImageUri] = useState<string | null>(null);
 
   // Store image ids for tagging follow-up when render succeeds (non-blocking)
   const pendingImageIdsRef = useRef<string[]>([]);
   const timelineRef = useRef<ReturnType<typeof startTimeline> | null>(null);
-
-  const centerCropToSquare = useCallback(async (uri: string): Promise<string> => {
-    if (Platform.OS === 'web') return uri;
-    try {
-      const source = await ImageManipulator.manipulateAsync(uri, [], {
-        compress: 1,
-        format: ImageManipulator.SaveFormat.JPEG,
-      });
-      if (source.width === source.height) return uri;
-      const side = Math.min(source.width, source.height);
-      const originX = Math.floor((source.width - side) / 2);
-      const originY = Math.floor((source.height - side) / 2);
-      const cropped = await ImageManipulator.manipulateAsync(
-        uri,
-        [{ crop: { originX, originY, width: side, height: side } }],
-        { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
-      );
-      return cropped.uri;
-    } catch {
-      return uri;
-    }
-  }, []);
 
   const onComplete = useCallback(
     (job: import('@/lib/ai-jobs').AIJob) => {
@@ -110,7 +96,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
             itemId: pendingItemId,
           });
         }
-        
+
         // Primary path: wardrobe_item_generate (navigation already done; cache update for back-navigation)
         if (job.job_type === 'wardrobe_item_generate') {
           const result = job.result as { base64_result?: string; mime_type?: string; suggested_title?: string; suggested_notes?: string } | undefined;
@@ -136,14 +122,14 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
           setGeneratingAI(false);
           return;
         }
-        
+
         // Backward compatibility: batch job results
         if (job.job_type === 'batch') {
           // Extract product_shot result from batch job
           const batchResult = job.result;
           const productShotResult = batchResult?.product_shot;
           const autoTagResult = batchResult?.auto_tag;
-          
+
           // Log for debugging
           console.log('[BatchJob] Job completed:', {
             hasProductShot: !!productShotResult,
@@ -152,23 +138,23 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
             autoTagResult,
             fullResult: batchResult,
           });
-          
+
           // Check if product_shot succeeded
           // Success is indicated by having image_id and storage_key, or by not having an error field
-          const productShotSucceeded = productShotResult && 
-            !productShotResult.error && 
+          const productShotSucceeded = productShotResult &&
+            !productShotResult.error &&
             (productShotResult.image_id || productShotResult.storage_key);
-          
+
           if (productShotSucceeded) {
             // Product shot succeeded - populate fast-path cache
             const base64Result = productShotResult.base64_result;
             if (base64Result) {
               const dataUri = toDataUri(base64Result, productShotResult.mime_type);
-              
+
               // Extract title and description from auto_tag result
               const title = autoTagResult?.suggested_title;
               const description = autoTagResult?.suggested_notes;
-              
+
               // Populate cache for fast-path rendering
               const cacheSetAt = Date.now();
               setInitialItemData(
@@ -194,7 +180,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
                 resultKeys: productShotResult ? Object.keys(productShotResult) : [],
               });
             }
-            
+
             // Product shot succeeded - update UI immediately
             setAnalysisStep('Product shot generated successfully');
             // The backend has already applied the product shot to the database,
@@ -271,131 +257,6 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
       setAnalysisStep('Adding item to your wardrobe');
     }
   }, [aiJob, generatingAI]);
-
-  const handleTakePhoto = useCallback(async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please grant camera permissions');
-      return;
-    }
-
-    const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes,
-      allowsEditing: Platform.OS !== 'web',
-      ...(Platform.OS !== 'web' ? { aspect: [1, 1] as [number, number] } : {}),
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      // Show cropper modal on web, or directly add on native
-      if (Platform.OS === 'web') {
-        setCropperImageUri(result.assets[0].uri);
-        setCropperVisible(true);
-      } else {
-        // On native, ImagePicker editor enforces 1:1.
-        const newImage = {
-          uri: result.assets[0].uri,
-          type: result.assets[0].type || 'image/jpeg',
-          name: result.assets[0].fileName || `photo-${Date.now()}.jpg`,
-        };
-        setSelectedImages((prev) => [...prev, newImage]);
-      }
-    }
-  }, []);
-
-  const handleUploadPhoto = useCallback(async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please grant camera roll permissions');
-      return;
-    }
-
-    const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes,
-      allowsMultipleSelection: Platform.OS === 'web',
-      allowsEditing: Platform.OS !== 'web',
-      ...(Platform.OS !== 'web' ? { aspect: [1, 1] as [number, number] } : {}),
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets) {
-      if (Platform.OS === 'web' && result.assets.length > 0) {
-        // On web, show cropper for first image
-        // For multiple images, we'd need to queue them, but for now handle one at a time
-        setCropperImageUri(result.assets[0].uri);
-        setCropperVisible(true);
-      } else {
-        // On native, ImagePicker editor enforces 1:1.
-        const newImages = result.assets.map((asset) => ({
-          uri: asset.uri,
-          type: asset.type || 'image/jpeg',
-          name: asset.fileName || `image-${Date.now()}.jpg`,
-        }));
-        setSelectedImages((prev) => [...prev, ...newImages]);
-      }
-    }
-  }, []);
-
-  const removeImage = useCallback((index: number) => {
-    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const addImageFromUri = useCallback(async (uri: string) => {
-    if (Platform.OS === 'web') {
-      setCropperImageUri(uri);
-      setCropperVisible(true);
-      return;
-    }
-
-    // Inline camera captures are auto-centered to 1:1 based on the guide.
-    const croppedUri = await centerCropToSquare(uri);
-    const newImage: SelectedImage = {
-      uri: croppedUri,
-      type: 'image/jpeg',
-      name: `photo-${Date.now()}.jpg`,
-    };
-    setSelectedImages((prev) => [...prev, newImage]);
-  }, [centerCropToSquare]);
-
-  const handleCropperCancel = useCallback(() => {
-    setCropperVisible(false);
-    setCropperImageUri(null);
-  }, []);
-
-  const handleCropperDone = useCallback((blob: Blob, fileName: string) => {
-    // Convert blob to data URI for React Native compatibility
-    if (Platform.OS === 'web') {
-      // On web, create object URL from blob
-      const objectUrl = URL.createObjectURL(blob);
-      const newImage: SelectedImage = {
-        uri: objectUrl,
-        type: 'image/jpeg',
-        name: fileName,
-      };
-      setSelectedImages((prev) => [...prev, newImage]);
-    } else {
-      // On native, convert blob to data URI
-      blob.arrayBuffer().then((buffer) => {
-        const bytes = new Uint8Array(buffer);
-        const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
-        const base64 = btoa(binary);
-        const dataUri = `data:image/jpeg;base64,${base64}`;
-        const newImage: SelectedImage = {
-          uri: dataUri,
-          type: 'image/jpeg',
-          name: fileName,
-        };
-        setSelectedImages((prev) => [...prev, newImage]);
-      });
-    }
-    
-    setCropperVisible(false);
-    setCropperImageUri(null);
-  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (!user || !wardrobeId) {

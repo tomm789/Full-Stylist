@@ -3,9 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
@@ -14,7 +11,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useNewLookbook } from '@/hooks/lookbooks';
 import { OutfitGridSelector } from '@/components/lookbooks';
 import FilterDefinitionEditor from '@/components/FilterDefinitionEditor';
-import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
+import { Header, HeaderActionButton, HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layout';
 
 export default function NewLookbookScreen() {
   const router = useRouter();
@@ -68,11 +65,12 @@ export default function NewLookbookScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.keyboardView}
+    <KeyboardAwareScreen
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      keyboardShouldPersistTaps="handled"
+      dismissOnTap
     >
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} keyboardShouldPersistTaps="handled">
       <Header
         title="New Lookbook"
         leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
@@ -104,6 +102,7 @@ export default function NewLookbookScreen() {
           value={description}
           onChangeText={setDescription}
           multiline
+          blurOnSubmit={false}
           numberOfLines={3}
           maxLength={500}
         />
@@ -224,16 +223,11 @@ export default function NewLookbookScreen() {
           <Text style={styles.savingText}>Creating lookbook...</Text>
         </View>
       )}
-    </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboardView: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
