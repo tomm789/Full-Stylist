@@ -1,88 +1,98 @@
-# Codex Task: Sweep 1B — Hook Complexity & Duplication Audit
+# Codex Task: Sweep 1C — Re-render & Memoization Audit (Component Layer)
 
 ## Context
 
 You are working on the Full Stylist app (Expo 54 / React Native / Expo Router). This is an audit-only task — **do not edit any source files**. Your job is to analyse and report.
 
-This is the second sweep of an optimization audit. Sweep 1A (see `CODEX_TASK_REPORT.md`) analysed the route files. This sweep focuses on the hooks layer — the 12 largest hooks by line count — looking for over-responsibility, duplication across hooks, missing cleanup, and split opportunities.
+This is the third sweep. Sweeps 1A and 1B analysed route files and hooks respectively. This sweep focuses on the **component layer** — looking for unnecessary re-renders, missing memoization, inline object/array creation in JSX, and list rendering performance.
+
+Reference the previous reports if helpful:
+- `CODEX_TASK_REPORT.md` (Sweep 1A — route file bloat)
+- `CODEX_TASK_REPORT_1B.md` (Sweep 1B — hook complexity)
 
 ## Your Task
 
-Read and analyse these 12 hook files:
+### Part 1: List Rendering Performance
 
-1. `src/hooks/wardrobe/useWardrobeItemDetail.ts` (570 lines)
-2. `src/hooks/outfits/useOutfitGeneration.ts` (549 lines)
-3. `src/hooks/headshot/useHairAndMakeup.ts` (527 lines)
-4. `src/hooks/outfits/useOutfitEditorActions.ts` (445 lines)
-5. `src/hooks/headshot/useDrawModeLogic.ts` (402 lines)
-6. `src/hooks/wardrobe/useAddWardrobeItem.ts` (385 lines)
-7. `src/hooks/wardrobe/useCanvasLayout.ts` (374 lines)
-8. `src/hooks/social/useFeed.ts` (374 lines)
-9. `src/hooks/lookbooks/useLookbookDetailActions.ts` (371 lines)
-10. `src/hooks/wardrobe/useFilters.ts` (340 lines)
-11. `src/hooks/wardrobe/useWardrobeItemEdit.ts` (325 lines)
-12. `src/hooks/outfits/useOutfitView.ts` (307 lines)
+Analyse all FlatList/ScrollView-based list components. For each, check:
 
-For **each hook**, produce the following analysis:
+- Is `renderItem` wrapped in `useCallback`?
+- Is the row/item component wrapped in `React.memo`?
+- Are `initialNumToRender`, `maxToRenderPerBatch`, `windowSize` configured?
+- Is `getItemLayout` provided where item height is fixed/predictable?
+- Are handler props passed to list items stable (useCallback) or recreated each render?
 
-### A. Responsibilities
-List every distinct responsibility this hook owns (data fetching, state management, mutations, subscriptions, UI logic, navigation, etc.). Flag any hook that owns more than 3 distinct responsibilities as "over-responsible".
+**Files to check** (search for `FlatList`, `SectionList`, `ScrollView` with mapped children):
+- `src/components/wardrobe/ItemGrid.tsx`
+- `src/components/social/FeedItem.tsx`
+- `src/components/calendar/CalendarContinuousGrid.tsx`
+- `src/components/lookbooks/LookbookPickerModal.tsx`
+- `src/components/outfits/OutfitViewContent.tsx`
+- Any other components that render lists of data — search broadly for `FlatList` and `.map(` in `src/components/`
 
-### B. Split opportunities
-If the hook is over-responsible, suggest concrete splits. Name the proposed new hooks and what each would own. Only suggest splits where the boundary is clean — don't split for the sake of it.
+### Part 2: Component Memoization Audit
 
-### C. Cleanup issues
-Look for:
-- Timers (`setTimeout`, `setInterval`) without cleanup in `useEffect` return
-- Subscriptions or listeners without unsubscribe
-- Polling without abort/cancel
-- `useEffect` with missing or incorrect dependency arrays
-- Async operations without abort controllers or mounted checks
-- State updates that could fire after unmount
+Check the **20 largest components** (by line count) for:
 
-### D. Duplication across hooks
-Look for patterns that appear in multiple hooks:
-- Similar data fetching patterns (Supabase queries with the same structure)
-- Similar polling/retry logic
-- Similar image processing flows
-- Similar state management patterns (loading/error/data triads)
-- Similar navigation patterns
-- Any utility logic that should be in `src/utils/` instead
+- Is the component wrapped in `React.memo` where it receives props from a parent?
+- Are there inline object/array literals in JSX `style` props that create new references each render? (e.g. `style={{ marginTop: 10 }}` instead of using StyleSheet)
+- Are there inline arrow functions in JSX event handlers that should be `useCallback`? (e.g. `onPress={() => doSomething(id)}` in a list context)
+- Are there expensive computations (filtering, sorting, mapping arrays) that should be wrapped in `useMemo`?
 
-### E. Memoization gaps
-For each hook, note:
-- Expensive computations not wrapped in `useMemo`
-- Callback functions recreated every render that are passed to child components (should be `useCallback`)
-- Objects/arrays created inline that cause unnecessary re-renders in consumers
+**Files to check** (the 20 largest components by line count):
+1. `src/components/outfits/OutfitViewContent.tsx` (501)
+2. `src/components/wardrobe/OutfitCreatorCanvas.tsx` (487)
+3. `src/components/headshots/MirrorTabContent.tsx` (412)
+4. `src/components/headshots/EditTabModal.tsx` (410)
+5. `src/components/outfits/GenerationProgressModal.tsx` (387)
+6. `src/components/social/FeedItem.tsx` (383)
+7. `src/components/profile/OnboardingAccountStep.tsx` (378)
+8. `src/components/lookbooks/LookbookPickerModal.tsx` (373)
+9. `src/components/profile/AIModelSection.tsx` (372)
+10. `src/components/ai/AIGenerationFeedback.tsx` (366)
+11. `src/components/UserWardrobeScreen.tsx` (357)
+12. `src/components/wardrobe/WardrobeCameraOverlay.tsx` (355)
+13. `src/components/wardrobe/CropEditor.tsx` (353)
+14. `src/components/calendar/CalendarDaySheet.tsx` (354)
+15. `src/components/social/UserProfileHeader.tsx` (342)
+16. `src/components/calendar/EntryCard.tsx` (337)
+17. `src/components/tabs/FullScreenMenuModal.tsx` (333)
+18. `src/components/wardrobe/HeadshotSelectorModal.tsx` (330)
+19. `src/components/headshots/DrawModeModal.tsx` (326)
+20. `src/components/tabs/HeaderSearchMenu.tsx` (323)
 
-## Also skim these smaller hooks for duplication patterns
+### Part 3: Context Re-render Risk
 
-Don't do a full analysis, but check if any of these duplicate logic from the 12 main hooks:
+Check each context provider for potential over-rendering:
 
-- `src/hooks/outfits/useOutfitSessionData.ts`
-- `src/hooks/outfits/useOutfitSessionNavigation.ts`
-- `src/hooks/social/useTryOnOutfit.ts`
-- `src/hooks/social/useUserProfile.ts`
-- `src/hooks/profile/useAccountSettings.ts`
-- `src/hooks/headshot/usePresetSelection.ts`
-- `src/hooks/headshot/useHeadshotGeneration.ts`
-- `src/hooks/wardrobe/useWardrobeCamera.ts`
-- `src/hooks/wardrobe/usePeriodicRefresh.ts`
+- `src/contexts/AuthContext.tsx`
+- `src/contexts/FloatingTabBarContext.tsx`
+- `src/contexts/HeaderSearchContext.tsx`
+- `src/contexts/TabSearchContext.tsx`
+- `src/contexts/ThemeContext.tsx`
+- `src/contexts/NotificationsContext.tsx`
+- `src/contexts/CalendarEntryFlowContext.tsx`
+- `src/contexts/CalendarPanelContext.tsx`
+
+For each, note:
+- Is the context value memoized (`useMemo`)?
+- Does the context bundle frequently-changing values (like animated values) with stable values (like callbacks)?
+- How many components consume this context? (Quick count of `useAuth`, `useThemeColors`, etc. imports)
 
 ## Output
 
-Write your full analysis to `CODEX_TASK_REPORT_1B.md` in the project root. Use the structure above (sections A-E for each of the 12 hooks). End with two summary sections:
+Write your full analysis to `CODEX_TASK_REPORT_1C.md` in the project root. Structure it as:
 
-### Summary: Cross-Hook Duplication Patterns
-List the top recurring patterns found across multiple hooks, with file references.
-
-### Summary: Top 5 Highest-Impact Actions
-Ranked by (complexity reduction × risk level), list the 5 most impactful things to fix across all 12 hooks.
+1. **Part 1: List Rendering** — table format per list component
+2. **Part 2: Component Memoization** — findings per component (only list issues found, skip components with no issues)
+3. **Part 3: Context Re-render Risk** — table format per context
+4. **Summary: Top 10 Quick Wins** — the 10 easiest, lowest-risk memoization/performance fixes ranked by impact
+5. **Summary: Structural Concerns** — any deeper issues that need architectural changes (not just adding `useMemo`)
 
 ## Important
 
 - **Do NOT edit any source files** — this is audit only
 - **Do NOT create any new source files** other than the report
-- Only create/edit `CODEX_TASK_REPORT_1B.md`
-- Be specific: reference line numbers or function names, not vague descriptions
-- When flagging cleanup issues, explain what the actual risk is (memory leak, stale state, race condition, etc.)
+- Only create/edit `CODEX_TASK_REPORT_1C.md`
+- Be specific: reference file names and line numbers
+- Focus on issues that would cause real-world performance problems, not theoretical purity
