@@ -302,7 +302,7 @@ export async function checkImagesRLSMigration(): Promise<{
       .limit(1);
 
     if (testError) {
-      console.warn('[checkImagesRLSMigration] Could not query:', testError);
+            if (__DEV__) console.warn('[checkImagesRLSMigration] Could not query:', testError);
       return { data: { applied: false }, error: testError };
     }
 

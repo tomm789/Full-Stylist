@@ -25,7 +25,6 @@ import {
   unsaveEntity,
   hasSaved,
   getSaveCount,
-  createComment,
   getComments,
   getCommentCount,
   Comment,
@@ -67,8 +66,6 @@ export default function LookbookViewScreen() {
   const [commentCount, setCommentCount] = useState(0);
   const [comments, setComments] = useState<Comment[]>([]);
   const [showComments, setShowComments] = useState(false);
-  const [commentText, setCommentText] = useState('');
-  const [submittingComment, setSubmittingComment] = useState(false);
   const isOwnLookbook = lookbook?.owner_user_id === user?.id;
 
   useEffect(() => {
@@ -217,25 +214,6 @@ export default function LookbookViewScreen() {
       }
     }
     setShowComments(true);
-  };
-
-  const handleSubmitComment = async () => {
-    if (!user || !id || !commentText.trim()) return;
-
-    setSubmittingComment(true);
-    try {
-      await createComment(user.id, 'lookbook', id as string, commentText.trim());
-      setCommentText('');
-      setCommentCount(commentCount + 1);
-      const { data } = await getComments('lookbook', id as string);
-      if (data) {
-        setComments(data);
-      }
-    } catch (error: any) {
-      console.error('Failed to submit comment:', error);
-    } finally {
-      setSubmittingComment(false);
-    }
   };
 
   const handleOpenSlideshow = async () => {

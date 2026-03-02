@@ -7,10 +7,11 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getOutfit, saveOutfit } from '@/lib/outfits';
-import { createAIJob, triggerAIJobExecution, waitForAIJobCompletion, getOutfitRenderItemLimit } from '@/lib/ai-jobs';
+import { getOutfitRenderItemLimit } from '@/lib/ai-jobs';
 import { supabase } from '@/lib/supabase';
 import { getWardrobeCategories, getWardrobeItemsByIds } from '@/lib/wardrobe';
 import { createImageRecord, uploadAndCreateImage } from '@/lib/utils/image-helpers';
+import { useOutfitRenderJob } from '@/hooks/outfits/useOutfitRenderJob';
 
 interface UseTryOnOutfitProps {
   userId: string | undefined;
@@ -26,6 +27,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
   const router = useRouter();
   const [tryingOnOutfit, setTryingOnOutfit] = useState(false);
   const [generatingOutfitId, setGeneratingOutfitId] = useState<string | null>(null);
+  const { runRenderJob } = useOutfitRenderJob();
 
   const tryOnOutfit = async (outfitId: string, referenceImageUrl: string | null) => {
     if (!userId) {
@@ -155,7 +157,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
       
       if (wardrobeItems.length < wardrobeItemIds.length) {
         const missingCount = wardrobeItemIds.length - wardrobeItems.length;
-        console.warn(`[Social] Only ${wardrobeItems.length} of ${wardrobeItemIds.length} wardrobe items accessible`);
+                if (__DEV__) console.warn(`[Social] Only ${wardrobeItems.length} of ${wardrobeItemIds.length} wardrobe items accessible`);
       }
 
       const wardrobeItemsMap = new Map(wardrobeItems.map(item => [item.id, item]));
@@ -176,67 +178,52 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
       let mannequinImageId: string | undefined;
 
       if (selected.length > renderLimit && !referenceImageId) {
-        const { data: mannequinJob, error: mannequinError } = await createAIJob(userId, 'outfit_mannequin', {
-          user_id: userId,
-          outfit_id: newOutfitId,
-          selected,
+        const { job: mannequinResult } = await runRenderJob({
+          userId,
+          jobType: 'outfit_mannequin',
+          jobParams: {
+            user_id: userId,
+            outfit_id: newOutfitId,
+            selected,
+          },
+          timeout: 120000,
+          interval: 2000,
+          logPrefix: '[Social] Mannequin',
+          pollingMode: 'wait_for_completion',
         });
 
-        if (mannequinError || !mannequinJob) {
-          throw new Error('Failed to start mannequin generation');
-        }
-
-        await triggerAIJobExecution(mannequinJob.id);
-        const { data: mannequinResult, error: mannequinPollError } = await waitForAIJobCompletion(
-          mannequinJob.id,
-          60,
-          2000,
-          '[Social] Mannequin'
-        );
-
-        if (mannequinPollError || !mannequinResult?.result?.mannequin_image_id) {
+        if (!mannequinResult?.result?.mannequin_image_id) {
           throw new Error('Mannequin generation timed out. Please try again.');
         }
 
         mannequinImageId = mannequinResult.result.mannequin_image_id;
       }
 
-      const { data: renderJob, error: jobError } = await createAIJob(userId, 'outfit_render', {
-        user_id: userId,
-        outfit_id: newOutfitId,
-        selected,
-        mannequin_image_id: mannequinImageId,
-        reference_image_id: referenceImageId,
-      });
-
-      if (jobError || !renderJob) {
-        throw new Error('Failed to start render job');
-      }
-
-      const triggerResult = await triggerAIJobExecution(renderJob.id);
-      if (triggerResult.error) {
-        console.error('[Social] Job trigger returned error:', triggerResult.error);
-        if (triggerResult.error.message?.includes('URL') || triggerResult.error.message?.includes('configuration')) {
-          await supabase
-            .from('outfits')
-            .update({ archived_at: new Date().toISOString() })
-            .eq('id', newOutfitId);
-          throw new Error('Failed to start outfit generation. Please check your network connection and try again.');
-        }
-        console.warn('[Social] Job trigger may have timed out, but job might still be processing');
-      }
-
-      setGeneratingOutfitId(newOutfitId);
-
       try {
-        const { data: finalJob, error: pollError } = await waitForAIJobCompletion(
-          renderJob.id,
-          120,
-          2000,
-          '[Social]'
-        );
+        let renderJobId: string | null = null;
+        const { job: finalJob } = await runRenderJob({
+          userId,
+          jobType: 'outfit_render',
+          jobParams: {
+            user_id: userId,
+            outfit_id: newOutfitId,
+            selected,
+            mannequin_image_id: mannequinImageId,
+            reference_image_id: referenceImageId,
+          },
+          timeout: 120000,
+          interval: 2000,
+          logPrefix: '[Social]',
+          pollingMode: 'wait_for_completion',
+          onJobCreated: (jobId) => {
+            renderJobId = jobId;
+          },
+          onJobTriggered: () => {
+            setGeneratingOutfitId(newOutfitId);
+          },
+        });
 
-        if (pollError || !finalJob) {
+        if (!finalJob) {
           setGeneratingOutfitId(null);
           setTryingOnOutfit(false);
           Alert.alert(
@@ -248,7 +235,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
         }
 
         const pollElapsedMs = Date.now() - tryOnStartMs;
-        console.info('[Social] Try-on poll succeeded', { jobId: renderJob.id, outfitId: newOutfitId, elapsedMs: pollElapsedMs });
+        console.info('[Social] Try-on poll succeeded', { jobId: renderJobId, outfitId: newOutfitId, elapsedMs: pollElapsedMs });
 
         if (finalJob.status === 'succeeded') {
           setGeneratingOutfitId(null);
@@ -262,6 +249,13 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
           Alert.alert('Generation Failed', finalJob.error || 'Outfit generation failed');
         }
       } catch (error: any) {
+        if (error?.message?.includes('URL') || error?.message?.includes('configuration')) {
+          await supabase
+            .from('outfits')
+            .update({ archived_at: new Date().toISOString() })
+            .eq('id', newOutfitId);
+          throw new Error('Failed to start outfit generation. Please check your network connection and try again.');
+        }
         console.error('[Social] Error polling outfit render:', error);
         setGeneratingOutfitId(null);
         setTryingOnOutfit(false);

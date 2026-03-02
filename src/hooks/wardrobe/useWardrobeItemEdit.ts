@@ -3,7 +3,7 @@
  * Manage wardrobe item editing with form state and AI polling
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -16,6 +16,7 @@ import {
 } from '@/lib/wardrobe';
 import { getEntityAttributes } from '@/lib/attributes';
 import { supabase } from '@/lib/supabase';
+import { usePeriodicRefresh } from './usePeriodicRefresh';
 
 interface UseWardrobeItemEditProps {
   itemId: string | undefined;
@@ -74,71 +75,71 @@ export function useWardrobeItemEdit({
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const [subcategoriesExpanded, setSubcategoriesExpanded] = useState(false);
   const [visibilityExpanded, setVisibilityExpanded] = useState(false);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const stopPeriodicRefreshRef = useRef<() => void>(() => {});
 
-  const loadSubcategories = async (categoryId: string) => {
+  const loadSubcategories = useCallback(async (categoryId: string) => {
     if (!categoryId) return;
     const { data } = await getSubcategories(categoryId);
     if (data) {
       setSubcategories(data);
     }
-  };
+  }, []);
 
-  const startPollingForAICompletion = () => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
+  const checkAICompletion = useCallback(async () => {
+    if (!itemId || !userId) return;
 
-    pollingIntervalRef.current = setInterval(async () => {
-      if (!itemId || !userId) return;
+    try {
+      const { data: refreshedItem } = await getWardrobeItem(itemId);
+      const { data: itemAttributes } = await getEntityAttributes(
+        'wardrobe_item',
+        itemId
+      );
 
-      try {
-        const { data: refreshedItem } = await getWardrobeItem(itemId);
-        const { data: itemAttributes } = await getEntityAttributes(
-          'wardrobe_item',
-          itemId
+      if (refreshedItem && itemAttributes) {
+        const hasAiAttributes = itemAttributes.some(
+          (attr: any) => attr.source === 'ai'
         );
+        const titleIsGenerated =
+          refreshedItem.title && refreshedItem.title !== 'New Item';
+        const isComplete = hasAiAttributes || titleIsGenerated;
 
-        if (refreshedItem && itemAttributes) {
-          const hasAiAttributes = itemAttributes.some(
-            (attr: any) => attr.source === 'ai'
-          );
-          const titleIsGenerated =
-            refreshedItem.title && refreshedItem.title !== 'New Item';
-          const isComplete = hasAiAttributes || titleIsGenerated;
+        if (isComplete) {
+          setAiGenerationComplete(true);
+          setItem(refreshedItem);
+          setTitle(refreshedItem.title || '');
+          setDescription(refreshedItem.description || '');
+          setSelectedCategoryId(refreshedItem.category_id || '');
+          setSelectedSubcategoryId(refreshedItem.subcategory_id || '');
+          setCategoriesExpanded(false);
+          setSubcategoriesExpanded(false);
 
-          if (isComplete) {
-            setAiGenerationComplete(true);
-            setItem(refreshedItem);
-            setTitle(refreshedItem.title || '');
-            setDescription(refreshedItem.description || '');
-            setSelectedCategoryId(refreshedItem.category_id || '');
-            setSelectedSubcategoryId(refreshedItem.subcategory_id || '');
-            setCategoriesExpanded(false);
-            setSubcategoriesExpanded(false);
-
-            if (refreshedItem.category_id) {
-              await loadSubcategories(refreshedItem.category_id);
-            }
-
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
+          if (refreshedItem.category_id) {
+            await loadSubcategories(refreshedItem.category_id);
           }
-        }
-      } catch (error) {
-        console.error('Error polling for AI completion:', error);
-      }
-    }, 2000);
 
-    setTimeout(() => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
+          stopPeriodicRefreshRef.current();
+        }
       }
-    }, 120000);
-  };
+    } catch (error) {
+      console.error('Error polling for AI completion:', error);
+    }
+  }, [itemId, userId, loadSubcategories]);
+
+  const {
+    startPeriodicImageRefresh,
+    stopPeriodicRefresh,
+  } = usePeriodicRefresh(itemId, userId, {
+    refreshImages: checkAICompletion,
+    refreshAttributes: checkAICompletion,
+    onImageRefreshTimeout: () => {
+      stopPeriodicRefreshRef.current();
+    },
+  });
+  stopPeriodicRefreshRef.current = stopPeriodicRefresh;
+
+  const startPollingForAICompletion = useCallback(() => {
+    startPeriodicImageRefresh({ intervalMs: 2000, timeoutMs: 120000 });
+  }, [startPeriodicImageRefresh]);
 
   const initialize = async () => {
     if (!userId || !itemId) return;
@@ -196,6 +197,7 @@ export function useWardrobeItemEdit({
         setAiGenerationComplete(isComplete);
 
         if (isComplete) {
+          stopPeriodicRefreshRef.current();
           setSelectedCategoryId(foundItem?.category_id || '');
           setSelectedSubcategoryId(foundItem?.subcategory_id || '');
 
@@ -275,12 +277,9 @@ export function useWardrobeItemEdit({
     }
 
     return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
+      stopPeriodicRefresh();
     };
-  }, [itemId, userId]);
+  }, [itemId, userId, stopPeriodicRefresh]);
 
   useEffect(() => {
     if (selectedCategoryId) {
@@ -291,7 +290,7 @@ export function useWardrobeItemEdit({
       setSelectedSubcategoryId('');
       setSubcategoriesExpanded(false);
     }
-  }, [selectedCategoryId]);
+  }, [selectedCategoryId, loadSubcategories]);
 
   return {
     item,

@@ -51,6 +51,7 @@ export default function FeedCard({
               style={styles.avatar}
               contentFit="cover"
               cachePolicy="memory-disk"
+              recyclingKey={item.owner.id}
             />
           ) : (
             <View style={styles.avatarFallback} />

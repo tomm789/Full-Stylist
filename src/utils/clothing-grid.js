@@ -69,11 +69,11 @@ export async function generateClothingGrid(imageUrls, options = {}) {
   const BACKGROUND_COLOR = '#FFFFFF';
   const PADDING = 20; // Padding between grid cells
 
-  console.log(`[generateClothingGrid] Creating grid for ${imageUrls.length} items`);
+    if (__DEV__) console.log(`[generateClothingGrid] Creating grid for ${imageUrls.length} items`);
 
   // Calculate grid layout
   const { cols, rows } = calculateGridLayout(imageUrls.length);
-  console.log(`[generateClothingGrid] Grid layout: ${cols}x${rows}`);
+    if (__DEV__) console.log(`[generateClothingGrid] Grid layout: ${cols}x${rows}`);
 
   // Calculate cell dimensions (accounting for padding)
   const totalPaddingWidth = (cols - 1) * PADDING;
@@ -81,7 +81,7 @@ export async function generateClothingGrid(imageUrls, options = {}) {
   const cellWidth = Math.floor((CANVAS_WIDTH - totalPaddingWidth) / cols);
   const cellHeight = Math.floor((CANVAS_HEIGHT - totalPaddingHeight) / rows);
 
-  console.log(`[generateClothingGrid] Cell dimensions: ${cellWidth}x${cellHeight}`);
+    if (__DEV__) console.log(`[generateClothingGrid] Cell dimensions: ${cellWidth}x${cellHeight}`);
 
   // Load all images asynchronously
   const images = [];
@@ -90,7 +90,7 @@ export async function generateClothingGrid(imageUrls, options = {}) {
       const image = new Image();
       image.crossOrigin = 'anonymous'; // Enable CORS
       image.onload = () => {
-        console.log(`[generateClothingGrid] Loaded image ${i + 1}/${imageUrls.length}: ${image.width}x${image.height}`);
+                if (__DEV__) console.log(`[generateClothingGrid] Loaded image ${i + 1}/${imageUrls.length}: ${image.width}x${image.height}`);
         resolve(image);
       };
       image.onerror = () => {
@@ -102,12 +102,12 @@ export async function generateClothingGrid(imageUrls, options = {}) {
   }
 
   // Pre-process: Trim whitespace from all images
-  console.log(`[generateClothingGrid] Trimming whitespace from ${images.length} images...`);
+    if (__DEV__) console.log(`[generateClothingGrid] Trimming whitespace from ${images.length} images...`);
   const trimmedCanvases = [];
   for (let i = 0; i < images.length; i++) {
     const trimmedCanvas = await trimImageWhitespace(images[i], 15, false);
     trimmedCanvases.push(trimmedCanvas);
-    console.log(`[generateClothingGrid] Trimmed image ${i + 1}/${images.length}: ${trimmedCanvas.width}x${trimmedCanvas.height}`);
+        if (__DEV__) console.log(`[generateClothingGrid] Trimmed image ${i + 1}/${images.length}: ${trimmedCanvas.width}x${trimmedCanvas.height}`);
   }
 
   // Create the canvas
@@ -186,7 +186,7 @@ export async function generateClothingGrid(imageUrls, options = {}) {
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
     const base64String = dataUrl.split(',')[1];
-    console.log(`[generateClothingGrid] Custom-layout canvas created, base64 length: ${base64String.length}`);
+        if (__DEV__) console.log(`[generateClothingGrid] Custom-layout canvas created, base64 length: ${base64String.length}`);
     return base64String;
   }
 
@@ -210,7 +210,7 @@ export async function generateClothingGrid(imageUrls, options = {}) {
     const x = cellX + (cellWidth - dstWidth) / 2;
     const y = cellY + (cellHeight - dstHeight) / 2;
 
-    console.log(`[generateClothingGrid] Drawing trimmed item ${i + 1} at (${col}, ${row}) -> (${x.toFixed(0)}, ${y.toFixed(0)}), size: ${dstWidth.toFixed(0)}x${dstHeight.toFixed(0)} (from ${trimmedWidth}x${trimmedHeight}, scale=${scale.toFixed(2)})`);
+        if (__DEV__) console.log(`[generateClothingGrid] Drawing trimmed item ${i + 1} at (${col}, ${row}) -> (${x.toFixed(0)}, ${y.toFixed(0)}), size: ${dstWidth.toFixed(0)}x${dstHeight.toFixed(0)} (from ${trimmedWidth}x${trimmedHeight}, scale=${scale.toFixed(2)})`);
 
     // 4. Draw scaled (full source rect → scaled, centered destination rect)
     ctx.drawImage(trimmedCanvas, 0, 0, trimmedWidth, trimmedHeight, x, y, dstWidth, dstHeight);
@@ -222,7 +222,7 @@ export async function generateClothingGrid(imageUrls, options = {}) {
   // Extract base64 string (remove data URL prefix)
   const base64String = dataUrl.split(',')[1];
   
-  console.log(`[generateClothingGrid] Grid canvas created, base64 length: ${base64String.length}`);
+    if (__DEV__) console.log(`[generateClothingGrid] Grid canvas created, base64 length: ${base64String.length}`);
   
   return base64String;
 }

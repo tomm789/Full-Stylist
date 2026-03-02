@@ -227,6 +227,9 @@ export default function UserFeedScreen() {
           data={feed}
           renderItem={renderFeedItem}
           keyExtractor={(item) => item.id}
+          initialNumToRender={8}
+          maxToRenderPerBatch={4}
+          windowSize={5}
           contentContainerStyle={styles.feed}
           onLayout={handleFeedLayout}
           onScrollToIndexFailed={handleScrollToIndexFailed}

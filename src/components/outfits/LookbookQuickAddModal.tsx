@@ -70,6 +70,9 @@ export default function LookbookQuickAddModal({
         <FlatList
           data={lookbooks}
           keyExtractor={(item) => item.id}
+          initialNumToRender={8}
+          maxToRenderPerBatch={4}
+          windowSize={5}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.lookbookRow}

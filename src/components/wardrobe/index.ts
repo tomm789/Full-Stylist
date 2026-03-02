@@ -16,6 +16,8 @@ export { default as OutfitCreatorOptionsModal } from './OutfitCreatorOptionsModa
 export { default as HeadshotSelectorCard } from './HeadshotSelectorCard';
 export { default as HeadshotSelectorModal } from './HeadshotSelectorModal';
 export { default as NavigationSlider } from './NavigationSlider';
+export { default as SessionPreviewStrip } from './SessionPreviewStrip';
+export { default as WardrobeModalStack } from './WardrobeModalStack';
 export { VisibilitySelector } from './VisibilitySelector';
 export { ItemImageCarousel } from './ItemImageCarousel';
 export { ItemAttributes } from './ItemAttributes';

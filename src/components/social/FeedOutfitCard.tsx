@@ -6,6 +6,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { Image } from 'expo-image';
+import { FEED_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -40,7 +41,12 @@ export default function FeedOutfitCard({
           )}
         </View>
       ) : (
-        <Image source={{ uri: imageUrl }} style={styles.image} contentFit="cover" />
+        <Image
+          {...FEED_IMAGE_PROPS}
+          source={{ uri: imageUrl }}
+          style={styles.image}
+          recyclingKey={imageUrl}
+        />
       )}
 
       {/* Try-on badge */}

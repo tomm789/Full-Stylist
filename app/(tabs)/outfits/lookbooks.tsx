@@ -103,6 +103,9 @@ export default function LookbooksScreen() {
       <FlatList
         data={[]}
         renderItem={null}
+        initialNumToRender={8}
+        maxToRenderPerBatch={4}
+        windowSize={5}
         ListHeaderComponent={
           <>
             {/* System Lookbooks */}
@@ -114,6 +117,9 @@ export default function LookbooksScreen() {
                 <FlatList
                   horizontal
                   data={systemLookbooks}
+                  initialNumToRender={8}
+                  maxToRenderPerBatch={4}
+                  windowSize={5}
                   renderItem={({ item }) => (
                     <SystemLookbookCard
                       lookbook={item}
@@ -146,6 +152,9 @@ export default function LookbooksScreen() {
                 <FlatList
                   horizontal
                   data={lookbooks}
+                  initialNumToRender={8}
+                  maxToRenderPerBatch={4}
+                  windowSize={5}
                   renderItem={({ item }) => (
                     <LookbookCard
                       lookbook={item}

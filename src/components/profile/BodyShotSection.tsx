@@ -59,6 +59,9 @@ export function BodyShotSection({
             source={{ uri: bodyShotImageUrl }}
             style={styles.imagePreview}
             contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+            recyclingKey={activeBodyShotId || bodyShotImageUrl}
           />
         </View>
       )}
@@ -69,6 +72,9 @@ export function BodyShotSection({
             source={{ uri: uploadedUri }}
             style={styles.uploadedImage}
             contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+            recyclingKey={uploadedUri}
           />
           <TouchableOpacity
             style={styles.generateButton}

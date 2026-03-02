@@ -22,6 +22,7 @@ export const SlideshowSlide = ({ outfit, imageUrl }: SlideshowSlideProps) => {
           contentFit="contain"
           cachePolicy="memory-disk"
           priority="high"
+          recyclingKey={outfit.id}
         />
       ) : (
         <View style={styles.slideImagePlaceholder}>

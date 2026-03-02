@@ -109,6 +109,9 @@ export default function MarketplaceScreen() {
           data={listings}
           renderItem={renderListing}
           keyExtractor={(item) => item.id}
+          initialNumToRender={8}
+          maxToRenderPerBatch={4}
+          windowSize={5}
           numColumns={2}
           contentContainerStyle={styles.listingsList}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

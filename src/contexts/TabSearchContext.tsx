@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 
 export type TabSearchFilter = 'all' | 'user' | 'outfit' | 'lookbook' | 'wardrobe_item';
 
@@ -48,14 +48,19 @@ export function TabSearchProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const value = useMemo(
+    () => ({
+      getTabSearch,
+      registerTabSearch,
+      clearTabSearch,
+      version,
+    }),
+    [getTabSearch, registerTabSearch, clearTabSearch, version]
+  );
+
   return (
     <TabSearchContext.Provider
-      value={{
-        getTabSearch,
-        registerTabSearch,
-        clearTabSearch,
-        version,
-      }}
+      value={value}
     >
       {children}
     </TabSearchContext.Provider>

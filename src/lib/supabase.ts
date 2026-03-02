@@ -17,17 +17,15 @@ try {
 } catch (_) {}
 
 if (SUPABASE_CONFIG.DEV_MODE && !SUPABASE_CONFIG.ENABLED) {
-  console.warn('[Supabase] DISABLED in development');
+    if (__DEV__) console.warn('[Supabase] DISABLED in development');
 }
 
 // Log environment variable loading (only in development)
-if (__DEV__) {
-  console.log('[Supabase Config] Loading environment variables...');
-  console.log('[Supabase Config] EXPO_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✓ Set' : '✗ Missing');
-  console.log('[Supabase Config] EXPO_PUBLICABASE_ANON_KEY:', supabaseAnonKey ? '✓ Set' : '✗ Missing');
-  if (supabaseAnonKey) {
-    console.log('[Supabase Config] Anon key preview:', supabaseAnonKey.substring(0, 20) + '...');
-  }
+if (__DEV__) console.log('[Supabase Config] Loading environment variables...');
+if (__DEV__) console.log('[Supabase Config] EXPO_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✓ Set' : '✗ Missing');
+if (__DEV__) console.log('[Supabase Config] EXPO_PUBLICABASE_ANON_KEY:', supabaseAnonKey ? '✓ Set' : '✗ Missing');
+if (__DEV__ && supabaseAnonKey) {
+  console.log('[Supabase Config] Anon key preview:', supabaseAnonKey.substring(0, 20) + '...');
 }
 
 if (!supabaseUrl || !supabaseAnonKey) {

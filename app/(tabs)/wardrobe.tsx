@@ -7,13 +7,12 @@
  *   useWardrobeTutorial, useWardrobeItemActions.
  */
 
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Alert,
   Platform,
   Animated,
-  Text,
   TouchableOpacity,
   useWindowDimensions,
   LayoutAnimation,
@@ -25,7 +24,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -49,10 +48,8 @@ import {
   LoadingOverlay,
   LoadingSpinner,
   HeaderTabPill,
-  GenerationThumbnailStrip,
 } from '@/components/shared';
 import type { ThumbnailItem } from '@/components/shared';
-import { Image } from 'expo-image';
 import { WardrobeTabIcon } from '@/components/icons/tabs';
 
 // Wardrobe Components
@@ -60,19 +57,17 @@ import {
   CategoryPills,
   FilterDrawer,
   ItemGrid,
-  ItemDetailModal,
-  OutfitCreatorOptionsModal,
-  HeadshotSelectorModal,
 } from '@/components/wardrobe';
 import TutorialScreen from '@/components/wardrobe/TutorialScreen';
 import OutfitCreatorSection from '@/components/wardrobe/OutfitCreatorSection';
 import { PANEL_COLLAPSED_HEIGHT } from '@/components/wardrobe/OutfitCreatorPanel';
+import SessionPreviewStrip from '@/components/wardrobe/SessionPreviewStrip';
+import WardrobeModalStack from '@/components/wardrobe/WardrobeModalStack';
 
 // Styles & utils
 import { theme } from '@/styles';
 import { findConflictingItem } from '@/utils';
 import { WardrobeItem } from '@/lib/wardrobe';
-import { logClientTiming } from '@/lib/perf/logClientTiming';
 import { PERF_MODE } from '@/lib/perf/perfMode';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -81,13 +76,15 @@ import { createCommonStyles } from '@/styles/commonStyles';
 import { createStyles } from './wardrobe.styles';
 import { useSearch } from '@/hooks';
 import SearchOverlay from '@/components/search/SearchOverlay';
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useWardrobeCamera } from '@/hooks/wardrobe/useWardrobeCamera';
-import WardrobeCameraOverlay from '@/components/wardrobe/WardrobeCameraOverlay';
 import SearchHeaderRow from '@/components/search/SearchHeaderRow';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSearchResultNavigation } from '@/hooks/useSearchResultNavigation';
+import { useCreatorReset } from '@/hooks/wardrobe/useCreatorReset';
+import { useOutfitSelectionFlow } from '@/hooks/wardrobe/useOutfitSelectionFlow';
+import { useWardrobeCameraFlow } from '@/hooks/wardrobe/useWardrobeCameraFlow';
+import { useGenerateOutfitFlow } from '@/hooks/wardrobe/useGenerateOutfitFlow';
 
 const CREATOR_BAR_HEIGHT = 60;
 
@@ -100,7 +97,6 @@ export default function WardrobeScreen() {
   const router = useRouter();
   const { setTabBarDimmed, setTabBarOpacity } = useFloatingTabBar();
   const isFocused = useIsFocused();
-  const { addItemId } = useLocalSearchParams<{ addItemId?: string }>();
   const [activeTab, setActiveTab] = useState<'my' | 'following' | 'discover'>('my');
 
   // ── Wardrobe data ────────────────────────────────────────────────────────────
@@ -387,42 +383,11 @@ export default function WardrobeScreen() {
   }, [user?.id, sessionData.refreshVariations]);
 
   // ── Camera navigation ────────────────────────────────────────────────────────
-  const handleOpenCamera = useCallback(() => {
-    if (Platform.OS === 'web') {
-      // On web, launch file picker directly
-      (async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission Required', 'Please grant photo library permissions.');
-          return;
-        }
-        const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes,
-          allowsMultipleSelection: false,
-          quality: 0.8,
-        });
-        if (!result.canceled && result.assets?.[0]) {
-          router.push(`/wardrobe/add?imageUri=${encodeURIComponent(result.assets[0].uri)}` as any);
-        }
-      })();
-    } else {
-      // On mobile, open custom camera overlay — hide tab bar so it doesn't cover the UI
-      setTabBarOpacity(0);
-      wardrobeCamera.open();
-    }
-  }, [router, wardrobeCamera, setTabBarOpacity]);
-
-  const handleCameraImageReady = useCallback((croppedUri: string) => {
-    wardrobeCamera.close();
-    setTabBarOpacity(1);
-    router.push(`/wardrobe/add?imageUri=${encodeURIComponent(croppedUri)}` as any);
-  }, [wardrobeCamera, router, setTabBarOpacity]);
-
-  const handleCameraClose = useCallback(() => {
-    wardrobeCamera.close();
-    setTabBarOpacity(1);
-  }, [wardrobeCamera, setTabBarOpacity]);
+  const { handleOpenCamera, handleCameraImageReady, handleCameraClose } = useWardrobeCameraFlow({
+    wardrobeCamera,
+    router,
+    setTabBarOpacity,
+  });
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -430,37 +395,39 @@ export default function WardrobeScreen() {
     setSelectedCategoryId(categoryId);
   }, []);
 
-  const upsertSelectedOutfitItem = useCallback((item: WardrobeItem) => {
-    setSelectedOutfitItemMap((prev) => {
-      const next = new Map(prev);
-      next.set(item.id, item);
-      return next;
-    });
-  }, []);
+  const { resetOutfitCreatorState } = useCreatorReset({
+    setSelectedOutfitItems,
+    setSelectedOutfitItemMap,
+    canvas,
+    setIsCreatorExpanded,
+    setOutfitCreatorMode,
+    handleCategorySelect,
+    updateFilter,
+    sessionData,
+    sessionNav,
+    setAutoSelectNext,
+  });
 
-  const removeSelectedOutfitItem = useCallback((itemId: string) => {
-    setSelectedOutfitItemMap((prev) => {
-      if (!prev.has(itemId)) return prev;
-      const next = new Map(prev);
-      next.delete(itemId);
-      return next;
-    });
-  }, []);
+  const { handleOutfitSelectionAttempt, removeSelectedOutfitItem } = useOutfitSelectionFlow({
+    selectedWardrobeItems,
+    outfitCreatorMode,
+    outfitDraft,
+    getCategoryById: (categoryId) => getCategoryById(categoryId),
+    setSelectedOutfitItems,
+    setSelectedOutfitItemMap,
+    setOutfitCreatorMode,
+  });
 
-  const resetOutfitCreatorState = useCallback(() => {
-    setSelectedOutfitItems([]);
-    setSelectedOutfitItemMap(new Map());
-    canvas.setOutfitCanvasLayouts({});
-    canvas.setOutfitCanvasTrims({});
-    canvas.setOutfitCanvasTrimStatuses({});
-    setIsCreatorExpanded(false);
-    setOutfitCreatorMode(false);
-    handleCategorySelect(null);
-    updateFilter('subcategoryId', null);
-    sessionData.endSession();
-    sessionNav.clearPreview();
-    setAutoSelectNext(false);
-  }, [handleCategorySelect, updateFilter, canvas.setOutfitCanvasLayouts, canvas.setOutfitCanvasTrims, canvas.setOutfitCanvasTrimStatuses, sessionData.endSession, sessionNav.clearPreview]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { handleGenerateOutfit } = useGenerateOutfitFlow({
+    selectedOutfitItems,
+    selectedWardrobeItems,
+    hasCustomCreatorLayout,
+    activeOutfitCanvasLayouts,
+    activeOutfitCanvasTrims,
+    sessionData,
+    generateOutfit,
+    setAutoSelectNext,
+  });
 
   const handleToggleExpanded = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -483,108 +450,6 @@ export default function WardrobeScreen() {
 
   const handleItemLongPress = (item: WardrobeItem) => {
     handleOutfitSelectionAttempt(item, true);
-  };
-
-  const handleOutfitSelectionAttempt = (item: WardrobeItem, promptOnConflict: boolean) => {
-    const conflictingItem = findConflictingItem(
-      item,
-      selectedWardrobeItems,
-      (categoryId) => getCategoryById(categoryId)?.name || ''
-    );
-
-    if (conflictingItem && promptOnConflict) {
-      Alert.alert(
-        'Replace item?',
-        `Replace ${conflictingItem.title} with ${item.title}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Replace',
-            style: 'destructive',
-            onPress: () => {
-              removeSelectedOutfitItem(conflictingItem.id);
-              upsertSelectedOutfitItem(item);
-              setSelectedOutfitItems((prev) =>
-                prev.filter((id) => id !== conflictingItem.id).concat(item.id)
-              );
-              if (!outfitCreatorMode) setOutfitCreatorMode(true);
-            },
-          },
-        ]
-      );
-      return;
-    }
-
-    if (!outfitCreatorMode && outfitDraft.hasDraft) {
-      Alert.alert(
-        'You have a saved draft',
-        'Open your saved outfit draft or start a new outfit?',
-        [
-          {
-            text: 'Open Draft',
-            onPress: () => {
-              outfitDraft.restoreDraft().then(() => {
-                upsertSelectedOutfitItem(item);
-                setSelectedOutfitItems((prev) =>
-                  prev.includes(item.id) ? prev : [...prev, item.id]
-                );
-              });
-            },
-          },
-          {
-            text: 'Start New',
-            style: 'destructive',
-            onPress: () => {
-              outfitDraft.clearDraft();
-              setOutfitCreatorMode(true);
-              upsertSelectedOutfitItem(item);
-              setSelectedOutfitItems([item.id]);
-            },
-          },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
-      return;
-    }
-
-    if (!outfitCreatorMode) setOutfitCreatorMode(true);
-    setSelectedOutfitItems((prev) => {
-      if (prev.includes(item.id)) {
-        removeSelectedOutfitItem(item.id);
-        return prev.filter((id) => id !== item.id);
-      }
-      upsertSelectedOutfitItem(item);
-      return [...prev, item.id];
-    });
-  };
-
-  const handleGenerateOutfit = async () => {
-    if (selectedOutfitItems.length === 0) {
-      Alert.alert('Error', 'Please select items for your outfit');
-      return;
-    }
-    if (selectedWardrobeItems.length === 0) {
-      Alert.alert('Error', 'Failed to load selected items');
-      return;
-    }
-
-    // Ensure a session exists for variation tracking (lazy — first generation creates it)
-    const sid = await sessionData.ensureSession();
-
-    const result = await logClientTiming('outfit_generation_client', async () => {
-      return generateOutfit(
-        selectedWardrobeItems,
-        hasCustomCreatorLayout ? activeOutfitCanvasLayouts : null,
-        hasCustomCreatorLayout ? activeOutfitCanvasTrims : null,
-        sid
-      );
-    });
-    if (result.success && result.outfitId) {
-      // Stay on wardrobe page — auto-select the latest variation once loaded
-      setAutoSelectNext(true);
-    } else {
-      Alert.alert('Error', result.error || 'Failed to generate outfit');
-    }
   };
 
   const handleModalOpenDetail = () => {
@@ -840,117 +705,23 @@ export default function WardrobeScreen() {
         />
       )}
 
-      {/* Item Detail Modal */}
-      {activeTab === 'my' && (
-        <ItemDetailModal
-          visible={showItemModal}
-          onClose={() => setShowItemModal(false)}
-          item={selectedItem}
-          imageUrl={selectedItem ? imageCache.get(selectedItem.id) || null : null}
-          isOwner={Boolean(user && selectedItem && selectedItem.owner_user_id === user.id)}
-          onAddToOutfit={() => {
-            if (selectedItem) {
-              handleOutfitSelectionAttempt(selectedItem, false);
-              setShowItemModal(false);
-              Alert.alert('Added to outfit', 'Tip: Long hold an item to add it to your outfit.');
-            }
-          }}
-          onOpenDetail={handleModalOpenDetail}
-          onEdit={handleModalEdit}
-          onDelete={handleModalDelete}
-        />
-      )}
-
       {/* Session Preview + Thumbnail Strip */}
       {hasSessionPreview && (
-        <View
-          style={{
-            position: 'absolute',
-            bottom: panelBottomOffset + PANEL_COLLAPSED_HEIGHT + theme.spacing.sm,
-            left: 0,
-            right: 0,
-            backgroundColor: colors.background,
-            paddingHorizontal: theme.spacing.md,
-            paddingTop: theme.spacing.sm,
-            zIndex: 14,
-          }}
-        >
-          {sessionNav.preview.imageUrl && (
-            <TouchableOpacity
-              style={{
-                width: '100%',
-                height: 200,
-                borderRadius: 12,
-                overflow: 'hidden',
-                marginBottom: theme.spacing.sm,
-                backgroundColor: colors.backgroundSecondary,
-              }}
-              onPress={() =>
-                previewOutfitId && router.push(`/outfits/${previewOutfitId}/view`)
-              }
-              activeOpacity={0.8}
-            >
-              <Image
-                source={{ uri: sessionNav.preview.imageUrl }}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="contain"
-              />
-            </TouchableOpacity>
-          )}
-          <GenerationThumbnailStrip
-            items={thumbnailItems}
-            onSelect={handleThumbnailSelect}
-            canNavigateBack={sessionNav.canNavigateBack}
-            canNavigateForward={sessionNav.canNavigateForward}
-            onNavigateBack={() => sessionNav.handleNavigate('back')}
-            onNavigateForward={() => sessionNav.handleNavigate('forward')}
-            onSavePress={handleSaveVariation}
-            showSaveIndicator
-          />
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'flex-end',
-              gap: theme.spacing.md,
-              paddingBottom: theme.spacing.xs,
-            }}
-          >
-            {previewOutfitId && (
-              <TouchableOpacity
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                  paddingVertical: 6,
-                  paddingHorizontal: 12,
-                  borderRadius: 8,
-                }}
-                onPress={() => router.push(`/outfits/${previewOutfitId}/view`)}
-              >
-                <Ionicons name="eye-outline" size={16} color={colors.textPrimary} />
-                <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>
-                  View
-                </Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                paddingVertical: 6,
-                paddingHorizontal: 12,
-                borderRadius: 8,
-              }}
-              onPress={resetOutfitCreatorState}
-            >
-              <Ionicons name="checkmark" size={16} color={colors.primary} />
-              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>
-                Done
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <SessionPreviewStrip
+          previewImageUrl={sessionNav.preview.imageUrl}
+          previewOutfitId={previewOutfitId}
+          thumbnailItems={thumbnailItems}
+          canNavigateBack={sessionNav.canNavigateBack}
+          canNavigateForward={sessionNav.canNavigateForward}
+          onThumbnailSelect={handleThumbnailSelect}
+          onNavigateBack={() => sessionNav.handleNavigate('back')}
+          onNavigateForward={() => sessionNav.handleNavigate('forward')}
+          onSaveVariation={handleSaveVariation}
+          onViewOutfit={(outfitId) => router.push(`/outfits/${outfitId}/view`)}
+          onClose={resetOutfitCreatorState}
+          bottomOffset={panelBottomOffset}
+          panelCollapsedHeight={PANEL_COLLAPSED_HEIGHT}
+        />
       )}
 
       {/* Outfit Creator Panel & Bar */}
@@ -988,34 +759,32 @@ export default function WardrobeScreen() {
         disabled={bodyShot.isBodyShotGenerating}
       />
 
-      {/* Outfit Creator Options Modal */}
-      <OutfitCreatorOptionsModal
-        visible={showOutfitCreatorOptionsModal}
-        onClose={() => setShowOutfitCreatorOptionsModal(false)}
-        onExpand={() => handleSetExpanded(true)}
-        onSaveAsDraft={async () => {
+      <WardrobeModalStack
+        activeTab={activeTab}
+        showItemModal={showItemModal}
+        selectedItem={selectedItem}
+        imageCache={imageCache}
+        userId={user?.id}
+        onCloseItemModal={() => setShowItemModal(false)}
+        onItemAddToOutfit={(item) => handleOutfitSelectionAttempt(item, false)}
+        onItemOpenDetail={handleModalOpenDetail}
+        onItemEdit={handleModalEdit}
+        onItemDelete={handleModalDelete}
+        showCreatorOptionsModal={showOutfitCreatorOptionsModal}
+        onCloseCreatorOptionsModal={() => setShowOutfitCreatorOptionsModal(false)}
+        onCreatorExpand={handleSetExpanded}
+        onSaveDraft={async () => {
           await outfitDraft.saveDraft();
           resetOutfitCreatorState();
           setShowOutfitCreatorOptionsModal(false);
         }}
-        onClearSelection={() => {
+        onResetCreator={() => {
           resetOutfitCreatorState();
           setShowOutfitCreatorOptionsModal(false);
         }}
-      />
-
-      {/* Headshot Selector Modal */}
-      <HeadshotSelectorModal
-        visible={showHeadshotSelector}
-        userId={user?.id ?? ''}
-        currentHeadshotId={bodyShot.currentHeadshotId}
-        currentBodyShotId={bodyShot.currentBodyShotId}
-        headshots={bodyShot.availableHeadshots}
-        onClose={() => setShowHeadshotSelector(false)}
-        onCheckHeadshot={bodyShot.handleCheckHeadshot}
-        onGenerateBodyShot={bodyShot.handleGenerateBodyShot}
-        onSkipBodyShot={bodyShot.handleSkipBodyShot}
-        loading={bodyShot.loadingHeadshots}
+        showHeadshotSelector={showHeadshotSelector}
+        onCloseHeadshotSelector={() => setShowHeadshotSelector(false)}
+        bodyShot={bodyShot}
         onNewHeadshot={async () => {
           await outfitDraft.saveDraft();
           setShowHeadshotSelector(false);
@@ -1023,21 +792,10 @@ export default function WardrobeScreen() {
           await AsyncStorage.setItem('wardrobe_draft_restore_pending', '1');
           router.push('/(tabs)/hair-and-make-up?returnToWardrobe=1' as any);
         }}
+        wardrobeCamera={wardrobeCamera}
+        onCameraImageReady={handleCameraImageReady}
+        onCameraClose={handleCameraClose}
       />
-
-      {Platform.OS !== 'web' && (
-        <WardrobeCameraOverlay
-          translateY={wardrobeCamera.cameraTranslateY}
-          isOpen={wardrobeCamera.isOpen}
-          cameraRef={wardrobeCamera.cameraRef}
-          onCameraReady={wardrobeCamera.onCameraReady}
-          onImageReady={handleCameraImageReady}
-          onClose={handleCameraClose}
-          pickFromLibrary={wardrobeCamera.pickFromLibrary}
-          capture={wardrobeCamera.capture}
-          lastPhotoUri={wardrobeCamera.lastPhotoUri}
-        />
-      )}
     </View>
   );
 }

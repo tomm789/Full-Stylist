@@ -7,6 +7,7 @@ import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { DETAIL_IMAGE_PROPS } from '@/lib/images';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createStyles } from './styles';
 
@@ -54,7 +55,13 @@ export function CameraView({ cameraUri, isUploading, onCapture, onAccept, onUndo
   return (
     <View style={styles.cameraContainer}>
       <View style={styles.cameraPreview}>
-        <Image source={{ uri: cameraUri }} style={styles.cameraPreviewImage} contentFit="cover" />
+        <Image
+          {...DETAIL_IMAGE_PROPS}
+          source={{ uri: cameraUri }}
+          style={styles.cameraPreviewImage}
+          recyclingKey={cameraUri}
+          contentFit="cover"
+        />
       </View>
 
       <View style={styles.cameraPreviewActions}>

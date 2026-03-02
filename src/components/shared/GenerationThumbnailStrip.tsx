@@ -172,7 +172,9 @@ function Thumbnail({
           source={{ uri: item.imageUrl }}
           style={styles.thumbImage}
           contentFit="cover"
+          cachePolicy="memory-disk"
           transition={200}
+          recyclingKey={item.id}
         />
       ) : (
         <View style={styles.thumbPlaceholder}>

@@ -60,11 +60,27 @@ export function useHeadshotImageActions({
 
   const handleSharePreview = useCallback(async () => {
     if (!canShare || !previewImageUrl) return;
+    let shareUri: string | null = null;
+    let shouldCleanup = false;
     try {
-      const shareUri = await getShareableUri(previewImageUrl);
+      shareUri = await getShareableUri(previewImageUrl);
+      shouldCleanup =
+        Platform.OS !== 'web' &&
+        shareUri.startsWith('file://') &&
+        shareUri !== previewImageUrl;
       await Share.share({ url: shareUri, message: shareUri });
     } catch (shareError) {
       console.error('Share error:', shareError);
+    } finally {
+      if (shouldCleanup && shareUri) {
+        try {
+          await FileSystem.deleteAsync(shareUri, { idempotent: true });
+        } catch (cleanupError) {
+          if (__DEV__) {
+            console.warn('Failed to clean up shared temp file:', cleanupError);
+          }
+        }
+      }
     }
   }, [canShare, previewImageUrl, getShareableUri]);
 

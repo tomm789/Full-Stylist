@@ -252,20 +252,6 @@ function TabsLayoutInner() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  createButtonContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  createButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -6,
-  },
   menuTitle: {
     fontSize: 14,
     fontWeight: '600',

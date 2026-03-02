@@ -6,6 +6,7 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Text } from 'react-native';
 import { Image } from 'expo-image';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 
 interface NavigationOutfit {
   id: string;
@@ -44,9 +45,10 @@ export function OutfitNavigation({
             >
               {navOutfit.imageUrl ? (
                 <Image
+                  {...GRID_IMAGE_PROPS}
                   source={{ uri: navOutfit.imageUrl }}
                   style={styles.image}
-                  contentFit="cover"
+                  recyclingKey={navOutfit.id}
                 />
               ) : (
                 <View style={styles.placeholder}>

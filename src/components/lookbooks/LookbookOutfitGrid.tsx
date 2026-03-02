@@ -70,6 +70,9 @@ export function LookbookOutfitGrid({
               source={{ uri: imageUrl }}
               style={postGridStyles.gridImage}
               contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
+              recyclingKey={item.id}
             />
             <TouchableOpacity
               style={styles.favoriteButton}

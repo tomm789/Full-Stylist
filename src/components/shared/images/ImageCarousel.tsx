@@ -13,6 +13,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { DETAIL_IMAGE_PROPS } from '@/lib/images';
 import ImagePlaceholder from './ImagePlaceholder';
 import IndicatorDots from '../layout/IndicatorDots';
 import { theme } from '@/styles';
@@ -91,11 +92,13 @@ export default function ImageCarousel({
           >
             {image.uri ? (
               <Image
+                {...DETAIL_IMAGE_PROPS}
                 source={{ uri: image.uri }}
                 style={[
                   styles.image,
                   typeof customBorderRadius === 'number' ? { borderRadius: customBorderRadius } : undefined,
                 ]}
+                recyclingKey={image.id}
                 contentFit="cover"
               />
             ) : (

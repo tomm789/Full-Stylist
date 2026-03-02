@@ -109,7 +109,7 @@ export function useProductShot({
       const { error: execError } = await triggerAIJobExecution(productShotJob.id);
       
       if (execError) {
-        console.warn('Job trigger returned error (may still work):', execError);
+                if (__DEV__) console.warn('Job trigger returned error (may still work):', execError);
         // Continue anyway - job might still be triggered
       }
 

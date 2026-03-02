@@ -77,6 +77,9 @@ export default function NewBodyshotScreen() {
                 data={headshots}
                 horizontal
                 showsHorizontalScrollIndicator={false}
+                initialNumToRender={8}
+                maxToRenderPerBatch={4}
+                windowSize={5}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={[

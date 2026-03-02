@@ -28,3 +28,5 @@ export { default as OutfitsSocialTab } from './OutfitsSocialTab';
 export { default as OutfitsHeaderSection } from './OutfitsHeaderSection';
 export { default as OutfitsMyOutfitsTab } from './OutfitsMyOutfitsTab';
 export { default as OutfitsModalsContainer } from './OutfitsModalsContainer';
+export { default as LookbooksTabContent } from './LookbooksTabContent';
+export { default as SocialTabContent } from './SocialTabContent';

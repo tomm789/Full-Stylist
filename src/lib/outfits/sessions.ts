@@ -74,7 +74,7 @@ export async function createOutfitSession(
     .single();
 
   if (error || !data) {
-    console.warn('createOutfitSession failed', error);
+        if (__DEV__) console.warn('createOutfitSession failed', error);
     return null;
   }
   return data as OutfitGenerationSession;
@@ -89,7 +89,7 @@ export async function updateOutfitSessionInput(
     .update({ input_json: inputJson })
     .eq('id', sessionId);
 
-  if (error) console.warn('updateOutfitSessionInput failed', error);
+  if (error)   if (error) if (__DEV__) console.warn('updateOutfitSessionInput failed', error);
 }
 
 export async function endOutfitSession(sessionId: string): Promise<void> {
@@ -98,7 +98,7 @@ export async function endOutfitSession(sessionId: string): Promise<void> {
     .update({ ended_at: new Date().toISOString() })
     .eq('id', sessionId);
 
-  if (error) console.warn('endOutfitSession failed', error);
+  if (error)   if (error) if (__DEV__) console.warn('endOutfitSession failed', error);
 }
 
 // ── Variation CRUD ───────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ export async function createOutfitVariation(
     .single();
 
   if (error || !data) {
-    console.warn('createOutfitVariation failed', error);
+        if (__DEV__) console.warn('createOutfitVariation failed', error);
     return null;
   }
   return data as OutfitGenerationVariation;
@@ -162,7 +162,7 @@ export async function updateOutfitVariation(
     .update(updates)
     .eq('id', variationId);
 
-  if (error) console.warn('updateOutfitVariation failed', error);
+  if (error)   if (error) if (__DEV__) console.warn('updateOutfitVariation failed', error);
 }
 
 export async function getOutfitVariationByImageId(
@@ -204,7 +204,7 @@ export async function saveVariationAsOutfit(
     .single();
 
   if (fetchError || !variation) {
-    console.warn('saveVariationAsOutfit: variation not found', fetchError);
+        if (__DEV__) console.warn('saveVariationAsOutfit: variation not found', fetchError);
     return null;
   }
 
@@ -230,7 +230,7 @@ export async function saveVariationAsOutfit(
   );
 
   if (saveError || !savedData) {
-    console.warn('saveVariationAsOutfit: saveOutfit failed', saveError);
+        if (__DEV__) console.warn('saveVariationAsOutfit: saveOutfit failed', saveError);
     return null;
   }
 
@@ -244,7 +244,7 @@ export async function saveVariationAsOutfit(
       .eq('id', newOutfitId);
 
     if (coverError) {
-      console.warn('saveVariationAsOutfit: cover update failed', coverError);
+            if (__DEV__) console.warn('saveVariationAsOutfit: cover update failed', coverError);
     }
 
     // 4. Create an outfit_renders record

@@ -50,6 +50,9 @@ const AddOutfitCard = React.memo(
             source={{ uri: imageUrl }}
             style={styles.image}
             contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+            recyclingKey={item.id}
           />
         ) : (
           <View style={styles.imagePlaceholder}>
@@ -133,6 +136,9 @@ export function AddOutfitsModal({
               />
             )}
             keyExtractor={(item) => item.id}
+            initialNumToRender={8}
+            maxToRenderPerBatch={4}
+            windowSize={5}
             numColumns={2}
             contentContainerStyle={styles.list}
           />

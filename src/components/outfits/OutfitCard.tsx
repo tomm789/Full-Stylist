@@ -15,6 +15,7 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { OutfitWithRating } from '@/lib/outfits';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { postGridStyles } from '@/components/social/PostGrid';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -56,7 +57,12 @@ const OutfitCard = React.memo(
             <ActivityIndicator />
           </View>
         ) : imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={postGridStyles.gridImage} contentFit="cover" />
+          <Image
+            {...GRID_IMAGE_PROPS}
+            source={{ uri: imageUrl }}
+            style={postGridStyles.gridImage}
+            recyclingKey={outfit.id}
+          />
         ) : (
           <View style={postGridStyles.gridImagePlaceholder}>
             <Text style={styles.placeholderText}>No Image</Text>

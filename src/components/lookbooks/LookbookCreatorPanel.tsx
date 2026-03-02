@@ -24,6 +24,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { ImagePlaceholder } from '@/components/shared';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -214,7 +215,12 @@ export default function LookbookCreatorPanel({
       activeOpacity={0.9}
     >
       {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.itemImage} contentFit="cover" />
+        <Image
+          {...GRID_IMAGE_PROPS}
+          source={{ uri: item.imageUrl }}
+          style={styles.itemImage}
+          recyclingKey={item.id}
+        />
       ) : (
         <View style={styles.itemImagePlaceholder}>
           <ImagePlaceholder text="" iconSize={20} />
@@ -238,7 +244,12 @@ export default function LookbookCreatorPanel({
       activeOpacity={0.9}
     >
       {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.itemImage} contentFit="cover" />
+        <Image
+          {...GRID_IMAGE_PROPS}
+          source={{ uri: item.imageUrl }}
+          style={styles.itemImage}
+          recyclingKey={item.id}
+        />
       ) : (
         <View style={styles.itemImagePlaceholder}>
           <ImagePlaceholder text="" iconSize={24} />

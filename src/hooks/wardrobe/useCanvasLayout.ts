@@ -220,7 +220,7 @@ export function useCanvasLayout({
           return next;
         });
       } catch (trimError) {
-        console.warn('[Wardrobe] Failed to fetch canvas trim metadata', trimError);
+                if (__DEV__) console.warn('[Wardrobe] Failed to fetch canvas trim metadata', trimError);
         if (cancelled) return;
         setOutfitCanvasTrimStatuses((prev) => {
           const next = { ...prev };

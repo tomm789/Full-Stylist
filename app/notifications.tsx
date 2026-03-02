@@ -193,6 +193,9 @@ export default function NotificationsScreen() {
         data={notifications}
         renderItem={renderNotification}
         keyExtractor={(item) => item.id}
+        initialNumToRender={8}
+        maxToRenderPerBatch={4}
+        windowSize={5}
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={

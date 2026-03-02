@@ -3,7 +3,7 @@
  * Manage profile images (headshots and body shots)
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { getUserSettings, updateUserSettings } from '@/lib/settings';
 import { getPublicImageUrl, getUserGeneratedImages } from '@/lib/images';
@@ -43,6 +43,14 @@ export function useProfileImages({
   const [allBodyShots, setAllBodyShots] = useState<ProfileImage[]>([]);
   const [activeHeadshotId, setActiveHeadshotId] = useState<string | null>(null);
   const [activeBodyShotId, setActiveBodyShotId] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const loadImageUrls = async (
     imageIds: string[]
@@ -66,6 +74,7 @@ export function useProfileImages({
 
   const refreshImages = async () => {
     if (!userId) return;
+    if (!mountedRef.current) return;
 
     setLoading(true);
 
@@ -73,6 +82,7 @@ export function useProfileImages({
       const { data: settings, error: settingsError } = await getUserSettings(
         userId
       );
+      if (!mountedRef.current) return;
 
       if (settingsError) {
         console.error('Settings load error:', settingsError);
@@ -98,6 +108,7 @@ export function useProfileImages({
                 setTimeout(() => resolve(new Map()), 5000)
               ),
             ]);
+            if (!mountedRef.current) return;
             if (settings.headshot_image_id) {
               setHeadshotImageUrl(
                 imageUrls.get(settings.headshot_image_id) || null
@@ -109,7 +120,7 @@ export function useProfileImages({
               );
             }
           } catch (e) {
-            console.warn('Active image load timeout');
+                        if (__DEV__) console.warn('Active image load timeout');
           }
         }
       }
@@ -120,12 +131,14 @@ export function useProfileImages({
           new Promise((resolve) => setTimeout(resolve, 10000)),
         ]);
       } catch (e) {
-        console.warn('Gallery load timeout');
+                if (__DEV__) console.warn('Gallery load timeout');
       }
     } catch (error: any) {
       console.error('Load data error:', error);
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -134,6 +147,7 @@ export function useProfileImages({
 
     try {
       const { headshots, bodyShots } = await getUserGeneratedImages(userId);
+      if (!mountedRef.current) return;
       setAllHeadshots(headshots);
       setAllBodyShots(bodyShots);
     } catch (error: any) {
@@ -149,28 +163,33 @@ export function useProfileImages({
         headshot_image_id: imageId,
       });
       if (error) throw error;
+      if (!mountedRef.current) return;
 
       setActiveHeadshotId(imageId);
       const imageUrls = await loadImageUrls([imageId]);
+      if (!mountedRef.current) return;
       setHeadshotImageUrl(imageUrls.get(imageId) || null);
 
       // Run bodyshot sync in the background so headshot activation is immediate.
       void (async () => {
         try {
           const syncResult = await syncBodyshotAfterActiveHeadshotSet(userId, imageId);
+          if (!mountedRef.current) return;
           if (syncResult.status === 'reused_existing' && syncResult.imageId) {
             setActiveBodyShotId(syncResult.imageId);
             const bodyUrls = await loadImageUrls([syncResult.imageId]);
+            if (!mountedRef.current) return;
             setBodyShotImageUrl(bodyUrls.get(syncResult.imageId) || null);
             return;
           }
 
           if (syncResult.status === 'error') {
-            console.warn('[useProfileImages] Active headshot set but bodyshot sync failed', {
+                        if (__DEV__) console.warn('[useProfileImages] Active headshot set but bodyshot sync failed', {
               userId,
               imageId,
               message: syncResult.message,
             });
+            if (!mountedRef.current) return;
             Alert.alert(
               'Body Shot Notice',
               'Headshot is active, but we could not sync your body shot.'
@@ -185,8 +204,9 @@ export function useProfileImages({
               2000,
               '[BodyShotSync]'
             );
+            if (!mountedRef.current) return;
             if (pollError || !completedJob || completedJob.status === 'failed') {
-              console.warn('[useProfileImages] Bodyshot generation failed after headshot activation', {
+                            if (__DEV__) console.warn('[useProfileImages] Bodyshot generation failed after headshot activation', {
                 userId,
                 imageId,
                 jobId: syncResult.jobId,
@@ -194,6 +214,7 @@ export function useProfileImages({
                 status: completedJob?.status,
                 error: completedJob?.error,
               });
+              if (!mountedRef.current) return;
               Alert.alert(
                 'Body Shot Notice',
                 'Headshot is active, but generating a matching body shot failed.'
@@ -206,15 +227,17 @@ export function useProfileImages({
             if (generatedImageId) {
               setActiveBodyShotId(generatedImageId);
               const bodyUrls = await loadImageUrls([generatedImageId]);
+              if (!mountedRef.current) return;
               setBodyShotImageUrl(bodyUrls.get(generatedImageId) || null);
             }
           }
         } catch (syncError: any) {
-          console.warn('[useProfileImages] Unexpected bodyshot sync error', {
+                    if (__DEV__) console.warn('[useProfileImages] Unexpected bodyshot sync error', {
             userId,
             imageId,
             message: syncError?.message,
           });
+          if (!mountedRef.current) return;
           Alert.alert(
             'Body Shot Notice',
             'Headshot is active, but we could not sync your body shot.'
@@ -222,7 +245,9 @@ export function useProfileImages({
         }
       })();
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to set active headshot');
+      if (mountedRef.current) {
+        Alert.alert('Error', 'Failed to set active headshot');
+      }
     }
   };
 
@@ -234,12 +259,16 @@ export function useProfileImages({
         body_shot_image_id: imageId,
       });
       if (error) throw error;
+      if (!mountedRef.current) return;
 
       setActiveBodyShotId(imageId);
       const imageUrls = await loadImageUrls([imageId]);
+      if (!mountedRef.current) return;
       setBodyShotImageUrl(imageUrls.get(imageId) || null);
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to set active body shot');
+      if (mountedRef.current) {
+        Alert.alert('Error', 'Failed to set active body shot');
+      }
     }
   };
 

@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { CalendarEntry, CalendarSlotPreset } from '@/lib/calendar';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -28,7 +29,7 @@ interface EntryCardProps {
   onStatusChange: (status: 'planned' | 'worn' | 'skipped') => void;
 }
 
-export default function EntryCard({
+const EntryCard = React.memo(function EntryCard({
   entry,
   slotPresets,
   outfits,
@@ -44,21 +45,21 @@ export default function EntryCard({
 }: EntryCardProps) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const getPresetName = (): string => {
+  const presetName = useMemo(() => {
     if (entry.slot_preset_id) {
       const preset = slotPresets.find((p) => p.id === entry.slot_preset_id);
       return preset?.name || 'Unknown';
     }
     return entry.custom_label || 'Custom';
-  };
+  }, [entry.slot_preset_id, entry.custom_label, slotPresets]);
 
-  const getOutfitTitle = (): string | null => {
+  const outfitTitle = useMemo(() => {
     if (entry.outfit_id) {
       const outfit = outfits.find((o) => o.id === entry.outfit_id);
       return outfit?.title || null;
     }
     return null;
-  };
+  }, [entry.outfit_id, outfits]);
 
   const imageUrl = entry.outfit_id ? outfitImages.get(entry.outfit_id) : null;
 
@@ -88,7 +89,7 @@ export default function EntryCard({
               </Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.presetName}>{getPresetName()}</Text>
+          <Text style={styles.presetName}>{presetName}</Text>
         </View>
         <View style={styles.actions}>
           <TouchableOpacity
@@ -115,7 +116,12 @@ export default function EntryCard({
             activeOpacity={0.7}
           >
             {imageUrl ? (
-              <Image source={{ uri: imageUrl }} style={styles.outfitImage} contentFit="cover" />
+              <Image
+                {...GRID_IMAGE_PROPS}
+                source={{ uri: imageUrl }}
+                style={styles.outfitImage}
+                recyclingKey={entry.outfit_id || imageUrl}
+              />
             ) : (
               <View style={styles.outfitImagePlaceholder}>
                 <Text style={styles.placeholderText}>No Image</Text>
@@ -131,7 +137,7 @@ export default function EntryCard({
               >
                 {entry.status.charAt(0).toUpperCase() + entry.status.slice(1)}
               </Text>
-              <Text style={styles.outfitTitle}>{getOutfitTitle() || 'Unknown Outfit'}</Text>
+              <Text style={styles.outfitTitle}>{outfitTitle || 'Unknown Outfit'}</Text>
               <Text style={styles.tapToView}>Tap to view</Text>
             </View>
           </TouchableOpacity>
@@ -177,7 +183,11 @@ export default function EntryCard({
       {entry.notes && <Text style={styles.notes}>{entry.notes}</Text>}
     </View>
   );
-}
+});
+
+EntryCard.displayName = 'EntryCard';
+
+export default EntryCard;
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {

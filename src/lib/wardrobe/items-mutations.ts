@@ -37,7 +37,7 @@ export async function createWardrobeItem(
     );
 
     if (uploadErrors.length > 0) {
-      console.warn('Some images failed to upload:', uploadErrors);
+            if (__DEV__) console.warn('Some images failed to upload:', uploadErrors);
     }
 
     if (imageIds.length === 0) {

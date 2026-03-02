@@ -81,6 +81,9 @@ export default function MyOutfitsSection({
         data={data}
         renderItem={renderFeedItem}
         keyExtractor={(item) => item.id}
+        initialNumToRender={8}
+        maxToRenderPerBatch={4}
+        windowSize={5}
         key={`my-outfits-${activeView}`}
         style={feedListStyle}
         contentContainerStyle={feedContentStyle}

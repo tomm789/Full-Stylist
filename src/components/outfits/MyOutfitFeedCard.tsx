@@ -92,6 +92,8 @@ const MyOutfitFeedCard = React.memo(
               style={styles.myFeedImage}
               contentFit="cover"
               cachePolicy="memory-disk"
+              transition={200}
+              recyclingKey={outfit.id}
             />
           ) : (
             <View style={styles.myFeedImagePlaceholder}>

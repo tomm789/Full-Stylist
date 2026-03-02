@@ -59,6 +59,7 @@ function calculateGridLayout(itemCount: number): { cols: number; rows: number } 
 export async function trimImageWhitespace(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
       try {
         // Create a canvas to analyze the image
@@ -199,15 +200,18 @@ export async function trimImageWhitespace(file: File): Promise<Blob> {
         }
       } catch (error) {
         reject(error);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
       }
     };
 
     img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
       reject(new Error('Failed to load image'));
     };
 
     // Load image from file
-    img.src = URL.createObjectURL(file);
+    img.src = objectUrl;
   });
 }
 
@@ -330,7 +334,7 @@ export async function processAndStackImages(files: File[]): Promise<Blob> {
       const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: 'image/jpeg' });
       
-      console.log(`[imageProcessor] Created stacked blob: ${blob.size} bytes, type: ${blob.type}`);
+            if (__DEV__) console.log(`[imageProcessor] Created stacked blob: ${blob.size} bytes, type: ${blob.type}`);
       resolve(blob);
     } catch (error) {
       reject(new Error(`Failed to create blob from stacked canvas: ${error}`));
@@ -356,11 +360,11 @@ export async function generateOutfitGridCanvas(imageUrls: string[]): Promise<Blo
   const BACKGROUND_COLOR = '#FFFFFF';
   const PADDING = 20; // Padding between grid cells
 
-  console.log(`[generateOutfitGridCanvas] Creating grid for ${imageUrls.length} items`);
+    if (__DEV__) console.log(`[generateOutfitGridCanvas] Creating grid for ${imageUrls.length} items`);
 
   // Calculate grid layout
   const { cols, rows } = calculateGridLayout(imageUrls.length);
-  console.log(`[generateOutfitGridCanvas] Grid layout: ${cols}x${rows}`);
+    if (__DEV__) console.log(`[generateOutfitGridCanvas] Grid layout: ${cols}x${rows}`);
 
   // Calculate cell dimensions (accounting for padding)
   const totalPaddingWidth = (cols - 1) * PADDING;
@@ -368,7 +372,7 @@ export async function generateOutfitGridCanvas(imageUrls: string[]): Promise<Blo
   const cellWidth = Math.floor((CANVAS_WIDTH - totalPaddingWidth) / cols);
   const cellHeight = Math.floor((CANVAS_HEIGHT - totalPaddingHeight) / rows);
 
-  console.log(`[generateOutfitGridCanvas] Cell dimensions: ${cellWidth}x${cellHeight}`);
+    if (__DEV__) console.log(`[generateOutfitGridCanvas] Cell dimensions: ${cellWidth}x${cellHeight}`);
 
   // Load all images asynchronously
   const images: HTMLImageElement[] = [];
@@ -377,7 +381,7 @@ export async function generateOutfitGridCanvas(imageUrls: string[]): Promise<Blo
       const image = new Image();
       image.crossOrigin = 'anonymous'; // Allow CORS if needed
       image.onload = () => {
-        console.log(`[generateOutfitGridCanvas] Loaded image ${i + 1}/${imageUrls.length}: ${image.width}x${image.height}`);
+                if (__DEV__) console.log(`[generateOutfitGridCanvas] Loaded image ${i + 1}/${imageUrls.length}: ${image.width}x${image.height}`);
         resolve(image);
       };
       image.onerror = () => {
@@ -439,7 +443,7 @@ export async function generateOutfitGridCanvas(imageUrls: string[]): Promise<Blo
     const offsetX = cellX + (cellWidth - drawWidth) / 2;
     const offsetY = cellY + (cellHeight - drawHeight) / 2;
     
-    console.log(`[generateOutfitGridCanvas] Drawing item ${i + 1} at (${col}, ${row}) -> (${offsetX}, ${offsetY}), size: ${drawWidth}x${drawHeight}`);
+        if (__DEV__) console.log(`[generateOutfitGridCanvas] Drawing item ${i + 1} at (${col}, ${row}) -> (${offsetX}, ${offsetY}), size: ${drawWidth}x${drawHeight}`);
     
     // Draw the image
     ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
@@ -460,7 +464,7 @@ export async function generateOutfitGridCanvas(imageUrls: string[]): Promise<Blo
       const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: 'image/jpeg' });
       
-      console.log(`[generateOutfitGridCanvas] Grid canvas created: ${blob.size} bytes, type: ${blob.type}`);
+            if (__DEV__) console.log(`[generateOutfitGridCanvas] Grid canvas created: ${blob.size} bytes, type: ${blob.type}`);
       resolve(blob);
     } catch (error) {
       reject(new Error(`Failed to create blob from grid canvas: ${error}`));

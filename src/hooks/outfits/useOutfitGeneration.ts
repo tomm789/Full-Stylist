@@ -3,7 +3,7 @@
  * Handles outfit creation and AI generation from wardrobe with client-side image stacking.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { saveOutfit } from '@/lib/outfits';
 import { setInitialCoverDataUri } from '@/lib/outfits/initialCoverCache';
 import {
@@ -11,7 +11,6 @@ import {
   type OutfitDescription,
   type GenerationMessage,
 } from '@/lib/outfits/outfitDescriptionMessages';
-import { createAndTriggerJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
 import { getUserSettings } from '@/lib/settings';
 import { WardrobeItem, WardrobeCategory } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
@@ -22,6 +21,7 @@ import type { OutfitCanvasLayoutMap, OutfitCanvasTrimMap } from '@/lib/outfits/c
 import { generateAndUploadGrid } from '@/lib/outfits/generateAndUploadGrid';
 import { useDescriptionPolling } from '@/lib/outfits/useDescriptionPolling';
 import { useItemRevealAnimation } from '@/hooks/outfits/useItemRevealAnimation';
+import { useOutfitRenderJob } from '@/hooks/outfits/useOutfitRenderJob';
 import {
   createOutfitVariation,
   updateOutfitVariation,
@@ -76,22 +76,37 @@ export function useOutfitGeneration({
   const [modalItems, setModalItems] = useState<GenerationItem[]>([]);
   const [activeMessage, setActiveMessage] = useState<GenerationMessage | null>(null);
   const [outfitDescription, setOutfitDescription] = useState<OutfitDescription | null>(null);
+  const descriptionDripRef = useRef<{ cancel: () => void } | null>(null);
+
+  const cancelDescriptionDrip = useCallback(() => {
+    descriptionDripRef.current?.cancel();
+    descriptionDripRef.current = null;
+  }, []);
 
   // ── Shared animation + polling hooks ────────────────────────────────────────
   const revealAnimation = useItemRevealAnimation({ setPhase: setModalPhase });
 
   const descriptionPolling = useDescriptionPolling({
     onSuccess: (description, messages) => {
+      cancelDescriptionDrip();
       setOutfitDescription(description);
       setModalPhase('analysis');
-      runDescriptionMessageDrip(messages, setActiveMessage, setModalPhase);
+      descriptionDripRef.current = runDescriptionMessageDrip(messages, setActiveMessage, setModalPhase);
     },
   });
+  const { runRenderJob } = useOutfitRenderJob();
 
   const stopAll = useCallback(() => {
+    cancelDescriptionDrip();
     revealAnimation.stop();
     descriptionPolling.stop();
-  }, [revealAnimation.stop, descriptionPolling.stop]);
+  }, [cancelDescriptionDrip, revealAnimation.stop, descriptionPolling.stop]);
+
+  useEffect(() => {
+    return () => {
+      stopAll();
+    };
+  }, [stopAll]);
 
   // ── Main generation flow ─────────────────────────────────────────────────────
   const generateOutfit = useCallback(
@@ -191,13 +206,13 @@ export function useOutfitGeneration({
               publicUrl: supabase.storage.from('media').getPublicUrl(storedKey).data.publicUrl,
               storagePath: storedKey,
             };
-            console.log(`[OutfitGeneration] Using pre-uploaded grid (0s latency): ${storedKey}`);
+                        if (__DEV__) console.log(`[OutfitGeneration] Using pre-uploaded grid (0s latency): ${storedKey}`);
           }
         }
 
         if (!stackedResult) {
           try {
-            console.log(`[OutfitGeneration] Fetching images for ${selectedItems.length} items`);
+                        if (__DEV__) console.log(`[OutfitGeneration] Fetching images for ${selectedItems.length} items`);
 
             const wardrobeItemIds = selectedItems.map((item) => item.id);
             const { data: imageLinks, error: linksError } = await supabase
@@ -289,10 +304,10 @@ export function useOutfitGeneration({
             timeline.mark('grid_done');
 
             if (stackedResult) {
-              console.log(`[OutfitGeneration] Grid uploaded successfully: ${stackedResult.storagePath}`);
+                            if (__DEV__) console.log(`[OutfitGeneration] Grid uploaded successfully: ${stackedResult.storagePath}`);
             }
           } catch (gridError) {
-            console.warn(
+                        if (__DEV__) console.warn(
               '[OutfitGeneration] Client-side grid generation failed; falling back to server stacking',
               gridError
             );
@@ -362,14 +377,15 @@ export function useOutfitGeneration({
         // Phase 5: Create and trigger AI job
         setProgress({ phase: 'generating', message: 'Generating outfit image...', progress: 80 });
 
-        console.log(
+                if (__DEV__) console.log(
           `[OutfitGeneration] Creating AI job with stacked image ID: ${stackedResult?.imageId || 'none'}`
         );
 
-        const { data: jobData, error: jobError } = await createAndTriggerJob(
+        let createdJobId: string | null = null;
+        const { job: completedJob, base64Result } = await runRenderJob({
           userId,
-          'outfit_render',
-          {
+          jobType: 'outfit_render',
+          jobParams: {
             user_id: userId,
             outfit_id: outfitId,
             selected: selectedForJob,
@@ -383,47 +399,40 @@ export function useOutfitGeneration({
               canvas_layout: hasCustomLayout ? canvasLayoutMap : null,
               canvas_trim_map: hasCustomLayout ? canvasTrimMap ?? null : null,
             },
-          }
-        );
-
-        if (jobError || !jobData?.jobId) {
-          throw new Error('Failed to start AI generation');
-        }
-
-        timeline.mark('job_created', { job_id: jobData.jobId });
-        timeline.mark('trigger_sent');
-
-        console.log(`[OutfitGeneration] AI job created: ${jobData.jobId}`);
-
-        // Start polling for description (skipped in PERF_MODE)
-        if (!PERF_MODE) {
-          descriptionPolling.start(outfitId);
-        }
-
-        // Phase 6: Poll for completion
-        setProgress({
-          phase: 'generating',
-          message: 'AI is working on your outfit...',
-          progress: 90,
+          },
+          timeout: 120000,
+          interval: 2000,
+          logPrefix: '[OutfitGeneration]',
+          pollJobType: 'outfit_render',
+          onJobCreated: (jobId) => {
+            createdJobId = jobId;
+            timeline.mark('job_created', { job_id: jobId });
+                        if (__DEV__) console.log(`[OutfitGeneration] AI job created: ${jobId}`);
+          },
+          onJobTriggered: () => {
+            timeline.mark('trigger_sent');
+            // Start polling for description (skipped in PERF_MODE)
+            if (!PERF_MODE) {
+              descriptionPolling.start(outfitId);
+            }
+            // Phase 6: Poll for completion
+            setProgress({
+              phase: 'generating',
+              message: 'AI is working on your outfit...',
+              progress: 90,
+            });
+            timeline.mark('poll_start');
+          },
         });
-
-        timeline.mark('poll_start');
-        const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
-          jobData.jobId,
-          60,
-          2000,
-          '[OutfitGeneration]',
-          'outfit_render'
-        );
 
         stopAll();
 
-        if (pollError || !completedJob) {
+        if (!completedJob) {
           timeline.mark('poll_timeout');
-          console.warn('[OutfitGeneration] AI generation polling timed out, but outfit was saved');
+                    if (__DEV__) console.warn('[OutfitGeneration] AI generation polling timed out, but outfit was saved');
           // Update variation with job ID even on timeout
-          if (variationId && jobData?.jobId) {
-            await updateOutfitVariation(variationId, { ai_job_id: jobData.jobId });
+          if (variationId && createdJobId) {
+            await updateOutfitVariation(variationId, { ai_job_id: createdJobId });
           }
           setProgress({
             phase: 'complete',
@@ -457,8 +466,8 @@ export function useOutfitGeneration({
         });
 
         const result = completedJob.result || {};
-        if (result.base64_result) {
-          const dataUri = toDataUri(result.base64_result, result.mime_type);
+        if (base64Result) {
+          const dataUri = toDataUri(base64Result, result.mime_type);
           const coverSetAt = Date.now();
           setInitialCoverDataUri(
             outfitId,
@@ -494,7 +503,7 @@ export function useOutfitGeneration({
           onVariationCreated?.();
         }
 
-        console.log('[OutfitGeneration] Generation completed successfully!');
+                if (__DEV__) console.log('[OutfitGeneration] Generation completed successfully!');
         setProgress({ phase: 'complete', message: 'Outfit generated successfully!', progress: 100 });
         setModalVisible(false);
 
@@ -513,7 +522,17 @@ export function useOutfitGeneration({
         setGenerating(false);
       }
     },
-    [userId, categories, backgroundGrid, sessionId, onVariationCreated, revealAnimation, descriptionPolling, stopAll]
+    [
+      userId,
+      categories,
+      backgroundGrid,
+      sessionId,
+      onVariationCreated,
+      revealAnimation,
+      descriptionPolling,
+      runRenderJob,
+      stopAll,
+    ]
   );
 
   const reset = useCallback(() => {

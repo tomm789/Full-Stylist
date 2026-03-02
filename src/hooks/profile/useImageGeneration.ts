@@ -130,12 +130,12 @@ export function useImageGeneration(): UseImageGenerationReturn {
     hairStyle?: string,
     makeupStyle?: string
   ): Promise<string | null> => {
-    console.log('=== HEADSHOT GENERATION START ===');
-    console.log('userId:', userId);
-    console.log('uploadedBlob exists:', !!uploadedBlob);
+        if (__DEV__) console.log('=== HEADSHOT GENERATION START ===');
+        if (__DEV__) console.log('userId:', userId);
+        if (__DEV__) console.log('uploadedBlob exists:', !!uploadedBlob);
 
     if (!uploadedBlob && !uploadedUri) {
-      console.log('ERROR: No blob');
+            if (__DEV__) console.log('ERROR: No blob');
       Alert.alert('Error', 'Please take or upload a photo first');
       return null;
     }
@@ -144,7 +144,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     setLoadingMessage('Uploading photo...');
 
     try {
-      console.log('-> Uploading...');
+            if (__DEV__) console.log('-> Uploading...');
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
       const uploadSource =
         Platform.OS === 'web'
@@ -156,14 +156,14 @@ export function useImageGeneration(): UseImageGenerationReturn {
         `selfie-${stamp}.jpg`,
         'upload'
       );
-      console.log('Upload done, error:', !!uploadError);
+            if (__DEV__) console.log('Upload done, error:', !!uploadError);
       if (uploadError || !uploadedImage) {
         throw uploadError || new Error('Failed to upload selfie');
       }
 
       setLoadingMessage('Creating headshot job...');
 
-      console.log('-> Creating job...');
+            if (__DEV__) console.log('-> Creating job...');
       const { data: job, error: jobError } = await triggerHeadshotGenerate(
         userId,
         uploadedImage.imageId,
@@ -171,19 +171,19 @@ export function useImageGeneration(): UseImageGenerationReturn {
         makeupStyle
       );
 
-      console.log('Job created, error:', !!jobError, 'jobId:', job?.id);
+            if (__DEV__) console.log('Job created, error:', !!jobError, 'jobId:', job?.id);
 
       if (!job || jobError) {
         throw jobError || new Error('Failed to create headshot job');
       }
 
-      console.log('-> Executing job...');
+            if (__DEV__) console.log('-> Executing job...');
       await triggerAIJobExecution(job.id);
-      console.log('Execution triggered');
+            if (__DEV__) console.log('Execution triggered');
 
       setLoadingMessage('Generating professional headshot...\nThis may take 20-30 seconds.');
 
-      console.log('-> Waiting for completion...');
+            if (__DEV__) console.log('-> Waiting for completion...');
       const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
         job.id,
         30,
@@ -191,7 +191,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
         '[Headshot]'
       );
 
-      console.log('Wait done, status:', completedJob?.status);
+            if (__DEV__) console.log('Wait done, status:', completedJob?.status);
 
       if (pollError || !completedJob) {
         throw new Error('Headshot generation timed out or failed');
@@ -199,7 +199,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
 
       if (completedJob.status === 'failed') {
         const failureMessage = completedJob.error || 'Unknown error';
-        console.log('Job failed:', failureMessage);
+                if (__DEV__) console.log('Job failed:', failureMessage);
 
         if (isGeminiPolicyBlockError(failureMessage)) {
           setPolicyMessage(
@@ -214,7 +214,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
       const generatedImageId =
         completedJob.result?.image_id || completedJob.result?.generated_image_id;
 
-      console.log('=== SUCCESS! Image ID:', generatedImageId);
+            if (__DEV__) console.log('=== SUCCESS! Image ID:', generatedImageId);
 
       if (generatedImageId) {
         try {
@@ -242,7 +242,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
             }
           }
         } catch (avatarError) {
-          console.warn('[Headshot] Failed to auto-set avatar:', avatarError);
+                    if (__DEV__) console.warn('[Headshot] Failed to auto-set avatar:', avatarError);
         }
       }
 
@@ -260,7 +260,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
       setError(message);
       return null;
     } finally {
-      console.log('-> Cleanup');
+            if (__DEV__) console.log('-> Cleanup');
       setGenerating(false);
       setLoadingMessage('');
     }

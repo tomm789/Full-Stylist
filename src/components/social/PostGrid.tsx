@@ -106,6 +106,9 @@ export default function PostGrid<T>({
       data={data}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
+      initialNumToRender={8}
+      maxToRenderPerBatch={4}
+      windowSize={5}
       numColumns={3}
       style={[postGridStyles.gridList, style]}
       contentContainerStyle={[postGridStyles.gridContent, contentContainerStyle]}

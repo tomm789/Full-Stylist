@@ -41,11 +41,11 @@ export function debugCalendar(
       console.error(prefix, timestamp, data);
       break;
     case 'warn':
-      console.warn(prefix, timestamp, data);
+            if (__DEV__) console.warn(prefix, timestamp, data);
       break;
     case 'log':
     default:
-      console.log(prefix, timestamp, data);
+            if (__DEV__) console.log(prefix, timestamp, data);
       break;
   }
 }

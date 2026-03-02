@@ -6,7 +6,7 @@
  * phase to 'analysis' after the last item is revealed.
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 type GenerationPhase = 'items' | 'analysis' | 'finalizing';
 
@@ -25,13 +25,24 @@ export function useItemRevealAnimation({ setPhase }: UseItemRevealAnimationOptio
   const [revealedItemsCount, setRevealedItemsCount] = useState(-1);
   const [completedItemsCount, setCompletedItemsCount] = useState(-1);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const phaseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const stop = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    if (phaseTimeoutRef.current) {
+      clearTimeout(phaseTimeoutRef.current);
+      phaseTimeoutRef.current = null;
+    }
   }, []);
+
+  useEffect(() => {
+    return () => {
+      stop();
+    };
+  }, [stop]);
 
   const reset = useCallback(() => {
     stop();
@@ -41,6 +52,7 @@ export function useItemRevealAnimation({ setPhase }: UseItemRevealAnimationOptio
 
   const start = useCallback(
     (items: RevealItem[]) => {
+      stop();
       setRevealedItemsCount(-1);
       setCompletedItemsCount(-1);
       setPhase('items');
@@ -61,8 +73,14 @@ export function useItemRevealAnimation({ setPhase }: UseItemRevealAnimationOptio
           currentCompleted = items.length - 1;
           setCompletedItemsCount(currentCompleted);
 
-          setTimeout(() => setPhase('analysis'), 500);
-          stop();
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          phaseTimeoutRef.current = setTimeout(() => {
+            phaseTimeoutRef.current = null;
+            setPhase('analysis');
+          }, 500);
         }
       }, 500);
     },

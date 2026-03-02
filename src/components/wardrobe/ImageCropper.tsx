@@ -72,7 +72,7 @@ export default function ImageCropper({
 
   const handleDone = useCallback(async () => {
     if (!croppedAreaPixels || !imageUri) {
-      console.warn('Cannot complete crop: missing croppedAreaPixels or imageUri');
+            if (__DEV__) console.warn('Cannot complete crop: missing croppedAreaPixels or imageUri');
       return;
     }
 

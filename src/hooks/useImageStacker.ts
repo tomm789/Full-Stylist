@@ -40,7 +40,7 @@ export function useImageStacker(): UseImageStackerReturn {
     setError(null);
 
     try {
-      console.log(`[useImageStacker] Stacking ${files.length} images...`);
+            if (__DEV__) console.log(`[useImageStacker] Stacking ${files.length} images...`);
 
       // Get the current user session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -57,7 +57,7 @@ export function useImageStacker(): UseImageStackerReturn {
 
       // Process and stack images using the utility function
       const stackedBlob = await processAndStackImages(files);
-      console.log(`[useImageStacker] Images stacked successfully`);
+            if (__DEV__) console.log(`[useImageStacker] Images stacked successfully`);
 
       // Generate a unique filename
       const timestamp = Date.now();
@@ -85,7 +85,7 @@ export function useImageStacker(): UseImageStackerReturn {
         throw new Error('Upload succeeded but no data returned');
       }
 
-      console.log(`[useImageStacker] Uploaded to storage: ${uploadDataResult.path}`);
+            if (__DEV__) console.log(`[useImageStacker] Uploaded to storage: ${uploadDataResult.path}`);
 
       // Get the public URL
       const { data: urlData } = supabase.storage
@@ -96,7 +96,7 @@ export function useImageStacker(): UseImageStackerReturn {
         throw new Error('Failed to get public URL for uploaded image');
       }
 
-      console.log(`[useImageStacker] Upload complete, storage path: ${uploadDataResult.path}`);
+            if (__DEV__) console.log(`[useImageStacker] Upload complete, storage path: ${uploadDataResult.path}`);
 
       // We don't need to create an images record - the Netlify function can download
       // directly from storage using the storage_key. Return the path as the "imageId"

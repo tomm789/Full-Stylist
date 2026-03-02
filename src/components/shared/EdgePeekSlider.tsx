@@ -171,6 +171,9 @@ function EdgePeekSliderInner<T>({
           data={data}
           extraData={extraData}
           keyExtractor={keyExtractor}
+          initialNumToRender={8}
+          maxToRenderPerBatch={4}
+          windowSize={5}
           showsHorizontalScrollIndicator={false}
           decelerationRate="fast"
           snapToInterval={snapInterval}

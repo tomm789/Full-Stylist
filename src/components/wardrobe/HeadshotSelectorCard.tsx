@@ -9,6 +9,7 @@ import { TouchableOpacity, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { ImagePlaceholder } from '@/components/shared';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -61,9 +62,10 @@ export default function HeadshotSelectorCard({
     >
       {headshotUrl ? (
         <Image
+          {...GRID_IMAGE_PROPS}
           source={{ uri: headshotUrl }}
           style={styles.image}
-          contentFit="cover"
+          recyclingKey={headshotUrl}
         />
       ) : (
         <View style={styles.placeholder}>

@@ -40,9 +40,11 @@ export function useCalendarEntries({
   const hasLoadedOnceRef = useRef(false);
   const isMountedRef = useRef(true);
 
-  const loadEntriesInternal = async (isMounted: { current: boolean }, retryAttempt = 0): Promise<void> => {
+  const loadEntriesInternal = async (mountedRef: { current: boolean }, retryAttempt = 0): Promise<void> => {
     if (!userId) {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
       return;
     }
 
@@ -57,17 +59,17 @@ export function useCalendarEntries({
       if (fetchError) {
         if (retryAttempt < CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS) {
           const delayMs = CALENDAR_CONFIG.INITIAL_RETRY_DELAY_MS * Math.pow(2, retryAttempt);
-          console.warn(`Calendar entries load failed, retrying in ${delayMs}ms (attempt ${retryAttempt + 1}/${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS}):`, fetchError);
+                    if (__DEV__) console.warn(`Calendar entries load failed, retrying in ${delayMs}ms (attempt ${retryAttempt + 1}/${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS}):`, fetchError);
           await new Promise(resolve => setTimeout(resolve, delayMs));
-          if (isMounted.current) {
-            return loadEntriesInternal(isMounted, retryAttempt + 1);
+          if (mountedRef.current) {
+            return loadEntriesInternal(mountedRef, retryAttempt + 1);
           }
         } else {
           throw new Error(`Failed to load calendar entries after ${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS} retries: ${fetchError.message}`);
         }
       }
 
-      if (!isMounted.current) return;
+      if (!mountedRef.current) return;
 
       const entriesMap = new Map<string, CalendarEntry[]>();
       if (monthEntries) {
@@ -90,10 +92,10 @@ export function useCalendarEntries({
       hasLoadedOnceRef.current = true;
 
       if (monthEntries) {
-        loadOutfitImages(monthEntries, isMounted.current);
+        void loadOutfitImages(monthEntries, mountedRef);
       }
     } catch (err) {
-      if (!isMounted.current) return;
+      if (!mountedRef.current) return;
       const error = err instanceof Error ? err : new Error(String(err));
       console.error('Error loading calendar entries:', error);
       setError(error);
@@ -101,21 +103,23 @@ export function useCalendarEntries({
         setLoading(false);
       }
     } finally {
-      if (isMounted.current && shouldShowLoading) {
+      if (mountedRef.current && shouldShowLoading) {
         setLoading(false);
       }
-      if (isMounted.current) {
+      if (mountedRef.current) {
         hasLoadedOnceRef.current = true;
       }
     }
   };
 
   const refresh = async (): Promise<void> => {
-    const isMounted = { current: true };
-    await loadEntriesInternal(isMounted);
+    await loadEntriesInternal(isMountedRef);
   };
 
-  const loadOutfitImages = async (entries: CalendarEntry[], isMounted: boolean) => {
+  const loadOutfitImages = async (
+    entries: CalendarEntry[],
+    mountedRef: { current: boolean }
+  ) => {
     const imagesMap = new Map<string, string | null>();
 
     // Get unique outfit IDs
@@ -140,7 +144,7 @@ export function useCalendarEntries({
     const outfitResults = await Promise.all(outfitPromises);
 
     // Cancel if component unmounted while promises were pending
-    if (!isMounted) return;
+    if (!mountedRef.current) return;
 
     for (const { data: outfit } of outfitResults) {
       const coverImage = Array.isArray(outfit?.cover_image) ? outfit?.cover_image?.[0] : outfit?.cover_image;
@@ -157,7 +161,7 @@ export function useCalendarEntries({
     }
 
     // Only update state if component is still mounted
-    if (isMounted) {
+    if (mountedRef.current) {
       setOutfitImages((prev) => {
         const next = new Map(prev);
         imagesMap.forEach((value, key) => {
@@ -169,11 +173,11 @@ export function useCalendarEntries({
   };
 
   useEffect(() => {
-    const isMounted = { current: true };
-    loadEntriesInternal(isMounted);
+    isMountedRef.current = true;
+    void loadEntriesInternal(isMountedRef);
 
     return () => {
-      isMounted.current = false;
+      isMountedRef.current = false;
     };
   }, [userId, startDate, endDate]);
 

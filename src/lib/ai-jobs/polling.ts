@@ -165,7 +165,7 @@ export async function pollAIJobWithFinalCheck(
   }
 
   if (logPrefix) {
-    console.log(`${logPrefix} polling timed out, doing final check...`);
+        if (__DEV__) console.log(`${logPrefix} polling timed out, doing final check...`);
   }
 
   const { data: finalCheck } = await getAIJob(jobId);
@@ -209,7 +209,7 @@ export async function waitForAIJobCompletion(
 
     if (error?.message?.toLowerCase().includes('timeout')) {
       if (logPrefix) {
-        console.log(`${logPrefix} polling timed out, doing final check...`);
+                if (__DEV__) console.log(`${logPrefix} polling timed out, doing final check...`);
       }
       const { data: finalCheck } = await getAIJob(jobId);
       if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
@@ -242,7 +242,7 @@ export async function waitForAIJobCompletion(
 
     if (error?.message && error.message.toLowerCase().includes('timeout')) {
       if (logPrefix) {
-        console.log(`${logPrefix} polling timed out, continuing to wait...`);
+                if (__DEV__) console.log(`${logPrefix} polling timed out, continuing to wait...`);
       }
       debugIngest({ location: 'polling.ts:132', message: 'waitForAIJobCompletion timeout, continuing', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
       await new Promise((r) => setTimeout(r, 500));

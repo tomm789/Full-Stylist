@@ -82,6 +82,15 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
   // Store image ids for tagging follow-up when render succeeds (non-blocking)
   const pendingImageIdsRef = useRef<string[]>([]);
   const timelineRef = useRef<ReturnType<typeof startTimeline> | null>(null);
+  const completionTimeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+
+  const scheduleCompletionTimeout = useCallback((callback: () => void, delayMs: number) => {
+    const timeoutId = setTimeout(() => {
+      completionTimeoutsRef.current = completionTimeoutsRef.current.filter((id) => id !== timeoutId);
+      callback();
+    }, delayMs);
+    completionTimeoutsRef.current.push(timeoutId);
+  }, []);
 
   const onComplete = useCallback(
     (job: import('@/lib/ai-jobs').AIJob) => {
@@ -131,7 +140,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
           const autoTagResult = batchResult?.auto_tag;
 
           // Log for debugging
-          console.log('[BatchJob] Job completed:', {
+                    if (__DEV__) console.log('[BatchJob] Job completed:', {
             hasProductShot: !!productShotResult,
             hasAutoTag: !!autoTagResult,
             productShotResult,
@@ -185,7 +194,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
             setAnalysisStep('Product shot generated successfully');
             // The backend has already applied the product shot to the database,
             // so we just need to redirect to see it
-            setTimeout(() => {
+            scheduleCompletionTimeout(() => {
               setGeneratingAI(false);
               // Use replace with refresh param to force reload of the item page
               router.replace(`/wardrobe/item/${pendingItemId}?refresh=${Date.now()}`);
@@ -196,19 +205,19 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
             setGeneratingAI(false);
           } else {
             // No product shot result or unexpected structure
-            console.warn('[BatchJob] No valid product_shot result found in batch job', {
+                        if (__DEV__) console.warn('[BatchJob] No valid product_shot result found in batch job', {
               batchResult,
               productShotResult,
             });
             // Still redirect - the item detail page will handle refreshing
-            setTimeout(() => {
+            scheduleCompletionTimeout(() => {
               setGeneratingAI(false);
               router.replace(`/wardrobe/item/${pendingItemId}`);
             }, 800);
           }
         } else {
           // Legacy: product_shot or other job types
-          setTimeout(() => {
+          scheduleCompletionTimeout(() => {
             setGeneratingAI(false);
             router.replace(`/wardrobe/item/${pendingItemId}`);
           }, 800);
@@ -223,7 +232,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
           const productShotResult = batchResult?.product_shot;
           if (productShotResult && !productShotResult.error) {
             setAnalysisStep('Product shot generated (some tasks may have failed)');
-            setTimeout(() => {
+            scheduleCompletionTimeout(() => {
               setGeneratingAI(false);
               router.replace(`/wardrobe/item/${pendingItemId}`);
             }, 800);
@@ -235,7 +244,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
         }
       }
     },
-    [pendingItemId, user?.id, router]
+    [pendingItemId, user?.id, router, scheduleCompletionTimeout]
   );
 
   const { job: aiJob } = useAIJobPolling({
@@ -257,6 +266,13 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
       setAnalysisStep('Adding item to your wardrobe');
     }
   }, [aiJob, generatingAI]);
+
+  useEffect(() => {
+    return () => {
+      completionTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+      completionTimeoutsRef.current = [];
+    };
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (!user || !wardrobeId) {
@@ -341,7 +357,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
 
         const { error: execError } = await triggerAIJobExecution(generateJob.id);
         if (execError) {
-          console.warn('[useAddWardrobeItem] Job trigger returned error (may still work):', execError);
+                    if (__DEV__) console.warn('[useAddWardrobeItem] Job trigger returned error (may still work):', execError);
         }
 
         setPendingItemJob(itemId, generateJob.id);

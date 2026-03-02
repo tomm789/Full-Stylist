@@ -8,6 +8,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { CalendarEntry } from '@/lib/calendar';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme as importedTheme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 
@@ -168,9 +169,10 @@ export default function CalendarDayCell({
         <View style={styles.outfitImagesContainer} pointerEvents="none">
           {imageUrl ? (
             <Image
+              {...GRID_IMAGE_PROPS}
               source={{ uri: imageUrl }}
               style={styles.outfitImage as ImageStyle}
-              contentFit="cover"
+              recyclingKey={firstEntry?.outfit_id || imageUrl}
               pointerEvents="none"
             />
           ) : (
@@ -189,6 +191,7 @@ export default function CalendarDayCell({
 
       {!hasOutfit && (
         <Image
+          {...GRID_IMAGE_PROPS}
           source={{
             uri: 'https://earlhvpckbcpvppvmxsd.supabase.co/storage/v1/object/public/media/App%20Media/Graphics/Transparent-Female-on-White-Background.png',
           }}
@@ -196,7 +199,7 @@ export default function CalendarDayCell({
             styles.emptySilhouette as ImageStyle,
             !inCurrentMonth && ({ opacity: 0.7 } as ImageStyle),
           ]}
-          contentFit="cover"
+          recyclingKey="calendar-empty-silhouette"
           pointerEvents="none"
         />
       )}

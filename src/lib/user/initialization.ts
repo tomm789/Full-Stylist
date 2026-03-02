@@ -77,7 +77,7 @@ export async function initializeUserProfile(
  */
 export async function isUserProfileComplete(userId: string): Promise<boolean> {
   try {
-    console.log('[isUserProfileComplete] Checking profile for user:', userId);
+        if (__DEV__) console.log('[isUserProfileComplete] Checking profile for user:', userId);
     
     // Check if user exists
     const { data: user, error: userError } = await supabase
@@ -93,20 +93,20 @@ export async function isUserProfileComplete(userId: string): Promise<boolean> {
       // 406 = Not Acceptable (can occur with RLS when user doesn't exist)
       // PGRST301 = no rows returned
       if (userError.code === 'PGRST116' || userError.code === 'PGRST301' || (userError as any).status === 406) {
-        console.log('[isUserProfileComplete] User not found in users table (expected for new users)');
+                if (__DEV__) console.log('[isUserProfileComplete] User not found in users table (expected for new users)');
       } else {
         // Log unexpected errors but still return false (treat as incomplete)
-        console.warn('[isUserProfileComplete] Unexpected error checking user:', userError.code, userError.message);
+                if (__DEV__) console.warn('[isUserProfileComplete] Unexpected error checking user:', userError.code, userError.message);
       }
       return false;
     }
 
     if (!user) {
-      console.log('[isUserProfileComplete] User not found');
+            if (__DEV__) console.log('[isUserProfileComplete] User not found');
       return false;
     }
 
-    console.log('[isUserProfileComplete] User found, checking settings...');
+        if (__DEV__) console.log('[isUserProfileComplete] User found, checking settings...');
 
     // Check settings exist
     const { data: settings, error: settingsError } = await supabase
@@ -119,19 +119,19 @@ export async function isUserProfileComplete(userId: string): Promise<boolean> {
       console.error('[isUserProfileComplete] Error checking settings:', settingsError);
       // Handle various "not found" error codes
       if (settingsError.code === 'PGRST116' || settingsError.code === 'PGRST301' || (settingsError as any).status === 406) {
-        console.log('[isUserProfileComplete] Settings not found');
+                if (__DEV__) console.log('[isUserProfileComplete] Settings not found');
       } else {
-        console.warn('[isUserProfileComplete] Unexpected error checking settings:', settingsError.code, settingsError.message);
+                if (__DEV__) console.warn('[isUserProfileComplete] Unexpected error checking settings:', settingsError.code, settingsError.message);
       }
       return false;
     }
 
     if (!settings) {
-      console.log('[isUserProfileComplete] Settings not found');
+            if (__DEV__) console.log('[isUserProfileComplete] Settings not found');
       return false;
     }
 
-    console.log('[isUserProfileComplete] Settings found, checking wardrobe...');
+        if (__DEV__) console.log('[isUserProfileComplete] Settings found, checking wardrobe...');
 
     // Check if at least one wardrobe exists (user might have multiple)
     const { data: wardrobes, error: wardrobeError } = await supabase
@@ -142,12 +142,12 @@ export async function isUserProfileComplete(userId: string): Promise<boolean> {
 
     if (wardrobeError) {
       console.error('[isUserProfileComplete] Error checking wardrobe:', wardrobeError);
-      console.warn('[isUserProfileComplete] Unexpected error checking wardrobe:', wardrobeError.code, wardrobeError.message);
+            if (__DEV__) console.warn('[isUserProfileComplete] Unexpected error checking wardrobe:', wardrobeError.code, wardrobeError.message);
       return false;
     }
 
     const isComplete = wardrobes && wardrobes.length > 0;
-    console.log('[isUserProfileComplete] Profile check complete. Result:', isComplete, 'Wardrobes found:', wardrobes?.length || 0);
+        if (__DEV__) console.log('[isUserProfileComplete] Profile check complete. Result:', isComplete, 'Wardrobes found:', wardrobes?.length || 0);
     return isComplete;
   } catch (error: any) {
     console.error('[isUserProfileComplete] Exception checking profile:', error);

@@ -72,6 +72,9 @@ export default function TabPillsRow({
           horizontal
           data={pills}
           keyExtractor={(item) => item.id}
+          initialNumToRender={8}
+          maxToRenderPerBatch={4}
+          windowSize={5}
           renderItem={({ item }) => {
             const selected = activeId === item.id;
             const iconColor = selected ? colors.primary : colors.textSecondary;

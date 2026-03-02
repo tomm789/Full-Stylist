@@ -7,6 +7,7 @@ import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { DETAIL_IMAGE_PROPS } from '@/lib/images';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createStyles, type Headshot } from './styles';
 
@@ -25,7 +26,13 @@ export function DetailView({ headshot, status, onYes, onSkip }: DetailViewProps)
     <View style={styles.detailContainer}>
       <View style={styles.detailImageWrapper}>
         {headshot.url ? (
-          <Image source={{ uri: headshot.url }} style={styles.detailImage} contentFit="cover" />
+          <Image
+            {...DETAIL_IMAGE_PROPS}
+            source={{ uri: headshot.url }}
+            style={styles.detailImage}
+            recyclingKey={headshot.id}
+            contentFit="cover"
+          />
         ) : (
           <View style={[styles.detailImage, styles.detailImagePlaceholder]}>
             <Ionicons name="image-outline" size={64} color={colors.textTertiary} />

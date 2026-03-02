@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { FEED_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -75,9 +76,10 @@ export default function FeedLookbookCarousel({
         <View style={styles.container}>
           {thumbnailUrl ? (
             <Image
+              {...FEED_IMAGE_PROPS}
               source={{ uri: thumbnailUrl }}
               style={styles.image}
-              contentFit="cover"
+              recyclingKey={thumbnailUrl}
             />
           ) : (
             <View style={styles.imagePlaceholder}>
@@ -126,7 +128,12 @@ export default function FeedLookbookCarousel({
                 activeOpacity={0.9}
               >
                 {imageUrl ? (
-                  <Image source={{ uri: imageUrl }} style={styles.image} contentFit="cover" />
+                  <Image
+                    {...FEED_IMAGE_PROPS}
+                    source={{ uri: imageUrl }}
+                    style={styles.image}
+                    recyclingKey={outfit.id}
+                  />
                 ) : (
                   <View style={styles.imagePlaceholder}>
                     <ActivityIndicator size="small" color={colors.primary} />

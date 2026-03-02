@@ -63,11 +63,11 @@ export async function generateClothingGrid(
     throw new Error('No image URLs provided for grid generation');
   }
 
-  console.log(`[generateClothingGrid:native] Creating grid for ${imageUrls.length} items`);
+    if (__DEV__) console.log(`[generateClothingGrid:native] Creating grid for ${imageUrls.length} items`);
 
   // Calculate grid layout
   const { cols, rows } = calculateGridLayout(imageUrls.length);
-  console.log(`[generateClothingGrid:native] Grid layout: ${cols}x${rows}`);
+    if (__DEV__) console.log(`[generateClothingGrid:native] Grid layout: ${cols}x${rows}`);
 
   // Calculate cell dimensions (accounting for padding)
   const totalPaddingWidth = (cols - 1) * PADDING;
@@ -75,13 +75,13 @@ export async function generateClothingGrid(
   const cellWidth = Math.floor((CANVAS_WIDTH - totalPaddingWidth) / cols);
   const cellHeight = Math.floor((CANVAS_HEIGHT - totalPaddingHeight) / rows);
 
-  console.log(`[generateClothingGrid:native] Cell dimensions: ${cellWidth}x${cellHeight}`);
+    if (__DEV__) console.log(`[generateClothingGrid:native] Cell dimensions: ${cellWidth}x${cellHeight}`);
 
   // Load all images in parallel
   const images = await Promise.all(
     imageUrls.map(async (url, i) => {
       const img = await loadSkImage(url);
-      console.log(
+            if (__DEV__) console.log(
         `[generateClothingGrid:native] Loaded image ${i + 1}/${imageUrls.length}: ${img.width()}x${img.height()}`
       );
       return img;
@@ -89,13 +89,13 @@ export async function generateClothingGrid(
   );
 
   // Trim whitespace from all images in parallel
-  console.log(
+    if (__DEV__) console.log(
     `[generateClothingGrid:native] Trimming whitespace from ${images.length} images...`
   );
   const trimmedImages = await Promise.all(
     images.map(async (img, i) => {
       const trimmed = await trimImageWhitespace(img, 15);
-      console.log(
+            if (__DEV__) console.log(
         `[generateClothingGrid:native] Trimmed image ${i + 1}/${images.length}: ${trimmed.width()}x${trimmed.height()}`
       );
       return trimmed;
@@ -184,7 +184,7 @@ export async function generateClothingGrid(
       img.dispose();
     }
 
-    console.log(
+        if (__DEV__) console.log(
       `[generateClothingGrid:native] Custom-layout grid created, base64 length: ${base64.length}`
     );
     return base64;
@@ -211,7 +211,7 @@ export async function generateClothingGrid(
     const x = cellX + (cellWidth - dstWidth) / 2;
     const y = cellY + (cellHeight - dstHeight) / 2;
 
-    console.log(
+        if (__DEV__) console.log(
       `[generateClothingGrid:native] Drawing item ${i + 1} at (${col}, ${row}) -> (${x.toFixed(0)}, ${y.toFixed(0)}), size: ${dstWidth.toFixed(0)}x${dstHeight.toFixed(0)} (from ${imgWidth}x${imgHeight}, scale=${scale.toFixed(2)})`
     );
 
@@ -228,7 +228,7 @@ export async function generateClothingGrid(
     img.dispose();
   }
 
-  console.log(
+    if (__DEV__) console.log(
     `[generateClothingGrid:native] Grid created, base64 length: ${base64.length}`
   );
 

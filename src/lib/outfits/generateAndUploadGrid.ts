@@ -96,7 +96,7 @@ export async function generateAndUploadGrid(
       storagePath: uploadResult.path,
     };
   } catch (error) {
-    console.warn('[generateAndUploadGrid] Failed:', error);
+        if (__DEV__) console.warn('[generateAndUploadGrid] Failed:', error);
     return null;
   }
 }

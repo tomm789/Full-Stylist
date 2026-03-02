@@ -5,10 +5,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
-  Text,
-  FlatList as RNFlatList,
-  ScrollView,
-  ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
 import type { FlatList } from 'react-native';
@@ -26,14 +22,16 @@ import {
   useOutfitsFeedOrchestration,
   useOutfitsModalsState,
   useOutfitsDerivedFilters,
+  useOutfitNavigation,
 } from '@/hooks/outfits';
 import {
   OutfitsModalsContainer,
   OutfitsCalendarModals,
   OutfitsAuxModals,
-  OutfitsSocialTab,
   OutfitsHeaderSection,
   OutfitsMyOutfitsTab,
+  LookbooksTabContent,
+  SocialTabContent,
 } from '@/components/outfits';
 import { OutfitScheduleStatus } from '@/types/outfits';
 import {
@@ -45,12 +43,11 @@ import {
   useSocialModals,
 } from '@/hooks/social';
 import { useLookbookSelection, useLookbookTabs, useLookbooks, useSystemLookbooks } from '@/hooks/lookbooks';
-import { LookbookCard, SystemLookbookCard } from '@/components/lookbooks';
 import LookbookQuickAddModal from '@/components/outfits/LookbookQuickAddModal';
 import LookbookSelectionBar from '@/components/outfits/LookbookSelectionBar';
 import { LOOKBOOK_PANEL_COLLAPSED_HEIGHT } from '@/components/lookbooks/LookbookCreatorPanel';
-import { LoadingSpinner, EmptyState } from '@/components/shared';
-import { layout, spacing, theme } from '@/styles';
+import { LoadingSpinner } from '@/components/shared';
+import { layout, spacing } from '@/styles';
 import { useSlotPresets } from '@/hooks/calendar';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 import createOutfitStyles from './styles';
@@ -448,28 +445,12 @@ export default function OutfitsScreen() {
     setExploreRefreshing(false);
   };
 
-  const handleOutfitPress = (outfitId: string) => {
-    const outfitIds = filteredOutfitsWithOccasions.map((o) => o.id).join(',');
-    const activeFilters: string[] = [];
-
-    if (filters.searchQuery.trim()) {
-      activeFilters.push(`Search: "${filters.searchQuery.trim()}"`);
-    }
-    if (filters.showFavoritesOnly) {
-      activeFilters.push('Favorites');
-    }
-    if (filters.sortBy !== 'date' || filters.sortOrder !== 'desc') {
-      activeFilters.push(`Sort: ${getSortLabel()}`);
-    }
-
-    const filterSummary = activeFilters.join(' • ');
-    const queryParts = [`outfitIds=${encodeURIComponent(outfitIds)}`];
-    if (filterSummary) {
-      queryParts.push(`filters=${encodeURIComponent(filterSummary)}`);
-    }
-
-    router.push(`/outfits/${outfitId}/view?${queryParts.join('&')}`);
-  };
+  const { handleOutfitPress } = useOutfitNavigation(
+    router as any,
+    filteredOutfitsWithOccasions,
+    filters,
+    getSortLabel
+  );
 
   const closeOutfitMenu = useCallback(() => setOpenOutfitMenuId(null), []);
   const closePostMenu = useCallback(() => {
@@ -699,85 +680,35 @@ export default function OutfitsScreen() {
       />
 
       {activeTab === 'lookbooks' ? (
-        lookbooksLoading && allLookbooks.length === 0 && systemLookbooks.length === 0 ? (
-          <View style={[commonStyles.container, styles.loadingContainer]}>
-            <LoadingSpinner text="Loading lookbooks..." />
-          </View>
-        ) : allLookbooks.length === 0 && systemLookbooks.every((lb) => lb.outfits.length === 0) ? (
-          <View style={[commonStyles.container, styles.loadingContainer]}>
-            <EmptyState
-              icon="book-outline"
-              title="Your lookbooks"
-              message="Create your first lookbook to organize your outfits."
-              actionLabel="Create lookbook"
-              onAction={() => {
-                setSelectionMode(true);
-                setLookbookPickerVisible(true);
-              }}
-            />
-          </View>
-        ) : (
-          <ScrollView
-            style={styles.container}
-            contentContainerStyle={{ paddingBottom: listBottomPadding }}
-            onScroll={handleGridScroll}
-            scrollEventThrottle={16}
-          >
-            {systemLookbooks.length > 0 && (
-              <View style={styles.lookbookSection}>
-                <Text style={styles.lookbookSectionTitle}>Highlights</Text>
-                <RNFlatList
-                  horizontal
-                  data={systemLookbooks}
-                  renderItem={({ item }) => (
-                    <SystemLookbookCard
-                      lookbook={item}
-                      onPress={() => router.push(`/lookbooks/system-${item.category}`)}
-                      onPlayPress={() => {}}
-                    />
-                  )}
-                  keyExtractor={(item) => item.category}
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.lookbookHorizontalList}
-                />
-              </View>
-            )}
-
-            <View style={styles.lookbookSection}>
-              <View style={styles.lookbookSectionHeader}>
-                <Text style={styles.lookbookSectionTitle}>My Lookbooks</Text>
-                <Text
-                  style={styles.lookbookAddButton}
-                  onPress={() => router.push('/lookbooks/new')}
-                >
-                  + New
-                </Text>
-              </View>
-              <View style={styles.lookbookGrid}>
-                {sortedLookbooks.map((lookbook) => (
-                  <LookbookCard
-                    key={lookbook.id}
-                    lookbook={lookbook}
-                    thumbnailUrl={lookbookThumbnails.get(lookbook.id) || null}
-                    loading={lookbookLoadingIds.has(lookbook.id)}
-                    onPress={() => router.push(`/lookbooks/${lookbook.id}`)}
-                    onPlayPress={() => router.push(`/lookbooks/${lookbook.id}`)}
-                  />
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-        )
+        <LookbooksTabContent
+          systemLookbooks={systemLookbooks}
+          sortedLookbooks={sortedLookbooks}
+          lookbookThumbnails={lookbookThumbnails as Map<string, string | null>}
+          lookbookLoadingIds={lookbookLoadingIds}
+          lookbooksLoading={lookbooksLoading}
+          allLookbooksEmpty={
+            allLookbooks.length === 0 && systemLookbooks.every((lb) => lb.outfits.length === 0)
+          }
+          onScroll={handleGridScroll}
+          onCreateLookbook={() => {
+            setSelectionMode(true);
+            setLookbookPickerVisible(true);
+          }}
+          onNavigate={(path) => router.push(path as any)}
+          listBottomPadding={listBottomPadding}
+          styles={styles}
+          commonStyles={commonStyles}
+        />
       ) : activeTab.startsWith('lookbook_') || activeTab === 'my_outfits' ? (
         <OutfitsMyOutfitsTab
           {...myOutfitsTabProps}
           activeView={activeTab.startsWith('lookbook_') ? 'grid' : activeView}
         />
       ) : activeTab === 'explore' ? (
-        <OutfitsSocialTab
-          activeView={activeView}
-          gridFeed={applyGridFilters(exploreOutfitFeed)}
-          feedList={applySavedFilter(exploreOutfitFeed)}
+        <SocialTabContent
+          feedType="explore"
+          activeView={activeView as 'grid' | 'feed'}
+          feed={exploreOutfitFeed}
           gridImages={discoverImages}
           feedOutfitImages={discoverImages}
           feedLookbookImages={discoverLookbookImages}
@@ -786,6 +717,8 @@ export default function OutfitsScreen() {
           onRefresh={onDiscoverRefresh}
           onLoadMore={discoverHasMore ? loadMoreDiscover : undefined}
           hasMore={discoverHasMore}
+          applyGridFilters={applyGridFilters}
+          applySavedFilter={applySavedFilter}
           onGridItemPress={handleGridFeedOpen}
           selectionMode={selectionMode}
           selectedIds={selectedOutfitIds}
@@ -794,24 +727,21 @@ export default function OutfitsScreen() {
           onScroll={handleGridScroll}
           renderFeedItem={renderFeedItem}
           feedRef={discoverFeedRef}
-          onLayout={() => handleFeedLayout('explore')}
+          onLayout={() => handleFeedLayout('explore' as any)}
           onScrollToIndexFailed={handleScrollToIndexFailed}
           emptyCopy={{
             title: 'No posts yet',
             message: 'Check back later for new content from the community.',
           }}
           styles={styles}
-          contentContainerStyle={{ paddingBottom: listBottomPadding }}
+          listBottomPadding={listBottomPadding}
+          loadingColor={colors.primary}
         />
-      ) : feedLoading && followingOutfitFeed.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
       ) : (
-        <OutfitsSocialTab
-          activeView={activeView}
-          gridFeed={applyGridFilters(followingOutfitFeed)}
-          feedList={applySavedFilter(followingOutfitFeed)}
+        <SocialTabContent
+          feedType="following"
+          activeView={activeView as 'grid' | 'feed'}
+          feed={followingOutfitFeed}
           gridImages={followingGridImages}
           feedOutfitImages={outfitImages}
           feedLookbookImages={lookbookImages}
@@ -820,6 +750,8 @@ export default function OutfitsScreen() {
           onRefresh={onRefresh}
           onLoadMore={undefined}
           hasMore={false}
+          applyGridFilters={applyGridFilters}
+          applySavedFilter={applySavedFilter}
           onGridItemPress={handleGridFeedOpen}
           selectionMode={selectionMode}
           selectedIds={selectedOutfitIds}
@@ -828,14 +760,15 @@ export default function OutfitsScreen() {
           onScroll={handleGridScroll}
           renderFeedItem={renderFeedItem}
           feedRef={followingFeedRef}
-          onLayout={() => handleFeedLayout('following')}
+          onLayout={() => handleFeedLayout('following' as any)}
           onScrollToIndexFailed={handleScrollToIndexFailed}
           emptyCopy={{
             title: 'No posts yet',
             message: 'Follow people to see their posts, or check out Explore!',
           }}
           styles={styles}
-          contentContainerStyle={{ paddingBottom: listBottomPadding }}
+          listBottomPadding={listBottomPadding}
+          loadingColor={colors.primary}
         />
       )}
 

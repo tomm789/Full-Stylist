@@ -94,6 +94,9 @@ export function HeadshotSection({
             source={{ uri: headshotImageUrl }}
             style={styles.imagePreview}
             contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+            recyclingKey={activeHeadshotId || headshotImageUrl}
           />
         </View>
       )}
@@ -104,6 +107,9 @@ export function HeadshotSection({
             source={{ uri: uploadedUri }}
             style={styles.uploadedImage}
             contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+            recyclingKey={uploadedUri}
           />
           <TouchableOpacity
             style={styles.generateButton}

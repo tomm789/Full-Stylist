@@ -10,6 +10,7 @@ import { getLookbook } from '@/lib/lookbooks';
 import { getUserOutfits } from '@/lib/outfits';
 import { isFollowing } from '@/lib/user';
 import { getRepostCount, hasReposted } from '@/lib/reposts';
+import { batchGetOutfitCoverImages } from '@/utils/batchImageHelpers';
 
 interface EngagementCounts {
   likes: number;
@@ -37,47 +38,6 @@ interface UseFeedReturn {
   followStatuses: Map<string, boolean>;
   loading: boolean;
   refresh: () => Promise<void>;
-}
-
-// 🔥 OPTIMIZATION: Batch get outfit cover images
-async function batchGetOutfitCoverImages(
-  outfits: Array<{ id: string; cover_image_id?: string }>
-): Promise<Map<string, string | null>> {
-  const imageMap = new Map<string, string | null>();
-  
-  const coverImageIds = outfits
-    .map(o => o.cover_image_id)
-    .filter(Boolean) as string[];
-
-  if (coverImageIds.length === 0) {
-    outfits.forEach(o => imageMap.set(o.id, null));
-    return imageMap;
-  }
-
-  const { data: coverImages } = await supabase
-    .from('images')
-    .select('id, storage_bucket, storage_key')
-    .in('id', coverImageIds);
-
-  const coverImageLookup = new Map(
-    (coverImages || []).map(img => [img.id, img])
-  );
-
-  outfits.forEach(outfit => {
-    if (outfit.cover_image_id) {
-      const img = coverImageLookup.get(outfit.cover_image_id);
-      if (img?.storage_key) {
-        const { data } = supabase.storage
-          .from(img.storage_bucket || 'media')
-          .getPublicUrl(img.storage_key);
-        imageMap.set(outfit.id, data.publicUrl);
-        return;
-      }
-    }
-    imageMap.set(outfit.id, null);
-  });
-
-  return imageMap;
 }
 
 // 🔥 OPTIMIZATION: Batch get engagement counts in ONE query
@@ -181,18 +141,27 @@ export function useFeed({
   const [followStatuses, setFollowStatuses] = useState<Map<string, boolean>>(new Map());
   const [loading, setLoading] = useState(true);
 
-  const loadFeed = async () => {
+  const loadFeed = async (cancelledRef?: { current: boolean }) => {
+    const isCancelled = () => cancelledRef?.current === true;
+
     if (!userId) {
-      setLoading(false);
+      if (!isCancelled()) {
+        setLoading(false);
+      }
       return;
     }
 
-    setLoading(true);
+    if (!isCancelled()) {
+      setLoading(true);
+    }
 
     try {
       const { data: feedItems } = await getFeed(userId, limit, 0);
+      if (isCancelled()) return;
       if (!feedItems) {
-        setLoading(false);
+        if (!isCancelled()) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -204,6 +173,7 @@ export function useFeed({
           })
         : feedItems;
 
+      if (isCancelled()) return;
       setFeed(filteredFeed);
 
       // Extract all post IDs and owner IDs
@@ -250,6 +220,7 @@ export function useFeed({
           }))
         ),
       ]);
+      if (isCancelled()) return;
 
       // Combine engagement data with reposts
       const counts: Record<string, EngagementCounts> = {};
@@ -264,12 +235,14 @@ export function useFeed({
         };
       });
 
+      if (isCancelled()) return;
       setEngagementCounts(counts);
 
       // Set follow statuses
       const followStatusMap = new Map(
         followData.map(f => [f.ownerId, f.following])
       );
+      if (isCancelled()) return;
       setFollowStatuses(followStatusMap);
 
       // 🔥 OPTIMIZATION: Batch get outfit images
@@ -280,7 +253,8 @@ export function useFeed({
         });
 
       const outfits = outfitItems.map(item => item.entity!.outfit);
-      const outfitImageCache = await batchGetOutfitCoverImages(outfits);
+      const outfitImageCache = await batchGetOutfitCoverImages(outfits, 'card');
+      if (isCancelled()) return;
       setOutfitImages(outfitImageCache);
 
       // Handle lookbooks (this is already relatively optimized)
@@ -306,7 +280,7 @@ export function useFeed({
 
               lookbookImageCache.set(`${lookbookId}_outfits`, lookbookOutfits);
 
-              const imageUrls = await batchGetOutfitCoverImages(lookbookOutfits);
+              const imageUrls = await batchGetOutfitCoverImages(lookbookOutfits, 'card');
               
               if (lookbookOutfits.length > 0) {
                 const firstUrl = imageUrls.get(lookbookOutfits[0].id);
@@ -325,6 +299,7 @@ export function useFeed({
         })
       );
 
+      if (isCancelled()) return;
       setLookbookImages(lookbookImageCache);
 
       // Build headshot image URL map from entity data (storage info already attached)
@@ -343,11 +318,14 @@ export function useFeed({
           }
         }
       });
+      if (isCancelled()) return;
       setHeadshotImages(headshotImageCache);
     } catch (error) {
       console.error('Error loading feed:', error);
     } finally {
-      setLoading(false);
+      if (!isCancelled()) {
+        setLoading(false);
+      }
     }
   };
 
@@ -356,7 +334,11 @@ export function useFeed({
   };
 
   useEffect(() => {
-    loadFeed();
+    const cancelledRef = { current: false };
+    void loadFeed(cancelledRef);
+    return () => {
+      cancelledRef.current = true;
+    };
   }, [userId, filterByUserId, limit]);
 
   return {

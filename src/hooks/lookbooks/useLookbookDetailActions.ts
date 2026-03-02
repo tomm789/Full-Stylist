@@ -3,7 +3,7 @@
  * Handlers and modal state for lookbook detail screen actions
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -76,6 +76,7 @@ export function useLookbookDetailActions({
 }: UseLookbookDetailActionsProps): UseLookbookDetailActionsReturn {
   const router = useRouter();
   const { user } = useAuth();
+  const mountedRef = useRef(true);
 
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -106,6 +107,13 @@ export function useLookbookDetailActions({
   // Action states
   const [deleting, setDeleting] = useState(false);
   const [publishing, setPublishing] = useState(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const handleEdit = useCallback(() => {
     if (!lookbook) return;
@@ -228,12 +236,14 @@ export function useLookbookDetailActions({
 
   const openAddOutfitsModal = useCallback(async () => {
     if (!user) return;
+    if (!mountedRef.current) return;
 
     setLoadingOutfits(true);
     setShowAddOutfitsModal(true);
 
     try {
       const { data: allOutfits } = await getUserOutfits(user.id);
+      if (!mountedRef.current) return;
       if (allOutfits) {
         const existingOutfitIds = new Set(outfits.map((o) => o.id));
         const available = allOutfits.filter((o: any) => !existingOutfitIds.has(o.id));
@@ -246,10 +256,13 @@ export function useLookbookDetailActions({
             imageUrlMap.set(outfit.id, url);
           })
         );
+        if (!mountedRef.current) return;
         setAddOutfitImageUrls(imageUrlMap);
       }
     } finally {
-      setLoadingOutfits(false);
+      if (mountedRef.current) {
+        setLoadingOutfits(false);
+      }
     }
   }, [user, outfits]);
 

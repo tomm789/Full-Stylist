@@ -13,6 +13,7 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { WardrobeCategory, WardrobeItem } from '@/lib/wardrobe';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -81,9 +82,10 @@ export default function CategorySlotSelector({
               <View style={styles.selectedItem}>
                 {itemImageUrl && (
                   <Image
+                    {...GRID_IMAGE_PROPS}
                     source={{ uri: itemImageUrl }}
                     style={styles.itemImage}
-                    contentFit="cover"
+                    recyclingKey={selectedItem.id}
                   />
                 )}
                 <Text style={styles.itemTitle} numberOfLines={2}>

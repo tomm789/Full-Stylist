@@ -101,7 +101,7 @@ export function useNewBodyshot(): UseNewBodyshotReturn {
     if (!user || !selectedHeadshotId) return;
 
     const startTime = performance.now();
-    console.log('[PERF] Bodyshot generate clicked at:', startTime);
+        if (__DEV__) console.log('[PERF] Bodyshot generate clicked at:', startTime);
 
     const generatedImageId = await imageGeneration.generateBodyShot(
       user.id,
@@ -110,8 +110,8 @@ export function useNewBodyshot(): UseNewBodyshotReturn {
     if (generatedImageId) {
       const apiResponseTime = performance.now();
       const backendProcessingTime = apiResponseTime - startTime;
-      console.log('[PERF] Bodyshot API response at:', apiResponseTime);
-      console.log(
+            if (__DEV__) console.log('[PERF] Bodyshot API response at:', apiResponseTime);
+            if (__DEV__) console.log(
         '[PERF] Bodyshot backend processing duration:',
         backendProcessingTime.toFixed(2),
         'ms'
