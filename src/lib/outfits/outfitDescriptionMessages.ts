@@ -17,6 +17,10 @@ export interface GenerationMessage {
   text: string;
 }
 
+export interface DescriptionMessageDripController {
+  cancel: () => void;
+}
+
 const DRIP_INTERVAL_MS = 1500;
 const DRIP_INITIAL_DELAY_MS = 300;
 
@@ -77,14 +81,31 @@ export function runDescriptionMessageDrip(
   messages: GenerationMessage[],
   setActiveMessage: (m: GenerationMessage | null) => void,
   setPhase: (phase: 'items' | 'analysis' | 'finalizing') => void
-): void {
+): DescriptionMessageDripController {
   let currentIndex = 0;
+  let cancelled = false;
+  let timeoutId: NodeJS.Timeout | null = null;
+
+  const schedule = (fn: () => void, delay: number) => {
+    if (cancelled) return;
+    timeoutId = setTimeout(fn, delay);
+  };
+
+  const cancel = () => {
+    cancelled = true;
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  };
 
   const showNext = () => {
+    if (cancelled) return;
+
     if (currentIndex < messages.length) {
       setActiveMessage(messages[currentIndex]);
       currentIndex++;
-      setTimeout(showNext, DRIP_INTERVAL_MS);
+      schedule(showNext, DRIP_INTERVAL_MS);
     } else {
       setPhase('finalizing');
       setActiveMessage({
@@ -95,5 +116,7 @@ export function runDescriptionMessageDrip(
     }
   };
 
-  setTimeout(showNext, DRIP_INITIAL_DELAY_MS);
+  schedule(showNext, DRIP_INITIAL_DELAY_MS);
+
+  return { cancel };
 }

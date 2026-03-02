@@ -31,11 +31,13 @@ export function useAIJobPolling({
 
   const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
   const isPollingRef = useRef(false);
+  const stoppedRef = useRef(false);
   const didCompleteRef = useRef(false);
   const attemptsRef = useRef(0);
   const currentJobIdRef = useRef<string | null>(null);
 
   const stopPolling = useCallback(() => {
+    stoppedRef.current = true;
     if (intervalIdRef.current) {
       clearInterval(intervalIdRef.current);
       intervalIdRef.current = null;
@@ -48,6 +50,7 @@ export function useAIJobPolling({
     if (!jobId || !enabled) return;
     if (isPollingRef.current && currentJobIdRef.current === jobId) return;
 
+    stoppedRef.current = false;
     currentJobIdRef.current = jobId;
     didCompleteRef.current = false;
     attemptsRef.current = 0;
@@ -57,13 +60,15 @@ export function useAIJobPolling({
 
     const poll = async () => {
       const id = currentJobIdRef.current;
-      if (!id) return;
+      if (!id || stoppedRef.current) return;
 
       try {
+        if (stoppedRef.current || currentJobIdRef.current !== id) return;
         attemptsRef.current += 1;
         setAttempts(attemptsRef.current);
 
         const { data: jobData, error: jobError } = await getAIJobNoStore(id);
+        if (stoppedRef.current || currentJobIdRef.current !== id) return;
 
         if (jobError) {
           throw jobError;
@@ -72,10 +77,10 @@ export function useAIJobPolling({
           throw new Error('Job not found');
         }
 
+        if (stoppedRef.current || currentJobIdRef.current !== id) return;
         setJob(jobData);
 
         if (jobData.status === 'succeeded' || jobData.status === 'failed') {
-          stopPolling();
           currentJobIdRef.current = null;
           if (didCompleteRef.current) return;
           didCompleteRef.current = true;
@@ -87,19 +92,21 @@ export function useAIJobPolling({
             setError(err);
             onError?.(err);
           }
+          stopPolling();
           return;
         }
 
         if (attemptsRef.current >= maxAttempts) {
-          stopPolling();
           currentJobIdRef.current = null;
           if (didCompleteRef.current) return;
           didCompleteRef.current = true;
           const err = new Error('Polling timeout - max attempts reached');
           setError(err);
           onError?.(err);
+          stopPolling();
         }
       } catch (err) {
+        if (stoppedRef.current || currentJobIdRef.current !== id) return;
         const e = err as Error;
         setError(e);
         onError?.(e);
@@ -109,6 +116,7 @@ export function useAIJobPolling({
     };
 
     await poll();
+    if (stoppedRef.current || currentJobIdRef.current !== jobId) return;
     if (intervalIdRef.current) clearInterval(intervalIdRef.current);
     intervalIdRef.current = setInterval(poll, interval);
   }, [jobId, enabled, interval, maxAttempts, onComplete, onError, stopPolling]);
@@ -121,6 +129,7 @@ export function useAIJobPolling({
     }
     startPolling();
     return () => {
+      stoppedRef.current = true;
       stopPolling();
       currentJobIdRef.current = null;
     };

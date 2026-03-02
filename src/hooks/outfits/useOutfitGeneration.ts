@@ -3,7 +3,7 @@
  * Handles outfit creation and AI generation from wardrobe with client-side image stacking.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { saveOutfit } from '@/lib/outfits';
 import { setInitialCoverDataUri } from '@/lib/outfits/initialCoverCache';
 import {
@@ -76,22 +76,36 @@ export function useOutfitGeneration({
   const [modalItems, setModalItems] = useState<GenerationItem[]>([]);
   const [activeMessage, setActiveMessage] = useState<GenerationMessage | null>(null);
   const [outfitDescription, setOutfitDescription] = useState<OutfitDescription | null>(null);
+  const descriptionDripRef = useRef<{ cancel: () => void } | null>(null);
+
+  const cancelDescriptionDrip = useCallback(() => {
+    descriptionDripRef.current?.cancel();
+    descriptionDripRef.current = null;
+  }, []);
 
   // ── Shared animation + polling hooks ────────────────────────────────────────
   const revealAnimation = useItemRevealAnimation({ setPhase: setModalPhase });
 
   const descriptionPolling = useDescriptionPolling({
     onSuccess: (description, messages) => {
+      cancelDescriptionDrip();
       setOutfitDescription(description);
       setModalPhase('analysis');
-      runDescriptionMessageDrip(messages, setActiveMessage, setModalPhase);
+      descriptionDripRef.current = runDescriptionMessageDrip(messages, setActiveMessage, setModalPhase);
     },
   });
 
   const stopAll = useCallback(() => {
+    cancelDescriptionDrip();
     revealAnimation.stop();
     descriptionPolling.stop();
-  }, [revealAnimation.stop, descriptionPolling.stop]);
+  }, [cancelDescriptionDrip, revealAnimation.stop, descriptionPolling.stop]);
+
+  useEffect(() => {
+    return () => {
+      stopAll();
+    };
+  }, [stopAll]);
 
   // ── Main generation flow ─────────────────────────────────────────────────────
   const generateOutfit = useCallback(

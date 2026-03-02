@@ -3,7 +3,7 @@
  * Actions and handlers for outfit editor screen.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -91,22 +91,40 @@ export function useOutfitEditorActions({
     'items'
   );
   const [activeMessage, setActiveMessage] = useState<any>(null);
+  const descriptionDripRef = useRef<{ cancel: () => void } | null>(null);
+
+  const cancelDescriptionDrip = useCallback(() => {
+    descriptionDripRef.current?.cancel();
+    descriptionDripRef.current = null;
+  }, []);
 
   // ── Shared animation + polling hooks ────────────────────────────────────────
   const revealAnimation = useItemRevealAnimation({ setPhase: setGenerationPhase });
 
   const descriptionPolling = useDescriptionPolling({
     onSuccess: (_description, messages) => {
+      cancelDescriptionDrip();
       setGenerationPhase('analysis');
-      runDescriptionMessageDrip(messages, setActiveMessage, setGenerationPhase);
+      descriptionDripRef.current = runDescriptionMessageDrip(
+        messages,
+        setActiveMessage,
+        setGenerationPhase
+      );
       onDescriptionReady?.();
     },
   });
 
   const stopAll = useCallback(() => {
+    cancelDescriptionDrip();
     revealAnimation.stop();
     descriptionPolling.stop();
-  }, [revealAnimation.stop, descriptionPolling.stop]);
+  }, [cancelDescriptionDrip, revealAnimation.stop, descriptionPolling.stop]);
+
+  useEffect(() => {
+    return () => {
+      stopAll();
+    };
+  }, [stopAll]);
 
   // ── Item picker ──────────────────────────────────────────────────────────────
 
