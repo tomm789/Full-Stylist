@@ -1,6 +1,8 @@
 /**
- * Add Wardrobe Item Screen (Refactored)
- * Screen for adding new wardrobe items with AI analysis
+ * Add Wardrobe Item Screen
+ * Screen for adding new wardrobe items with AI analysis.
+ * Expects either an imageUri param (from camera overlay) or an action param
+ * (photo/upload) for fallback auto-launch from external callers.
  */
 
 import React, { useMemo, useEffect, useRef } from 'react';
@@ -58,20 +60,22 @@ export default function AddItemScreen() {
     if (didAutoActionRef.current) return;
     didAutoActionRef.current = true;
 
-    // If a pre-captured image URI was passed (from inline camera), add it directly
+    // If a pre-captured image URI was passed (from camera overlay), add it directly
     if (imageUri) {
       void addImageFromUri(decodeURIComponent(imageUri));
       return;
     }
 
-    if (!action) return;
-
+    // Fallback auto-launch for external callers (HeaderAddMenu, tab menu, etc.)
     if (action === 'photo') {
       handleTakePhoto();
     } else if (action === 'upload') {
       handleUploadPhoto();
+    } else {
+      // No image and no action — redirect back
+      router.back();
     }
-  }, [action, imageUri, handleTakePhoto, handleUploadPhoto, addImageFromUri]);
+  }, [action, imageUri, handleTakePhoto, handleUploadPhoto, addImageFromUri, router]);
 
   if (wardrobeLoading) {
     return (
@@ -94,31 +98,7 @@ export default function AddItemScreen() {
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
       >
-        {selectedImages.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="image-outline" size={64} color={colors.gray400} />
-            <Text style={styles.emptyTitle}>Add Photos</Text>
-            <Text style={styles.emptyMessage}>Take a photo or upload from your library</Text>
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={handleTakePhoto}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="camera-outline" size={20} color={colors.white} />
-                <Text style={styles.actionButtonText}>Take Photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={handleUploadPhoto}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="images-outline" size={20} color={colors.white} />
-                <Text style={styles.actionButtonText}>Upload Photo</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
+        {selectedImages.length > 0 && (
           <>
             <View style={styles.imageGrid}>
               {selectedImages.map((image, index) => (
@@ -216,7 +196,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   submitButtonText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: typography.fontSize.base,
     fontWeight: '600',
   },
   errorContainer: {
@@ -232,45 +212,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.white,
     fontSize: 14,
     textAlign: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xxxl,
-  },
-  emptyTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  emptyMessage: {
-    fontSize: typography.fontSize.base,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-    textAlign: 'center',
-  },
-  buttonContainer: {
-    width: '100%',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    gap: spacing.sm,
-  },
-  actionButtonText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
   },
 });

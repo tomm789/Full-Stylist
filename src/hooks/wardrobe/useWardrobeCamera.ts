@@ -1,11 +1,11 @@
 /**
  * useWardrobeCamera Hook
- * Manages inline camera state for the wardrobe screen's left-swipe camera feature.
- * Handles permissions, capture, slide animations, and gallery thumbnail.
+ * Manages the wardrobe camera overlay state, permissions, capture,
+ * slide-from-bottom animation, and gallery thumbnail.
  */
 
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { Animated, Dimensions, Platform, Alert } from 'react-native';
+import { Animated, Dimensions, Alert } from 'react-native';
 import { CameraView } from 'expo-camera';
 import { useCameraPermissions } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
@@ -24,9 +24,8 @@ interface UseWardrobeCameraReturn {
   isOpen: boolean;
   cameraReady: boolean;
 
-  // Animation values
-  gridTranslateX: Animated.Value;
-  cameraTranslateX: Animated.Value;
+  // Animation value (slide from bottom)
+  cameraTranslateY: Animated.Value;
 
   // Camera ref
   cameraRef: React.RefObject<CameraView | null>;
@@ -46,7 +45,7 @@ interface UseWardrobeCameraReturn {
 }
 
 export function useWardrobeCamera(): UseWardrobeCameraReturn {
-  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
 
   const [isOpen, setIsOpen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
@@ -55,13 +54,11 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
   const cameraRef = useRef<CameraView | null>(null);
   const isAnimating = useRef(false);
 
-  // Animation values: grid starts at 0, camera starts off-screen left
-  const gridTranslateX = useRef(new Animated.Value(0)).current;
-  const cameraTranslateX = useRef(new Animated.Value(-screenWidth)).current;
+  // Slide-from-bottom animation (starts off-screen below)
+  const cameraTranslateY = useRef(new Animated.Value(screenHeight)).current;
 
   // Permissions
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [mediaLibraryPermission, setMediaLibraryPermission] = useState<boolean | null>(null);
 
   const hasPermission = cameraPermission?.granted ?? null;
 
@@ -71,7 +68,6 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
 
     (async () => {
       const { status } = await MediaLibrary.requestPermissionsAsync();
-      setMediaLibraryPermission(status === 'granted');
 
       if (status === 'granted') {
         const { assets } = await MediaLibrary.getAssetsAsync({
@@ -102,44 +98,30 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
       isAnimating.current = true;
       setIsOpen(true);
 
-      Animated.parallel([
-        Animated.timing(gridTranslateX, {
-          toValue: screenWidth,
-          duration: ANIMATION_DURATION,
-          useNativeDriver: true,
-        }),
-        Animated.timing(cameraTranslateX, {
-          toValue: 0,
-          duration: ANIMATION_DURATION,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
+      Animated.timing(cameraTranslateY, {
+        toValue: 0,
+        duration: ANIMATION_DURATION,
+        useNativeDriver: true,
+      }).start(() => {
         isAnimating.current = false;
       });
     })();
-  }, [isOpen, cameraPermission, requestCameraPermission, gridTranslateX, cameraTranslateX, screenWidth]);
+  }, [isOpen, cameraPermission, requestCameraPermission, cameraTranslateY]);
 
   const close = useCallback(() => {
     if (isAnimating.current || !isOpen) return;
     isAnimating.current = true;
 
-    Animated.parallel([
-      Animated.timing(gridTranslateX, {
-        toValue: 0,
-        duration: ANIMATION_DURATION,
-        useNativeDriver: true,
-      }),
-      Animated.timing(cameraTranslateX, {
-        toValue: -screenWidth,
-        duration: ANIMATION_DURATION,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    Animated.timing(cameraTranslateY, {
+      toValue: screenHeight,
+      duration: ANIMATION_DURATION,
+      useNativeDriver: true,
+    }).start(() => {
       isAnimating.current = false;
       setIsOpen(false);
       setCameraReady(false);
     });
-  }, [isOpen, gridTranslateX, cameraTranslateX, screenWidth]);
+  }, [isOpen, cameraTranslateY, screenHeight]);
 
   const onCameraReady = useCallback(() => {
     setCameraReady(true);
@@ -193,8 +175,7 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
   return {
     isOpen,
     cameraReady,
-    gridTranslateX,
-    cameraTranslateX,
+    cameraTranslateY,
     cameraRef,
     open,
     close,

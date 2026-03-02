@@ -24,4 +24,6 @@ export { ItemActions } from './ItemActions';
 export { CategorySelector } from './CategorySelector';
 export { AttributeEditor } from './AttributeEditor';
 export { AddAttributeModal } from './AddAttributeModal';
+export { default as WardrobeCameraOverlay } from './WardrobeCameraOverlay';
+export { default as CropEditor } from './CropEditor';
 export { FilterPillGroup, FilterAccordionSection } from '@/components/shared';

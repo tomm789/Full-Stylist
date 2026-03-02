@@ -1,11 +1,13 @@
 /**
  * WardrobeCameraOverlay
- * Inline camera view for the wardrobe screen's left-swipe camera feature.
- * Renders a full-screen camera with capture button, close button, and
- * a gallery thumbnail in the bottom-left that opens the photo library.
+ * Full-screen camera overlay for the wardrobe screen.
+ * Renders a camera with capture button, close button, flash/flip controls,
+ * and a gallery thumbnail in the bottom-left that opens the photo library.
+ *
+ * After capture or library selection, shows the CropEditor for 1:1 crop.
  */
 
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -17,50 +19,66 @@ import { CameraView } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import CropEditor from './CropEditor';
 
 const CAPTURE_BUTTON_SIZE = 72;
 const CAPTURE_BUTTON_INNER = 60;
 const THUMBNAIL_SIZE = 48;
 
+type OverlayMode = 'camera' | 'crop';
+
 interface WardrobeCameraOverlayProps {
-  /** Animated translateX value for slide animation */
-  translateX: Animated.Value;
+  /** Animated translateY value for slide-from-bottom animation */
+  translateY: Animated.Value;
   /** Whether the camera is currently open (controls CameraView mount) */
   isOpen: boolean;
   /** Ref to the CameraView for taking pictures */
   cameraRef: React.RefObject<CameraView | null>;
   /** Called when camera becomes ready */
   onCameraReady: () => void;
-  /** Called when user presses the capture button */
-  onCapture: () => void;
+  /** Called with the final cropped image URI */
+  onImageReady: (croppedUri: string) => void;
   /** Called when user presses close/back */
   onClose: () => void;
-  /** Called when user taps the gallery thumbnail */
-  onPickFromLibrary: () => void;
+  /** Called when user taps the gallery thumbnail — should return the selected image URI or null */
+  pickFromLibrary: () => Promise<{ uri: string } | null>;
   /** URI of the most recent camera roll photo (thumbnail preview) */
   lastPhotoUri: string | null;
+  /** Capture function from useWardrobeCamera */
+  capture: () => Promise<{ uri: string } | null>;
 }
 
 export default function WardrobeCameraOverlay({
-  translateX,
+  translateY,
   isOpen,
   cameraRef,
   onCameraReady,
-  onCapture,
+  onImageReady,
   onClose,
-  onPickFromLibrary,
+  pickFromLibrary,
   lastPhotoUri,
+  capture,
 }: WardrobeCameraOverlayProps) {
   const insets = useSafeAreaInsets();
-  const [selectedLens, setSelectedLens] = React.useState<string | null>(null);
+  const [selectedLens, setSelectedLens] = useState<string | null>(null);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
+  // Camera controls state
+  const [flashMode, setFlashMode] = useState<'off' | 'on'>('off');
+  const [facing, setFacing] = useState<'back' | 'front'>('back');
+
+  // Mode: camera viewfinder or crop editor
+  const [mode, setMode] = useState<OverlayMode>('camera');
+  const [capturedUri, setCapturedUri] = useState<string | null>(null);
+
+  // Layout calculations
   const topBarHeight = insets.top + 8 + 40;
   const bottomBarHeight = insets.bottom + 24 + CAPTURE_BUTTON_SIZE;
   const availableHeight = Math.max(0, screenHeight - topBarHeight - bottomBarHeight);
   const cropGuideSize = Math.max(120, Math.min(screenWidth - 32, availableHeight - 24));
   const cropGuideTop = topBarHeight + Math.max(0, (availableHeight - cropGuideSize) / 2);
 
-  const handleAvailableLensesChanged = React.useCallback((event: { lenses: string[] }) => {
+  const handleAvailableLensesChanged = useCallback((event: { lenses: string[] }) => {
     const lenses = event?.lenses ?? [];
     if (lenses.length === 0) return;
 
@@ -73,25 +91,93 @@ export default function WardrobeCameraOverlay({
     setSelectedLens(standard);
   }, []);
 
-  // Don't render CameraView when closed to save resources
+  const handleFlipCamera = useCallback(() => {
+    setFacing((prev) => {
+      const next = prev === 'back' ? 'front' : 'back';
+      // Disable flash on front camera
+      if (next === 'front') setFlashMode('off');
+      return next;
+    });
+  }, []);
+
+  const handleToggleFlash = useCallback(() => {
+    // Flash only works with back camera
+    if (facing === 'front') return;
+    setFlashMode((prev) => (prev === 'off' ? 'on' : 'off'));
+  }, [facing]);
+
+  const handleCapture = useCallback(async () => {
+    const result = await capture();
+    if (result) {
+      setCapturedUri(result.uri);
+      setMode('crop');
+    }
+  }, [capture]);
+
+  const handlePickFromLibrary = useCallback(async () => {
+    const result = await pickFromLibrary();
+    if (result) {
+      setCapturedUri(result.uri);
+      setMode('crop');
+    }
+  }, [pickFromLibrary]);
+
+  const handleCropCancel = useCallback(() => {
+    setCapturedUri(null);
+    setMode('camera');
+  }, []);
+
+  const handleCropChoose = useCallback((croppedUri: string) => {
+    setCapturedUri(null);
+    setMode('camera');
+    onImageReady(croppedUri);
+  }, [onImageReady]);
+
+  const handleClose = useCallback(() => {
+    // Reset state when closing
+    setCapturedUri(null);
+    setMode('camera');
+    setFlashMode('off');
+    setFacing('back');
+    onClose();
+  }, [onClose]);
+
+  // Don't render when closed to save resources
   if (!isOpen) return null;
 
+  // Crop editor mode
+  if (mode === 'crop' && capturedUri) {
+    return (
+      <Animated.View
+        style={[styles.container, { transform: [{ translateY }] }]}
+      >
+        <CropEditor
+          imageUri={capturedUri}
+          onCancel={handleCropCancel}
+          onChoose={handleCropChoose}
+          cancelLabel="Retake"
+          chooseLabel="Choose"
+        />
+      </Animated.View>
+    );
+  }
+
+  // Camera viewfinder mode
   return (
     <Animated.View
-      style={[
-        styles.container,
-        { transform: [{ translateX }] },
-      ]}
+      style={[styles.container, { transform: [{ translateY }] }]}
     >
       <CameraView
         ref={cameraRef}
         style={styles.camera}
-        facing="back"
+        facing={facing}
+        flash={flashMode}
         selectedLens={selectedLens || undefined}
         onAvailableLensesChanged={handleAvailableLensesChanged}
         onCameraReady={onCameraReady}
       />
 
+      {/* Crop guide overlay */}
       <View
         pointerEvents="none"
         style={[
@@ -105,16 +191,40 @@ export default function WardrobeCameraOverlay({
         ]}
       />
 
-      {/* Top bar with close button */}
+      {/* Top bar: close, flash, flip */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
-          style={styles.closeButton}
-          onPress={onClose}
+          style={styles.controlButton}
+          onPress={handleClose}
           activeOpacity={0.7}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <Ionicons name="close" size={28} color="#fff" />
         </TouchableOpacity>
+
+        <View style={styles.topBarRight}>
+          <TouchableOpacity
+            style={[styles.controlButton, facing === 'front' && styles.controlButtonDisabled]}
+            onPress={handleToggleFlash}
+            activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons
+              name={flashMode === 'on' ? 'flash' : 'flash-outline'}
+              size={22}
+              color={facing === 'front' ? 'rgba(255,255,255,0.3)' : '#fff'}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={handleFlipCamera}
+            activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="camera-reverse-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Bottom controls */}
@@ -122,7 +232,7 @@ export default function WardrobeCameraOverlay({
         {/* Gallery thumbnail (bottom-left) */}
         <TouchableOpacity
           style={styles.thumbnailButton}
-          onPress={onPickFromLibrary}
+          onPress={handlePickFromLibrary}
           activeOpacity={0.7}
         >
           {lastPhotoUri ? (
@@ -141,7 +251,7 @@ export default function WardrobeCameraOverlay({
         {/* Capture button (bottom-center) */}
         <TouchableOpacity
           style={styles.captureButton}
-          onPress={onCapture}
+          onPress={handleCapture}
           activeOpacity={0.7}
         >
           <View style={styles.captureButtonInner} />
@@ -158,6 +268,7 @@ const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#000',
+    zIndex: 100,
   },
   camera: {
     flex: 1,
@@ -177,14 +288,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  closeButton: {
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  controlButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  controlButtonDisabled: {
+    opacity: 0.5,
   },
   bottomBar: {
     position: 'absolute',
