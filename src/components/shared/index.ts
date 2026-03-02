@@ -36,3 +36,7 @@ export { default as CreatorBar } from './CreatorBar';
 
 // Wardrobe
 export { default as WardrobeCategoryIcon } from './WardrobeCategoryIcon';
+
+// Generation
+export { default as GenerationThumbnailStrip } from './GenerationThumbnailStrip';
+export type { ThumbnailItem, GenerationThumbnailStripProps } from './GenerationThumbnailStrip';

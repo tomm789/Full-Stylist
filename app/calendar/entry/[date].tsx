@@ -23,7 +23,7 @@ import {
   StatusSelector,
   CreatePresetModal,
 } from '@/components/calendar';
-import { LoadingSpinner, PrimaryButton } from '@/components/shared';
+import { LoadingSpinner } from '@/components/shared';
 import { KeyboardAwareScreen } from '@/components/shared/layout';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -186,6 +186,16 @@ export default function CalendarEntryScreen() {
           </Text>
           <Text style={styles.subtitleText}>{dateLabel}</Text>
         </View>
+        <TouchableOpacity
+          style={styles.headerSaveButton}
+          onPress={handleSave}
+          disabled={saving}
+          accessibilityLabel={editingEntry ? 'Update entry' : 'Save entry'}
+        >
+          <Text style={[styles.headerSaveText, saving && { opacity: 0.5 }]}>
+            {saving ? 'Saving...' : 'Save'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <KeyboardAwareScreen
@@ -199,13 +209,6 @@ export default function CalendarEntryScreen() {
           selectedPresetId={selectedPreset}
           onSelectPreset={setSelectedPreset}
           onCreatePreset={() => setShowCreatePresetModal(true)}
-        />
-
-        <OutfitGridPicker
-          outfits={outfits}
-          outfitImages={outfitImages}
-          selectedOutfitId={selectedOutfit}
-          onSelectOutfit={setSelectedOutfit}
         />
 
         <StatusSelector
@@ -228,15 +231,12 @@ export default function CalendarEntryScreen() {
           />
         </View>
 
-        <View style={styles.submitContainer}>
-          <PrimaryButton
-            title={editingEntry ? 'Update Entry' : 'Add Entry'}
-            onPress={handleSave}
-            loading={saving}
-            disabled={saving}
-            fullWidth
-          />
-        </View>
+        <OutfitGridPicker
+          outfits={outfits}
+          outfitImages={outfitImages}
+          selectedOutfitId={selectedOutfit}
+          onSelectOutfit={setSelectedOutfit}
+        />
       </KeyboardAwareScreen>
 
       <CreatePresetModal
@@ -279,6 +279,15 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   headerText: {
     flex: 1,
   },
+  headerSaveButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  headerSaveText: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.primary,
+  },
   titleText: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
@@ -317,8 +326,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     height: 80,
     textAlignVertical: 'top',
     paddingTop: spacing.sm,
-  },
-  submitContainer: {
-    marginBottom: spacing.xl,
   },
 });

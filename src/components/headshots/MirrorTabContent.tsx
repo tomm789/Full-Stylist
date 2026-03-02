@@ -21,7 +21,8 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { EdgePeekSlider, PillButton } from '@/components/shared';
+import { EdgePeekSlider, PillButton, GenerationThumbnailStrip } from '@/components/shared';
+import type { ThumbnailItem } from '@/components/shared';
 import IconSegmentedToggle from '@/components/shared/buttons/IconSegmentedToggle';
 import HeadshotPromptSettings from '@/components/headshots/HeadshotPromptSettings';
 import AdvancedFieldsPanel from '@/components/headshots/AdvancedFieldsPanel';
@@ -109,6 +110,14 @@ interface MirrorTabContentProps {
   // Edit tab request from header pill row
   editTabRequest?: EditTab | null;
   onEditTabRequestHandled?: () => void;
+
+  // Generation thumbnail strip (optional — shown when variations exist)
+  thumbnailItems?: ThumbnailItem[];
+  onThumbnailSelect?: (id: string) => void;
+  thumbnailCanNavigateBack?: boolean;
+  thumbnailCanNavigateForward?: boolean;
+  onThumbnailNavigateBack?: () => void;
+  onThumbnailNavigateForward?: () => void;
 }
 
 export default function MirrorTabContent({
@@ -160,6 +169,12 @@ export default function MirrorTabContent({
   scrollEventThrottle = 16,
   editTabRequest = null,
   onEditTabRequestHandled,
+  thumbnailItems,
+  onThumbnailSelect,
+  thumbnailCanNavigateBack,
+  thumbnailCanNavigateForward,
+  onThumbnailNavigateBack,
+  onThumbnailNavigateForward,
 }: MirrorTabContentProps) {
   const colors = useThemeColors();
   const { width: windowWidth } = useWindowDimensions();
@@ -258,6 +273,19 @@ export default function MirrorTabContent({
             </View>
           )}
         </View>
+
+        {/* Generation thumbnail strip — below slider, above controls */}
+        {!generating && thumbnailItems && thumbnailItems.length > 0 && onThumbnailSelect && (
+          <GenerationThumbnailStrip
+            items={thumbnailItems}
+            onSelect={onThumbnailSelect}
+            canNavigateBack={thumbnailCanNavigateBack}
+            canNavigateForward={thumbnailCanNavigateForward}
+            onNavigateBack={onThumbnailNavigateBack}
+            onNavigateForward={onThumbnailNavigateForward}
+            style={{ paddingHorizontal: spacing.md }}
+          />
+        )}
 
         {!generating && (
           <>

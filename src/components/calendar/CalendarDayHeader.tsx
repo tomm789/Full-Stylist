@@ -18,7 +18,7 @@ interface CalendarDayHeaderProps {
   onNavigateDay: (direction: 'prev' | 'next') => void;
 }
 
-export function CalendarDayHeader({
+function CalendarDayHeaderInner({
   date,
   onBack,
   onNavigateDay,
@@ -66,9 +66,11 @@ export function CalendarDayHeader({
   );
 }
 
+export const CalendarDayHeader = React.memo(CalendarDayHeaderInner);
+
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
-    paddingTop: 60,
+    paddingTop: spacing.xl,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,

@@ -47,3 +47,20 @@ export {
   outfitDescriptionToGenerationMessages,
   runDescriptionMessageDrip,
 } from './outfitDescriptionMessages';
+
+// Generation sessions
+export {
+  type OutfitGenerationSession,
+  type OutfitGenerationVariation,
+  type OutfitVariationSnapshot,
+  getActiveOutfitSession,
+  createOutfitSession,
+  updateOutfitSessionInput,
+  endOutfitSession,
+  listOutfitVariations,
+  createOutfitVariation,
+  updateOutfitVariation,
+  getOutfitVariationByImageId,
+  saveVariationAsOutfit,
+  resolveImageUrls,
+} from './sessions';

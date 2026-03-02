@@ -34,6 +34,9 @@ import FollowingWardrobesScreen from '@/app/social/following-wardrobes';
 // Hooks
 import { useWardrobe, useWardrobeItems, useFilters } from '@/hooks';
 import { useOutfitGeneration, useBackgroundGridGenerator } from '@/hooks/outfits';
+import { useOutfitSessionData } from '@/hooks/outfits/useOutfitSessionData';
+import { useOutfitSessionNavigation } from '@/hooks/outfits/useOutfitSessionNavigation';
+import { saveVariationAsOutfit } from '@/lib/outfits/sessions';
 import { useOutfitDraft } from '@/hooks/wardrobe/useOutfitDraft';
 import { useBodyShotGeneration } from '@/hooks/wardrobe/useBodyShotGeneration';
 import { useCanvasLayout } from '@/hooks/wardrobe/useCanvasLayout';
@@ -46,7 +49,10 @@ import {
   LoadingOverlay,
   LoadingSpinner,
   HeaderTabPill,
+  GenerationThumbnailStrip,
 } from '@/components/shared';
+import type { ThumbnailItem } from '@/components/shared';
+import { Image } from 'expo-image';
 import { WardrobeTabIcon } from '@/components/icons/tabs';
 
 // Wardrobe Components
@@ -229,6 +235,22 @@ export default function WardrobeScreen() {
   const pregenGridEnabled =
     typeof process !== 'undefined' && process.env.EXPO_PUBLIC_PREGEND_GRID === 'true';
 
+  // ── Session hooks ──────────────────────────────────────────────────────────
+  const sessionData = useOutfitSessionData({
+    userId: user?.id ?? null,
+    enabled: outfitCreatorMode,
+  });
+
+  const sessionNav = useOutfitSessionNavigation({
+    variations: sessionData.variations,
+    variationUrls: sessionData.variationUrls,
+    resolveImageUrl: sessionData.resolveImageUrl,
+  });
+
+  const handleVariationCreated = useCallback(() => {
+    sessionData.refreshVariations();
+  }, [sessionData.refreshVariations]);
+
   const { generating, progress, generatedOutfitId, generateOutfit, reset: resetGeneration } =
     useOutfitGeneration({
       userId: user?.id || '',
@@ -237,6 +259,7 @@ export default function WardrobeScreen() {
         pregenGridEnabled && backgroundGrid && !hasCustomCreatorLayout
           ? { getStoredKeyOrAwaitPending: backgroundGrid.getStoredKeyOrAwaitPending }
           : null,
+      onVariationCreated: handleVariationCreated,
     });
 
   // ── Filtering ────────────────────────────────────────────────────────────────
@@ -319,6 +342,49 @@ export default function WardrobeScreen() {
     resetOutfitCreatorState();
   }, [outfitCreatorMode, selectedOutfitItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Session: auto-select latest variation after generation ─────────────────
+  const [autoSelectNext, setAutoSelectNext] = useState(false);
+
+  useEffect(() => {
+    if (autoSelectNext && sessionNav.completedVariations.length > 0) {
+      sessionNav.selectLatest();
+      setAutoSelectNext(false);
+    }
+  }, [autoSelectNext, sessionNav.completedVariations.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Session: thumbnail data for the strip ──────────────────────────────────
+  const thumbnailItems = useMemo<ThumbnailItem[]>(() => {
+    return sessionNav.completedVariations.map((v) => ({
+      id: v.id,
+      imageUrl: sessionData.variationUrls.get(v.image_id!) ?? null,
+      isActive: v.id === sessionNav.preview.variationId,
+      isSaved: v.is_saved,
+      status: v.status as ThumbnailItem['status'],
+    }));
+  }, [sessionNav.completedVariations, sessionData.variationUrls, sessionNav.preview.variationId]);
+
+  const handleThumbnailSelect = useCallback((id: string) => {
+    const variation = sessionData.variations.find((v) => v.id === id);
+    if (variation) sessionNav.selectVariation(variation);
+  }, [sessionData.variations, sessionNav.selectVariation]);
+
+  const previewOutfitId = useMemo(() => {
+    if (!sessionNav.preview.variationId) return null;
+    const v = sessionData.variations.find((vi) => vi.id === sessionNav.preview.variationId);
+    return v?.outfit_id ?? null;
+  }, [sessionNav.preview.variationId, sessionData.variations]);
+
+  const handleSaveVariation = useCallback(async (variationId: string) => {
+    if (!user?.id) return;
+    const newOutfitId = await saveVariationAsOutfit(variationId, user.id);
+    if (newOutfitId) {
+      sessionData.refreshVariations();
+      Alert.alert('Saved', 'Outfit saved as a copy.');
+    } else {
+      Alert.alert('Error', 'Failed to save outfit.');
+    }
+  }, [user?.id, sessionData.refreshVariations]);
+
   // ── Camera navigation ────────────────────────────────────────────────────────
   const handleOpenCamera = useCallback(() => {
     if (cameraNavLockRef.current) return;
@@ -373,7 +439,10 @@ export default function WardrobeScreen() {
     setOutfitCreatorMode(false);
     handleCategorySelect(null);
     updateFilter('subcategoryId', null);
-  }, [handleCategorySelect, updateFilter, canvas.setOutfitCanvasLayouts, canvas.setOutfitCanvasTrims, canvas.setOutfitCanvasTrimStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+    sessionData.endSession();
+    sessionNav.clearPreview();
+    setAutoSelectNext(false);
+  }, [handleCategorySelect, updateFilter, canvas.setOutfitCanvasLayouts, canvas.setOutfitCanvasTrims, canvas.setOutfitCanvasTrimStatuses, sessionData.endSession, sessionNav.clearPreview]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToggleExpanded = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -480,25 +549,21 @@ export default function WardrobeScreen() {
       Alert.alert('Error', 'Failed to load selected items');
       return;
     }
+
+    // Ensure a session exists for variation tracking (lazy — first generation creates it)
+    const sid = await sessionData.ensureSession();
+
     const result = await logClientTiming('outfit_generation_client', async () => {
       return generateOutfit(
         selectedWardrobeItems,
         hasCustomCreatorLayout ? activeOutfitCanvasLayouts : null,
-        hasCustomCreatorLayout ? activeOutfitCanvasTrims : null
+        hasCustomCreatorLayout ? activeOutfitCanvasTrims : null,
+        sid
       );
     });
     if (result.success && result.outfitId) {
-      resetOutfitCreatorState();
-      const navigateAt = Date.now();
-      console.debug('[outfit_render_timing] navigate_to_view_at', {
-        ts: navigateAt,
-        outfitId: result.outfitId,
-        traceId: result.renderTraceId,
-      });
-      const query = result.renderTraceId
-        ? `?renderTraceId=${encodeURIComponent(result.renderTraceId)}`
-        : '';
-      router.push(`/outfits/${result.outfitId}/view${query}`);
+      // Stay on wardrobe page — auto-select the latest variation once loaded
+      setAutoSelectNext(true);
     } else {
       Alert.alert('Error', result.error || 'Failed to generate outfit');
     }
@@ -513,8 +578,8 @@ export default function WardrobeScreen() {
 
   const handleModalEdit = () => {
     if (!selectedItem) return;
-    setShowItemModal(false);
     router.push(`/wardrobe/item/${selectedItem.id}/edit`);
+    setTimeout(() => setShowItemModal(false), 50);
   };
 
   const { handleSearchResultPress } = useSearchResultNavigation();
@@ -580,8 +645,13 @@ export default function WardrobeScreen() {
     windowHeight - creatorCanvasTop - panelBottomOffset
   );
   const isCreatorVisible = outfitCreatorMode && selectedOutfitItems.length > 0;
+  const hasSessionPreview = isCreatorVisible && thumbnailItems.length > 0;
+  // Extra bottom padding when the session preview strip is visible above the creator panel
+  const sessionPreviewHeight = hasSessionPreview
+    ? (sessionNav.preview.imageUrl ? 200 + theme.spacing.sm : 0) + 68 + 40
+    : 0;
   const listBottomPadding = isCreatorVisible
-    ? panelBottomOffset + PANEL_COLLAPSED_HEIGHT + theme.spacing.md
+    ? panelBottomOffset + PANEL_COLLAPSED_HEIGHT + theme.spacing.md + sessionPreviewHeight
     : theme.spacing.xl + CREATOR_BAR_HEIGHT + theme.spacing.md + insets.bottom;
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -766,6 +836,98 @@ export default function WardrobeScreen() {
           onEdit={handleModalEdit}
           onDelete={handleModalDelete}
         />
+      )}
+
+      {/* Session Preview + Thumbnail Strip */}
+      {hasSessionPreview && (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: panelBottomOffset + PANEL_COLLAPSED_HEIGHT + theme.spacing.sm,
+            left: 0,
+            right: 0,
+            backgroundColor: colors.background,
+            paddingHorizontal: theme.spacing.md,
+            paddingTop: theme.spacing.sm,
+            zIndex: 14,
+          }}
+        >
+          {sessionNav.preview.imageUrl && (
+            <TouchableOpacity
+              style={{
+                width: '100%',
+                height: 200,
+                borderRadius: 12,
+                overflow: 'hidden',
+                marginBottom: theme.spacing.sm,
+                backgroundColor: colors.backgroundSecondary,
+              }}
+              onPress={() =>
+                previewOutfitId && router.push(`/outfits/${previewOutfitId}/view`)
+              }
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{ uri: sessionNav.preview.imageUrl }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="contain"
+              />
+            </TouchableOpacity>
+          )}
+          <GenerationThumbnailStrip
+            items={thumbnailItems}
+            onSelect={handleThumbnailSelect}
+            canNavigateBack={sessionNav.canNavigateBack}
+            canNavigateForward={sessionNav.canNavigateForward}
+            onNavigateBack={() => sessionNav.handleNavigate('back')}
+            onNavigateForward={() => sessionNav.handleNavigate('forward')}
+            onSavePress={handleSaveVariation}
+            showSaveIndicator
+          />
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'flex-end',
+              gap: theme.spacing.md,
+              paddingBottom: theme.spacing.xs,
+            }}
+          >
+            {previewOutfitId && (
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  borderRadius: 8,
+                }}
+                onPress={() => router.push(`/outfits/${previewOutfitId}/view`)}
+              >
+                <Ionicons name="eye-outline" size={16} color={colors.textPrimary} />
+                <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>
+                  View
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                paddingVertical: 6,
+                paddingHorizontal: 12,
+                borderRadius: 8,
+              }}
+              onPress={resetOutfitCreatorState}
+            >
+              <Ionicons name="checkmark" size={16} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>
+                Done
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       {/* Outfit Creator Panel & Bar */}

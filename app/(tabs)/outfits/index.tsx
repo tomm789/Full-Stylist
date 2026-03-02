@@ -5,6 +5,9 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
+  Text,
+  FlatList as RNFlatList,
+  ScrollView,
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
@@ -41,12 +44,13 @@ import {
   useTryOnOutfit,
   useSocialModals,
 } from '@/hooks/social';
-import { useLookbookSelection, useLookbookTabs } from '@/hooks/lookbooks';
+import { useLookbookSelection, useLookbookTabs, useLookbooks, useSystemLookbooks } from '@/hooks/lookbooks';
+import { LookbookCard, SystemLookbookCard } from '@/components/lookbooks';
 import LookbookQuickAddModal from '@/components/outfits/LookbookQuickAddModal';
 import LookbookSelectionBar from '@/components/outfits/LookbookSelectionBar';
 import { LOOKBOOK_PANEL_COLLAPSED_HEIGHT } from '@/components/lookbooks/LookbookCreatorPanel';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
-import { layout, spacing } from '@/styles';
+import { layout, spacing, theme } from '@/styles';
 import { useSlotPresets } from '@/hooks/calendar';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 import createOutfitStyles from './styles';
@@ -157,6 +161,29 @@ export default function OutfitsScreen() {
     availableLookbooks,
     loadingLookbooks: loadingAvailableLookbooks,
   } = useLookbookTabs({ userId: user?.id });
+
+  const {
+    lookbooks: allLookbooks,
+    thumbnails: lookbookThumbnails,
+    loading: lookbooksLoading,
+    loadingIds: lookbookLoadingIds,
+    refresh: refreshLookbooks,
+  } = useLookbooks({ userId: user?.id });
+
+  const {
+    systemLookbooks,
+    loading: systemLookbooksLoading,
+    refresh: refreshSystemLookbooks,
+  } = useSystemLookbooks({ userId: user?.id });
+
+  const sortedLookbooks = React.useMemo(() => {
+    const pinnedIds = new Set(pinnedLookbooks.map((lb) => lb.id));
+    return [...allLookbooks].sort((a, b) => {
+      const aPinned = pinnedIds.has(a.id) ? 0 : 1;
+      const bPinned = pinnedIds.has(b.id) ? 0 : 1;
+      return aPinned - bPinned;
+    });
+  }, [allLookbooks, pinnedLookbooks]);
 
   // ── Tab state ─────────────────────────────────────────────────────────────────
   const {
@@ -671,29 +698,76 @@ export default function OutfitsScreen() {
         onResultPress={handleSearchResultPress}
       />
 
-      {activeTab === 'lookbooks' && pinnedLookbooks.length === 0 && availableLookbooks.length === 0 && !loadingAvailableLookbooks ? (
-        <View style={[commonStyles.container, styles.loadingContainer]}>
-          <EmptyState
-            icon="book-outline"
-            title="Your lookbooks"
-            message="Create your first lookbook to organize your outfits."
-            actionLabel="Create lookbook"
-            onAction={() => {
-              setSelectionMode(true);
-              setLookbookPickerVisible(true);
-            }}
-          />
-        </View>
-      ) : activeTab === 'lookbooks' && pinnedLookbooks.length === 0 ? (
-        <View style={[commonStyles.container, styles.loadingContainer]}>
-          <EmptyState
-            icon="book-outline"
-            title="Your lookbooks"
-            message="Select a lookbook to view its outfits."
-            actionLabel="Select lookbook"
-            onAction={() => setShowLookbookAddModal(true)}
-          />
-        </View>
+      {activeTab === 'lookbooks' ? (
+        lookbooksLoading && allLookbooks.length === 0 && systemLookbooks.length === 0 ? (
+          <View style={[commonStyles.container, styles.loadingContainer]}>
+            <LoadingSpinner text="Loading lookbooks..." />
+          </View>
+        ) : allLookbooks.length === 0 && systemLookbooks.every((lb) => lb.outfits.length === 0) ? (
+          <View style={[commonStyles.container, styles.loadingContainer]}>
+            <EmptyState
+              icon="book-outline"
+              title="Your lookbooks"
+              message="Create your first lookbook to organize your outfits."
+              actionLabel="Create lookbook"
+              onAction={() => {
+                setSelectionMode(true);
+                setLookbookPickerVisible(true);
+              }}
+            />
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.container}
+            contentContainerStyle={{ paddingBottom: listBottomPadding }}
+            onScroll={handleGridScroll}
+            scrollEventThrottle={16}
+          >
+            {systemLookbooks.length > 0 && (
+              <View style={styles.lookbookSection}>
+                <Text style={styles.lookbookSectionTitle}>Highlights</Text>
+                <RNFlatList
+                  horizontal
+                  data={systemLookbooks}
+                  renderItem={({ item }) => (
+                    <SystemLookbookCard
+                      lookbook={item}
+                      onPress={() => router.push(`/lookbooks/system-${item.category}`)}
+                      onPlayPress={() => {}}
+                    />
+                  )}
+                  keyExtractor={(item) => item.category}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.lookbookHorizontalList}
+                />
+              </View>
+            )}
+
+            <View style={styles.lookbookSection}>
+              <View style={styles.lookbookSectionHeader}>
+                <Text style={styles.lookbookSectionTitle}>My Lookbooks</Text>
+                <Text
+                  style={styles.lookbookAddButton}
+                  onPress={() => router.push('/lookbooks/new')}
+                >
+                  + New
+                </Text>
+              </View>
+              <View style={styles.lookbookGrid}>
+                {sortedLookbooks.map((lookbook) => (
+                  <LookbookCard
+                    key={lookbook.id}
+                    lookbook={lookbook}
+                    thumbnailUrl={lookbookThumbnails.get(lookbook.id) || null}
+                    loading={lookbookLoadingIds.has(lookbook.id)}
+                    onPress={() => router.push(`/lookbooks/${lookbook.id}`)}
+                    onPlayPress={() => router.push(`/lookbooks/${lookbook.id}`)}
+                  />
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+        )
       ) : activeTab.startsWith('lookbook_') || activeTab === 'my_outfits' ? (
         <OutfitsMyOutfitsTab
           {...myOutfitsTabProps}

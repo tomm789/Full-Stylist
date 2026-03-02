@@ -116,7 +116,7 @@ export default function RootLayout() {
                 <Stack.Screen name="users/[id]" />
                 <Stack.Screen name="account-settings" />
                 <Stack.Screen name="feedback/index" />
-                <Stack.Screen name="wardrobe/item/[id]" options={{ animation: 'slide_from_bottom' }} />
+                <Stack.Screen name="wardrobe/item/[id]" />
               </Stack>
               <AddToHomeScreenBanner />
             </CalendarEntryFlowProvider>

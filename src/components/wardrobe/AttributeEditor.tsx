@@ -3,7 +3,7 @@
  * Interface for editing item attributes
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,17 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { theme } from '@/styles';
+import type { ThemeColors } from '@/styles/themes';
 import {
   EntityAttribute,
   AttributeDefinition,
 } from '@/lib/attributes';
 import { useAttributeEditor } from '@/hooks/wardrobe';
 import { AddAttributeModal } from './AddAttributeModal';
+
+const { spacing, borderRadius, typography } = theme;
 
 type AttributeValue = any;
 
@@ -41,6 +46,8 @@ export function AttributeEditor({
   onDeleteAttribute,
   onCreateAttribute,
 }: AttributeEditorProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const {
     editingAttributeTypeKey,
     editingAttributeValues,
@@ -73,7 +80,7 @@ export function AttributeEditor({
           style={styles.addButton}
           onPress={() => setShowAddAttribute(true)}
         >
-          <Ionicons name="add" size={20} color="#007AFF" />
+          <Ionicons name="add" size={20} color={colors.primary} />
           <Text style={styles.addButtonText}>Add</Text>
         </TouchableOpacity>
       </View>
@@ -87,7 +94,7 @@ export function AttributeEditor({
               <Text style={styles.attributeGroupName}>{group.name}</Text>
               {!isEditing ? (
                 <TouchableOpacity onPress={() => handleStartEditAttributeType(key)}>
-                  <Ionicons name="pencil" size={18} color="#007AFF" />
+                  <Ionicons name="pencil" size={18} color={colors.primary} />
                 </TouchableOpacity>
               ) : (
                 <View style={styles.editActions}>
@@ -115,10 +122,11 @@ export function AttributeEditor({
                         }))
                       }
                       placeholder="Enter value"
+                      placeholderTextColor={colors.textPlaceholder}
                       blurOnSubmit
                     />
                     <TouchableOpacity onPress={() => onDeleteAttribute(attr.id)}>
-                      <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+                      <Ionicons name="trash-outline" size={18} color={colors.error} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -150,85 +158,86 @@ export function AttributeEditor({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
-    padding: 16,
+    marginTop: spacing.sm,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    padding: 8,
+    gap: spacing.xs,
+    padding: spacing.sm,
   },
   addButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
+    fontSize: typography.fontSize.base,
+    color: colors.primary,
+    fontWeight: typography.fontWeight.semibold,
   },
   attributeGroup: {
-    marginBottom: 24,
-    padding: 16,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
+    marginBottom: spacing.xxl,
+    padding: spacing.lg,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.md,
   },
   attributeGroupHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   attributeGroupName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
   },
   editActions: {
     flexDirection: 'row',
-    gap: 16,
+    gap: spacing.lg,
   },
   cancelText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
   },
   saveText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
+    fontSize: typography.fontSize.base,
+    color: colors.primary,
+    fontWeight: typography.fontWeight.semibold,
   },
   editValues: {
-    gap: 8,
+    gap: spacing.sm,
   },
   editValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   editValueInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: typography.fontSize.base,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
   },
   valuesList: {
-    gap: 4,
+    gap: spacing.xs,
   },
   valueText: {
-    fontSize: 14,
-    color: '#333',
-    paddingVertical: 4,
+    fontSize: typography.fontSize.md,
+    color: colors.gray800,
+    paddingVertical: spacing.xs,
   },
 });

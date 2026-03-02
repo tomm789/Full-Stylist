@@ -28,7 +28,7 @@ export type OutfitCanvasTrimStatusMap = Record<string, OutfitCanvasTrimStatus>;
 export const OUTFIT_CANVAS_MIN_SCALE = 0.55;
 export const OUTFIT_CANVAS_MAX_SCALE = 2.2;
 
-function calculateGridLayout(itemCount: number): { cols: number; rows: number } {
+export function calculateGridLayout(itemCount: number): { cols: number; rows: number } {
   if (itemCount <= 1) return { cols: 1, rows: 1 };
   if (itemCount === 2) return { cols: 2, rows: 1 };
   if (itemCount <= 4) return { cols: 2, rows: 2 };

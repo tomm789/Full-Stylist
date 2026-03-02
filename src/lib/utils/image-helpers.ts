@@ -379,6 +379,40 @@ export async function uploadBase64ImageToStorage(
 }
 
 /**
+ * Upload raw bytes directly to Supabase storage (no temp file, no base64).
+ * Preferred on native when binary data is already available (e.g., Skia encodeToBytes).
+ */
+export async function uploadBytesToStorage(
+  bucket: string,
+  storagePath: string,
+  bytes: Uint8Array,
+  mimeType: string
+): Promise<{
+  data: { path: string; fullPath: string } | null;
+  error: any;
+}> {
+  try {
+    const { data, error } = await supabase.storage.from(bucket).upload(storagePath, bytes, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: mimeType,
+    });
+
+    if (error || !data) {
+      return { data: null, error: error || new Error('Upload failed') };
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(bucket).getPublicUrl(data.path);
+
+    return { data: { path: data.path, fullPath: publicUrl }, error: null };
+  } catch (error: any) {
+    return { data: null, error };
+  }
+}
+
+/**
  * Delete image from storage and database
  */
 export async function deleteImage(imageId: string, userId: string): Promise<{ error: any }> {

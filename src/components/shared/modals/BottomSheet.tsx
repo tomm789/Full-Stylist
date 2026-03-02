@@ -15,6 +15,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '@/styles';
 import type { DimensionValue } from 'react-native';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -31,6 +32,7 @@ interface BottomSheetProps extends Partial<ModalProps> {
   headerRight?: React.ReactNode;
   footerContent?: React.ReactNode;
   maxHeight?: DimensionValue;
+  minHeight?: DimensionValue;
   style?: ViewStyle;
 }
 
@@ -42,12 +44,15 @@ export default function BottomSheet({
   headerRight,
   footerContent,
   maxHeight = '80%',
+  minHeight = '40%',
   style,
   ...modalProps
 }: BottomSheetProps) {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const commonStyles = createCommonStyles(colors);
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const bottomPadding = Math.max(spacing.xl, insets.bottom + spacing.sm);
   return (
     <Modal
       visible={visible}
@@ -59,7 +64,7 @@ export default function BottomSheet({
     >
       <Pressable style={commonStyles.modalOverlay} onPress={onClose}>
         <Pressable
-          style={[styles.sheet, { maxHeight }, style]}
+          style={[styles.sheet, { maxHeight, minHeight, paddingBottom: bottomPadding }, style]}
           onPress={() => {}} // Prevent closing when tapping inside
         >
           {(title || headerRight) && (
@@ -88,7 +93,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.background,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
-    paddingBottom: spacing.xl,
   },
   headerRight: {
     flexDirection: 'row',
@@ -99,7 +103,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     padding: spacing.xs,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
     paddingHorizontal: spacing.xl,
   },
   footer: {

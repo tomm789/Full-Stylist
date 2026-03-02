@@ -22,6 +22,11 @@ import type { OutfitCanvasLayoutMap, OutfitCanvasTrimMap } from '@/lib/outfits/c
 import { generateAndUploadGrid } from '@/lib/outfits/generateAndUploadGrid';
 import { useDescriptionPolling } from '@/lib/outfits/useDescriptionPolling';
 import { useItemRevealAnimation } from '@/hooks/outfits/useItemRevealAnimation';
+import {
+  createOutfitVariation,
+  updateOutfitVariation,
+  type OutfitVariationSnapshot,
+} from '@/lib/outfits/sessions';
 
 interface GenerationProgress {
   phase: 'saving' | 'preparing' | 'stacking' | 'generating' | 'complete' | 'error';
@@ -44,9 +49,19 @@ interface UseOutfitGenerationOptions {
   userId: string;
   categories: WardrobeCategory[];
   backgroundGrid?: BackgroundGridApi | null;
+  /** Session ID for variation tracking. If null, session is not used. */
+  sessionId?: string | null;
+  /** Called after a variation is created/updated so the session data hook can refresh. */
+  onVariationCreated?: () => void;
 }
 
-export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseOutfitGenerationOptions) {
+export function useOutfitGeneration({
+  userId,
+  categories,
+  backgroundGrid,
+  sessionId = null,
+  onVariationCreated,
+}: UseOutfitGenerationOptions) {
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState<GenerationProgress>({
     phase: 'saving',
@@ -83,8 +98,10 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
     async (
       selectedItems: WardrobeItem[],
       canvasLayoutMap?: OutfitCanvasLayoutMap | null,
-      canvasTrimMap?: OutfitCanvasTrimMap | null
+      canvasTrimMap?: OutfitCanvasTrimMap | null,
+      sessionIdOverride?: string | null
     ): Promise<{ success: boolean; outfitId?: string; error?: string; renderTraceId?: string }> => {
+      const effectiveSessionId = sessionIdOverride ?? sessionId;
       if (!userId || selectedItems.length === 0) {
         return { success: false, error: 'No items selected' };
       }
@@ -99,8 +116,11 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
       const timeline = startTimeline('outfit_generation');
       timeline.mark('generate_click');
 
+      // Hoisted so it's accessible in the catch block for failure updates
+      let variationId: string | null = null;
+
       try {
-        // Phase 1: Save outfit
+        // Phase 1 + 2: Save outfit and fetch user settings in parallel
         setProgress({ phase: 'saving', message: 'Saving outfit...', progress: 10 });
 
         const outfitItems = selectedItems.map((item, index) => ({
@@ -109,12 +129,16 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           position: index,
         }));
 
-        const { data: savedData, error: saveError } = await saveOutfit(
-          userId,
-          { title: 'Generated Outfit', notes: 'AI-generated outfit' },
-          outfitItems
-        );
+        const [saveResult, settingsResult] = await Promise.all([
+          saveOutfit(
+            userId,
+            { title: 'Generated Outfit', notes: 'AI-generated outfit' },
+            outfitItems
+          ),
+          getUserSettings(userId),
+        ]);
 
+        const { data: savedData, error: saveError } = saveResult;
         if (saveError || !savedData) {
           throw new Error('Failed to save outfit');
         }
@@ -131,10 +155,9 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           });
         }
 
-        // Phase 2: Get user settings
         setProgress({ phase: 'preparing', message: 'Preparing generation...', progress: 20 });
 
-        const { data: userSettings } = await getUserSettings(userId);
+        const { data: userSettings } = settingsResult;
         if (!userSettings?.body_shot_image_id) {
           throw new Error('Please upload a body photo in settings before generating outfits');
         }
@@ -310,6 +333,32 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           userSettings?.ai_model_preference ||
           'gemini-2.5-flash-image';
 
+        // ── Session: create variation record (pending) ─────────────────────────
+        if (effectiveSessionId) {
+          const snapshot: OutfitVariationSnapshot = {
+            items: selectedForJob.map((item, index) => ({
+              wardrobe_item_id: item.wardrobe_item_id,
+              category_id: item.category_id,
+              position: index,
+              text_snapshot: item.text_snapshot,
+            })),
+            canvas_layout: hasCustomLayout ? canvasLayoutMap ?? null : null,
+            canvas_trim_map: hasCustomLayout ? canvasTrimMap ?? null : null,
+            body_shot_image_id: userSettings.body_shot_image_id,
+            model_preference: modelPreference,
+            stacked_image_id: stackedResult?.imageId ?? null,
+          };
+
+          const variation = await createOutfitVariation({
+            session_id: effectiveSessionId,
+            user_id: userId,
+            outfit_id: outfitId,
+            status: 'pending',
+            input_snapshot_json: snapshot,
+          });
+          variationId = variation?.id ?? null;
+        }
+
         // Phase 5: Create and trigger AI job
         setProgress({ phase: 'generating', message: 'Generating outfit image...', progress: 80 });
 
@@ -372,6 +421,10 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
         if (pollError || !completedJob) {
           timeline.mark('poll_timeout');
           console.warn('[OutfitGeneration] AI generation polling timed out, but outfit was saved');
+          // Update variation with job ID even on timeout
+          if (variationId && jobData?.jobId) {
+            await updateOutfitVariation(variationId, { ai_job_id: jobData.jobId });
+          }
           setProgress({
             phase: 'complete',
             message: 'Outfit saved! Image generation in progress...',
@@ -383,6 +436,13 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
 
         if (completedJob.status === 'failed') {
           timeline.mark('poll_failed', { error: completedJob.error });
+          if (variationId) {
+            await updateOutfitVariation(variationId, {
+              ai_job_id: completedJob.id,
+              status: 'failed',
+            });
+            onVariationCreated?.();
+          }
           throw new Error(completedJob.error || 'AI generation failed');
         }
 
@@ -422,6 +482,18 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
           });
         }
 
+        // ── Session: mark variation complete ────────────────────────────────────
+        if (variationId) {
+          const resultImageId: string | null =
+            result.image_id || result.generated_image_id || result.output_image_id || null;
+          await updateOutfitVariation(variationId, {
+            ai_job_id: completedJob.id,
+            image_id: resultImageId,
+            status: 'complete',
+          });
+          onVariationCreated?.();
+        }
+
         console.log('[OutfitGeneration] Generation completed successfully!');
         setProgress({ phase: 'complete', message: 'Outfit generated successfully!', progress: 100 });
         setModalVisible(false);
@@ -430,6 +502,10 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
       } catch (error: any) {
         console.error('[OutfitGeneration] Error:', error);
         stopAll();
+        if (variationId) {
+          await updateOutfitVariation(variationId, { status: 'failed' });
+          onVariationCreated?.();
+        }
         setProgress({ phase: 'error', message: error.message || 'Generation failed', progress: 0 });
         setModalVisible(false);
         return { success: false, error: error.message };
@@ -437,7 +513,7 @@ export function useOutfitGeneration({ userId, categories, backgroundGrid }: UseO
         setGenerating(false);
       }
     },
-    [userId, categories, backgroundGrid, revealAnimation, descriptionPolling, stopAll]
+    [userId, categories, backgroundGrid, sessionId, onVariationCreated, revealAnimation, descriptionPolling, stopAll]
   );
 
   const reset = useCallback(() => {

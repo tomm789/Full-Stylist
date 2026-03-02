@@ -3,13 +3,18 @@
  * Category and subcategory picker for wardrobe items
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { theme } from '@/styles';
+import type { ThemeColors } from '@/styles/themes';
 import {
   WardrobeCategory,
   WardrobeSubcategory,
 } from '@/lib/wardrobe';
+
+const { spacing, borderRadius, typography } = theme;
 
 interface CategorySelectorProps {
   categories: WardrobeCategory[];
@@ -38,6 +43,9 @@ export function CategorySelector({
   onToggleExpanded,
   onToggleSubcategoriesExpanded,
 }: CategorySelectorProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   if (!aiGenerationComplete) {
     return (
       <View style={styles.container}>
@@ -62,7 +70,7 @@ export function CategorySelector({
         <Ionicons
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={20}
-          color="#666"
+          color={colors.textSecondary}
         />
       </TouchableOpacity>
 
@@ -86,7 +94,7 @@ export function CategorySelector({
                 {category.name}
               </Text>
               {selectedCategoryId === category.id && (
-                <Ionicons name="checkmark" size={20} color="#007AFF" />
+                <Ionicons name="checkmark" size={20} color={colors.primary} />
               )}
             </TouchableOpacity>
           ))}
@@ -110,7 +118,7 @@ export function CategorySelector({
             <Ionicons
               name={subcategoriesExpanded ? 'chevron-up' : 'chevron-down'}
               size={20}
-              color="#666"
+              color={colors.textSecondary}
             />
           </TouchableOpacity>
 
@@ -136,7 +144,7 @@ export function CategorySelector({
                     {subcategory.name}
                   </Text>
                   {selectedSubcategoryId === subcategory.id && (
-                    <Ionicons name="checkmark" size={20} color="#007AFF" />
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -148,22 +156,22 @@ export function CategorySelector({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
-    padding: 16,
+    marginBottom: spacing.xl,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.borderLight,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
   },
   optionsList: {
     maxHeight: 200,
@@ -172,26 +180,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
+    padding: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.backgroundTertiary,
   },
   optionSelected: {
-    backgroundColor: '#f0f8ff',
+    backgroundColor: colors.backgroundSecondary,
   },
   optionText: {
-    fontSize: 16,
-    color: '#000',
+    fontSize: typography.fontSize.base,
+    color: colors.textPrimary,
   },
   optionTextSelected: {
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.primary,
   },
   waitingText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
     fontStyle: 'italic',
-    padding: 16,
+    padding: spacing.lg,
     textAlign: 'center',
   },
 });

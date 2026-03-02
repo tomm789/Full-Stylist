@@ -46,7 +46,7 @@ export default function LookbookQuickAddModal({
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="Add Lookbook Tab" maxHeight="60%">
+    <BottomSheet visible={visible} onClose={onClose} title="Add Lookbook Tab">
       <TouchableOpacity
         style={styles.createRow}
         onPress={() => {

@@ -362,18 +362,19 @@ export default function CalendarScreen() {
           <Text style={styles.headerTitle}>Calendar</Text>
           <View style={styles.headerSpacer} />
           <HeaderActionIcons
-            onAdd={() => {
-              openDateSelector(new Date());
-            }}
             onSearch={() => router.push('/search' as any)}
             onNotifications={() => router.push('/notifications' as any)}
             unreadCount={unreadCount}
+            onProfile={() => router.push('/(tabs)/profile' as any)}
+            avatarUri={user?.user_metadata?.avatar_url}
+            avatarInitials={user?.user_metadata?.full_name?.slice(0, 2) || user?.email?.slice(0, 2)}
           />
         </View>
         <MonthNavigator
           currentDate={activeMonthDate}
           onNavigate={handleMonthNavigate}
           onToday={handleToday}
+          onAdd={() => openDateSelector(new Date())}
         />
         <CalendarWeekHeader />
       </View>
@@ -431,6 +432,7 @@ export default function CalendarScreen() {
           onDayPress={handleDayPress}
           scrollY={scrollY}
           viewportHeight={viewportHeight}
+          activeMonthDate={activeMonthDate}
         />
       </Animated.ScrollView>
     </LinearGradient>

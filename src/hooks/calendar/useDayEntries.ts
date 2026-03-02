@@ -3,7 +3,7 @@
  * Manages calendar entries for a specific day
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getCalendarEntriesForDate,
   createCalendarEntry,
@@ -40,6 +40,7 @@ interface UseDayEntriesReturn {
 export function useDayEntries({ userId, date }: UseDayEntriesProps): UseDayEntriesReturn {
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const isInitialLoad = useRef(true);
 
   const loadEntries = useCallback(async () => {
     if (!userId || !date) {
@@ -47,7 +48,11 @@ export function useDayEntries({ userId, date }: UseDayEntriesProps): UseDayEntri
       return;
     }
 
-    setLoading(true);
+    // Only show loading spinner on the very first fetch.
+    // Subsequent date changes swap entries silently to avoid flash.
+    if (isInitialLoad.current) {
+      setLoading(true);
+    }
 
     try {
       const { data: dayEntries } = await getCalendarEntriesForDate(userId, date);
@@ -55,6 +60,7 @@ export function useDayEntries({ userId, date }: UseDayEntriesProps): UseDayEntri
     } catch (error) {
       console.error('Error loading day entries:', error);
     } finally {
+      isInitialLoad.current = false;
       setLoading(false);
     }
   }, [userId, date]);

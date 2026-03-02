@@ -22,6 +22,7 @@ interface CalendarContinuousGridProps {
   onDayPress: (date: Date) => void;
   scrollY: Animated.Value;
   viewportHeight: number;
+  activeMonthDate?: Date;
 }
 
 export default function CalendarContinuousGrid({
@@ -32,6 +33,7 @@ export default function CalendarContinuousGrid({
   onDayPress,
   scrollY,
   viewportHeight,
+  activeMonthDate,
 }: CalendarContinuousGridProps) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -67,9 +69,11 @@ export default function CalendarContinuousGrid({
           key: `pill-${date.toISOString()}`,
           label: date.toLocaleString('default', { month: 'long', year: 'numeric' }),
           top,
+          month: date.getMonth(),
+          year: date.getFullYear(),
         };
       })
-      .filter(Boolean) as Array<{ key: string; label: string; top: number }>;
+      .filter(Boolean) as Array<{ key: string; label: string; top: number; month: number; year: number }>;
   }, [days]);
 
   const bounceValuesRef = useRef<Map<string, Animated.Value>>(new Map());
@@ -190,6 +194,14 @@ export default function CalendarContinuousGrid({
       </View>
 
       {pillConfigs.map((pill) => {
+        // Hide the pill if it matches the currently active month in the navigator
+        if (activeMonthDate &&
+          pill.month === activeMonthDate.getMonth() &&
+          pill.year === activeMonthDate.getFullYear()
+        ) {
+          return null;
+        }
+
         const effectiveViewport = viewportHeight || 600;
         const midPoint = pill.top - effectiveViewport * 0.5;
         const exitPoint = pill.top - effectiveViewport * 0.25;

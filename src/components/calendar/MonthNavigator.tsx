@@ -5,6 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -15,6 +16,7 @@ interface MonthNavigatorProps {
   currentDate: Date;
   onNavigate: (direction: number) => void;
   onToday: () => void;
+  onAdd?: () => void;
 }
 
 const monthNames = [
@@ -32,7 +34,7 @@ const monthNames = [
   'December',
 ];
 
-export default function MonthNavigator({ currentDate, onNavigate, onToday }: MonthNavigatorProps) {
+export default function MonthNavigator({ currentDate, onNavigate, onToday, onAdd }: MonthNavigatorProps) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const month = currentDate.getMonth();
@@ -53,9 +55,20 @@ export default function MonthNavigator({ currentDate, onNavigate, onToday }: Mon
           </TouchableOpacity>
         </View>
       </View>
-      <TouchableOpacity onPress={onToday} style={styles.todayButton}>
-        <Text style={styles.todayButtonText}>Today</Text>
-      </TouchableOpacity>
+      <View style={styles.rightActions}>
+        <TouchableOpacity onPress={onToday} style={styles.todayButton}>
+          <Text style={styles.todayButtonText}>Today</Text>
+        </TouchableOpacity>
+        {onAdd && (
+          <TouchableOpacity
+            onPress={onAdd}
+            style={styles.addButton}
+            accessibilityLabel="Add entry"
+          >
+            <Ionicons name="add-circle-outline" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -107,6 +120,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.white,
   },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   todayButton: {
     minWidth: 72,
     height: 32,
@@ -122,5 +140,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  addButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

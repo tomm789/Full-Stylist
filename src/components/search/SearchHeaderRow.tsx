@@ -3,13 +3,13 @@
  * Shared header row for Wardrobe/Outfits with left-side search icon.
  *
  * Collapsed: [LeftIcon] [🔍] [---CenterSlot---] [RightSlot]
- * Expanded:  [🔍] [---Search input---] [✕]
+ * Expanded:  [←] [🔍] [---Search input (with optional ✕)---]
  *
- * The left icon fades/shrinks out, the center slot and right slot fade out,
- * and the search input expands from the search icon rightward.
+ * Back arrow closes search + dismisses keyboard.
+ * ✕ inside the field only appears when there is text, and clears the query.
  */
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
@@ -91,14 +92,10 @@ export default function SearchHeaderRow({
     };
   }, [anim, searchOpen]);
 
-  const leftIconAnimStyle = useMemo(
-    () => ({
-      opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
-      width: anim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }),
-      overflow: 'hidden' as const,
-    }),
-    [anim],
-  );
+  const handleBack = useCallback(() => {
+    Keyboard.dismiss();
+    onSearchToggle(false);
+  }, [onSearchToggle]);
 
   const centerAnimStyle = useMemo(
     () => ({
@@ -107,7 +104,9 @@ export default function SearchHeaderRow({
         outputRange: [1, 0],
         extrapolate: 'clamp' as const,
       }),
-      flex: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+      // Avoid flex: 0 on native — RN sets flexBasis: auto at exactly 0,
+      // which snaps the center slot back to its intrinsic content width.
+      flex: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.001] }),
       overflow: 'hidden' as const,
     }),
     [anim],
@@ -128,7 +127,8 @@ export default function SearchHeaderRow({
 
   const inputAnimStyle = useMemo(
     () => ({
-      flex: anim,
+      // Avoid flex: 0 on native — same flexBasis: auto issue as center slot.
+      flex: anim.interpolate({ inputRange: [0, 1], outputRange: [0.001, 1] }),
       opacity: anim.interpolate({
         inputRange: [0, 0.5],
         outputRange: [0, 1],
@@ -138,37 +138,30 @@ export default function SearchHeaderRow({
     [anim],
   );
 
-  const closeAnimStyle = useMemo(
-    () => ({
-      opacity: anim.interpolate({
-        inputRange: [0, 0.6],
-        outputRange: [0, 1],
-        extrapolate: 'clamp' as const,
-      }),
-      width: anim.interpolate({ inputRange: [0, 1], outputRange: [0, 30] }),
-      overflow: 'hidden' as const,
-    }),
-    [anim],
-  );
-
   const hasAvatar = avatarUri != null || avatarInitials != null;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.sm }]}>
-      {/* Left icon (camera/calendar) — fades out when search expands */}
-      <Animated.View style={leftIconAnimStyle}>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={onLeftAction}
-          disabled={!onLeftAction}
-          accessibilityRole="button"
-          accessibilityLabel={leftIcon.replace(/-outline$/, '').replace(/-/g, ' ')}
-        >
-          <Ionicons name={leftIcon} size={22} color={colors.textPrimary} />
-        </TouchableOpacity>
-      </Animated.View>
+      {/* Left icon — swaps between leftIcon and back arrow */}
+      <TouchableOpacity
+        style={styles.iconButton}
+        onPress={searchOpen ? handleBack : onLeftAction}
+        disabled={!searchOpen && !onLeftAction}
+        accessibilityRole="button"
+        accessibilityLabel={
+          searchOpen
+            ? 'Close search'
+            : leftIcon.replace(/-outline$/, '').replace(/-/g, ' ')
+        }
+      >
+        <Ionicons
+          name={searchOpen ? 'chevron-back' : leftIcon}
+          size={22}
+          color={colors.textPrimary}
+        />
+      </TouchableOpacity>
 
-      {/* Search icon — always visible, slides left as left icon shrinks */}
+      {/* Search icon — always visible, toggles search */}
       <TouchableOpacity
         style={styles.iconButton}
         onPress={() => onSearchToggle(!searchOpen)}
@@ -178,7 +171,7 @@ export default function SearchHeaderRow({
         <Ionicons name="search-outline" size={22} color={colors.textPrimary} />
       </TouchableOpacity>
 
-      {/* Animated search input — grows when expanded */}
+      {/* Animated search input — grows to fill remaining space */}
       <Animated.View style={[styles.inputWrap, inputAnimStyle]}>
         <TextInput
           ref={inputRef}
@@ -192,6 +185,20 @@ export default function SearchHeaderRow({
           returnKeyType="search"
           blurOnSubmit
         />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity
+            onPress={() => onSearchChange('')}
+            style={styles.clearButton}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+          >
+            <Ionicons
+              name="close-circle"
+              size={18}
+              color={colors.textTertiary}
+            />
+          </TouchableOpacity>
+        )}
       </Animated.View>
 
       {/* Center slot (tab pills) — fades out when search expands */}
@@ -230,18 +237,6 @@ export default function SearchHeaderRow({
           </TouchableOpacity>
         ) : null}
       </Animated.View>
-
-      {/* Close button — fades in when search expands */}
-      <Animated.View style={closeAnimStyle}>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => onSearchToggle(false)}
-          accessibilityRole="button"
-          accessibilityLabel="Close search"
-        >
-          <Ionicons name="close" size={22} color={colors.textPrimary} />
-        </TouchableOpacity>
-      </Animated.View>
     </View>
   );
 }
@@ -275,18 +270,24 @@ const createStyles = (colors: ThemeColors) =>
     },
     inputWrap: {
       height: 34,
+      flexDirection: 'row',
+      alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.borderLight,
       borderRadius: borderRadius.round,
-      paddingHorizontal: spacing.sm,
-      justifyContent: 'center',
+      paddingLeft: spacing.sm,
+      paddingRight: spacing.xs,
       backgroundColor: colors.backgroundSecondary,
       minWidth: 0,
       flexBasis: 0,
     },
     searchInput: {
+      flex: 1,
       fontSize: typography.fontSize.sm,
       paddingVertical: 0,
+    },
+    clearButton: {
+      padding: spacing.xs,
     },
     badge: {
       position: 'absolute',

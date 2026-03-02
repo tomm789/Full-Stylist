@@ -18,6 +18,7 @@ import { PanGestureHandler } from 'react-native-gesture-handler';
 import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
 import { HeaderTabPill } from '@/components/shared';
+import type { ThumbnailItem } from '@/components/shared';
 import HeadshotSocialTab from '@/components/headshots/HeadshotSocialTab';
 import HeadshotSlideItem from '@/components/headshots/HeadshotSlideItem';
 import DrawModeInline from '@/components/headshots/DrawModeInline';
@@ -130,6 +131,27 @@ export default function HairAndMakeUpScreen() {
     const ids = new Set(hairLengthOptions.map((o) => o.id));
     return state.selectedIds.find((id) => ids.has(id)) ?? null;
   }, [hairLengthOptions, state.selectedIds]);
+
+  // ── Thumbnail strip data for generation variations ──────────────────────────
+  const activeVariationId = React.useMemo(() => {
+    if (state.previewGenerationIndex < 0) return null;
+    return state.completedVariations[state.previewGenerationIndex]?.id ?? null;
+  }, [state.previewGenerationIndex, state.completedVariations]);
+
+  const headshotThumbnailItems = React.useMemo<ThumbnailItem[]>(() => {
+    return state.completedVariations.map((v) => ({
+      id: v.id,
+      imageUrl: state.variationUrls.get(v.image_id!) ?? null,
+      isActive: v.id === activeVariationId,
+      isSaved: false,
+      status: v.status as ThumbnailItem['status'],
+    }));
+  }, [state.completedVariations, state.variationUrls, activeVariationId]);
+
+  const handleHeadshotThumbnailSelect = React.useCallback((id: string) => {
+    const variation = state.completedVariations.find((v) => v.id === id);
+    if (variation) state.setPreviewFromVariation(variation);
+  }, [state.completedVariations, state.setPreviewFromVariation]);
 
   const { dialogLine1Opacity, dialogLine2Opacity, dialogLine3Opacity, dialogLine4Opacity } =
     useGenerationDialogAnimation(state.generating);
@@ -407,6 +429,12 @@ export default function HairAndMakeUpScreen() {
             scrollEventThrottle={16}
             editTabRequest={mirrorEditTabRequest}
             onEditTabRequestHandled={() => setMirrorEditTabRequest(null)}
+            thumbnailItems={headshotThumbnailItems}
+            onThumbnailSelect={handleHeadshotThumbnailSelect}
+            thumbnailCanNavigateBack={state.canNavigateBack}
+            thumbnailCanNavigateForward={state.canNavigateForward}
+            onThumbnailNavigateBack={() => state.handleNavigateGeneration('back')}
+            onThumbnailNavigateForward={() => state.handleNavigateGeneration('forward')}
           />
         )}
 

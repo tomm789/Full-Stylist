@@ -479,6 +479,8 @@ export function useHairAndMakeup() {
     canNavigateForward: varNav.canNavigateForward,
     canShare,
     handleNavigateGeneration: varNav.handleNavigateGeneration,
+    setPreviewFromVariation: varNav.setPreviewFromVariation,
+    variationUrls,
 
     // ── Action handlers ──────────────────────────────────────────────────────
     handlePickCamera,

@@ -68,14 +68,10 @@ export function useOutfitsTabState({ pinnedLookbooks }: UseOutfitsTabStateOption
 
   const handleTabChange = useCallback(
     (tab: OutfitsTab) => {
-      const nextTab =
-        tab === 'lookbooks' && pinnedLookbooks.length > 0
-          ? (`lookbook_${pinnedLookbooks[0].id}` as OutfitsTab)
-          : tab;
-      setActiveTab(nextTab);
-      setTabViews((prev) => ({ ...prev, [nextTab]: 'grid' }));
+      setActiveTab(tab);
+      setTabViews((prev) => ({ ...prev, [tab]: 'grid' }));
     },
-    [pinnedLookbooks]
+    []
   );
 
   return {

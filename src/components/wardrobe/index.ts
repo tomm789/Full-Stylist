@@ -21,7 +21,6 @@ export { ItemImageCarousel } from './ItemImageCarousel';
 export { ItemAttributes } from './ItemAttributes';
 export { ItemNavigation } from './ItemNavigation';
 export { ItemActions } from './ItemActions';
-export { EditItemForm } from './EditItemForm';
 export { CategorySelector } from './CategorySelector';
 export { AttributeEditor } from './AttributeEditor';
 export { AddAttributeModal } from './AddAttributeModal';

@@ -52,6 +52,39 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: spacing.xxxl,
   },
+  lookbookSection: {
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
+  },
+  lookbookSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  lookbookSectionTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  lookbookAddButton: {
+    fontSize: typography.fontSize.md,
+    color: colors.primary,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  lookbookHorizontalList: {
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  lookbookGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
 });
 
 export default createStyles;

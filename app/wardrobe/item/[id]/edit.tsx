@@ -1,5 +1,5 @@
 /**
- * Edit Wardrobe Item Screen (Refactored)
+ * Edit Wardrobe Item Screen
  * Edit wardrobe item details, categories, and attributes
  */
 
@@ -14,19 +14,34 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createCommonStyles } from '@/styles/commonStyles';
+import { theme } from '@/styles';
+import type { ThemeColors } from '@/styles/themes';
 import {
   useWardrobeItemEdit,
   useItemAttributes,
 } from '@/hooks/wardrobe';
 import {
-  EditItemForm,
   CategorySelector,
   AttributeEditor,
   VisibilitySelector,
 } from '@/components/wardrobe';
-import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
+import {
+  Header,
+  HeaderActionButton,
+  HeaderIconButton,
+  Input,
+  TextArea,
+  LoadingSpinner,
+} from '@/components/shared';
+
+const { spacing, borderRadius, typography } = theme;
 
 export default function EditItemScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const router = useRouter();
@@ -156,23 +171,22 @@ export default function EditItemScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
+      <View style={commonStyles.loadingContainer}>
+        <LoadingSpinner size="large" text="Loading item..." />
       </View>
     );
   }
 
   if (!item) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Item not found</Text>
+      <View style={commonStyles.container}>
+        <Text style={commonStyles.emptyText}>Item not found</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <View style={commonStyles.container}>
       <Header
         title="Edit Item"
         leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
@@ -186,38 +200,59 @@ export default function EditItemScreen() {
         }
       />
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         {/* AI Generation Status */}
         {(!aiGenerationComplete || title === 'New Item') && (
-          <View style={styles.section}>
-            <View style={styles.loadingMessage}>
-              <ActivityIndicator
-                size="small"
-                color="#007AFF"
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.loadingText}>
-                AI is generating item details... Please wait.
-              </Text>
-            </View>
+          <View style={styles.aiLoadingSection}>
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={{ marginRight: spacing.sm }}
+            />
+            <Text style={styles.aiLoadingText}>
+              AI is generating item details... Please wait.
+            </Text>
           </View>
         )}
 
         {/* Form Fields */}
         {aiGenerationComplete && title !== 'New Item' && (
           <>
-            <EditItemForm
-              title={title}
-              description={description}
-              brand={brand}
-              size={size}
-              onTitleChange={setTitle}
-              onDescriptionChange={setDescription}
-              onBrandChange={setBrand}
-              onSizeChange={setSize}
+            <Input
+              label="Title"
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Item title"
+              required
             />
 
-            {/* Category Selector */}
+            <TextArea
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Item description"
+              rows={4}
+            />
+
+            <Input
+              label="Brand"
+              value={brand}
+              onChangeText={setBrand}
+              placeholder="Brand name"
+            />
+
+            <Input
+              label="Size"
+              value={size}
+              onChangeText={setSize}
+              placeholder="Size"
+            />
+
             <CategorySelector
               categories={categories}
               selectedCategoryId={selectedCategoryId}
@@ -234,18 +269,15 @@ export default function EditItemScreen() {
               }
             />
 
-            {/* Visibility Selector */}
-            <View style={styles.section}>
-              <VisibilitySelector
-                value={visibility}
-                onChange={setVisibility}
-                expanded={visibilityExpanded}
-                onToggleExpanded={() =>
-                  setVisibilityExpanded(!visibilityExpanded)
-                }
-                showInherit={true}
-              />
-            </View>
+            <VisibilitySelector
+              value={visibility}
+              onChange={setVisibility}
+              expanded={visibilityExpanded}
+              onToggleExpanded={() =>
+                setVisibilityExpanded(!visibilityExpanded)
+              }
+              showInherit={true}
+            />
           </>
         )}
 
@@ -264,40 +296,24 @@ export default function EditItemScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  content: {
-    paddingBottom: 32,
+  scrollContent: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xxxl,
   },
-  section: {
-    padding: 16,
-  },
-  loadingMessage: {
+  aiLoadingSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#f0f8ff',
-    borderRadius: 8,
+    padding: spacing.lg,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.lg,
   },
-  loadingText: {
-    fontSize: 14,
-    color: '#007AFF',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 40,
+  aiLoadingText: {
+    fontSize: typography.fontSize.md,
+    color: colors.primary,
   },
 });
