@@ -44,7 +44,7 @@ export function getDayIndex(startDate: Date, targetDate: Date): number {
 export function getDateAtIndex(startDate: Date, index: number): Date | null {
   // Validate index is a finite number
   if (!Number.isFinite(index)) {
-    console.warn(`[Calendar] Invalid index: ${index}, must be a finite number`);
+        if (__DEV__) console.warn(`[Calendar] Invalid index: ${index}, must be a finite number`);
     return null;
   }
 
@@ -54,7 +54,7 @@ export function getDateAtIndex(startDate: Date, index: number): Date | null {
   const clampedIndex = Math.max(-MAX_INDEX, Math.min(MAX_INDEX, index));
 
   if (Math.abs(clampedIndex) !== Math.abs(index)) {
-    console.warn(
+        if (__DEV__) console.warn(
       `[Calendar] Index ${index} clamped to ${clampedIndex} (max ±${MAX_INDEX} days)`
     );
   }

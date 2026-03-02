@@ -121,13 +121,13 @@ export function useBackgroundGridGenerator(
         );
 
         if (uploadError || !uploadDataResult) {
-          console.warn('[BackgroundGrid] Upload failed:', uploadError?.message);
+                    if (__DEV__) console.warn('[BackgroundGrid] Upload failed:', uploadError?.message);
           return null;
         }
 
         return { key: uploadDataResult.path, selectionKey: currentSelectionKey };
       } catch (err) {
-        console.warn('[BackgroundGrid] Error:', err);
+                if (__DEV__) console.warn('[BackgroundGrid] Error:', err);
         return null;
       } finally {
         if (runIdRef.current === runId) {

@@ -80,7 +80,7 @@ export default function UserProfileScreen() {
     isOwnProfile,
   } = useUserProfile({ userId, currentUserId: user?.id });
 
-  console.log('[UserProfileScreen] DEBUG', {
+    if (__DEV__) console.log('[UserProfileScreen] DEBUG', {
     userId,
     currentUserId: user?.id,
     isOwnProfile,

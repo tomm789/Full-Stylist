@@ -53,7 +53,7 @@ export async function applyAutoTagResults(
     );
 
     if (errors.length > 0) {
-      console.warn('Some attributes failed to create:', errors);
+            if (__DEV__) console.warn('Some attributes failed to create:', errors);
     }
 
     // Update wardrobe item with suggested fields if provided

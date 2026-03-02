@@ -155,7 +155,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
       
       if (wardrobeItems.length < wardrobeItemIds.length) {
         const missingCount = wardrobeItemIds.length - wardrobeItems.length;
-        console.warn(`[Social] Only ${wardrobeItems.length} of ${wardrobeItemIds.length} wardrobe items accessible`);
+                if (__DEV__) console.warn(`[Social] Only ${wardrobeItems.length} of ${wardrobeItemIds.length} wardrobe items accessible`);
       }
 
       const wardrobeItemsMap = new Map(wardrobeItems.map(item => [item.id, item]));
@@ -223,7 +223,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
             .eq('id', newOutfitId);
           throw new Error('Failed to start outfit generation. Please check your network connection and try again.');
         }
-        console.warn('[Social] Job trigger may have timed out, but job might still be processing');
+                if (__DEV__) console.warn('[Social] Job trigger may have timed out, but job might still be processing');
       }
 
       setGeneratingOutfitId(newOutfitId);

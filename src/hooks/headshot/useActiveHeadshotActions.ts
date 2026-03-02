@@ -31,7 +31,7 @@ export function useActiveHeadshotActions({
         try {
           const syncResult = await syncBodyshotAfterActiveHeadshotSet(userId, previewImageId);
           if (syncResult.status === 'error') {
-            console.warn('Bodyshot sync failed after active headshot update:', syncResult.message);
+                        if (__DEV__) console.warn('Bodyshot sync failed after active headshot update:', syncResult.message);
             Alert.alert(
               'Body Shot Notice',
               'Headshot is active, but we could not sync your body shot.'
@@ -46,7 +46,7 @@ export function useActiveHeadshotActions({
               '[BodyShotSync]'
             );
             if (pollError || !completedJob || completedJob.status === 'failed') {
-              console.warn('Bodyshot generation failed after active headshot update', {
+                            if (__DEV__) console.warn('Bodyshot generation failed after active headshot update', {
                 jobId: syncResult.jobId,
                 pollError,
                 status: completedJob?.status,
@@ -59,7 +59,7 @@ export function useActiveHeadshotActions({
             }
           }
         } catch (syncError: any) {
-          console.warn('Unexpected bodyshot sync error after active headshot update:', syncError);
+                    if (__DEV__) console.warn('Unexpected bodyshot sync error after active headshot update:', syncError);
           Alert.alert(
             'Body Shot Notice',
             'Headshot is active, but we could not sync your body shot.'

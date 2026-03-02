@@ -57,14 +57,14 @@ export const useWardrobeItemPolling = ({
       stopPolling();
     }
 
-    console.log(`${logPrefix} Starting polling for job ${jobId}`);
+        if (__DEV__) console.log(`${logPrefix} Starting polling for job ${jobId}`);
     isPollingRef.current = true;
     activeJobIdRef.current = jobId;
     setIsPolling(true);
 
     // Set timeout to stop polling
     timeoutRef.current = setTimeout(() => {
-      console.log(`${logPrefix} Timeout reached`);
+            if (__DEV__) console.log(`${logPrefix} Timeout reached`);
       if (onTimeout) {
         onTimeout();
       }
@@ -88,7 +88,7 @@ export const useWardrobeItemPolling = ({
         if (job) {
           onJobUpdate?.(job);
           if (job.status === 'succeeded' || job.status === 'failed') {
-            console.log(`${logPrefix} Job completed with status: ${job.status}`);
+                        if (__DEV__) console.log(`${logPrefix} Job completed with status: ${job.status}`);
             stopPolling();
             onComplete(job);
           }

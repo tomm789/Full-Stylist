@@ -66,7 +66,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     if (!user?.id) return;
 
     if (SUPABASE_CONFIG.DEV_MODE && !SUPABASE_CONFIG.REALTIME_ENABLED) {
-      console.log('[Notifications] Realtime disabled in dev');
+            if (__DEV__) console.log('[Notifications] Realtime disabled in dev');
       return;
     }
 

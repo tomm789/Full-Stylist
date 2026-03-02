@@ -43,7 +43,7 @@ export function useWardrobeTutorial({
         const dismissed = await AsyncStorage.getItem(key);
         if (isMounted) { setShowFirstTimeTutorial(!dismissed); setTutorialChecked(true); }
       } catch (error) {
-        console.warn('Failed to read wardrobe tutorial flag:', error);
+                if (__DEV__) console.warn('Failed to read wardrobe tutorial flag:', error);
         if (isMounted) { setShowFirstTimeTutorial(true); setTutorialChecked(true); }
       }
     };
@@ -70,7 +70,7 @@ export function useWardrobeTutorial({
     try {
       await AsyncStorage.setItem(key, 'true');
     } catch (error) {
-      console.warn('Failed to persist wardrobe tutorial flag:', error);
+            if (__DEV__) console.warn('Failed to persist wardrobe tutorial flag:', error);
     }
     setShowFirstTimeTutorial(false);
     setTutorialChecked(true);

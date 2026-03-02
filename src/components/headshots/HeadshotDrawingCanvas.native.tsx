@@ -143,7 +143,7 @@ const HeadshotDrawingCanvas = React.forwardRef<
 
         return surface.makeImageSnapshot().encodeToBase64();
       } catch (e) {
-        console.warn('[HeadshotDrawingCanvas] makeCompositeSnapshot failed:', e);
+                if (__DEV__) console.warn('[HeadshotDrawingCanvas] makeCompositeSnapshot failed:', e);
         return null;
       }
     },

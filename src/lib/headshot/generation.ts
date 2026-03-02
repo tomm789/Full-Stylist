@@ -56,7 +56,7 @@ export async function createHeadshotGenerationSession(
     .single();
 
   if (error || !data) {
-    console.warn('createHeadshotGenerationSession failed', error);
+        if (__DEV__) console.warn('createHeadshotGenerationSession failed', error);
     return null;
   }
 
@@ -73,7 +73,7 @@ export async function updateHeadshotGenerationSession(
     .eq('id', sessionId);
 
   if (error) {
-    console.warn('updateHeadshotGenerationSession failed', error);
+        if (__DEV__) console.warn('updateHeadshotGenerationSession failed', error);
   }
 }
 
@@ -119,7 +119,7 @@ export async function createHeadshotGenerationVariation(
     .single();
 
   if (error || !data) {
-    console.warn('createHeadshotGenerationVariation failed', error);
+        if (__DEV__) console.warn('createHeadshotGenerationVariation failed', error);
     return null;
   }
 
@@ -155,7 +155,7 @@ export async function updateHeadshotGenerationVariation(
     .eq('id', variationId);
 
   if (error) {
-    console.warn('updateHeadshotGenerationVariation failed', error);
+        if (__DEV__) console.warn('updateHeadshotGenerationVariation failed', error);
   }
 }
 

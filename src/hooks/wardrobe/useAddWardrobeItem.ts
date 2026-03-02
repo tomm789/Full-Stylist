@@ -140,7 +140,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
           const autoTagResult = batchResult?.auto_tag;
 
           // Log for debugging
-          console.log('[BatchJob] Job completed:', {
+                    if (__DEV__) console.log('[BatchJob] Job completed:', {
             hasProductShot: !!productShotResult,
             hasAutoTag: !!autoTagResult,
             productShotResult,
@@ -205,7 +205,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
             setGeneratingAI(false);
           } else {
             // No product shot result or unexpected structure
-            console.warn('[BatchJob] No valid product_shot result found in batch job', {
+                        if (__DEV__) console.warn('[BatchJob] No valid product_shot result found in batch job', {
               batchResult,
               productShotResult,
             });
@@ -357,7 +357,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
 
         const { error: execError } = await triggerAIJobExecution(generateJob.id);
         if (execError) {
-          console.warn('[useAddWardrobeItem] Job trigger returned error (may still work):', execError);
+                    if (__DEV__) console.warn('[useAddWardrobeItem] Job trigger returned error (may still work):', execError);
         }
 
         setPendingItemJob(itemId, generateJob.id);

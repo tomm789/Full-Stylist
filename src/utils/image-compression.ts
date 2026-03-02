@@ -17,12 +17,12 @@ import * as ImageManipulator from 'expo-image-manipulator';
 export async function compressImageFile(file: File): Promise<File> {
   // Only compress on web platform
   if (Platform.OS !== 'web') {
-    console.log('[compressImageFile] Skipping compression on native platform');
+        if (__DEV__) console.log('[compressImageFile] Skipping compression on native platform');
     return file;
   }
 
   try {
-    console.log('[compressImageFile] Starting compression:', {
+        if (__DEV__) console.log('[compressImageFile] Starting compression:', {
       originalSize: file.size,
       originalType: file.type,
       originalName: file.name,
@@ -37,7 +37,7 @@ export async function compressImageFile(file: File): Promise<File> {
 
     const compressedFile = await imageCompression(file, options);
 
-    console.log('[compressImageFile] Compression complete:', {
+        if (__DEV__) console.log('[compressImageFile] Compression complete:', {
       originalSize: file.size,
       compressedSize: compressedFile.size,
       reduction: `${((1 - compressedFile.size / file.size) * 100).toFixed(1)}%`,

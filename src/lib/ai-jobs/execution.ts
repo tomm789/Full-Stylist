@@ -31,11 +31,11 @@ export async function triggerAIJobExecution(
 
     if (!baseUrl) {
       if (!isDev) {
-        console.warn(
+                if (__DEV__) console.warn(
           '[AIJobs] EXPO_PUBLIC_NETLIFY_URL not set and window.location unavailable, using relative URL'
         );
       } else {
-        console.warn(
+                if (__DEV__) console.warn(
           '[AIJobs] EXPO_PUBLIC_NETLIFY_DEV_URL not set; attempting Metro host inference'
         );
       }
@@ -100,7 +100,7 @@ export async function triggerAIJobExecution(
           (responseTextLower.includes('task timed out') ||
             responseTextLower.includes('timeouterror') ||
             responseTextLower.includes('timed out'));
-        console.warn('[AIJobs] Function trigger returned non-OK response', {
+                if (__DEV__) console.warn('[AIJobs] Function trigger returned non-OK response', {
           status: response.status,
           statusText: response.statusText,
           responseText: responseText.substring(0, 200),

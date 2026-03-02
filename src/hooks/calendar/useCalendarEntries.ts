@@ -59,7 +59,7 @@ export function useCalendarEntries({
       if (fetchError) {
         if (retryAttempt < CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS) {
           const delayMs = CALENDAR_CONFIG.INITIAL_RETRY_DELAY_MS * Math.pow(2, retryAttempt);
-          console.warn(`Calendar entries load failed, retrying in ${delayMs}ms (attempt ${retryAttempt + 1}/${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS}):`, fetchError);
+                    if (__DEV__) console.warn(`Calendar entries load failed, retrying in ${delayMs}ms (attempt ${retryAttempt + 1}/${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS}):`, fetchError);
           await new Promise(resolve => setTimeout(resolve, delayMs));
           if (mountedRef.current) {
             return loadEntriesInternal(mountedRef, retryAttempt + 1);

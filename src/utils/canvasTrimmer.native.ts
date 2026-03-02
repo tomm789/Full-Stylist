@@ -31,7 +31,7 @@ export async function trimImageWhitespace(
   const width = imageSource.width();
   const height = imageSource.height();
 
-  console.log(`[trimImageWhitespace:native] Start Trim: ${width} x ${height}`);
+    if (__DEV__) console.log(`[trimImageWhitespace:native] Start Trim: ${width} x ${height}`);
 
   // Read RGBA_8888 pixel data (4 bytes per pixel: R, G, B, A)
   const pixels = imageSource.readPixels(0, 0, {
@@ -42,7 +42,7 @@ export async function trimImageWhitespace(
   });
 
   if (!pixels) {
-    console.warn('[trimImageWhitespace:native] readPixels returned null — returning original');
+        if (__DEV__) console.warn('[trimImageWhitespace:native] readPixels returned null — returning original');
     return imageSource;
   }
 
@@ -82,7 +82,7 @@ export async function trimImageWhitespace(
     }
   }
 
-  console.log(`[trimImageWhitespace:native] Detected bounding box:`, {
+    if (__DEV__) console.log(`[trimImageWhitespace:native] Detected bounding box:`, {
     top: minY,
     bottom: maxY,
     left: minX,
@@ -91,21 +91,21 @@ export async function trimImageWhitespace(
 
   // Safety check: if no content found, return original image
   if (!foundContent || minX >= maxX || minY >= maxY) {
-    console.log('[trimImageWhitespace:native] No content found — returning original');
+        if (__DEV__) console.log('[trimImageWhitespace:native] No content found — returning original');
     return imageSource;
   }
 
   const trimmedWidth = maxX - minX + 1;
   const trimmedHeight = maxY - minY + 1;
 
-  console.log(
+    if (__DEV__) console.log(
     `[trimImageWhitespace:native] Trimmed from ${width}x${height} to ${trimmedWidth}x${trimmedHeight}`
   );
 
   // Create new surface at trimmed dimensions and draw the cropped region
   const surface = Skia.Surface.Make(trimmedWidth, trimmedHeight);
   if (!surface) {
-    console.warn('[trimImageWhitespace:native] Failed to create surface — returning original');
+        if (__DEV__) console.warn('[trimImageWhitespace:native] Failed to create surface — returning original');
     return imageSource;
   }
 

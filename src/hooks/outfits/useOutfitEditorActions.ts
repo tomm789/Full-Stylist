@@ -248,7 +248,7 @@ export function useOutfitEditorActions({
         const gridResult = await generateAndUploadGrid(imageUrls, user.id);
         stackedImageId = gridResult?.storagePath ?? null;
         if (stackedImageId) {
-          console.log(`[OutfitEditor] Grid uploaded successfully: ${stackedImageId}`);
+                    if (__DEV__) console.log(`[OutfitEditor] Grid uploaded successfully: ${stackedImageId}`);
         }
       }
 

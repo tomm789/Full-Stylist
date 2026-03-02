@@ -55,7 +55,7 @@ export async function getOutfitCoverImages(
 
   // On failure, return empty map (treat as "unknown/loading" rather than "no image")
   if (error || !images) {
-    console.warn('getOutfitCoverImages: images fetch failed', error);
+        if (__DEV__) console.warn('getOutfitCoverImages: images fetch failed', error);
     return new Map();
   }
 

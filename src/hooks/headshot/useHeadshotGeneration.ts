@@ -184,7 +184,7 @@ export function useHeadshotGeneration({
           maskStoragePath = maskUpload.path;
           maskStorageBucket = maskBucket;
         } else {
-          console.warn('[HairMakeup] Mask upload failed — continuing without mask. Error:', maskError);
+                    if (__DEV__) console.warn('[HairMakeup] Mask upload failed — continuing without mask. Error:', maskError);
         }
       }
 

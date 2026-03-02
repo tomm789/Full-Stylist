@@ -41,7 +41,7 @@ export async function trimImageWhitespace(imageSource, threshold = 15, debug = f
   tempCanvas.height = image.height;
 
   // Log start of trim operation
-  console.log(`[trimImageWhitespace] Start Trim: ${image.width} x ${image.height}`);
+    if (__DEV__) console.log(`[trimImageWhitespace] Start Trim: ${image.width} x ${image.height}`);
 
   // Draw the image onto the temporary canvas
   tempCtx.drawImage(image, 0, 0);
@@ -94,11 +94,11 @@ export async function trimImageWhitespace(imageSource, threshold = 15, debug = f
     left: minX,
     right: maxX
   };
-  console.log(`[trimImageWhitespace] Detected bounding box:`, boundingBox);
+    if (__DEV__) console.log(`[trimImageWhitespace] Detected bounding box:`, boundingBox);
 
   // Safety check: if no content found, return original image (as safety fallback)
   if (!foundContent || minX >= maxX || minY >= maxY) {
-    console.log('[trimImageWhitespace] No content found - returning original image');
+        if (__DEV__) console.log('[trimImageWhitespace] No content found - returning original image');
     const originalCanvas = document.createElement('canvas');
     const originalCtx = originalCanvas.getContext('2d');
     originalCanvas.width = image.width;
@@ -115,7 +115,7 @@ export async function trimImageWhitespace(imageSource, threshold = 15, debug = f
       originalCtx.strokeStyle = '#FF0000';
       originalCtx.lineWidth = 4;
       originalCtx.strokeRect(0, 0, originalCanvas.width, originalCanvas.height);
-      console.log('[trimImageWhitespace] Debug mode: Red border drawn around original canvas (no content found)');
+            if (__DEV__) console.log('[trimImageWhitespace] Debug mode: Red border drawn around original canvas (no content found)');
     }
     
     return originalCanvas;
@@ -125,8 +125,8 @@ export async function trimImageWhitespace(imageSource, threshold = 15, debug = f
   const trimmedWidth = maxX - minX + 1;
   const trimmedHeight = maxY - minY + 1;
 
-  console.log(`[trimImageWhitespace] Final Size: ${trimmedWidth} x ${trimmedHeight}`);
-  console.log(`[trimImageWhitespace] Trimmed from ${width}x${height} to ${trimmedWidth}x${trimmedHeight} (bounds: ${minX},${minY} to ${maxX},${maxY})`);
+    if (__DEV__) console.log(`[trimImageWhitespace] Final Size: ${trimmedWidth} x ${trimmedHeight}`);
+    if (__DEV__) console.log(`[trimImageWhitespace] Trimmed from ${width}x${height} to ${trimmedWidth}x${trimmedHeight} (bounds: ${minX},${minY} to ${maxX},${maxY})`);
 
   // Create new canvas with trimmed dimensions (always cropped)
   const trimmedCanvas = document.createElement('canvas');
@@ -155,7 +155,7 @@ export async function trimImageWhitespace(imageSource, threshold = 15, debug = f
     trimmedCtx.strokeStyle = '#FF0000';
     trimmedCtx.lineWidth = 4;
     trimmedCtx.strokeRect(0, 0, trimmedCanvas.width, trimmedCanvas.height);
-    console.log(`[trimImageWhitespace] Debug mode: Red border drawn around trimmed canvas edges (${trimmedWidth}x${trimmedHeight})`);
+        if (__DEV__) console.log(`[trimImageWhitespace] Debug mode: Red border drawn around trimmed canvas edges (${trimmedWidth}x${trimmedHeight})`);
   }
 
   return trimmedCanvas;

@@ -45,7 +45,7 @@ export function useAccountSettings(): UseAccountSettingsReturn {
     // Load settings
     const { data: settingsData, error: settingsError } = await getUserSettings(user.id);
     if (settingsError) {
-      console.log('[AccountSettings] Settings not found, user may need to complete onboarding');
+            if (__DEV__) console.log('[AccountSettings] Settings not found, user may need to complete onboarding');
       setSettings(null);
     } else {
       setSettings(settingsData);

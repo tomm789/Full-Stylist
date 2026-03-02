@@ -281,7 +281,7 @@ export function useWardrobeItemDetail({
     if (!userId || !itemId) return;
     const sourceImageId = data.allImages?.[0]?.image_id;
     if (!sourceImageId) {
-      console.warn('[WardrobeItemGenerate] retry skipped: no source image', { itemId });
+            if (__DEV__) console.warn('[WardrobeItemGenerate] retry skipped: no source image', { itemId });
       return;
     }
     setGenerationFailed(false);
@@ -296,7 +296,7 @@ export function useWardrobeItemDetail({
     setGenerateJobId(generateJob.id);
     setIsGeneratingProductShot(true);
     const { error: execError } = await triggerAIJobExecution(generateJob.id);
-    if (execError) console.warn('[WardrobeItemGenerate] retry trigger error', execError);
+    if (execError)     if (execError) if (__DEV__) console.warn('[WardrobeItemGenerate] retry trigger error', execError);
   };
 
   // Start polling when job IDs are set (effects depend only on jobId to avoid restarts)

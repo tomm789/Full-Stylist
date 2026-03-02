@@ -120,7 +120,7 @@ export function useProfileImages({
               );
             }
           } catch (e) {
-            console.warn('Active image load timeout');
+                        if (__DEV__) console.warn('Active image load timeout');
           }
         }
       }
@@ -131,7 +131,7 @@ export function useProfileImages({
           new Promise((resolve) => setTimeout(resolve, 10000)),
         ]);
       } catch (e) {
-        console.warn('Gallery load timeout');
+                if (__DEV__) console.warn('Gallery load timeout');
       }
     } catch (error: any) {
       console.error('Load data error:', error);
@@ -184,7 +184,7 @@ export function useProfileImages({
           }
 
           if (syncResult.status === 'error') {
-            console.warn('[useProfileImages] Active headshot set but bodyshot sync failed', {
+                        if (__DEV__) console.warn('[useProfileImages] Active headshot set but bodyshot sync failed', {
               userId,
               imageId,
               message: syncResult.message,
@@ -206,7 +206,7 @@ export function useProfileImages({
             );
             if (!mountedRef.current) return;
             if (pollError || !completedJob || completedJob.status === 'failed') {
-              console.warn('[useProfileImages] Bodyshot generation failed after headshot activation', {
+                            if (__DEV__) console.warn('[useProfileImages] Bodyshot generation failed after headshot activation', {
                 userId,
                 imageId,
                 jobId: syncResult.jobId,
@@ -232,7 +232,7 @@ export function useProfileImages({
             }
           }
         } catch (syncError: any) {
-          console.warn('[useProfileImages] Unexpected bodyshot sync error', {
+                    if (__DEV__) console.warn('[useProfileImages] Unexpected bodyshot sync error', {
             userId,
             imageId,
             message: syncError?.message,

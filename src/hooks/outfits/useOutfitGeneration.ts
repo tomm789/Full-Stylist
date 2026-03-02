@@ -205,13 +205,13 @@ export function useOutfitGeneration({
               publicUrl: supabase.storage.from('media').getPublicUrl(storedKey).data.publicUrl,
               storagePath: storedKey,
             };
-            console.log(`[OutfitGeneration] Using pre-uploaded grid (0s latency): ${storedKey}`);
+                        if (__DEV__) console.log(`[OutfitGeneration] Using pre-uploaded grid (0s latency): ${storedKey}`);
           }
         }
 
         if (!stackedResult) {
           try {
-            console.log(`[OutfitGeneration] Fetching images for ${selectedItems.length} items`);
+                        if (__DEV__) console.log(`[OutfitGeneration] Fetching images for ${selectedItems.length} items`);
 
             const wardrobeItemIds = selectedItems.map((item) => item.id);
             const { data: imageLinks, error: linksError } = await supabase
@@ -303,10 +303,10 @@ export function useOutfitGeneration({
             timeline.mark('grid_done');
 
             if (stackedResult) {
-              console.log(`[OutfitGeneration] Grid uploaded successfully: ${stackedResult.storagePath}`);
+                            if (__DEV__) console.log(`[OutfitGeneration] Grid uploaded successfully: ${stackedResult.storagePath}`);
             }
           } catch (gridError) {
-            console.warn(
+                        if (__DEV__) console.warn(
               '[OutfitGeneration] Client-side grid generation failed; falling back to server stacking',
               gridError
             );
@@ -376,7 +376,7 @@ export function useOutfitGeneration({
         // Phase 5: Create and trigger AI job
         setProgress({ phase: 'generating', message: 'Generating outfit image...', progress: 80 });
 
-        console.log(
+                if (__DEV__) console.log(
           `[OutfitGeneration] Creating AI job with stacked image ID: ${stackedResult?.imageId || 'none'}`
         );
 
@@ -407,7 +407,7 @@ export function useOutfitGeneration({
         timeline.mark('job_created', { job_id: jobData.jobId });
         timeline.mark('trigger_sent');
 
-        console.log(`[OutfitGeneration] AI job created: ${jobData.jobId}`);
+                if (__DEV__) console.log(`[OutfitGeneration] AI job created: ${jobData.jobId}`);
 
         // Start polling for description (skipped in PERF_MODE)
         if (!PERF_MODE) {
@@ -434,7 +434,7 @@ export function useOutfitGeneration({
 
         if (pollError || !completedJob) {
           timeline.mark('poll_timeout');
-          console.warn('[OutfitGeneration] AI generation polling timed out, but outfit was saved');
+                    if (__DEV__) console.warn('[OutfitGeneration] AI generation polling timed out, but outfit was saved');
           // Update variation with job ID even on timeout
           if (variationId && jobData?.jobId) {
             await updateOutfitVariation(variationId, { ai_job_id: jobData.jobId });
@@ -508,7 +508,7 @@ export function useOutfitGeneration({
           onVariationCreated?.();
         }
 
-        console.log('[OutfitGeneration] Generation completed successfully!');
+                if (__DEV__) console.log('[OutfitGeneration] Generation completed successfully!');
         setProgress({ phase: 'complete', message: 'Outfit generated successfully!', progress: 100 });
         setModalVisible(false);
 

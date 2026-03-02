@@ -48,10 +48,10 @@ export function getStorageUrl(bucket: string, key: string): string {
  * Convert image URI to Blob
  */
 export async function uriToBlob(uri: string, mimeType: string): Promise<Blob> {
-  console.log('[uriToBlob] Converting URI:', { uri: uri.substring(0, 50), mimeType });
+    if (__DEV__) console.log('[uriToBlob] Converting URI:', { uri: uri.substring(0, 50), mimeType });
 
   if (uri.startsWith('file://') && Platform.OS !== 'web') {
-    console.log('[uriToBlob] Using FileSystem for file:// URI');
+        if (__DEV__) console.log('[uriToBlob] Using FileSystem for file:// URI');
     const base64 = await LegacyFileSystem.readAsStringAsync(uri, {
       encoding: 'base64' as any,
     });
@@ -61,10 +61,10 @@ export async function uriToBlob(uri: string, mimeType: string): Promise<Blob> {
     return await response.blob();
   }
 
-  console.log('[uriToBlob] Using fetch for URI');
+    if (__DEV__) console.log('[uriToBlob] Using fetch for URI');
   const response = await fetch(uri);
   const blob = await response.blob();
-  console.log('[uriToBlob] Created blob:', { size: blob.size, type: blob.type });
+    if (__DEV__) console.log('[uriToBlob] Created blob:', { size: blob.size, type: blob.type });
   return blob;
 }
 
@@ -96,7 +96,7 @@ async function uploadUriToStorage(
       },
     });
 
-    console.log('[uploadUriToStorage] HTTP status:', uploadResult.status, 'body:', uploadResult.body?.substring(0, 200));
+        if (__DEV__) console.log('[uploadUriToStorage] HTTP status:', uploadResult.status, 'body:', uploadResult.body?.substring(0, 200));
     if (uploadResult.status < 200 || uploadResult.status >= 300) {
       return {
         data: null,
@@ -131,7 +131,7 @@ export async function uploadImageToStorage(
     const fileExt = fileName.split('.').pop();
     const filePath = `${userId}/${Date.now()}.${fileExt}`;
 
-    console.log('[uploadImageToStorage] Starting upload:', {
+        if (__DEV__) console.log('[uploadImageToStorage] Starting upload:', {
       userId,
       fileName,
       filePath,
@@ -151,9 +151,9 @@ export async function uploadImageToStorage(
 
     // Convert Blob to ArrayBuffer to ensure raw binary upload
     // This prevents the multipart form data issue
-    console.log('[uploadImageToStorage] Converting blob to ArrayBuffer...');
+        if (__DEV__) console.log('[uploadImageToStorage] Converting blob to ArrayBuffer...');
     const arrayBuffer = await blobFile.arrayBuffer();
-    console.log('[uploadImageToStorage] ArrayBuffer size:', arrayBuffer.byteLength);
+        if (__DEV__) console.log('[uploadImageToStorage] ArrayBuffer size:', arrayBuffer.byteLength);
 
     // Verify it's a valid image
     const bytes = new Uint8Array(arrayBuffer);
@@ -171,13 +171,13 @@ export async function uploadImageToStorage(
       bytes[10] === 0x42 &&
       bytes[11] === 0x50;
 
-    console.log(
+        if (__DEV__) console.log(
       '[uploadImageToStorage] First bytes:',
       Array.from(bytes.slice(0, 12))
         .map((b) => '0x' + b.toString(16).padStart(2, '0'))
         .join(' ')
     );
-    console.log('[uploadImageToStorage] Valid image format:', isJPEG || isPNG || isWebP);
+        if (__DEV__) console.log('[uploadImageToStorage] Valid image format:', isJPEG || isPNG || isWebP);
 
     if (!isJPEG && !isPNG && !isWebP) {
       return {
@@ -187,7 +187,7 @@ export async function uploadImageToStorage(
     }
 
     // Upload as ArrayBuffer (raw bytes)
-    console.log('[uploadImageToStorage] Uploading to Supabase...');
+        if (__DEV__) console.log('[uploadImageToStorage] Uploading to Supabase...');
     const { data, error } = await supabase.storage.from(bucket).upload(filePath, arrayBuffer, {
       cacheControl: '3600',
       upsert: false,
@@ -199,7 +199,7 @@ export async function uploadImageToStorage(
       return { data: null, error };
     }
 
-    console.log('[uploadImageToStorage] Upload success:', data.path);
+        if (__DEV__) console.log('[uploadImageToStorage] Upload success:', data.path);
 
     const {
       data: { publicUrl },
@@ -338,15 +338,15 @@ export async function uploadBase64ImageToStorage(
       const fileName = storagePath.split('/').pop() || 'upload.jpg';
       const tempPath = `${LegacyFileSystem.cacheDirectory || LegacyFileSystem.documentDirectory}${fileName}`;
 
-      console.log('[uploadBase64ImageToStorage] Native path:', { storagePath, tempPath, base64Length: base64Data.length, mimeType, bucket });
+            if (__DEV__) console.log('[uploadBase64ImageToStorage] Native path:', { storagePath, tempPath, base64Length: base64Data.length, mimeType, bucket });
 
       await LegacyFileSystem.writeAsStringAsync(tempPath, base64Data, {
         encoding: LegacyFileSystem.EncodingType.Base64,
       });
-      console.log('[uploadBase64ImageToStorage] Wrote temp file, uploading...');
+            if (__DEV__) console.log('[uploadBase64ImageToStorage] Wrote temp file, uploading...');
 
       const result = await uploadUriToStorage(storagePath, tempPath, mimeType, bucket);
-      console.log('[uploadBase64ImageToStorage] uploadUriToStorage result:', { path: result.data?.path, error: result.error });
+            if (__DEV__) console.log('[uploadBase64ImageToStorage] uploadUriToStorage result:', { path: result.data?.path, error: result.error });
       await LegacyFileSystem.deleteAsync(tempPath, { idempotent: true });
       return result;
     }
@@ -433,7 +433,7 @@ export async function deleteImage(imageId: string, userId: string): Promise<{ er
       .remove([image.storage_key]);
 
     if (storageError) {
-      console.warn('Failed to delete from storage:', storageError);
+            if (__DEV__) console.warn('Failed to delete from storage:', storageError);
     }
 
     const { error: dbError } = await supabase
@@ -502,27 +502,27 @@ export async function batchUploadImages(
           fileType = 'image/webp';
 
           // Detailed compression logging
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log('📸 IMAGE COMPRESSION COMPLETE');
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log(`📁 Original File Name: ${originalFileName}`);
-          console.log(
+                    if (__DEV__) console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    if (__DEV__) console.log('📸 IMAGE COMPRESSION COMPLETE');
+                    if (__DEV__) console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    if (__DEV__) console.log(`📁 Original File Name: ${originalFileName}`);
+                    if (__DEV__) console.log(
             `📊 Original Size: ${originalSizeMB} MB (${originalSizeBytes.toLocaleString()} bytes)`
           );
-          console.log(
+                    if (__DEV__) console.log(
             `📊 Compressed Size: ${compressedSizeMB} MB (${compressedSizeBytes.toLocaleString()} bytes)`
           );
-          console.log(
+                    if (__DEV__) console.log(
             `💾 Size Reduction: ${sizeReductionPercent}% (Saved ${(
               sizeReductionBytes /
               (1024 * 1024)
             ).toFixed(2)} MB)`
           );
-          console.log(`⏱️  Compression Time: ${compressionTimeMs}ms`);
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log('🚀 Starting upload...');
+                    if (__DEV__) console.log(`⏱️  Compression Time: ${compressionTimeMs}ms`);
+                    if (__DEV__) console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    if (__DEV__) console.log('🚀 Starting upload...');
         } catch (compressionError) {
-          console.warn('[batchUploadImages] Compression failed, using original:', compressionError);
+                    if (__DEV__) console.warn('[batchUploadImages] Compression failed, using original:', compressionError);
           // Continue with original blob if compression fails
         }
       }
