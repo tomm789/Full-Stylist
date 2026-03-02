@@ -56,6 +56,9 @@ export function GridView({ headshots, currentHeadshotId, loading, onSelect }: Gr
       data={headshots}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
+      initialNumToRender={8}
+      maxToRenderPerBatch={4}
+      windowSize={5}
       numColumns={3}
       columnWrapperStyle={styles.columnWrapper}
       contentContainerStyle={styles.gridContent}

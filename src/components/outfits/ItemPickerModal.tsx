@@ -38,6 +38,9 @@ export default function ItemPickerModal({
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
+        initialNumToRender={8}
+        maxToRenderPerBatch={4}
+        windowSize={5}
         renderItem={({ item }) => {
           const imageUrl = itemImageUrls.get(item.id);
           return (

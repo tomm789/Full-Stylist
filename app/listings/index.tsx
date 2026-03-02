@@ -154,6 +154,9 @@ export default function MyListingsScreen() {
           data={listings}
           renderItem={renderListing}
           keyExtractor={(item) => item.id}
+          initialNumToRender={8}
+          maxToRenderPerBatch={4}
+          windowSize={5}
           contentContainerStyle={styles.listingsList}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />

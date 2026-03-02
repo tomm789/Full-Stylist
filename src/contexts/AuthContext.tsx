@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { debugIngest } from '@/lib/ai-jobs/debug-ingest';
@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signIn = async (email: string, password?: string) => {
+  const signIn = useCallback(async (email: string, password?: string) => {
     try {
       debugIngest({ location: 'AuthContext.tsx:signIn:entry', message: 'signIn called', data: { email, usePassword: !!password }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H3,H4,H5' });
       if (password) {
@@ -97,9 +97,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('[AuthContext] Exception during sign in:', error);
       return { error };
     }
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string) => {
     try {
             if (__DEV__) console.log('[AuthContext] Attempting sign up for:', email);
       const { data, error } = await supabase.auth.signUp({
@@ -126,9 +126,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('[AuthContext] Exception during sign up:', error);
       return { error, user: null, session: null };
     }
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     clearHairMakeupSessionVisited();
     debugIngest({ location: 'AuthContext.tsx:138', message: 'signOut called', data: { sessionBefore: session?.user?.id ?? 'null', userBefore: user?.id ?? 'null', hasSession: !!session }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
     try {
@@ -157,9 +157,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       debugIngest({ location: 'AuthContext.tsx:169', message: 'Local state cleared after signOut exception', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H1' });
     }
-  };
+  }, [session, user]);
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = useCallback(async (email: string) => {
     try {
             if (__DEV__) console.log('[AuthContext] Resetting password for:', email);
       const { data, error } = await supabase.auth.resetPasswordForEmail(email);
@@ -175,9 +175,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('[AuthContext] Exception during password reset:', error);
       return { error };
     }
-  };
+  }, []);
 
-  const verifyOtp = async (token: string, type: 'magiclink' | 'email') => {
+  const verifyOtp = useCallback(async (token: string, type: 'magiclink' | 'email') => {
     try {
             if (__DEV__) console.log('[AuthContext] Verifying OTP token, type:', type);
       
@@ -218,20 +218,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return { error, session: null };
     }
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      session,
+      user,
+      loading,
+      signIn,
+      signUp,
+      signOut,
+      resetPassword,
+      verifyOtp,
+    }),
+    [session, user, loading, signIn, signUp, signOut, resetPassword, verifyOtp]
+  );
 
   return (
     <AuthContext.Provider
-      value={{
-        session,
-        user,
-        loading,
-        signIn,
-        signUp,
-        signOut,
-        resetPassword,
-        verifyOtp,
-      }}
+      value={value}
     >
       {children}
     </AuthContext.Provider>

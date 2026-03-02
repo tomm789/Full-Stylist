@@ -28,7 +28,7 @@ interface EntryCardProps {
   onStatusChange: (status: 'planned' | 'worn' | 'skipped') => void;
 }
 
-export default function EntryCard({
+const EntryCard = React.memo(function EntryCard({
   entry,
   slotPresets,
   outfits,
@@ -44,21 +44,21 @@ export default function EntryCard({
 }: EntryCardProps) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const getPresetName = (): string => {
+  const presetName = useMemo(() => {
     if (entry.slot_preset_id) {
       const preset = slotPresets.find((p) => p.id === entry.slot_preset_id);
       return preset?.name || 'Unknown';
     }
     return entry.custom_label || 'Custom';
-  };
+  }, [entry.slot_preset_id, entry.custom_label, slotPresets]);
 
-  const getOutfitTitle = (): string | null => {
+  const outfitTitle = useMemo(() => {
     if (entry.outfit_id) {
       const outfit = outfits.find((o) => o.id === entry.outfit_id);
       return outfit?.title || null;
     }
     return null;
-  };
+  }, [entry.outfit_id, outfits]);
 
   const imageUrl = entry.outfit_id ? outfitImages.get(entry.outfit_id) : null;
 
@@ -88,7 +88,7 @@ export default function EntryCard({
               </Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.presetName}>{getPresetName()}</Text>
+          <Text style={styles.presetName}>{presetName}</Text>
         </View>
         <View style={styles.actions}>
           <TouchableOpacity
@@ -131,7 +131,7 @@ export default function EntryCard({
               >
                 {entry.status.charAt(0).toUpperCase() + entry.status.slice(1)}
               </Text>
-              <Text style={styles.outfitTitle}>{getOutfitTitle() || 'Unknown Outfit'}</Text>
+              <Text style={styles.outfitTitle}>{outfitTitle || 'Unknown Outfit'}</Text>
               <Text style={styles.tapToView}>Tap to view</Text>
             </View>
           </TouchableOpacity>
@@ -177,7 +177,11 @@ export default function EntryCard({
       {entry.notes && <Text style={styles.notes}>{entry.notes}</Text>}
     </View>
   );
-}
+});
+
+EntryCard.displayName = 'EntryCard';
+
+export default EntryCard;
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {

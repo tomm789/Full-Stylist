@@ -4,7 +4,7 @@
  * that the native header bar can read and control.
  */
 
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
 
 interface HeaderSearchState {
   title?: string;
@@ -70,15 +70,20 @@ export function HeaderSearchProvider({ children }: { children: React.ReactNode }
     return headerSearchByRoute.current[key] ?? null;
   }, [currentRouteKey]);
 
+  const value = useMemo(
+    () => ({
+      headerSearch,
+      getHeaderSearch,
+      headerSearchVersion,
+      registerHeaderSearch,
+      clearHeaderSearch,
+    }),
+    [headerSearch, getHeaderSearch, headerSearchVersion, registerHeaderSearch, clearHeaderSearch]
+  );
+
   return (
     <HeaderSearchContext.Provider
-      value={{
-        headerSearch,
-        getHeaderSearch,
-        headerSearchVersion,
-        registerHeaderSearch,
-        clearHeaderSearch,
-      }}
+      value={value}
     >
       {children}
     </HeaderSearchContext.Provider>

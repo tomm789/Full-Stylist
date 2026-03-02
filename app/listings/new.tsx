@@ -119,6 +119,9 @@ export default function NewListingScreen() {
             data={items}
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
+            initialNumToRender={8}
+            maxToRenderPerBatch={4}
+            windowSize={5}
             numColumns={2}
             contentContainerStyle={styles.itemsList}
             ListEmptyComponent={
@@ -150,6 +153,9 @@ export default function NewListingScreen() {
                 data={itemImages}
                 renderItem={renderImage}
                 keyExtractor={(item) => item.id}
+                initialNumToRender={8}
+                maxToRenderPerBatch={4}
+                windowSize={5}
                 numColumns={3}
                 contentContainerStyle={styles.imagesList}
               />
@@ -199,4 +205,3 @@ export default function NewListingScreen() {
     </ScrollView>
   );
 }
-

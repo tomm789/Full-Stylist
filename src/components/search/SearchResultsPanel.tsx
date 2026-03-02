@@ -44,6 +44,9 @@ export default function SearchResultsPanel({
             <SearchResultItem result={item} onPress={onResultPress} />
           )}
           keyExtractor={(item) => `${item.type}-${item.id}`}
+          initialNumToRender={8}
+          maxToRenderPerBatch={4}
+          windowSize={5}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"

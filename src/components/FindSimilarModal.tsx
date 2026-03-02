@@ -118,6 +118,9 @@ export default function FindSimilarModal({
             data={wardrobeResults}
             renderItem={renderResultItem}
             keyExtractor={(item) => ('id' in item.item ? item.item.id : 'unknown')}
+            initialNumToRender={8}
+            maxToRenderPerBatch={4}
+            windowSize={5}
             contentContainerStyle={styles.resultsList}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
@@ -132,6 +135,9 @@ export default function FindSimilarModal({
             data={sellableResults}
             renderItem={renderResultItem}
             keyExtractor={(item) => ('id' in item.item ? item.item.id : 'unknown')}
+            initialNumToRender={8}
+            maxToRenderPerBatch={4}
+            windowSize={5}
             contentContainerStyle={styles.resultsList}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
@@ -146,6 +152,9 @@ export default function FindSimilarModal({
             data={onlineResults}
             renderItem={renderOnlineResultItem}
             keyExtractor={(item, index) => item.url || `online-${index}`}
+            initialNumToRender={8}
+            maxToRenderPerBatch={4}
+            windowSize={5}
             contentContainerStyle={styles.resultsList}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>

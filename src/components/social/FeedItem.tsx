@@ -3,7 +3,7 @@
  * Single feed item renderer for social feed
  */
 
-import React, { useRef } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -48,7 +48,7 @@ interface FeedItemProps {
   setOpenMenuPostId: (postId: string | null) => void;
 }
 
-export function FeedItemComponent({
+export const FeedItemComponent = React.memo(function FeedItemComponent({
   item,
   engagementCounts,
   outfitImages,
@@ -279,7 +279,9 @@ export function FeedItemComponent({
       </View>
     </View>
   );
-}
+});
+
+FeedItemComponent.displayName = 'FeedItemComponent';
 
 const styles = StyleSheet.create({
   feedCard: {

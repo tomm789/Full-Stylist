@@ -55,7 +55,7 @@ export default function ItemGrid({
   onScroll,
   scrollEventThrottle,
 }: ItemGridProps) {
-  const renderItem = ({ item }: { item: WardrobeItem }) => {
+  const renderItem = React.useCallback(({ item }: { item: WardrobeItem }) => {
     const isSelected = selectedItems.includes(item.id);
     const isDimmed = dimmedItems.includes(item.id);
 
@@ -80,7 +80,7 @@ export default function ItemGrid({
         showFavorite={showFavorite}
       />
     );
-  };
+  }, [selectedItems, dimmedItems, imageCache, onItemPress, onItemLongPress, onFavoritePress, showFavorite]);
 
   if (items.length === 0) {
     return (
@@ -99,6 +99,9 @@ export default function ItemGrid({
       data={items}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
+      initialNumToRender={8}
+      maxToRenderPerBatch={4}
+      windowSize={5}
       numColumns={numColumns}
       contentContainerStyle={[styles.list, contentContainerStyle]}
       columnWrapperStyle={numColumns > 1 ? styles.row : undefined}

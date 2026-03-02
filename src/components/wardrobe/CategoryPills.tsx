@@ -9,6 +9,7 @@ import {
   FlatList,
   StyleSheet,
   ViewStyle,
+  ListRenderItemInfo,
   LayoutAnimation,
   Platform,
   UIManager,
@@ -20,6 +21,9 @@ import { WardrobeCategory, WardrobeSubcategory } from '@/lib/wardrobe';
 import ExpandableCategoryPill from './ExpandableCategoryPill';
 
 const { spacing } = theme;
+const ESTIMATED_PILL_WIDTH = 80;
+const PILL_GAP = spacing.xs;
+const PILL_TOTAL_WIDTH = ESTIMATED_PILL_WIDTH + PILL_GAP;
 
 // Enable LayoutAnimation on Android
 if (
@@ -130,6 +134,25 @@ export default function CategoryPills({
     onSelectCategory?.(categoryId);
   };
 
+  const renderCategory = ({ item }: ListRenderItemInfo<WardrobeCategory>) => (
+    <ExpandableCategoryPill
+      category={item}
+      subcategories={
+        item.id === selectedCategoryId ? subcategories : []
+      }
+      selected={item.id === selectedCategoryId}
+      selectedSubcategoryId={selectedSubcategoryId}
+      onSelectCategory={handleSelectCategory}
+      onSelectSubcategory={onSelectSubcategory ?? (() => {})}
+    />
+  );
+
+  const getItemLayout = (_: ArrayLike<WardrobeCategory> | null | undefined, index: number) => ({
+    length: PILL_TOTAL_WIDTH,
+    offset: PILL_TOTAL_WIDTH * index,
+    index,
+  });
+
   return (
     <View style={[styles.container, style]}>
       <FlatList
@@ -137,20 +160,13 @@ export default function CategoryPills({
         horizontal
         data={sortedCategories}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ExpandableCategoryPill
-            category={item}
-            subcategories={
-              item.id === selectedCategoryId ? subcategories : []
-            }
-            selected={item.id === selectedCategoryId}
-            selectedSubcategoryId={selectedSubcategoryId}
-            onSelectCategory={handleSelectCategory}
-            onSelectSubcategory={onSelectSubcategory ?? (() => {})}
-          />
-        )}
+        renderItem={renderCategory}
+        initialNumToRender={8}
+        maxToRenderPerBatch={4}
+        windowSize={5}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.list}
+        getItemLayout={getItemLayout}
         onScrollToIndexFailed={(info) => {
           if (retryScrollTimeoutRef.current) {
             clearTimeout(retryScrollTimeoutRef.current);

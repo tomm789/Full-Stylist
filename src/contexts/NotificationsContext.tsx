@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import {
   getNotifications,
@@ -24,7 +24,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const refreshNotifications = async () => {
+  const refreshNotifications = useCallback(async () => {
     if (!user) {
       setNotifications([]);
       setLoading(false);
@@ -37,9 +37,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       setNotifications(data);
     }
     setLoading(false);
-  };
+  }, [user]);
 
-  const refreshUnreadCount = async () => {
+  const refreshUnreadCount = useCallback(async () => {
     if (!user) {
       setUnreadCount(0);
       return;
@@ -47,7 +47,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
     const count = await getUnreadCount(user.id);
     setUnreadCount(count);
-  };
+  }, [user]);
 
   // Initial load
   useEffect(() => {
@@ -59,7 +59,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       setUnreadCount(0);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, refreshNotifications, refreshUnreadCount]);
 
   // Subscribe to real-time updates
   useEffect(() => {
@@ -97,17 +97,22 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, refreshUnreadCount]);
+
+  const value = useMemo(
+    () => ({
+      notifications,
+      unreadCount,
+      loading,
+      refreshNotifications,
+      refreshUnreadCount,
+    }),
+    [notifications, unreadCount, loading, refreshNotifications, refreshUnreadCount]
+  );
 
   return (
     <NotificationsContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        loading,
-        refreshNotifications,
-        refreshUnreadCount,
-      }}
+      value={value}
     >
       {children}
     </NotificationsContext.Provider>

@@ -102,6 +102,9 @@ export default function FeedbackListScreen() {
             />
           )}
           keyExtractor={(item) => item.id}
+          initialNumToRender={8}
+          maxToRenderPerBatch={4}
+          windowSize={5}
           contentContainerStyle={styles.threadsList}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

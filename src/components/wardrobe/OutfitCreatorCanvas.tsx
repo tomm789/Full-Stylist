@@ -289,15 +289,23 @@ export default function OutfitCreatorCanvas({
   const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
   const [isCanvasMeasured, setIsCanvasMeasured] = useState(false);
 
+  const defaultZIndexByItemId = useMemo(() => {
+    const map: Record<string, number> = {};
+    selectedItems.forEach((item, index) => {
+      map[item.id] = index;
+    });
+    return map;
+  }, [selectedItems]);
+
   const sortedItems = useMemo(() => {
     return [...selectedItems].sort((a, b) => {
       const aLayout = layoutMap[a.id];
       const bLayout = layoutMap[b.id];
-      const aZ = aLayout?.zIndex ?? selectedItems.findIndex((item) => item.id === a.id);
-      const bZ = bLayout?.zIndex ?? selectedItems.findIndex((item) => item.id === b.id);
+      const aZ = aLayout?.zIndex ?? defaultZIndexByItemId[a.id] ?? 0;
+      const bZ = bLayout?.zIndex ?? defaultZIndexByItemId[b.id] ?? 0;
       return aZ - bZ;
     });
-  }, [layoutMap, selectedItems]);
+  }, [layoutMap, selectedItems, defaultZIndexByItemId]);
 
   const onCanvasLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;

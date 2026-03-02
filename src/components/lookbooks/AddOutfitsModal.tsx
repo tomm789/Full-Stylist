@@ -133,6 +133,9 @@ export function AddOutfitsModal({
               />
             )}
             keyExtractor={(item) => item.id}
+            initialNumToRender={8}
+            maxToRenderPerBatch={4}
+            windowSize={5}
             numColumns={2}
             contentContainerStyle={styles.list}
           />

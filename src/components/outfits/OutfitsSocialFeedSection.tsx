@@ -90,6 +90,16 @@ export default function OutfitsSocialFeedSection({
   styles,
   contentContainerStyle,
 }: OutfitsSocialFeedSectionProps) {
+  const feedItemRenderer = React.useMemo(
+    () => renderFeedItem(feedOutfitImages, feedLookbookImages),
+    [renderFeedItem, feedOutfitImages, feedLookbookImages]
+  );
+
+  const renderFeedListItem = React.useCallback(
+    ({ item }: { item: FeedItem }) => feedItemRenderer({ item }),
+    [feedItemRenderer]
+  );
+
   if (activeView === 'grid') {
     return (
       <DiscoverGrid
@@ -116,8 +126,11 @@ export default function OutfitsSocialFeedSection({
     <FlatList
       ref={feedRef}
       data={feedList}
-      renderItem={renderFeedItem(feedOutfitImages, feedLookbookImages)}
+      renderItem={renderFeedListItem}
       keyExtractor={(item) => item.id}
+      initialNumToRender={8}
+      maxToRenderPerBatch={4}
+      windowSize={5}
       style={styles.feedListWrapper}
       contentContainerStyle={[styles.feedList, contentContainerStyle]}
       onLayout={onLayout}

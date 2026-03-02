@@ -36,6 +36,9 @@ export default function OccasionPills({
         horizontal
         data={occasions}
         keyExtractor={(item) => item}
+        initialNumToRender={8}
+        maxToRenderPerBatch={4}
+        windowSize={5}
         renderItem={({ item }) => (
           <PillButton
             label={item.length > 22 ? `${item.substring(0, 22)}...` : item}

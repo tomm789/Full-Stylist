@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -154,7 +154,7 @@ export default function UserWardrobeScreen({
     setRefreshing(false);
   };
 
-  const handleSaveItem = async (itemId: string) => {
+  const handleSaveItem = useCallback(async (itemId: string) => {
     if (!user) return;
 
     setSavingItemId(itemId);
@@ -177,14 +177,14 @@ export default function UserWardrobeScreen({
     }
 
     setSavingItemId(null);
-  };
+  }, [user, savedItems]);
 
-  const handleItemPress = (itemId: string) => {
+  const handleItemPress = useCallback((itemId: string) => {
     // Navigate to item detail (read-only view)
     router.push(`/wardrobe/item/${itemId}?readOnly=true`);
-  };
+  }, [router]);
 
-  const renderItem = ({ item }: { item: WardrobeItem }) => {
+  const renderItem = useCallback(({ item }: { item: WardrobeItem }) => {
     const imageUrl = itemImagesCache.get(item.id) || null;
     const isSaved = savedItems.has(item.id);
     const isSaving = savingItemId === item.id;
@@ -224,7 +224,7 @@ export default function UserWardrobeScreen({
         </TouchableOpacity>
       </TouchableOpacity>
     );
-  };
+  }, [itemImagesCache, savedItems, savingItemId, styles, handleItemPress, handleSaveItem, colors.textTertiary, colors.primary]);
 
   const shouldShowEmptyState = !loading && filteredItems.length === 0;
   const emptyMessage =
@@ -238,6 +238,9 @@ export default function UserWardrobeScreen({
         data={filteredItems}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
+        initialNumToRender={8}
+        maxToRenderPerBatch={4}
+        windowSize={5}
         numColumns={3}
         contentContainerStyle={styles.itemsList}
         columnWrapperStyle={styles.itemsRow}
