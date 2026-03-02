@@ -1,66 +1,88 @@
-# Codex Task: Sweep 1A — Route File Bloat & Component Coupling Audit
+# Codex Task: Sweep 1B — Hook Complexity & Duplication Audit
 
 ## Context
 
 You are working on the Full Stylist app (Expo 54 / React Native / Expo Router). This is an audit-only task — **do not edit any source files**. Your job is to analyse and report.
 
-The app's route files in `app/` have grown too large. The 5 biggest route files contain business logic, state management, and UI code that should live in hooks or components under `src/`. We need to understand exactly what's in them before refactoring.
+This is the second sweep of an optimization audit. Sweep 1A (see `CODEX_TASK_REPORT.md`) analysed the route files. This sweep focuses on the hooks layer — the 12 largest hooks by line count — looking for over-responsibility, duplication across hooks, missing cleanup, and split opportunities.
 
 ## Your Task
 
-Read and analyse these 5 route files:
+Read and analyse these 12 hook files:
 
-1. `app/(tabs)/wardrobe.tsx` (1,043 lines)
-2. `app/(tabs)/outfits/index.tsx` (900 lines)
-3. `app/hair-and-make-up.tsx` (545 lines)
-4. `app/calendar/day/[date].tsx` (510 lines)
-5. `app/lookbooks/[id]/view.tsx` (479 lines)
+1. `src/hooks/wardrobe/useWardrobeItemDetail.ts` (570 lines)
+2. `src/hooks/outfits/useOutfitGeneration.ts` (549 lines)
+3. `src/hooks/headshot/useHairAndMakeup.ts` (527 lines)
+4. `src/hooks/outfits/useOutfitEditorActions.ts` (445 lines)
+5. `src/hooks/headshot/useDrawModeLogic.ts` (402 lines)
+6. `src/hooks/wardrobe/useAddWardrobeItem.ts` (385 lines)
+7. `src/hooks/wardrobe/useCanvasLayout.ts` (374 lines)
+8. `src/hooks/social/useFeed.ts` (374 lines)
+9. `src/hooks/lookbooks/useLookbookDetailActions.ts` (371 lines)
+10. `src/hooks/wardrobe/useFilters.ts` (340 lines)
+11. `src/hooks/wardrobe/useWardrobeItemEdit.ts` (325 lines)
+12. `src/hooks/outfits/useOutfitView.ts` (307 lines)
 
-For **each file**, produce the following analysis:
+For **each hook**, produce the following analysis:
 
-### A. What should STAY in the route file
-- Screen-level layout/JSX composition
-- Route-specific navigation logic (params, navigation calls)
-- Screen-level state that genuinely belongs to the route
+### A. Responsibilities
+List every distinct responsibility this hook owns (data fetching, state management, mutations, subscriptions, UI logic, navigation, etc.). Flag any hook that owns more than 3 distinct responsibilities as "over-responsible".
 
-### B. What should EXTRACT to custom hooks (under `src/hooks/`)
-- Business logic (data fetching, mutations, transformations)
-- Complex state management (multiple related useState/useEffect)
-- Timer/polling/subscription logic
-- Any logic block over ~20 lines that isn't JSX composition
+### B. Split opportunities
+If the hook is over-responsible, suggest concrete splits. Name the proposed new hooks and what each would own. Only suggest splits where the boundary is clean — don't split for the sake of it.
 
-### C. What should EXTRACT to components (under `src/components/`)
-- Large JSX blocks that could be standalone components
-- Repeated UI patterns
-- Sections with their own state that are self-contained
+### C. Cleanup issues
+Look for:
+- Timers (`setTimeout`, `setInterval`) without cleanup in `useEffect` return
+- Subscriptions or listeners without unsubscribe
+- Polling without abort/cancel
+- `useEffect` with missing or incorrect dependency arrays
+- Async operations without abort controllers or mounted checks
+- State updates that could fire after unmount
 
-### D. Dependencies & coupling
-- What hooks/contexts does this file import?
-- What components does it render?
-- Are there circular or tight coupling concerns?
+### D. Duplication across hooks
+Look for patterns that appear in multiple hooks:
+- Similar data fetching patterns (Supabase queries with the same structure)
+- Similar polling/retry logic
+- Similar image processing flows
+- Similar state management patterns (loading/error/data triads)
+- Similar navigation patterns
+- Any utility logic that should be in `src/utils/` instead
 
-### E. Risk assessment
-- Rate refactor difficulty: Low / Medium / High
-- Note any tricky dependencies that would make extraction hard
+### E. Memoization gaps
+For each hook, note:
+- Expensive computations not wrapped in `useMemo`
+- Callback functions recreated every render that are passed to child components (should be `useCallback`)
+- Objects/arrays created inline that cause unnecessary re-renders in consumers
 
-## Also check
+## Also skim these smaller hooks for duplication patterns
 
-Skim the corresponding existing hooks for these screens to understand what's **already** been extracted. This avoids recommending extractions that duplicate existing hooks:
+Don't do a full analysis, but check if any of these duplicate logic from the 12 main hooks:
 
-- `src/hooks/wardrobe/` — all files
-- `src/hooks/outfits/` — all files
-- `src/hooks/headshot/` — all files
-- `src/hooks/calendar/` — all files
-- `src/hooks/lookbooks/` — all files
+- `src/hooks/outfits/useOutfitSessionData.ts`
+- `src/hooks/outfits/useOutfitSessionNavigation.ts`
+- `src/hooks/social/useTryOnOutfit.ts`
+- `src/hooks/social/useUserProfile.ts`
+- `src/hooks/profile/useAccountSettings.ts`
+- `src/hooks/headshot/usePresetSelection.ts`
+- `src/hooks/headshot/useHeadshotGeneration.ts`
+- `src/hooks/wardrobe/useWardrobeCamera.ts`
+- `src/hooks/wardrobe/usePeriodicRefresh.ts`
 
 ## Output
 
-Write your full analysis to `CODEX_TASK_REPORT.md` in the project root. Use the structure above (sections A-E for each of the 5 files). End with a **Summary** section listing the top 5 highest-impact extractions across all files, ranked by (lines saved × risk reduction).
+Write your full analysis to `CODEX_TASK_REPORT_1B.md` in the project root. Use the structure above (sections A-E for each of the 12 hooks). End with two summary sections:
+
+### Summary: Cross-Hook Duplication Patterns
+List the top recurring patterns found across multiple hooks, with file references.
+
+### Summary: Top 5 Highest-Impact Actions
+Ranked by (complexity reduction × risk level), list the 5 most impactful things to fix across all 12 hooks.
 
 ## Important
 
 - **Do NOT edit any source files** — this is audit only
-- **Do NOT create any new source files**
-- Only create/edit `CODEX_TASK_REPORT.md`
+- **Do NOT create any new source files** other than the report
+- Only create/edit `CODEX_TASK_REPORT_1B.md`
 - Be specific: reference line numbers or function names, not vague descriptions
-- If a hook already exists that covers some logic, note it as "already extracted"
+- When flagging cleanup issues, explain what the actual risk is (memory leak, stale state, race condition, etc.)
