@@ -1,211 +1,110 @@
-# Codex Task: Phase 2B — Shared Utilities & Standards (4 sub-tasks)
+# Codex Task: Phase 2C — Context & Memoization Quick Wins (3 sub-tasks)
 
 ## Context
 
-You are working on the Full Stylist app (Expo 54 / React Native). This is an **implementation task**. Phase 2A (bug fixes) is complete. This phase creates shared utility abstractions that later phases will use. You are creating new files and doing one large mechanical edit pass (console log gating).
+You are working on the Full Stylist app (Expo 54 / React Native). This is an **implementation task**. Phases 2A (stability) and 2B (shared utilities) are complete. This phase applies broad, low-risk memoization and performance improvements across the component and context layers.
 
-Reference: `CODEX_IMPLEMENTATION_PLAN.md` for full context.
-
----
-
-## Sub-task 2B-1: Create image URL transform helper
-
-**Create new file:** `src/lib/images/transforms.ts`
-
-The app uses Supabase storage. Currently all image URLs are fetched via `getPublicUrl()` with no size transforms — full-resolution images load everywhere including tiny grid thumbnails. Supabase supports image transforms via URL parameters.
-
-**Implementation:**
-
-```typescript
-import { supabase } from '@/lib/supabase';
-
-export type ImageSizeClass = 'thumb' | 'card' | 'full';
-
-const SIZE_CONFIG: Record<ImageSizeClass, { width: number; height: number; quality?: number } | null> = {
-  thumb: { width: 150, height: 150, quality: 70 },
-  card: { width: 400, height: 400, quality: 80 },
-  full: null, // No transform — original resolution
-};
-
-/**
- * Get a public URL for a Supabase storage image with optional size transform.
- * Falls back to untransformed URL if transform not supported or size is 'full'.
- */
-export function getImageUrl(
-  bucket: string,
-  path: string,
-  size: ImageSizeClass = 'full'
-): string {
-  const config = SIZE_CONFIG[size];
-
-  if (!config) {
-    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-    return data.publicUrl;
-  }
-
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path, {
-    transform: {
-      width: config.width,
-      height: config.height,
-      quality: config.quality,
-    },
-  });
-  return data.publicUrl;
-}
-```
-
-Adapt as needed if the Supabase client version or storage API differs from this pattern. Check `src/lib/supabase.ts` for the existing client setup. Also check existing usage of `getPublicUrl` in `src/lib/images.ts` and `src/lib/wardrobe/images.ts` to understand current patterns.
-
-**Also create:** `src/lib/images/index.ts` barrel export if the directory doesn't exist yet.
+Reference: `CODEX_IMPLEMENTATION_PLAN.md` for full context, `CODEX_TASK_REPORT_1C.md` for the audit findings.
 
 ---
 
-## Sub-task 2B-2: Create standard expo-image props helper
+## Sub-task 2C-1: Memoize context provider values
 
-**Create new file:** `src/lib/images/defaults.ts`
+For each context below, wrap the provider `value` prop in `useMemo` so consumers don't re-render when the value object reference changes unnecessarily. Separate stable callbacks from changing state where feasible.
 
-```typescript
-/**
- * Standard expo-image prop sets by rendering context.
- * Import and spread onto <Image> components for consistency.
- */
+### `src/contexts/AuthContext.tsx` (line ~224-234)
+- The provider value is an object literal recreated every render.
+- 18 consumers (`useAuth`) across the app — highest blast radius.
+- Wrap in `useMemo` with appropriate deps (session, user, loading, and the stable callback functions).
 
-export const GRID_IMAGE_PROPS = {
-  cachePolicy: 'memory-disk' as const,
-  contentFit: 'cover' as const,
-  transition: 200,
-};
+### `src/contexts/HeaderSearchContext.tsx` (line ~75-81)
+- Provider value is an object literal.
+- 3 consumers.
+- Wrap in `useMemo`.
 
-export const DETAIL_IMAGE_PROPS = {
-  contentFit: 'contain' as const,
-  priority: 'high' as const,
-};
+### `src/contexts/TabSearchContext.tsx` (line ~53-58)
+- Provider value is an object literal.
+- 1 consumer currently but pattern should be correct.
+- Wrap in `useMemo`.
 
-export const AVATAR_IMAGE_PROPS = {
-  cachePolicy: 'memory-disk' as const,
-  contentFit: 'cover' as const,
-  transition: 150,
-};
+### `src/contexts/NotificationsContext.tsx` (line ~104-110)
+- Provider value is an object literal. Frequent poll/realtime updates recreate context value.
+- 3 consumers.
+- Wrap in `useMemo`.
 
-export const FEED_IMAGE_PROPS = {
-  cachePolicy: 'memory-disk' as const,
-  contentFit: 'cover' as const,
-  transition: 200,
-};
-```
+**Note:** `FloatingTabBarContext`, `ThemeContext`, `CalendarEntryFlowContext` already have memoized values — do not change those.
 
-Export from `src/lib/images/index.ts`.
+**Success criteria:** All 8 context providers have memoized values. Verify by reading each file after changes.
 
 ---
 
-## Sub-task 2B-3: Create cancellable timer utilities
+## Sub-task 2C-2: FlatList tuning across all list components
 
-**Create new file:** `src/lib/utils/timers.ts`
+Add virtualization props to all FlatList components that lack them. Use these as baseline defaults (adjust if item sizes differ significantly):
 
 ```typescript
-import { useRef, useEffect } from 'react';
-
-/**
- * Hook that returns a ref which is `true` while the component is mounted.
- * Use to guard state updates in async callbacks.
- */
-export function useMountedRef(): React.MutableRefObject<boolean> {
-  const mountedRef = useRef(true);
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-  return mountedRef;
-}
-
-/**
- * Hook that returns helpers for tracking timeouts that auto-clear on unmount.
- */
-export function useTrackedTimeouts() {
-  const timeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
-
-  useEffect(() => {
-    return () => {
-      timeoutsRef.current.forEach(clearTimeout);
-      timeoutsRef.current.clear();
-    };
-  }, []);
-
-  const schedule = (callback: () => void, delayMs: number): ReturnType<typeof setTimeout> => {
-    const id = setTimeout(() => {
-      timeoutsRef.current.delete(id);
-      callback();
-    }, delayMs);
-    timeoutsRef.current.add(id);
-    return id;
-  };
-
-  const cancel = (id: ReturnType<typeof setTimeout>) => {
-    clearTimeout(id);
-    timeoutsRef.current.delete(id);
-  };
-
-  const cancelAll = () => {
-    timeoutsRef.current.forEach(clearTimeout);
-    timeoutsRef.current.clear();
-  };
-
-  return { schedule, cancel, cancelAll };
-}
+initialNumToRender={8}
+maxToRenderPerBatch={4}
+windowSize={5}
 ```
 
-Export from an `index.ts` barrel if one exists in `src/lib/utils/`, or create one.
+### Files to update:
+
+1. **`src/components/wardrobe/ItemGrid.tsx`** (line ~98) — main wardrobe grid
+2. **`src/components/UserWardrobeScreen.tsx`** (line ~237) — user wardrobe grid
+3. **`src/components/outfits/OutfitsSocialFeedSection.tsx`** (line ~116) — outfit feed
+4. **`src/components/social/PostGrid.tsx`** (line ~105) — social post grid
+5. **`src/components/lookbooks/LookbookPickerModal.tsx`** (line ~157) — lookbook list
+6. **`src/components/search/SearchResultsPanel.tsx`** (line ~41) — search results
+7. **`src/components/FindSimilarModal.tsx`** (lines ~117, 131, 145) — 3 FlatLists in one modal
+8. **`src/components/social/DiscoverGrid.tsx`** / **`src/components/social/PostGrid.tsx`** — social grids
+9. **`src/components/outfits/MyOutfitsSection.tsx`** (line ~79) — my outfits feed
+10. **`src/components/wardrobe/headshot-selector/GridView.tsx`** (line ~55) — headshot grid
+
+### Special case: `src/components/wardrobe/CategoryPills.tsx`
+- Add `getItemLayout` — this list uses `scrollToIndex` (line ~91) and currently has retry fallback logic because `getItemLayout` is missing.
+- Estimate pill width (e.g., ~80px per pill or measure from styles). Provide a `getItemLayout` function.
+- Also add the standard virtualization props.
+
+### Do NOT convert ScrollView+map to FlatList in this task — that's a bigger change for later.
+
+**Success criteria:** Every `FlatList` in the codebase has `initialNumToRender`, `maxToRenderPerBatch`, and `windowSize`. `CategoryPills` has `getItemLayout`.
 
 ---
 
-## Sub-task 2B-4: Gate console.log calls with __DEV__
+## Sub-task 2C-3: Memoize high-frequency list components
 
-**Scope:** All `console.log` and `console.warn` calls in `src/` that are not already gated by `__DEV__`. Keep `console.error` calls for genuine error paths but gate diagnostic/verbose ones.
+### Wrap these row components in `React.memo`:
 
-**Approach:** For each ungated `console.log(...)` or `console.warn(...)`, wrap with:
-```typescript
-if (__DEV__) console.log(...);
-```
-or for multi-line:
-```typescript
-if (__DEV__) {
-  console.log(...);
-}
-```
+1. **`src/components/social/FeedItem.tsx`** (line ~51) — wrap the `FeedItemComponent` (or equivalent default export) in `React.memo`. This is the highest-frequency rendered row in the app.
 
-**Priority files** (handle these first, they have the most):
-1. `src/contexts/AuthContext.tsx` (35 occurrences)
-2. `src/lib/utils/image-helpers.ts` (29)
-3. `src/hooks/profile/useImageGeneration.ts` (17)
-4. `src/lib/user/initialization.ts` (15)
-5. `src/hooks/outfits/useOutfitGeneration.ts` (9)
-6. `src/utils/clothing-grid.native.ts` (9)
-7. `src/utils/clothing-grid.js` (9)
-8. `src/hooks/wardrobe/useWardrobeItemDetail.ts` (8)
-9. `src/utils/imageProcessor.ts` (8)
-10. `src/lib/outfits/sessions.ts` (8)
+2. **`src/components/calendar/EntryCard.tsx`** (line ~31) — wrap in `React.memo`. Also memoize the `find()` calls at lines ~47-61 using `useMemo`.
 
-Then do a broad sweep: search for all remaining `console.log` and `console.warn` in `src/` and gate them too.
+### Wrap these `renderItem` functions in `useCallback`:
 
-**Do NOT gate:**
-- `console.error` in catch blocks for genuine errors
-- Any log already inside an `if (__DEV__)` block
+3. **`src/components/wardrobe/ItemGrid.tsx`** (line ~58) — wrap `renderItem` in `useCallback`.
 
-**Success criteria:** Running `grep -rn "console\.\(log\|warn\)" src/ --include="*.ts" --include="*.tsx" | grep -v "__DEV__" | wc -l` returns less than 10.
+4. **`src/components/UserWardrobeScreen.tsx`** (line ~187) — wrap `renderItem` in `useCallback`.
+
+5. **`src/components/outfits/OutfitsSocialFeedSection.tsx`** (line ~119) — stabilize the `renderItem` callback with `useCallback`.
+
+### Fix this specific performance issue:
+
+6. **`src/components/wardrobe/OutfitCreatorCanvas.tsx`** (lines ~292-300) — the `sortedItems` sort uses `findIndex` inside the sort comparator, creating O(n² log n) behavior. Precompute a z-index lookup map before sorting, then reference the map in the comparator for O(n log n).
 
 ---
 
 ## General rules
 
-- **New files** should follow existing project conventions (TypeScript, consistent imports, no default exports for utilities).
-- **Console log gating** is mechanical — do not change log content, just wrap with `if (__DEV__)`.
+- **Preserve existing behavior** — these are performance optimizations only, no functional changes.
+- **Minimal changes** — add memoization wrappers, don't restructure components.
+- **Verify by reading** — after changes, re-read each file to confirm correctness.
 - Commit all changes with a descriptive message.
 
 ## Output
 
-Write a summary to `CODEX_TASK_REPORT_2B.md` listing:
-1. New files created and their exports
-2. Console log gating: how many gated, how many remaining ungated, which files had the most changes
-3. Any issues encountered or decisions made
+Write a summary to `CODEX_TASK_REPORT_2C.md` listing:
+1. Context changes: which contexts were memoized and what deps were used
+2. FlatList changes: which lists were tuned and what values were used
+3. Memoization changes: which components were wrapped in `React.memo`, which `renderItem`s were wrapped in `useCallback`, and the canvas sort fix
+4. Any issues or decisions made
