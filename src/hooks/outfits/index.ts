@@ -23,6 +23,10 @@ export { useOutfitActions } from './useOutfitActions';
 export { useSelectedOutfitsBar } from './useSelectedOutfitsBar';
 export { useOutfitsModalsState } from './useOutfitsModalsState';
 export { useOutfitsDerivedFilters } from './useOutfitsDerivedFilters';
+export { useOutfitNavigation } from './useOutfitNavigation';
+export { useItemPicker } from './useItemPicker';
+export { useRenderPipeline } from './useRenderPipeline';
+export { useSaveAndArchive } from './useSaveAndArchive';
 
 export type { SortOption, SortOrder } from './useOutfitFilters';
 export type { BackgroundGridApi } from './useOutfitGeneration';
