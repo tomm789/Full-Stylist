@@ -36,6 +36,7 @@ export default function NavigationSlider({
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const scrollRef = useRef<ScrollView>(null);
+  const alignTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentIndex = items.findIndex((item) => item.id === currentItemId);
 
   useEffect(() => {
@@ -47,10 +48,20 @@ export default function NavigationSlider({
         currentIndex * itemWidth - 150 // Center approximately
       );
 
-      setTimeout(() => {
+      if (alignTimeoutRef.current) {
+        clearTimeout(alignTimeoutRef.current);
+      }
+      alignTimeoutRef.current = setTimeout(() => {
         scrollRef.current?.scrollTo({ x: scrollPosition, animated: true });
       }, 100);
     }
+
+    return () => {
+      if (alignTimeoutRef.current) {
+        clearTimeout(alignTimeoutRef.current);
+        alignTimeoutRef.current = null;
+      }
+    };
   }, [currentIndex]);
 
   if (items.length <= 1) return null;

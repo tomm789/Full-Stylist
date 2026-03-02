@@ -68,6 +68,8 @@ export default function CategoryPills({
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const flatListRef = useRef<FlatList>(null);
+  const selectedScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sortedCategories = React.useMemo(() => {
     return [...categories].sort((a, b) => {
@@ -87,7 +89,10 @@ export default function CategoryPills({
       );
       if (index >= 0 && flatListRef.current) {
         // Small delay to let LayoutAnimation settle
-        setTimeout(() => {
+        if (selectedScrollTimeoutRef.current) {
+          clearTimeout(selectedScrollTimeoutRef.current);
+        }
+        selectedScrollTimeoutRef.current = setTimeout(() => {
           flatListRef.current?.scrollToIndex({
             index,
             animated: true,
@@ -96,7 +101,27 @@ export default function CategoryPills({
         }, 50);
       }
     }
+
+    return () => {
+      if (selectedScrollTimeoutRef.current) {
+        clearTimeout(selectedScrollTimeoutRef.current);
+        selectedScrollTimeoutRef.current = null;
+      }
+    };
   }, [selectedCategoryId, subcategories.length, sortedCategories]);
+
+  useEffect(() => {
+    return () => {
+      if (selectedScrollTimeoutRef.current) {
+        clearTimeout(selectedScrollTimeoutRef.current);
+        selectedScrollTimeoutRef.current = null;
+      }
+      if (retryScrollTimeoutRef.current) {
+        clearTimeout(retryScrollTimeoutRef.current);
+        retryScrollTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   if (sortedCategories.length === 0) return null;
 
@@ -127,7 +152,10 @@ export default function CategoryPills({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.list}
         onScrollToIndexFailed={(info) => {
-          setTimeout(() => {
+          if (retryScrollTimeoutRef.current) {
+            clearTimeout(retryScrollTimeoutRef.current);
+          }
+          retryScrollTimeoutRef.current = setTimeout(() => {
             flatListRef.current?.scrollToIndex({
               index: info.index,
               animated: true,

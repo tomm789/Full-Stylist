@@ -102,6 +102,7 @@ export function OutfitViewContent({
   const router = useRouter();
   const [imageRetryKey, setImageRetryKey] = useState(0);
   const imageRetryCountRef = useRef(0);
+  const imageRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didFireCoverLoadRef = useRef(false);
   const didFireErrorFallbackRef = useRef(false);
 
@@ -128,6 +129,15 @@ export function OutfitViewContent({
     didFireCoverLoadRef.current = false;
     didFireErrorFallbackRef.current = false;
   }, [coverImageUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (imageRetryTimeoutRef.current) {
+        clearTimeout(imageRetryTimeoutRef.current);
+        imageRetryTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const handleImageLoadStart = useCallback(() => {
     const ts = Date.now();
@@ -165,8 +175,12 @@ export function OutfitViewContent({
     }
     if (!renderTraceId) return;
     imageRetryCountRef.current = retryCount + 1;
-    setTimeout(() => {
+    if (imageRetryTimeoutRef.current) {
+      clearTimeout(imageRetryTimeoutRef.current);
+    }
+    imageRetryTimeoutRef.current = setTimeout(() => {
       setImageRetryKey((k) => k + 1);
+      imageRetryTimeoutRef.current = null;
     }, delay);
   }, [timeline, uriType, renderTraceId, onCoverImageErrorAfterRetries]);
 

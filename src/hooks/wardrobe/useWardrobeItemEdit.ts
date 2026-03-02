@@ -75,6 +75,7 @@ export function useWardrobeItemEdit({
   const [subcategoriesExpanded, setSubcategoriesExpanded] = useState(false);
   const [visibilityExpanded, setVisibilityExpanded] = useState(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadSubcategories = async (categoryId: string) => {
     if (!categoryId) return;
@@ -87,6 +88,10 @@ export function useWardrobeItemEdit({
   const startPollingForAICompletion = () => {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
+    }
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+      pollingTimeoutRef.current = null;
     }
 
     pollingIntervalRef.current = setInterval(async () => {
@@ -125,6 +130,10 @@ export function useWardrobeItemEdit({
               clearInterval(pollingIntervalRef.current);
               pollingIntervalRef.current = null;
             }
+            if (pollingTimeoutRef.current) {
+              clearTimeout(pollingTimeoutRef.current);
+              pollingTimeoutRef.current = null;
+            }
           }
         }
       } catch (error) {
@@ -132,11 +141,12 @@ export function useWardrobeItemEdit({
       }
     }, 2000);
 
-    setTimeout(() => {
+    pollingTimeoutRef.current = setTimeout(() => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
+      pollingTimeoutRef.current = null;
     }, 120000);
   };
 
@@ -278,6 +288,10 @@ export function useWardrobeItemEdit({
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
+      }
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+        pollingTimeoutRef.current = null;
       }
     };
   }, [itemId, userId]);

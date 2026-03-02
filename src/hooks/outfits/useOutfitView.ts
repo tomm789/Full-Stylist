@@ -70,12 +70,15 @@ export function useOutfitView({
   const [jobSucceededAt, setJobSucceededAt] = useState<number | null>(null);
   const [lastSucceededJobId, setLastSucceededJobId] = useState<string | null>(null);
   const [lastSucceededJobFeedbackAt, setLastSucceededJobFeedbackAt] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+  const pollingTokenRef = useRef(0);
   const renderTraceIdRef = useRef<string | null>(renderTraceIdParam ?? null);
 
   const refreshOutfit = async () => {
     if (!outfitId) return;
 
     const { data } = await getOutfit(outfitId);
+    if (!mountedRef.current) return;
     if (data) {
       setOutfit(data.outfit);
       setCoverImage(data.coverImage);
@@ -87,7 +90,11 @@ export function useOutfitView({
     }
   };
 
-  const startPollingForOutfitRender = async (jobId: string, timeline?: Timeline) => {
+  const startPollingForOutfitRender = async (
+    jobId: string,
+    timeline?: Timeline,
+    pollingToken?: number
+  ) => {
     try {
       timeline?.mark('poll_start');
       const { data: finalJob } = await pollAIJobWithFinalCheck(
@@ -97,6 +104,13 @@ export function useOutfitView({
         '[OutfitView]',
         'outfit_render'
       );
+
+      if (
+        !mountedRef.current ||
+        (pollingToken !== undefined && pollingTokenRef.current !== pollingToken)
+      ) {
+        return;
+      }
 
       if (finalJob && finalJob.status === 'succeeded') {
         const result = finalJob.result || {};
@@ -136,6 +150,12 @@ export function useOutfitView({
 
         timeline?.mark('outfit_fetch_start');
         await refreshOutfit();
+        if (
+          !mountedRef.current ||
+          (pollingToken !== undefined && pollingTokenRef.current !== pollingToken)
+        ) {
+          return;
+        }
         timeline?.mark('outfit_fetch_end');
       } else if (finalJob && finalJob.status === 'failed') {
         setRenderJobId(null);
@@ -143,6 +163,12 @@ export function useOutfitView({
         Alert.alert('Error', 'Outfit generation failed');
       }
     } catch (error) {
+      if (
+        !mountedRef.current ||
+        (pollingToken !== undefined && pollingTokenRef.current !== pollingToken)
+      ) {
+        return;
+      }
       console.error('Error polling:', error);
       timeline?.mark('poll_error', { error: String(error) });
     }
@@ -158,12 +184,23 @@ export function useOutfitView({
   };
 
   useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      pollingTokenRef.current += 1;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!outfitId || !userId) {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
       return;
     }
 
     const loadOutfitData = async () => {
+      if (!mountedRef.current) return;
       setLoading(true);
       setCoverImageDataUri(null);
       setJobSucceededAt(null);
@@ -187,6 +224,7 @@ export function useOutfitView({
         }
 
         const { data, error } = await getOutfit(outfitId);
+        if (!mountedRef.current) return;
         if (error || !data) {
           Alert.alert('Error', 'Failed to load outfit');
           return;
@@ -201,6 +239,7 @@ export function useOutfitView({
           outfitId,
           userId
         );
+        if (!mountedRef.current) return;
 
         if (activeJob) {
           const coverImageCreatedAt = data.coverImage?.created_at
@@ -215,7 +254,9 @@ export function useOutfitView({
             setIsGenerating(true);
             const timeline = startTimeline('outfit_view_active_job');
             renderTraceIdRef.current = timeline.traceId;
-            startPollingForOutfitRender(activeJob.id, timeline);
+            const pollingToken = pollingTokenRef.current + 1;
+            pollingTokenRef.current = pollingToken;
+            void startPollingForOutfitRender(activeJob.id, timeline, pollingToken);
           }
         } else if (renderJobIdParam) {
           setIsGenerating(true);
@@ -224,7 +265,9 @@ export function useOutfitView({
             ? continueTimeline(renderTraceIdParam)
             : startTimeline('outfit_view_poll');
           renderTraceIdRef.current = timeline.traceId;
-          startPollingForOutfitRender(renderJobIdParam, timeline);
+          const pollingToken = pollingTokenRef.current + 1;
+          pollingTokenRef.current = pollingToken;
+          void startPollingForOutfitRender(renderJobIdParam, timeline, pollingToken);
         }
 
         // Load wardrobe items
@@ -238,6 +281,7 @@ export function useOutfitView({
               .from('wardrobe_items')
               .select('*')
               .in('id', wardrobeItemIds);
+            if (!mountedRef.current) return;
 
             if (items) {
               const itemsMap = new Map();
@@ -264,6 +308,7 @@ export function useOutfitView({
               });
 
               const imageResults = await Promise.all(imagePromises);
+              if (!mountedRef.current) return;
               const newImageUrls = new Map<string, string>();
               imageResults.forEach(({ itemId, url }) => {
                 if (url) {
@@ -277,14 +322,21 @@ export function useOutfitView({
           }
         }
       } catch (error) {
+        if (!mountedRef.current) return;
         console.error('Error loading outfit:', error);
         Alert.alert('Error', 'Failed to load outfit');
       } finally {
-        setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     };
 
-    loadOutfitData();
+    void loadOutfitData();
+
+    return () => {
+      pollingTokenRef.current += 1;
+    };
   }, [outfitId, userId, renderJobIdParam, renderTraceIdParam]);
 
   return {

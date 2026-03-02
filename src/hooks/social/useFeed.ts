@@ -181,18 +181,27 @@ export function useFeed({
   const [followStatuses, setFollowStatuses] = useState<Map<string, boolean>>(new Map());
   const [loading, setLoading] = useState(true);
 
-  const loadFeed = async () => {
+  const loadFeed = async (cancelledRef?: { current: boolean }) => {
+    const isCancelled = () => cancelledRef?.current === true;
+
     if (!userId) {
-      setLoading(false);
+      if (!isCancelled()) {
+        setLoading(false);
+      }
       return;
     }
 
-    setLoading(true);
+    if (!isCancelled()) {
+      setLoading(true);
+    }
 
     try {
       const { data: feedItems } = await getFeed(userId, limit, 0);
+      if (isCancelled()) return;
       if (!feedItems) {
-        setLoading(false);
+        if (!isCancelled()) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -204,6 +213,7 @@ export function useFeed({
           })
         : feedItems;
 
+      if (isCancelled()) return;
       setFeed(filteredFeed);
 
       // Extract all post IDs and owner IDs
@@ -250,6 +260,7 @@ export function useFeed({
           }))
         ),
       ]);
+      if (isCancelled()) return;
 
       // Combine engagement data with reposts
       const counts: Record<string, EngagementCounts> = {};
@@ -264,12 +275,14 @@ export function useFeed({
         };
       });
 
+      if (isCancelled()) return;
       setEngagementCounts(counts);
 
       // Set follow statuses
       const followStatusMap = new Map(
         followData.map(f => [f.ownerId, f.following])
       );
+      if (isCancelled()) return;
       setFollowStatuses(followStatusMap);
 
       // 🔥 OPTIMIZATION: Batch get outfit images
@@ -281,6 +294,7 @@ export function useFeed({
 
       const outfits = outfitItems.map(item => item.entity!.outfit);
       const outfitImageCache = await batchGetOutfitCoverImages(outfits);
+      if (isCancelled()) return;
       setOutfitImages(outfitImageCache);
 
       // Handle lookbooks (this is already relatively optimized)
@@ -325,6 +339,7 @@ export function useFeed({
         })
       );
 
+      if (isCancelled()) return;
       setLookbookImages(lookbookImageCache);
 
       // Build headshot image URL map from entity data (storage info already attached)
@@ -343,11 +358,14 @@ export function useFeed({
           }
         }
       });
+      if (isCancelled()) return;
       setHeadshotImages(headshotImageCache);
     } catch (error) {
       console.error('Error loading feed:', error);
     } finally {
-      setLoading(false);
+      if (!isCancelled()) {
+        setLoading(false);
+      }
     }
   };
 
@@ -356,7 +374,11 @@ export function useFeed({
   };
 
   useEffect(() => {
-    loadFeed();
+    const cancelledRef = { current: false };
+    void loadFeed(cancelledRef);
+    return () => {
+      cancelledRef.current = true;
+    };
   }, [userId, filterByUserId, limit]);
 
   return {
