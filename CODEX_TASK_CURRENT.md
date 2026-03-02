@@ -1,109 +1,211 @@
-# Codex Task: 2A-2/3/4 Combined — Track All Untracked Timers, Add Mounted Guards, Fix Calendar Bug
+# Codex Task: Phase 2B — Shared Utilities & Standards (4 sub-tasks)
 
 ## Context
 
-You are working on the Full Stylist app (Expo 54 / React Native). This is an **implementation task** — you will edit source files. Task 2A-1 is complete (polling interval leak, drip cancellation, reveal timeout). This task covers the remaining three stability fixes from Phase 2A.
+You are working on the Full Stylist app (Expo 54 / React Native). This is an **implementation task**. Phase 2A (bug fixes) is complete. This phase creates shared utility abstractions that later phases will use. You are creating new files and doing one large mechanical edit pass (console log gating).
 
-Reference: `CODEX_IMPLEMENTATION_PLAN.md` for full plan, `CODEX_TASK_REPORT_1D.md` Part 2 for audit evidence.
-
----
-
-## Part 1: Track all untracked setTimeout calls (was Task 2A-2)
-
-Every `setTimeout` must be stored in a ref and cleared on unmount. Fix these:
-
-### 1a) `src/hooks/wardrobe/useAddWardrobeItem.ts`
-**Problem (lines ~188, 204, 211, 226):** Four navigation-delay `setTimeout` calls are not tracked. If the component unmounts before the timeout fires, it will attempt state updates or navigation on an unmounted component.
-**Fix:** Create a `timeoutRef` (or array of refs). Store each timeout ID. Add a `useEffect` cleanup that clears all pending timeouts on unmount.
-
-### 1b) `src/hooks/wardrobe/useWardrobeItemEdit.ts`
-**Problem (line ~135):** A hard-stop polling timeout is not stored in a ref and cannot be cleared on unmount.
-**Fix:** Store the timeout ID in a ref. Clear it in the existing cleanup/unmount path.
-
-### 1c) `src/components/wardrobe/CategoryPills.tsx`
-**Problem (lines ~90, 130):** Two `setTimeout` calls for scroll alignment are not tracked.
-**Fix:** Store in refs, clear on unmount.
-
-### 1d) `src/components/wardrobe/NavigationSlider.tsx`
-**Problem (line ~50):** Scroll-align `setTimeout` is not tracked.
-**Fix:** Store in ref, clear on unmount.
-
-### 1e) `src/components/outfits/OutfitViewContent.tsx`
-**Problem (line ~168):** Retry `setTimeout` after image error is not tracked.
-**Fix:** Store in ref, clear on unmount.
+Reference: `CODEX_IMPLEMENTATION_PLAN.md` for full context.
 
 ---
 
-## Part 2: Add mounted/cancel guards to async hooks (was Task 2A-3)
+## Sub-task 2B-1: Create image URL transform helper
 
-Long async chains must not perform `setState` after the hook unmounts. For each file below, add a cancellation mechanism. The preferred pattern is:
+**Create new file:** `src/lib/images/transforms.ts`
+
+The app uses Supabase storage. Currently all image URLs are fetched via `getPublicUrl()` with no size transforms — full-resolution images load everywhere including tiny grid thumbnails. Supabase supports image transforms via URL parameters.
+
+**Implementation:**
 
 ```typescript
-useEffect(() => {
-  let cancelled = false;
+import { supabase } from '@/lib/supabase';
 
-  async function load() {
-    // ... async work ...
-    if (cancelled) return;
-    setState(result);
+export type ImageSizeClass = 'thumb' | 'card' | 'full';
+
+const SIZE_CONFIG: Record<ImageSizeClass, { width: number; height: number; quality?: number } | null> = {
+  thumb: { width: 150, height: 150, quality: 70 },
+  card: { width: 400, height: 400, quality: 80 },
+  full: null, // No transform — original resolution
+};
+
+/**
+ * Get a public URL for a Supabase storage image with optional size transform.
+ * Falls back to untransformed URL if transform not supported or size is 'full'.
+ */
+export function getImageUrl(
+  bucket: string,
+  path: string,
+  size: ImageSizeClass = 'full'
+): string {
+  const config = SIZE_CONFIG[size];
+
+  if (!config) {
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+    return data.publicUrl;
   }
 
-  load();
-  return () => { cancelled = true; };
-}, [deps]);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path, {
+    transform: {
+      width: config.width,
+      height: config.height,
+      quality: config.quality,
+    },
+  });
+  return data.publicUrl;
+}
 ```
 
-Or for non-effect async functions, use a `mountedRef`:
+Adapt as needed if the Supabase client version or storage API differs from this pattern. Check `src/lib/supabase.ts` for the existing client setup. Also check existing usage of `getPublicUrl` in `src/lib/images.ts` and `src/lib/wardrobe/images.ts` to understand current patterns.
 
-```typescript
-const mountedRef = useRef(true);
-useEffect(() => { return () => { mountedRef.current = false; }; }, []);
-```
-
-### 2a) `src/hooks/wardrobe/useWardrobeItemDetail.ts`
-**Problem (lines ~349-533):** Large async effect chain with nested promises and no cancellation guard. State writes happen after multiple awaits.
-**Fix:** Add a `cancelled` flag to the main load effect. Check `cancelled` before every `setState` call after an `await`. Return cleanup that sets `cancelled = true`.
-
-### 2b) `src/hooks/outfits/useOutfitView.ts`
-**Problem (lines ~90-149, 160-288):** `startPollingForOutfitRender` and `loadOutfitData` are async without cancellation. Polling can continue after unmount.
-**Fix:** Add a `mountedRef`. Check before state updates. Add unmount cleanup that stops polling.
-
-### 2c) `src/hooks/social/useFeed.ts`
-**Problem (lines ~184-352, 358-360):** `loadFeed` can race on rapid filter/user changes. No abort or cancelled guard.
-**Fix:** Add a `cancelled` flag in the effect that calls `loadFeed`. When deps change, the previous call's `cancelled` flag is set to `true` by the cleanup function. Check `cancelled` before each state update in `loadFeed`.
-
-### 2d) `src/hooks/lookbooks/useLookbookDetailActions.ts`
-**Problem (lines ~229-254):** `openAddOutfitsModal` async fetch updates state without mounted guard.
-**Fix:** Add a `mountedRef`. Check before state updates after await.
-
-### 2e) `src/hooks/profile/useProfileImages.ts`
-**Problem (lines ~158-223):** Fire-and-forget async bodyshot sync/poll can update state after unmount.
-**Fix:** Add a `mountedRef`. Check before state updates and alerts.
+**Also create:** `src/lib/images/index.ts` barrel export if the directory doesn't exist yet.
 
 ---
 
-## Part 3: Fix useCalendarEntries mounted flag bug (was Task 2A-4)
+## Sub-task 2B-2: Create standard expo-image props helper
 
-### `src/hooks/calendar/useCalendarEntries.ts`
-**Problem (line ~93, helper at ~118):** The `isMounted` boolean is passed as a parameter to `loadOutfitImages`. Because it's a boolean (not a ref), it captures the value at call time — if the component unmounts after the call but before the async work completes, the function still sees `isMounted === true` and proceeds with state updates.
-**Fix:** Change to use a ref pattern:
-- Create `const mountedRef = useRef(true)` in the hook
-- Set `mountedRef.current = false` in unmount cleanup
-- Pass `mountedRef` (the ref object) to `loadOutfitImages` instead of a boolean
-- Inside `loadOutfitImages`, check `mountedRef.current` before state updates
+**Create new file:** `src/lib/images/defaults.ts`
+
+```typescript
+/**
+ * Standard expo-image prop sets by rendering context.
+ * Import and spread onto <Image> components for consistency.
+ */
+
+export const GRID_IMAGE_PROPS = {
+  cachePolicy: 'memory-disk' as const,
+  contentFit: 'cover' as const,
+  transition: 200,
+};
+
+export const DETAIL_IMAGE_PROPS = {
+  contentFit: 'contain' as const,
+  priority: 'high' as const,
+};
+
+export const AVATAR_IMAGE_PROPS = {
+  cachePolicy: 'memory-disk' as const,
+  contentFit: 'cover' as const,
+  transition: 150,
+};
+
+export const FEED_IMAGE_PROPS = {
+  cachePolicy: 'memory-disk' as const,
+  contentFit: 'cover' as const,
+  transition: 200,
+};
+```
+
+Export from `src/lib/images/index.ts`.
+
+---
+
+## Sub-task 2B-3: Create cancellable timer utilities
+
+**Create new file:** `src/lib/utils/timers.ts`
+
+```typescript
+import { useRef, useEffect } from 'react';
+
+/**
+ * Hook that returns a ref which is `true` while the component is mounted.
+ * Use to guard state updates in async callbacks.
+ */
+export function useMountedRef(): React.MutableRefObject<boolean> {
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  return mountedRef;
+}
+
+/**
+ * Hook that returns helpers for tracking timeouts that auto-clear on unmount.
+ */
+export function useTrackedTimeouts() {
+  const timeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current.clear();
+    };
+  }, []);
+
+  const schedule = (callback: () => void, delayMs: number): ReturnType<typeof setTimeout> => {
+    const id = setTimeout(() => {
+      timeoutsRef.current.delete(id);
+      callback();
+    }, delayMs);
+    timeoutsRef.current.add(id);
+    return id;
+  };
+
+  const cancel = (id: ReturnType<typeof setTimeout>) => {
+    clearTimeout(id);
+    timeoutsRef.current.delete(id);
+  };
+
+  const cancelAll = () => {
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current.clear();
+  };
+
+  return { schedule, cancel, cancelAll };
+}
+```
+
+Export from an `index.ts` barrel if one exists in `src/lib/utils/`, or create one.
+
+---
+
+## Sub-task 2B-4: Gate console.log calls with __DEV__
+
+**Scope:** All `console.log` and `console.warn` calls in `src/` that are not already gated by `__DEV__`. Keep `console.error` calls for genuine error paths but gate diagnostic/verbose ones.
+
+**Approach:** For each ungated `console.log(...)` or `console.warn(...)`, wrap with:
+```typescript
+if (__DEV__) console.log(...);
+```
+or for multi-line:
+```typescript
+if (__DEV__) {
+  console.log(...);
+}
+```
+
+**Priority files** (handle these first, they have the most):
+1. `src/contexts/AuthContext.tsx` (35 occurrences)
+2. `src/lib/utils/image-helpers.ts` (29)
+3. `src/hooks/profile/useImageGeneration.ts` (17)
+4. `src/lib/user/initialization.ts` (15)
+5. `src/hooks/outfits/useOutfitGeneration.ts` (9)
+6. `src/utils/clothing-grid.native.ts` (9)
+7. `src/utils/clothing-grid.js` (9)
+8. `src/hooks/wardrobe/useWardrobeItemDetail.ts` (8)
+9. `src/utils/imageProcessor.ts` (8)
+10. `src/lib/outfits/sessions.ts` (8)
+
+Then do a broad sweep: search for all remaining `console.log` and `console.warn` in `src/` and gate them too.
+
+**Do NOT gate:**
+- `console.error` in catch blocks for genuine errors
+- Any log already inside an `if (__DEV__)` block
+
+**Success criteria:** Running `grep -rn "console\.\(log\|warn\)" src/ --include="*.ts" --include="*.tsx" | grep -v "__DEV__" | wc -l` returns less than 10.
 
 ---
 
 ## General rules
 
-- **Preserve existing API contracts** — do not change hook return types or function signatures visible to consumers.
-- **Do not refactor beyond scope** — only add cancellation/cleanup guards. Do not restructure, rename, or improve unrelated code.
-- **Minimal changes** — for each file, add the minimum code needed for the fix. Don't reorganize surrounding code.
-- **Test by reading** — after making changes, re-read each modified file to verify correctness.
+- **New files** should follow existing project conventions (TypeScript, consistent imports, no default exports for utilities).
+- **Console log gating** is mechanical — do not change log content, just wrap with `if (__DEV__)`.
+- Commit all changes with a descriptive message.
 
 ## Output
 
-Commit your changes with a descriptive message. Then write a summary to `CODEX_TASK_REPORT_2A234.md` listing:
-1. What was changed in each file
-2. The cancellation pattern used (cancelled flag, mountedRef, or timeout ref)
-3. Any edge cases or concerns to flag for review
+Write a summary to `CODEX_TASK_REPORT_2B.md` listing:
+1. New files created and their exports
+2. Console log gating: how many gated, how many remaining ungated, which files had the most changes
+3. Any issues encountered or decisions made
