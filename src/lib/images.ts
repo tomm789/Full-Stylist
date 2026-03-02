@@ -1,17 +1,22 @@
 import { supabase } from './supabase';
 import { getOutfit } from './outfits';
 import { getWardrobeItemImages } from './wardrobe';
+import { getImageUrl, type ImageSizeClass } from './images/transforms';
+
+export * from './images/defaults';
+export * from './images/transforms';
 
 export function getPublicImageUrl(
-  image?: { storage_bucket?: string | null; storage_key?: string | null } | null
+  image?: { storage_bucket?: string | null; storage_key?: string | null } | null,
+  size: ImageSizeClass = 'full'
 ): string | null {
   if (!image?.storage_key) return null;
+  const bucket = image.storage_bucket || 'media';
+  if (size !== 'full') {
+    return getImageUrl(bucket, image.storage_key, size);
+  }
 
-  const { data: urlData } = supabase.storage
-    .from(image.storage_bucket || 'media')
-    .getPublicUrl(image.storage_key);
-
-  return urlData.publicUrl;
+  return supabase.storage.from(bucket).getPublicUrl(image.storage_key).data.publicUrl;
 }
 
 /** Minimal outfit shape for batched cover image lookup */
@@ -27,7 +32,8 @@ export type OutfitCoverDescriptor = { id: string; cover_image_id?: string | null
  * - key => null => known no cover image
  */
 export async function getOutfitCoverImages(
-  outfits: Array<OutfitCoverDescriptor>
+  outfits: Array<OutfitCoverDescriptor>,
+  size: ImageSizeClass = 'full'
 ): Promise<Map<string, string | null>> {
   // Deduplicate by outfit id (first occurrence wins)
   const byId = new Map<string, OutfitCoverDescriptor>();
@@ -61,7 +67,7 @@ export async function getOutfitCoverImages(
 
   const urlByImageId = new Map<string, string | null>();
   for (const img of images) {
-    urlByImageId.set(img.id, getPublicImageUrl(img));
+    urlByImageId.set(img.id, getPublicImageUrl(img, size));
   }
 
   const imageMap = new Map<string, string | null>();

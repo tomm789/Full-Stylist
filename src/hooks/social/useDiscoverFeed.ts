@@ -65,7 +65,7 @@ export function useDiscoverFeed({
       });
 
       const outfits = outfitItems.map(item => item.entity!.outfit);
-      const newImageCache = await batchGetOutfitCoverImages(outfits);
+      const newImageCache = await batchGetOutfitCoverImages(outfits, 'card');
 
       // Also handle lookbook images (use first outfit image as cover)
       const lookbookItems = feedItems.filter(item => {

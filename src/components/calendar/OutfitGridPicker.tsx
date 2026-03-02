@@ -6,6 +6,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -58,9 +59,10 @@ export default function OutfitGridPicker({
             >
               {imageUrl ? (
                 <Image
+                  {...GRID_IMAGE_PROPS}
                   source={{ uri: imageUrl }}
                   style={postGridStyles.gridImage}
-                  contentFit="cover"
+                  recyclingKey={item.id}
                 />
               ) : (
                 <View style={[postGridStyles.gridImagePlaceholder, styles.outfitImagePlaceholder]}>

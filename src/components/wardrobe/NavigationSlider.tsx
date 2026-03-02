@@ -7,6 +7,7 @@ import React, { useMemo, useRef, useEffect } from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { ImagePlaceholder } from '@/components/shared';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -86,9 +87,10 @@ export default function NavigationSlider({
             >
               {item.imageUrl ? (
                 <Image
+                  {...GRID_IMAGE_PROPS}
                   source={{ uri: item.imageUrl }}
                   style={styles.image}
-                  contentFit="cover"
+                  recyclingKey={item.id}
                 />
               ) : (
                 <ImagePlaceholder text="" iconSize={24} />

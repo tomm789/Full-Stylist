@@ -50,6 +50,9 @@ const AddOutfitCard = React.memo(
             source={{ uri: imageUrl }}
             style={styles.image}
             contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+            recyclingKey={item.id}
           />
         ) : (
           <View style={styles.imagePlaceholder}>

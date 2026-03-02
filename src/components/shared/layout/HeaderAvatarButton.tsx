@@ -4,7 +4,9 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { TouchableOpacity, StyleSheet, Text, View, Image } from 'react-native';
+import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { AVATAR_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -45,6 +47,7 @@ export default function HeaderAvatarButton({
     >
       {uri && !imageError ? (
         <Image
+          {...AVATAR_IMAGE_PROPS}
           source={{ uri }}
           style={styles.avatar}
           onError={() => setImageError(true)}

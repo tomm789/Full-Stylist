@@ -101,7 +101,7 @@ export function useProfileData({
           .map(item => item.entity?.outfit)
           .filter(Boolean);
         
-        const imageCache = await batchGetOutfitCoverImages(outfits);
+        const imageCache = await batchGetOutfitCoverImages(outfits, 'card');
         setPostImages(imageCache);
       }
 

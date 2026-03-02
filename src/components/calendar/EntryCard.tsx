@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { CalendarEntry, CalendarSlotPreset } from '@/lib/calendar';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -115,7 +116,12 @@ const EntryCard = React.memo(function EntryCard({
             activeOpacity={0.7}
           >
             {imageUrl ? (
-              <Image source={{ uri: imageUrl }} style={styles.outfitImage} contentFit="cover" />
+              <Image
+                {...GRID_IMAGE_PROPS}
+                source={{ uri: imageUrl }}
+                style={styles.outfitImage}
+                recyclingKey={entry.outfit_id || imageUrl}
+              />
             ) : (
               <View style={styles.outfitImagePlaceholder}>
                 <Text style={styles.placeholderText}>No Image</Text>

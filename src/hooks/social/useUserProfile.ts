@@ -108,7 +108,7 @@ export function useUserProfile({
 
       // 🔥 OPTIMIZATION: Batch get outfit images
       if (outfitsData && outfitsData.length > 0) {
-        const outfitImageCache = await batchGetOutfitCoverImages(outfitsData);
+        const outfitImageCache = await batchGetOutfitCoverImages(outfitsData, 'card');
         setOutfitImages(outfitImageCache);
       }
 
@@ -129,7 +129,7 @@ export function useUserProfile({
           .map(outfitId => outfitsData.find(o => o.id === outfitId))
           .filter(Boolean);
 
-        const firstOutfitImages = await batchGetOutfitCoverImages(firstOutfits);
+        const firstOutfitImages = await batchGetOutfitCoverImages(firstOutfits, 'card');
 
         // Map back to lookbooks
         lookbooksData.forEach(lookbook => {
@@ -198,7 +198,7 @@ export function useUserProfile({
       }
 
       if (outfitsData && outfitsData.length > 0) {
-        const outfitImageCache = await batchGetOutfitCoverImages(outfitsData);
+        const outfitImageCache = await batchGetOutfitCoverImages(outfitsData, 'card');
         setOutfitImages(outfitImageCache);
       }
 
@@ -213,7 +213,7 @@ export function useUserProfile({
         const firstOutfits = Array.from(firstOutfitsByLookbook.values())
           .map(outfitId => outfitsData.find(o => o.id === outfitId))
           .filter(Boolean);
-        const firstOutfitImages = await batchGetOutfitCoverImages(firstOutfits);
+        const firstOutfitImages = await batchGetOutfitCoverImages(firstOutfits, 'card');
         lookbooksData.forEach(lookbook => {
           const firstOutfitId = firstOutfitsByLookbook.get(lookbook.id);
           if (firstOutfitId) {

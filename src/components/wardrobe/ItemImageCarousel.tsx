@@ -14,7 +14,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { supabase } from '@/lib/supabase';
+import { getImageUrl as getTransformedImageUrl } from '@/lib/images';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -35,11 +35,12 @@ export function ItemImageCarousel({
   const [modalImageIndex, setModalImageIndex] = useState(0);
 
   const getImageUrl = (imageData: any): string | null => {
-    if (!imageData) return null;
-    const { data: urlData } = supabase.storage
-      .from(imageData.storage_bucket || 'media')
-      .getPublicUrl(imageData.storage_key);
-    return urlData.publicUrl;
+    if (!imageData?.storage_key) return null;
+    return getTransformedImageUrl(
+      imageData.storage_bucket || 'media',
+      imageData.storage_key,
+      'card'
+    );
   };
 
   const openImageModal = (index: number) => {

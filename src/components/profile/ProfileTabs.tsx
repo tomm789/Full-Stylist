@@ -102,6 +102,8 @@ export function ProfileTabs({
                     style={postGridStyles.gridImage}
                     contentFit="cover"
                     cachePolicy="memory-disk"
+                    transition={200}
+                    recyclingKey={img.id}
                   />
                 </TouchableOpacity>
               );
@@ -141,6 +143,8 @@ export function ProfileTabs({
                     style={postGridStyles.gridImage}
                     contentFit="cover"
                     cachePolicy="memory-disk"
+                    transition={200}
+                    recyclingKey={img.id}
                   />
                 </TouchableOpacity>
               );

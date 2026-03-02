@@ -32,7 +32,13 @@ export function GridView({ headshots, currentHeadshotId, loading, onSelect }: Gr
           disabled={loading}
         >
           {item.url ? (
-            <Image source={{ uri: item.url }} style={styles.gridImage} contentFit="cover" />
+            <Image
+              source={{ uri: item.url }}
+              style={styles.gridImage}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              recyclingKey={item.id}
+            />
           ) : (
             <View style={styles.gridImagePlaceholder}>
               <Ionicons name="image-outline" size={32} color={colors.textTertiary} />

@@ -47,6 +47,8 @@ export default function HeadshotFeedCard({
           style={styles.image}
           contentFit="cover"
           cachePolicy="memory-disk"
+          transition={200}
+          recyclingKey={headshot.id}
         />
       )}
     </TouchableOpacity>

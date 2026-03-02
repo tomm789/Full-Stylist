@@ -61,6 +61,9 @@ export function ProfileImageGallery({
                 source={{ uri: image.url }}
                 style={styles.image}
                 contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={200}
+                recyclingKey={image.id}
               />
               {isActive && (
                 <View style={styles.activeBadge}>

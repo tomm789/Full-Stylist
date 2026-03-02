@@ -78,7 +78,7 @@ export function useDiscoverOutfits({
       const newFeed = append ? [...discoverOutfitFeed, ...feedItems] : feedItems;
       setDiscoverOutfitFeed(newFeed);
 
-      const newImageCache = await batchGetOutfitCoverImages(outfits);
+      const newImageCache = await batchGetOutfitCoverImages(outfits, 'card');
 
       if (append) {
         const mergedImages = new Map(discoverOutfitImages);

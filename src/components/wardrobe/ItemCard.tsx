@@ -15,6 +15,7 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import ImagePlaceholder from '../shared/images/ImagePlaceholder';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -72,9 +73,10 @@ function ItemCard({
       ) : imageUrl ? (
         <>
           <Image
+            {...GRID_IMAGE_PROPS}
             source={{ uri: imageUrl }}
             style={styles.image}
-            contentFit="cover"
+            recyclingKey={item.id}
           />
           {showFavorite && onFavoritePress && (
             <TouchableOpacity

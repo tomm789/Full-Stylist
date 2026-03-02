@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { WardrobeItem } from '@/lib/wardrobe';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { BottomSheet } from '@/components/shared';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -50,9 +51,10 @@ export default function ItemPickerModal({
             >
               {imageUrl ? (
                 <Image
+                  {...GRID_IMAGE_PROPS}
                   source={{ uri: imageUrl }}
                   style={styles.itemImage}
-                  contentFit="cover"
+                  recyclingKey={item.id}
                 />
               ) : (
                 <View style={styles.imagePlaceholder}>

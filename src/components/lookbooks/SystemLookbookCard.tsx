@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { SystemLookbookData } from '@/hooks/lookbooks';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -30,9 +31,10 @@ export default function SystemLookbookCard({
     <TouchableOpacity style={styles.card} onPress={onPress}>
       {lookbook.coverImageUrl ? (
         <Image
+          {...GRID_IMAGE_PROPS}
           source={{ uri: lookbook.coverImageUrl }}
           style={styles.image}
-          contentFit="cover"
+          recyclingKey={lookbook.id}
         />
       ) : (
         <View style={styles.placeholder}>

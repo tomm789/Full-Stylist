@@ -151,6 +151,8 @@ export function DiscoverGrid({
             style={postGridStyles.gridImage}
             contentFit="cover"
             cachePolicy="memory-disk"
+            transition={200}
+            recyclingKey={entityId}
           />
         ) : (
           <View style={postGridStyles.gridImagePlaceholder}>

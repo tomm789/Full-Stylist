@@ -253,7 +253,7 @@ export function useFeed({
         });
 
       const outfits = outfitItems.map(item => item.entity!.outfit);
-      const outfitImageCache = await batchGetOutfitCoverImages(outfits);
+      const outfitImageCache = await batchGetOutfitCoverImages(outfits, 'card');
       if (isCancelled()) return;
       setOutfitImages(outfitImageCache);
 
@@ -280,7 +280,7 @@ export function useFeed({
 
               lookbookImageCache.set(`${lookbookId}_outfits`, lookbookOutfits);
 
-              const imageUrls = await batchGetOutfitCoverImages(lookbookOutfits);
+              const imageUrls = await batchGetOutfitCoverImages(lookbookOutfits, 'card');
               
               if (lookbookOutfits.length > 0) {
                 const firstUrl = imageUrls.get(lookbookOutfits[0].id);

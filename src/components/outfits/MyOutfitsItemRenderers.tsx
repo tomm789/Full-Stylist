@@ -85,6 +85,8 @@ export function MyOutfitGridItem({
           style={[postGridStyles.gridImage, styles.gridImage]}
           contentFit="cover"
           cachePolicy="memory-disk"
+          transition={200}
+          recyclingKey={item.id}
         />
       ) : (
         <View style={[postGridStyles.gridImagePlaceholder, styles.gridImagePlaceholder]}>

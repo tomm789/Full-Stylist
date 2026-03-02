@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getImageUrl, type ImageSizeClass } from '@/lib/images';
 
 export interface OutfitWithCover {
   id: string;
@@ -13,7 +14,8 @@ export interface OutfitWithCover {
  * @returns Map keyed by outfit ID -> public URL (or null if no cover)
  */
 export async function batchGetOutfitCoverImages(
-  outfits: OutfitWithCover[]
+  outfits: OutfitWithCover[],
+  size: ImageSizeClass = 'full'
 ): Promise<Map<string, string | null>> {
   const imageMap = new Map<string, string | null>();
 
@@ -37,10 +39,12 @@ export async function batchGetOutfitCoverImages(
     if (outfit.cover_image_id) {
       const image = coverImageLookup.get(outfit.cover_image_id);
       if (image?.storage_key) {
-        const { data } = supabase.storage
-          .from(image.storage_bucket || 'media')
-          .getPublicUrl(image.storage_key);
-        imageMap.set(outfit.id, data.publicUrl);
+        const bucket = image.storage_bucket || 'media';
+        const url =
+          size === 'full'
+            ? supabase.storage.from(bucket).getPublicUrl(image.storage_key).data.publicUrl
+            : getImageUrl(bucket, image.storage_key, size);
+        imageMap.set(outfit.id, url);
         return;
       }
     }

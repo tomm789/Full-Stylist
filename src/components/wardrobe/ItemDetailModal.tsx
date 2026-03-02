@@ -8,6 +8,7 @@ import { Dimensions, Modal, View, Text, Pressable, StyleSheet, TouchableOpacity 
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { ImagePlaceholder } from '@/components/shared';
+import { DETAIL_IMAGE_PROPS } from '@/lib/images';
 import { DropdownMenuModal, DropdownMenuItem } from '@/components/shared/modals';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -98,7 +99,13 @@ export default function ItemDetailModal({
           {/* Content */}
           <View style={styles.content}>
             {imageUrl ? (
-              <Image source={{ uri: imageUrl }} style={styles.image} contentFit="cover" />
+              <Image
+                {...DETAIL_IMAGE_PROPS}
+                source={{ uri: imageUrl }}
+                style={styles.image}
+                recyclingKey={item.id}
+                contentFit="cover"
+              />
             ) : (
               <ImagePlaceholder aspectRatio={1} />
             )}

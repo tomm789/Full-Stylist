@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { Lookbook } from '@/lib/lookbooks';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -37,7 +38,12 @@ export default function LookbookCard({
           <ActivityIndicator size="small" color={colors.primary} />
         </View>
       ) : thumbnailUrl ? (
-        <Image source={{ uri: thumbnailUrl }} style={styles.image} contentFit="cover" />
+        <Image
+          {...GRID_IMAGE_PROPS}
+          source={{ uri: thumbnailUrl }}
+          style={styles.image}
+          recyclingKey={thumbnailUrl}
+        />
       ) : (
         <View style={styles.placeholder}>
           <Text style={styles.placeholderText}>📚</Text>

@@ -3,6 +3,7 @@ import { View, TouchableOpacity, type StyleProp, type ViewStyle, type ImageStyle
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { ImagePlaceholder, WardrobeCategoryIcon } from '@/components/shared';
+import { GRID_IMAGE_PROPS } from '@/lib/images';
 import type { WardrobeCategory } from '@/lib/wardrobe';
 import type { OutfitCanvasTrimStatus } from '@/lib/outfits/canvasLayout';
 
@@ -38,7 +39,12 @@ export function PanelItemCard({
   return (
     <View style={cardStyle}>
       {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={imageStyle} contentFit="cover" />
+        <Image
+          {...GRID_IMAGE_PROPS}
+          source={{ uri: item.imageUrl }}
+          style={imageStyle}
+          recyclingKey={item.id}
+        />
       ) : (
         <View style={placeholderStyle}>
           <ImagePlaceholder text="" iconSize={placeholderIconSize} />
