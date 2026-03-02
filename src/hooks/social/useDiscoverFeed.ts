@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { getDiscoverFeed, FeedItem } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
+import { batchGetOutfitCoverImages } from '@/utils/batchImageHelpers';
 
 interface UseDiscoverFeedProps {
   userId: string | undefined;
@@ -21,47 +22,6 @@ interface UseDiscoverFeedReturn {
   refresh: () => Promise<void>;
   loadMore: () => Promise<void>;
   hasMore: boolean;
-}
-
-// Batch get outfit cover images (same helper as useFeed)
-async function batchGetOutfitCoverImages(
-  outfits: Array<{ id: string; cover_image_id?: string }>
-): Promise<Map<string, string | null>> {
-  const imageMap = new Map<string, string | null>();
-
-  const coverImageIds = outfits
-    .map(o => o.cover_image_id)
-    .filter(Boolean) as string[];
-
-  if (coverImageIds.length === 0) {
-    outfits.forEach(o => imageMap.set(o.id, null));
-    return imageMap;
-  }
-
-  const { data: coverImages } = await supabase
-    .from('images')
-    .select('id, storage_bucket, storage_key')
-    .in('id', coverImageIds);
-
-  const coverImageLookup = new Map(
-    (coverImages || []).map(img => [img.id, img])
-  );
-
-  outfits.forEach(outfit => {
-    if (outfit.cover_image_id) {
-      const img = coverImageLookup.get(outfit.cover_image_id);
-      if (img?.storage_key) {
-        const { data } = supabase.storage
-          .from(img.storage_bucket || 'media')
-          .getPublicUrl(img.storage_key);
-        imageMap.set(outfit.id, data.publicUrl);
-        return;
-      }
-    }
-    imageMap.set(outfit.id, null);
-  });
-
-  return imageMap;
 }
 
 export function useDiscoverFeed({

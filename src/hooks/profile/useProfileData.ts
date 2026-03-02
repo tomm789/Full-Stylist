@@ -8,6 +8,7 @@ import { getFullUserProfile, updateUserProfile } from '@/lib/user';
 import { getUserSettings } from '@/lib/settings';
 import { getFeed, FeedItem } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
+import { batchGetOutfitCoverImages } from '@/utils/batchImageHelpers';
 
 interface UseProfileDataProps {
   userId: string | undefined;
@@ -40,51 +41,6 @@ function batchGenerateImageUrls(
         created_at: img.created_at,
       };
     });
-}
-
-// 🔥 OPTIMIZATION: Get outfit cover images in batch
-async function batchGetOutfitCoverImages(
-  outfits: Array<{ id: string; cover_image_id?: string }>
-): Promise<Map<string, string | null>> {
-  const imageMap = new Map<string, string | null>();
-  
-  // Get all cover image IDs
-  const coverImageIds = outfits
-    .map(o => o.cover_image_id)
-    .filter(Boolean) as string[];
-
-  if (coverImageIds.length === 0) {
-    outfits.forEach(o => imageMap.set(o.id, null));
-    return imageMap;
-  }
-
-  // 🔥 Single query to get all cover images
-  const { data: coverImages } = await supabase
-    .from('images')
-    .select('id, storage_bucket, storage_key')
-    .in('id', coverImageIds);
-
-  // Create lookup map
-  const coverImageLookup = new Map(
-    (coverImages || []).map(img => [img.id, img])
-  );
-
-  // Generate URLs for all outfits
-  outfits.forEach(outfit => {
-    if (outfit.cover_image_id) {
-      const img = coverImageLookup.get(outfit.cover_image_id);
-      if (img?.storage_key) {
-        const { data } = supabase.storage
-          .from(img.storage_bucket || 'media')
-          .getPublicUrl(img.storage_key);
-        imageMap.set(outfit.id, data.publicUrl);
-        return;
-      }
-    }
-    imageMap.set(outfit.id, null);
-  });
-
-  return imageMap;
 }
 
 export function useProfileData({

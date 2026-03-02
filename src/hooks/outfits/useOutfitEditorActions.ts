@@ -12,11 +12,6 @@ import {
   getSavedWardrobeItems,
   WardrobeItem,
 } from '@/lib/wardrobe';
-import {
-  createAIJob,
-  triggerAIJobExecution,
-  pollAIJobWithFinalCheck,
-} from '@/lib/ai-jobs';
 import { setInitialCoverDataUri } from '@/lib/outfits/initialCoverCache';
 import { toDataUri } from '@/lib/images/dataUri';
 import { runDescriptionMessageDrip } from '@/lib/outfits/outfitDescriptionMessages';
@@ -26,6 +21,7 @@ import { startTimeline } from '@/lib/perf/timeline';
 import { generateAndUploadGrid } from '@/lib/outfits/generateAndUploadGrid';
 import { useDescriptionPolling } from '@/lib/outfits/useDescriptionPolling';
 import { useItemRevealAnimation } from '@/hooks/outfits/useItemRevealAnimation';
+import { useOutfitRenderJob } from '@/hooks/outfits/useOutfitRenderJob';
 
 interface UseOutfitEditorActionsProps {
   outfitId: string;
@@ -113,6 +109,7 @@ export function useOutfitEditorActions({
       onDescriptionReady?.();
     },
   });
+  const { runRenderJob } = useOutfitRenderJob();
 
   const stopAll = useCallback(() => {
     cancelDescriptionDrip();
@@ -289,57 +286,42 @@ export function useOutfitEditorActions({
       const timeline = startTimeline('outfit_render_editor');
       timeline.mark('generate_press');
 
-      const { data: renderJob, error } = await createAIJob(user.id, 'outfit_render', {
-        user_id: user.id,
-        outfit_id: savedOutfitId,
-        stacked_image_id: stackedImageId,
-        selected,
-        prompt: notes.trim() || undefined,
-        body_shot_image_id: userSettings.body_shot_image_id,
-        model_preference: modelPreference,
-      });
-
-      if (error || !renderJob) {
-        Alert.alert('Error', 'Failed to start render job');
-        setRendering(false);
-        return;
-      }
-
-      timeline.mark('job_created', { job_id: renderJob.id });
-
-      const triggerResult = await triggerAIJobExecution(renderJob.id);
-      if (triggerResult.error) {
-        Alert.alert(
-          'Generation Failed',
-          triggerResult.error.message || 'Failed to start AI generation. Please try again.'
-        );
-        setRendering(false);
-        return;
-      }
-      timeline.mark('execution_triggered');
-
-      stopAll();
-
       const editorItems = Array.from(outfitItems.values()).map((item, index) => ({
         id: item.id,
         title: item.title || `Item ${index + 1}`,
         orderIndex: index,
       }));
-      revealAnimation.start(editorItems);
-      descriptionPolling.start(savedOutfitId);
-
-      timeline.mark('poll_start');
-      const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
-        renderJob.id,
-        60,
-        2000,
-        '[OutfitEditor]',
-        'outfit_render'
-      );
+      const { job: completedJob, base64Result } = await runRenderJob({
+        userId: user.id,
+        jobType: 'outfit_render',
+        jobParams: {
+          user_id: user.id,
+          outfit_id: savedOutfitId,
+          stacked_image_id: stackedImageId,
+          selected,
+          prompt: notes.trim() || undefined,
+          body_shot_image_id: userSettings.body_shot_image_id,
+          model_preference: modelPreference,
+        },
+        timeout: 120000,
+        interval: 2000,
+        logPrefix: '[OutfitEditor]',
+        pollJobType: 'outfit_render',
+        onJobCreated: (jobId) => {
+          timeline.mark('job_created', { job_id: jobId });
+        },
+        onJobTriggered: () => {
+          timeline.mark('execution_triggered');
+          stopAll();
+          revealAnimation.start(editorItems);
+          descriptionPolling.start(savedOutfitId);
+          timeline.mark('poll_start');
+        },
+      });
 
       stopAll();
 
-      if (pollError || !completedJob) {
+      if (!completedJob) {
         timeline.mark('poll_timeout');
         setRendering(false);
         const q = timeline.traceId ? `?renderTraceId=${encodeURIComponent(timeline.traceId)}` : '';
@@ -364,8 +346,8 @@ export function useOutfitEditorActions({
         traceId: timeline.traceId,
       });
 
-      if (result.base64_result) {
-        const dataUri = toDataUri(result.base64_result, result.mime_type);
+      if (base64Result) {
+        const dataUri = toDataUri(base64Result, result.mime_type);
         setInitialCoverDataUri(
           savedOutfitId,
           dataUri,
@@ -409,6 +391,7 @@ export function useOutfitEditorActions({
     stopAll,
     revealAnimation,
     descriptionPolling,
+    runRenderJob,
   ]);
 
   // ── Delete ───────────────────────────────────────────────────────────────────

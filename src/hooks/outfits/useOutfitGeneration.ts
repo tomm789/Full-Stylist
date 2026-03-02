@@ -11,7 +11,6 @@ import {
   type OutfitDescription,
   type GenerationMessage,
 } from '@/lib/outfits/outfitDescriptionMessages';
-import { createAndTriggerJob, pollAIJobWithFinalCheck } from '@/lib/ai-jobs';
 import { getUserSettings } from '@/lib/settings';
 import { WardrobeItem, WardrobeCategory } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
@@ -22,6 +21,7 @@ import type { OutfitCanvasLayoutMap, OutfitCanvasTrimMap } from '@/lib/outfits/c
 import { generateAndUploadGrid } from '@/lib/outfits/generateAndUploadGrid';
 import { useDescriptionPolling } from '@/lib/outfits/useDescriptionPolling';
 import { useItemRevealAnimation } from '@/hooks/outfits/useItemRevealAnimation';
+import { useOutfitRenderJob } from '@/hooks/outfits/useOutfitRenderJob';
 import {
   createOutfitVariation,
   updateOutfitVariation,
@@ -94,6 +94,7 @@ export function useOutfitGeneration({
       descriptionDripRef.current = runDescriptionMessageDrip(messages, setActiveMessage, setModalPhase);
     },
   });
+  const { runRenderJob } = useOutfitRenderJob();
 
   const stopAll = useCallback(() => {
     cancelDescriptionDrip();
@@ -380,10 +381,11 @@ export function useOutfitGeneration({
           `[OutfitGeneration] Creating AI job with stacked image ID: ${stackedResult?.imageId || 'none'}`
         );
 
-        const { data: jobData, error: jobError } = await createAndTriggerJob(
+        let createdJobId: string | null = null;
+        const { job: completedJob, base64Result } = await runRenderJob({
           userId,
-          'outfit_render',
-          {
+          jobType: 'outfit_render',
+          jobParams: {
             user_id: userId,
             outfit_id: outfitId,
             selected: selectedForJob,
@@ -397,47 +399,40 @@ export function useOutfitGeneration({
               canvas_layout: hasCustomLayout ? canvasLayoutMap : null,
               canvas_trim_map: hasCustomLayout ? canvasTrimMap ?? null : null,
             },
-          }
-        );
-
-        if (jobError || !jobData?.jobId) {
-          throw new Error('Failed to start AI generation');
-        }
-
-        timeline.mark('job_created', { job_id: jobData.jobId });
-        timeline.mark('trigger_sent');
-
-                if (__DEV__) console.log(`[OutfitGeneration] AI job created: ${jobData.jobId}`);
-
-        // Start polling for description (skipped in PERF_MODE)
-        if (!PERF_MODE) {
-          descriptionPolling.start(outfitId);
-        }
-
-        // Phase 6: Poll for completion
-        setProgress({
-          phase: 'generating',
-          message: 'AI is working on your outfit...',
-          progress: 90,
+          },
+          timeout: 120000,
+          interval: 2000,
+          logPrefix: '[OutfitGeneration]',
+          pollJobType: 'outfit_render',
+          onJobCreated: (jobId) => {
+            createdJobId = jobId;
+            timeline.mark('job_created', { job_id: jobId });
+                        if (__DEV__) console.log(`[OutfitGeneration] AI job created: ${jobId}`);
+          },
+          onJobTriggered: () => {
+            timeline.mark('trigger_sent');
+            // Start polling for description (skipped in PERF_MODE)
+            if (!PERF_MODE) {
+              descriptionPolling.start(outfitId);
+            }
+            // Phase 6: Poll for completion
+            setProgress({
+              phase: 'generating',
+              message: 'AI is working on your outfit...',
+              progress: 90,
+            });
+            timeline.mark('poll_start');
+          },
         });
-
-        timeline.mark('poll_start');
-        const { data: completedJob, error: pollError } = await pollAIJobWithFinalCheck(
-          jobData.jobId,
-          60,
-          2000,
-          '[OutfitGeneration]',
-          'outfit_render'
-        );
 
         stopAll();
 
-        if (pollError || !completedJob) {
+        if (!completedJob) {
           timeline.mark('poll_timeout');
                     if (__DEV__) console.warn('[OutfitGeneration] AI generation polling timed out, but outfit was saved');
           // Update variation with job ID even on timeout
-          if (variationId && jobData?.jobId) {
-            await updateOutfitVariation(variationId, { ai_job_id: jobData.jobId });
+          if (variationId && createdJobId) {
+            await updateOutfitVariation(variationId, { ai_job_id: createdJobId });
           }
           setProgress({
             phase: 'complete',
@@ -471,8 +466,8 @@ export function useOutfitGeneration({
         });
 
         const result = completedJob.result || {};
-        if (result.base64_result) {
-          const dataUri = toDataUri(result.base64_result, result.mime_type);
+        if (base64Result) {
+          const dataUri = toDataUri(base64Result, result.mime_type);
           const coverSetAt = Date.now();
           setInitialCoverDataUri(
             outfitId,
@@ -527,7 +522,17 @@ export function useOutfitGeneration({
         setGenerating(false);
       }
     },
-    [userId, categories, backgroundGrid, sessionId, onVariationCreated, revealAnimation, descriptionPolling, stopAll]
+    [
+      userId,
+      categories,
+      backgroundGrid,
+      sessionId,
+      onVariationCreated,
+      revealAnimation,
+      descriptionPolling,
+      runRenderJob,
+      stopAll,
+    ]
   );
 
   const reset = useCallback(() => {

@@ -9,11 +9,22 @@ interface PeriodicRefreshCallbacks {
   refreshImages: () => Promise<void>;
   refreshAttributes: () => Promise<void>;
   onImageRefreshTimeout?: () => void;
+  onAttributeRefreshTimeout?: () => void;
+}
+
+interface PeriodicRefreshOptions {
+  intervalMs?: number;
+  timeoutMs?: number;
+}
+
+interface CombinedPeriodicRefreshOptions {
+  image?: PeriodicRefreshOptions | false;
+  attribute?: PeriodicRefreshOptions | false;
 }
 
 export function usePeriodicRefresh(
   itemId: string | undefined,
-  userId: string | undefined,
+  _userId: string | undefined,
   callbacks: PeriodicRefreshCallbacks
 ) {
   // Periodic refresh refs
@@ -27,7 +38,10 @@ export function usePeriodicRefresh(
   callbacksRef.current = callbacks;
 
   // Start periodic image refresh (fallback when no job)
-  const startPeriodicImageRefresh = useCallback(() => {
+  const startPeriodicImageRefresh = useCallback((options: PeriodicRefreshOptions = {}) => {
+    const intervalMs = options.intervalMs ?? 3000;
+    const timeoutMs = options.timeoutMs ?? 90000;
+
     if (periodicImageRefreshRef.current) {
       clearInterval(periodicImageRefreshRef.current);
     }
@@ -38,7 +52,7 @@ export function usePeriodicRefresh(
     periodicImageRefreshRef.current = setInterval(async () => {
       if (!itemId) return;
       await callbacksRef.current.refreshImages();
-    }, 3000);
+    }, intervalMs);
 
     periodicImageTimeoutRef.current = setTimeout(() => {
       if (periodicImageRefreshRef.current) {
@@ -46,7 +60,7 @@ export function usePeriodicRefresh(
         periodicImageRefreshRef.current = null;
       }
       callbacksRef.current.onImageRefreshTimeout?.();
-    }, 90000);
+    }, timeoutMs);
   }, [itemId]);
 
   const stopPeriodicImageRefresh = useCallback(() => {
@@ -61,7 +75,10 @@ export function usePeriodicRefresh(
   }, []);
 
   // Start periodic attribute refresh (fallback when no job)
-  const startPeriodicAttributeRefresh = useCallback(() => {
+  const startPeriodicAttributeRefresh = useCallback((options: PeriodicRefreshOptions = {}) => {
+    const intervalMs = options.intervalMs ?? 5000;
+    const timeoutMs = options.timeoutMs ?? 120000;
+
     if (periodicAttributeRefreshRef.current) {
       clearInterval(periodicAttributeRefreshRef.current);
     }
@@ -71,14 +88,15 @@ export function usePeriodicRefresh(
 
     periodicAttributeRefreshRef.current = setInterval(async () => {
       await callbacksRef.current.refreshAttributes();
-    }, 5000);
+    }, intervalMs);
 
     periodicAttributeTimeoutRef.current = setTimeout(() => {
       if (periodicAttributeRefreshRef.current) {
         clearInterval(periodicAttributeRefreshRef.current);
         periodicAttributeRefreshRef.current = null;
       }
-    }, 120000);
+      callbacksRef.current.onAttributeRefreshTimeout?.();
+    }, timeoutMs);
   }, []);
 
   const stopPeriodicAttributeRefresh = useCallback(() => {
@@ -93,10 +111,17 @@ export function usePeriodicRefresh(
   }, []);
 
   // Combined start/stop helpers
-  const startPeriodicRefresh = useCallback(() => {
-    startPeriodicImageRefresh();
-    startPeriodicAttributeRefresh();
-  }, [startPeriodicImageRefresh, startPeriodicAttributeRefresh]);
+  const startPeriodicRefresh = useCallback(
+    (options: CombinedPeriodicRefreshOptions = {}) => {
+      if (options.image !== false) {
+        startPeriodicImageRefresh(options.image || undefined);
+      }
+      if (options.attribute !== false) {
+        startPeriodicAttributeRefresh(options.attribute || undefined);
+      }
+    },
+    [startPeriodicImageRefresh, startPeriodicAttributeRefresh]
+  );
 
   const stopPeriodicRefresh = useCallback(() => {
     stopPeriodicImageRefresh();
