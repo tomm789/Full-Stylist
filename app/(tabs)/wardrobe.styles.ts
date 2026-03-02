@@ -54,12 +54,4 @@ export const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    edgeSwipeGestureZone: {
-      position: 'absolute',
-      left: 0,
-      bottom: 0,
-      width: 28,
-      backgroundColor: 'transparent',
-      zIndex: 50,
-    },
   });

@@ -17,7 +17,7 @@ export function useTabMenuItems() {
         openDateSelector(new Date());
         break;
       case 'wardrobe':
-        router.push('/wardrobe/add' as any);
+        router.push('/wardrobe/add?action=photo' as any);
         break;
       case 'lookbook':
         router.push('/lookbooks/new' as any);

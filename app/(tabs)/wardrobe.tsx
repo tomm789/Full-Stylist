@@ -81,9 +81,10 @@ import { createCommonStyles } from '@/styles/commonStyles';
 import { createStyles } from './wardrobe.styles';
 import { useSearch } from '@/hooks';
 import SearchOverlay from '@/components/search/SearchOverlay';
-import { PanGestureHandler } from 'react-native-gesture-handler';
-import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { useWardrobeCamera } from '@/hooks/wardrobe/useWardrobeCamera';
+import WardrobeCameraOverlay from '@/components/wardrobe/WardrobeCameraOverlay';
 import SearchHeaderRow from '@/components/search/SearchHeaderRow';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSearchResultNavigation } from '@/hooks/useSearchResultNavigation';
@@ -129,7 +130,7 @@ export default function WardrobeScreen() {
   const { width: searchOverlayWidth, height: windowHeight } = useWindowDimensions();
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
 
-  const cameraNavLockRef = useRef(false);
+  const wardrobeCamera = useWardrobeCamera();
 
   // ── Sub-hooks ────────────────────────────────────────────────────────────────
 
@@ -387,24 +388,41 @@ export default function WardrobeScreen() {
 
   // ── Camera navigation ────────────────────────────────────────────────────────
   const handleOpenCamera = useCallback(() => {
-    if (cameraNavLockRef.current) return;
-    cameraNavLockRef.current = true;
-    router.push('/wardrobe/add?action=photo' as any);
-    setTimeout(() => { cameraNavLockRef.current = false; }, 700);
-  }, [router]);
+    if (Platform.OS === 'web') {
+      // On web, launch file picker directly
+      (async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Please grant photo library permissions.');
+          return;
+        }
+        const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes,
+          allowsMultipleSelection: false,
+          quality: 0.8,
+        });
+        if (!result.canceled && result.assets?.[0]) {
+          router.push(`/wardrobe/add?imageUri=${encodeURIComponent(result.assets[0].uri)}` as any);
+        }
+      })();
+    } else {
+      // On mobile, open custom camera overlay — hide tab bar so it doesn't cover the UI
+      setTabBarOpacity(0);
+      wardrobeCamera.open();
+    }
+  }, [router, wardrobeCamera, setTabBarOpacity]);
 
-  const cameraSwipe = useEdgeSwipe({
-    direction: 'left',
-    onSwipe: handleOpenCamera,
-    enabled:
-      isFocused &&
-      activeTab === 'my' &&
-      !searchOverlayOpen &&
-      !showItemModal &&
-      !showHeadshotSelector &&
-      !showFilterDrawer &&
-      !isCreatorExpanded,
-  });
+  const handleCameraImageReady = useCallback((croppedUri: string) => {
+    wardrobeCamera.close();
+    setTabBarOpacity(1);
+    router.push(`/wardrobe/add?imageUri=${encodeURIComponent(croppedUri)}` as any);
+  }, [wardrobeCamera, router, setTabBarOpacity]);
+
+  const handleCameraClose = useCallback(() => {
+    wardrobeCamera.close();
+    setTabBarOpacity(1);
+  }, [wardrobeCamera, setTabBarOpacity]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -626,11 +644,16 @@ export default function WardrobeScreen() {
       <TutorialScreen
         onStartPhoto={async () => {
           await tutorial.dismissFirstTimeTutorial();
-          router.push('/wardrobe/add?action=photo');
+          handleOpenCamera();
         }}
         onStartUpload={async () => {
           await tutorial.dismissFirstTimeTutorial();
-          router.push('/wardrobe/add?action=upload');
+          if (Platform.OS === 'web') {
+            router.push('/wardrobe/add?action=upload');
+          } else {
+            // On mobile, open library picker then show crop editor via camera overlay
+            handleOpenCamera();
+          }
         }}
         onDismiss={tutorial.dismissFirstTimeTutorial}
       />
@@ -773,7 +796,7 @@ export default function WardrobeScreen() {
               : 'Your wardrobe is empty'
           }
           emptyActionLabel="Add your first item"
-          onEmptyAction={() => router.push('/wardrobe/add')}
+          onEmptyAction={handleOpenCamera}
           onScroll={handleGridScroll}
           scrollEventThrottle={16}
           contentContainerStyle={{ paddingBottom: listBottomPadding }}
@@ -1002,9 +1025,19 @@ export default function WardrobeScreen() {
         }}
       />
 
-      <PanGestureHandler enabled={cameraSwipe.enabled} onGestureEvent={cameraSwipe.onGestureEvent}>
-        <View style={[styles.edgeSwipeGestureZone, { top: headerHeightPx }]} />
-      </PanGestureHandler>
+      {Platform.OS !== 'web' && (
+        <WardrobeCameraOverlay
+          translateY={wardrobeCamera.cameraTranslateY}
+          isOpen={wardrobeCamera.isOpen}
+          cameraRef={wardrobeCamera.cameraRef}
+          onCameraReady={wardrobeCamera.onCameraReady}
+          onImageReady={handleCameraImageReady}
+          onClose={handleCameraClose}
+          pickFromLibrary={wardrobeCamera.pickFromLibrary}
+          capture={wardrobeCamera.capture}
+          lastPhotoUri={wardrobeCamera.lastPhotoUri}
+        />
+      )}
     </View>
   );
 }

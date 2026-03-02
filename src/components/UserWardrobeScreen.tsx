@@ -253,7 +253,7 @@ export default function UserWardrobeScreen({
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   onFilter={() => setShowFilterDrawer(true)}
-                  onAdd={showAddButton ? () => router.push('/wardrobe/add') : undefined}
+                  onAdd={showAddButton ? () => router.push('/wardrobe/add?action=photo') : undefined}
                   hasActiveFilters={hasActiveFilters}
                   showAdd={showAddButton}
                 />
