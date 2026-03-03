@@ -27,3 +27,5 @@ export { AddAttributeModal } from './AddAttributeModal';
 export { default as WardrobeCameraOverlay } from './WardrobeCameraOverlay';
 export { default as CropEditor } from './CropEditor';
 export { FilterPillGroup, FilterAccordionSection } from '@/components/shared';
+export { default as WardrobeBrowserModal } from './WardrobeBrowserModal';
+export { default as BrowserCategoryBar } from './BrowserCategoryBar';
