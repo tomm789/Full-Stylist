@@ -92,10 +92,8 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
       return null;
     }
 
-    const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';
-
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes,
+      mediaTypes: ['images'],
       allowsMultipleSelection: false,
       quality: 0.8,
     });

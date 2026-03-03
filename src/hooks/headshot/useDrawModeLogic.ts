@@ -197,8 +197,8 @@ export function useDrawModeLogic({
     };
   }, []);
 
+  // Web pointer handlers — only assigned when Platform.OS === 'web' (see webCanvasHandlers).
   const handleWebPointerDown = useCallback((event: any) => {
-    if (Platform.OS !== 'web') return;
     if (keyboardVisible) {
       Keyboard.dismiss();
       return;
@@ -221,7 +221,6 @@ export function useDrawModeLogic({
   }, [drawingCanvasRef, getWebPoint, keyboardVisible, scale]);
 
   const handleWebPointerMove = useCallback((event: any) => {
-    if (Platform.OS !== 'web') return;
     const mode = webPointerModeRef.current;
     if (mode === 'idle') return;
 
@@ -241,7 +240,6 @@ export function useDrawModeLogic({
   }, [drawingCanvasRef, getWebPoint, translateX, translateY]);
 
   const handleWebPointerUp = useCallback(() => {
-    if (Platform.OS !== 'web') return;
     if (webPointerModeRef.current === 'draw') {
       drawingCanvasRef.current?.handleDrawEnd();
     } else if (webPointerModeRef.current === 'pan') {
@@ -252,7 +250,6 @@ export function useDrawModeLogic({
   }, [drawingCanvasRef, savedTranslateX, savedTranslateY, translateX, translateY]);
 
   const handleWebWheel = useCallback((event: any) => {
-    if (Platform.OS !== 'web') return;
     const native = event?.nativeEvent ?? {};
     const deltaY = typeof native.deltaY === 'number' ? native.deltaY : 0;
     if (!Number.isFinite(deltaY) || deltaY === 0) return;
