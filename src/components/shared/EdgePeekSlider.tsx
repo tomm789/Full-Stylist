@@ -6,8 +6,16 @@
 import React from 'react';
 import { FlatList, Platform, StyleSheet, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
-import * as Haptics from 'expo-haptics';
 import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
+
+type HapticsModule = {
+  selectionAsync?: () => Promise<void>;
+};
+
+let Haptics: HapticsModule | null = null;
+if (Platform.OS !== 'web') {
+  Haptics = require('expo-haptics');
+}
 
 type RenderItemProps<T> = {
   item: T;
@@ -113,7 +121,7 @@ function EdgePeekSliderInner<T>({
       if (nextIndex === lastIndexRef.current) return;
       lastIndexRef.current = nextIndex;
       pendingIndexRef.current = nextIndex;
-      if (enableHaptics && Platform.OS !== 'web') {
+      if (enableHaptics && Haptics?.selectionAsync) {
         void Haptics.selectionAsync().catch(() => undefined);
       }
     },
