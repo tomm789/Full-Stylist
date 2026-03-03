@@ -110,6 +110,7 @@ export default function DrawModeInline({
     keyboardVisible,
     // No onClose — user stays in draw mode until they tap the back button
   });
+  const canvasInteractionProps = (draw.webCanvasHandlers ?? {}) as any;
 
   const kbOffset = keyboardVisible ? keyboardBottomInset : 0;
 
@@ -158,7 +159,7 @@ export default function DrawModeInline({
       {/* ── Image + canvas (rendered only after container width is known) ── */}
       {containerWidth > 0 && (
         <GestureDetector gesture={draw.allGestures}>
-          <View style={styles.canvasContainer}>
+          <View style={styles.canvasContainer} {...canvasInteractionProps}>
             <Animated.View style={[StyleSheet.absoluteFill, draw.animatedCanvasStyle]}>
               {previewImageUrl ? (
                 <ExpoImage

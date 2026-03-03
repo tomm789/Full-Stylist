@@ -124,6 +124,7 @@ export default function DrawModeModal({
     onApplyTemplateSelections,
     onClose, // Modal variant: generate → close
   });
+  const canvasInteractionProps = (draw.webCanvasHandlers ?? {}) as any;
 
   // Reset draw state when modal closes
   useEffect(() => {
@@ -195,7 +196,7 @@ export default function DrawModeModal({
 
           {/* ── Image + canvas ── */}
           <GestureDetector gesture={draw.allGestures}>
-            <View style={styles.canvasContainer}>
+            <View style={styles.canvasContainer} {...canvasInteractionProps}>
               <Animated.View style={[StyleSheet.absoluteFill, draw.animatedCanvasStyle]}>
                 {previewImageUrl ? (
                   <ExpoImage

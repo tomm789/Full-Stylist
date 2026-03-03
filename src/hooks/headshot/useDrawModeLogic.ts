@@ -8,8 +8,8 @@
  *   - Inline variant: omit onClose → user stays in draw mode
  */
 
-import { useState, useCallback } from 'react';
-import { Alert, Keyboard } from 'react-native';
+import { useState, useCallback, useRef } from 'react';
+import { Alert, Keyboard, Platform } from 'react-native';
 import { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Gesture } from 'react-native-gesture-handler';
 import type React from 'react';
@@ -56,6 +56,10 @@ export type UseDrawModeLogicParams = {
   keyboardVisible?: boolean;
 };
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 export function useDrawModeLogic({
   previewImageUrl,
   baseImageId,
@@ -89,6 +93,8 @@ export function useDrawModeLogic({
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [saving, setSaving] = useState(false);
   const [templateMaskUrl, setTemplateMaskUrl] = useState<string | null>(null);
+  const webPointerModeRef = useRef<'idle' | 'draw' | 'pan'>('idle');
+  const webPanLastRef = useRef({ x: 0, y: 0 });
 
   // --- Zoom / pan (Reanimated shared values) ---
   const scale = useSharedValue(1);
@@ -164,13 +170,121 @@ export function useDrawModeLogic({
     .runOnJS(true)
     .onEnd(() => resetZoom());
 
-  const allGestures = Gesture.Simultaneous(
-    drawGesture,
-    keyboardDismissGesture,
-    pinchGesture,
-    panZoomGesture,
-    doubleTapGesture,
-  );
+  const allGestures = Platform.OS === 'web'
+    ? keyboardDismissGesture
+    : Gesture.Simultaneous(
+        drawGesture,
+        keyboardDismissGesture,
+        pinchGesture,
+        panZoomGesture,
+        doubleTapGesture,
+      );
+
+  const getWebPoint = useCallback((event: any): { x: number; y: number } => {
+    const native = event?.nativeEvent ?? event ?? {};
+    const currentTarget = event?.currentTarget as { getBoundingClientRect?: () => DOMRect } | undefined;
+    if (currentTarget?.getBoundingClientRect) {
+      const rect = currentTarget.getBoundingClientRect();
+      const pageX = typeof native.pageX === 'number' ? native.pageX : native.clientX;
+      const pageY = typeof native.pageY === 'number' ? native.pageY : native.clientY;
+      if (typeof pageX === 'number' && typeof pageY === 'number') {
+        return { x: pageX - rect.left, y: pageY - rect.top };
+      }
+    }
+    return {
+      x: typeof native.locationX === 'number' ? native.locationX : 0,
+      y: typeof native.locationY === 'number' ? native.locationY : 0,
+    };
+  }, []);
+
+  const handleWebPointerDown = useCallback((event: any) => {
+    if (Platform.OS !== 'web') return;
+    if (keyboardVisible) {
+      Keyboard.dismiss();
+      return;
+    }
+
+    const native = event?.nativeEvent ?? {};
+    if (typeof native.button === 'number' && native.button !== 0) return;
+
+    const point = getWebPoint(event);
+    const shouldPan = (scale.value ?? 1) > 1.01 && !native.shiftKey;
+
+    if (shouldPan) {
+      webPointerModeRef.current = 'pan';
+      webPanLastRef.current = point;
+      return;
+    }
+
+    webPointerModeRef.current = 'draw';
+    drawingCanvasRef.current?.handleDrawBegin(point.x, point.y);
+  }, [drawingCanvasRef, getWebPoint, keyboardVisible, scale]);
+
+  const handleWebPointerMove = useCallback((event: any) => {
+    if (Platform.OS !== 'web') return;
+    const mode = webPointerModeRef.current;
+    if (mode === 'idle') return;
+
+    const point = getWebPoint(event);
+
+    if (mode === 'draw') {
+      drawingCanvasRef.current?.handleDrawUpdate(point.x, point.y);
+      return;
+    }
+
+    const dx = point.x - webPanLastRef.current.x;
+    const dy = point.y - webPanLastRef.current.y;
+    webPanLastRef.current = point;
+
+    translateX.value += dx;
+    translateY.value += dy;
+  }, [drawingCanvasRef, getWebPoint, translateX, translateY]);
+
+  const handleWebPointerUp = useCallback(() => {
+    if (Platform.OS !== 'web') return;
+    if (webPointerModeRef.current === 'draw') {
+      drawingCanvasRef.current?.handleDrawEnd();
+    } else if (webPointerModeRef.current === 'pan') {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    }
+    webPointerModeRef.current = 'idle';
+  }, [drawingCanvasRef, savedTranslateX, savedTranslateY, translateX, translateY]);
+
+  const handleWebWheel = useCallback((event: any) => {
+    if (Platform.OS !== 'web') return;
+    const native = event?.nativeEvent ?? {};
+    const deltaY = typeof native.deltaY === 'number' ? native.deltaY : 0;
+    if (!Number.isFinite(deltaY) || deltaY === 0) return;
+
+    const deltaScale = deltaY < 0 ? 0.2 : -0.2;
+    const nextScale = clamp((scale.value ?? 1) + deltaScale, 1, 4);
+    scale.value = nextScale;
+    savedScale.value = nextScale;
+
+    if (nextScale <= 1) {
+      translateX.value = withSpring(0);
+      translateY.value = withSpring(0);
+      savedTranslateX.value = 0;
+      savedTranslateY.value = 0;
+    }
+
+    if (typeof event?.preventDefault === 'function') {
+      event.preventDefault();
+    }
+  }, [scale, savedScale, translateX, translateY, savedTranslateX, savedTranslateY]);
+
+  const webCanvasHandlers =
+    Platform.OS === 'web'
+      ? {
+          onPointerDown: handleWebPointerDown,
+          onPointerMove: handleWebPointerMove,
+          onPointerUp: handleWebPointerUp,
+          onPointerLeave: handleWebPointerUp,
+          onPointerCancel: handleWebPointerUp,
+          onWheel: handleWebWheel,
+        }
+      : undefined;
 
   // --- Stroke change callback (fired by the canvas) ---
   const handleStrokeChange = useCallback(
@@ -384,6 +498,7 @@ export function useDrawModeLogic({
     resetZoom,
     // Gestures
     allGestures,
+    webCanvasHandlers,
     // Handlers
     handleStrokeChange,
     handleUndo,

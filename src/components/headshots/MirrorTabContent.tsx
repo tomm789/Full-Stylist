@@ -12,7 +12,6 @@
 import React from 'react';
 import {
   Animated,
-  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -310,7 +309,7 @@ export default function MirrorTabContent({
 
             <View style={{ flex: 1 }} />
 
-            {previewHasImage && Platform.OS !== 'web' && (
+            {previewHasImage && (
               <PillButton
                 label="Draw"
                 icon="pencil-outline"
