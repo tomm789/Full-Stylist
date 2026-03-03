@@ -8,7 +8,7 @@
  */
 
 import { useRef, useCallback } from 'react';
-import { Dimensions } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 import { PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 
 export type EdgeSwipeDirection = 'left' | 'right' | 'top' | 'bottom';
@@ -37,6 +37,15 @@ export function useEdgeSwipe({
   debounceMs = 500,
   enabled = true,
 }: UseEdgeSwipeProps): UseEdgeSwipeReturn {
+  const noopGestureHandler = useCallback((_event: PanGestureHandlerGestureEvent) => {}, []);
+
+  if (Platform.OS === 'web') {
+    return {
+      enabled: false,
+      onGestureEvent: noopGestureHandler,
+    };
+  }
+
   const lastTriggerRef = useRef<number>(0);
   const gestureContext = useRef<{ startX: number; startY: number }>({ startX: 0, startY: 0 });
 
