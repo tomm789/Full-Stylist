@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   FlatList,
   LayoutAnimation,
@@ -59,9 +59,6 @@ const createStyles = (colors: ThemeColors) =>
       paddingBottom: spacing.sm,
       gap: spacing.xs,
     },
-    categoryIcon: {
-      marginRight: spacing.xs / 2,
-    },
   });
 
 interface BrowserCategoryBarProps {
@@ -112,9 +109,10 @@ export default function BrowserCategoryBar({
   const showSubcategories =
     selectedCategoryId !== null && subcategories.length > 0;
 
-  useEffect(() => {
+  const handleCategoryPress = useCallback((categoryId: string | null) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-  }, [showSubcategories]);
+    onSelectCategory(categoryId);
+  }, [onSelectCategory]);
 
   if (visibleCategories.length === 0) {
     return null;
@@ -134,13 +132,11 @@ export default function BrowserCategoryBar({
           return (
             <PillButton
               leading={
-                <View style={styles.categoryIcon}>
-                  <WardrobeCategoryIcon
-                    categoryName={item.name}
-                    size={16}
-                    color={isSelected ? colors.white : colors.textSecondary}
-                  />
-                </View>
+                <WardrobeCategoryIcon
+                  categoryName={item.name}
+                  size={16}
+                  color={isSelected ? colors.white : colors.textSecondary}
+                />
               }
               label={item.name}
               layout="horizontal"
@@ -148,10 +144,10 @@ export default function BrowserCategoryBar({
               selected={isSelected}
               onPress={() => {
                 if (singleCategoryMode) {
-                  onSelectCategory(item.id);
+                  handleCategoryPress(item.id);
                   return;
                 }
-                onSelectCategory(isSelected ? null : item.id);
+                handleCategoryPress(isSelected ? null : item.id);
               }}
             />
           );
