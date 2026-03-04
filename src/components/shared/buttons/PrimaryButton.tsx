@@ -17,6 +17,7 @@ import {
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
+import { haptics } from '@/utils/haptics';
 
 const { spacing, typography } = theme;
 
@@ -51,6 +52,11 @@ export default function PrimaryButton({
   const colors = useThemeColors();
   const commonStyles = createCommonStyles(colors);
   const isDisabled = !!disabled || loading;
+
+  const handlePress = () => {
+    haptics.light();
+    onPress();
+  };
 
   const variantStyleMap: Record<ButtonVariant, any> = {
     primary: commonStyles.buttonPrimary,
@@ -88,7 +94,7 @@ export default function PrimaryButton({
   return (
     <TouchableOpacity
       style={buttonStyle}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={isDisabled}
       activeOpacity={0.7}
       {...props}

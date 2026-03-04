@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
 import type { WardrobeItem } from '@/lib/wardrobe';
+import { showErrorToast } from '@/utils/toast';
 import { setInitialCoverDataUri } from '@/lib/outfits/initialCoverCache';
 import { toDataUri } from '@/lib/images/dataUri';
 import { runDescriptionMessageDrip } from '@/lib/outfits/outfitDescriptionMessages';
@@ -83,7 +83,7 @@ export function useRenderPipeline({
 
   const handleRender = useCallback(async () => {
     if (!user || outfitItems.size === 0) {
-      Alert.alert('Error', 'Please add items to the outfit before rendering');
+      showErrorToast('Please add items to the outfit before rendering');
       return;
     }
 
@@ -94,7 +94,7 @@ export function useRenderPipeline({
     try {
       const savedOutfitId = await saveOutfit();
       if (!savedOutfitId) {
-        Alert.alert('Error', 'Failed to save outfit before rendering');
+        showErrorToast('Failed to save outfit before rendering');
         setRendering(false);
         return;
       }
@@ -144,7 +144,7 @@ export function useRenderPipeline({
 
       const { data: userSettings } = await getUserSettings(user.id);
       if (!userSettings?.body_shot_image_id) {
-        Alert.alert('Setup Required', 'Please upload a body photo before generating outfits.');
+        showErrorToast('Please upload a body photo before generating outfits.');
         setRendering(false);
         return;
       }
@@ -203,7 +203,7 @@ export function useRenderPipeline({
       }
 
       if (completedJob.status === 'failed') {
-        Alert.alert('Error', completedJob.error ?? 'Outfit generation failed');
+        showErrorToast(completedJob.error ?? 'Outfit generation failed');
         setRendering(false);
         return;
       }
@@ -247,7 +247,7 @@ export function useRenderPipeline({
     } catch (error: any) {
       console.error('Render error:', error);
       stopAll();
-      Alert.alert('Error', error.message || 'An unexpected error occurred');
+      showErrorToast(error.message || 'An unexpected error occurred');
       setRendering(false);
     }
   }, [

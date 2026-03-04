@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import {
   getWardrobeItem,
@@ -214,11 +214,11 @@ export function useWardrobeItemEdit({
           startPollingForAICompletion();
         }
       } else {
-        Alert.alert('Error', 'Item not found');
+        showErrorToast('Item not found');
         router.back();
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load item');
+      showErrorToast(error.message || 'Failed to load item');
       router.back();
     } finally {
       setLoading(false);
@@ -260,10 +260,10 @@ export function useWardrobeItemEdit({
 
       if (error) throw error;
 
-      Alert.alert('Success', 'Item updated successfully');
+      showSuccessToast('Item updated successfully');
       router.back();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save item');
+      showErrorToast(error.message || 'Failed to save item');
     }
   };
 

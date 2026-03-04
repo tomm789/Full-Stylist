@@ -5,12 +5,10 @@
  * No close button — closed by tapping the menu icon in the floating pill.
  */
 
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
-  Animated,
   DevSettings,
   Dimensions,
-  PanResponder,
   SafeAreaView,
   ScrollView,
   TextInput,
@@ -19,6 +17,8 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '@/contexts/NotificationsContext';
@@ -73,7 +73,7 @@ export function FullScreenMenuModal({
   const { width: windowWidth } = useWindowDimensions();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
-  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+  const slideAnim = useSharedValue(SCREEN_WIDTH);
   const [rendered, setRendered] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -89,21 +89,14 @@ export function FullScreenMenuModal({
   useEffect(() => {
     if (visible) {
       setRendered(true);
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 280,
-        useNativeDriver: true,
-      }).start();
+      slideAnim.value = withTiming(0, { duration: 280 });
     } else {
-      Animated.timing(slideAnim, {
-        toValue: SCREEN_WIDTH,
-        duration: 250,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) {
-          setRendered(false);
-        }
-      });
+      slideAnim.value = withTiming(SCREEN_WIDTH, { duration: 250 });
+      // Delay unmount to allow the slide-out animation to complete
+      const timeout = setTimeout(() => {
+        setRendered(false);
+      }, 260);
+      return () => clearTimeout(timeout);
     }
   }, [visible]);
 
@@ -114,17 +107,17 @@ export function FullScreenMenuModal({
   }, [visible]);
 
   // Swipe right to dismiss menu
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_evt, gestureState) =>
-        Math.abs(gestureState.dx) > 10 && gestureState.dx > 0,
-      onPanResponderRelease: (_evt, gestureState) => {
-        if (gestureState.dx > SWIPE_THRESHOLD) {
-          onClose();
-        }
-      },
-    })
-  ).current;
+  const panGesture = Gesture.Pan()
+    .activeOffsetX(10)
+    .onEnd((e) => {
+      if (e.translationX > SWIPE_THRESHOLD) {
+        runOnJS(onClose)();
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: slideAnim.value }],
+  }));
 
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -166,12 +159,12 @@ export function FullScreenMenuModal({
   if (!rendered) return null;
 
   return (
+    <GestureDetector gesture={panGesture}>
     <Animated.View
       style={[
         styles.overlay,
-        { transform: [{ translateX: slideAnim }] },
+        animatedStyle,
       ]}
-      {...panResponder.panHandlers}
     >
       <SafeAreaView style={styles.container}>
         {/* Header — title + actions */}
@@ -329,5 +322,6 @@ export function FullScreenMenuModal({
         />
       </SafeAreaView>
     </Animated.View>
+    </GestureDetector>
   );
 }

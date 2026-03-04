@@ -12,9 +12,9 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Animated,
   useWindowDimensions,
 } from 'react-native';
+import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 import { CameraView } from 'expo-camera';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,8 +29,8 @@ const THUMBNAIL_SIZE = 48;
 type OverlayMode = 'camera' | 'crop';
 
 interface WardrobeCameraOverlayProps {
-  /** Animated translateY value for slide-from-bottom animation */
-  translateY: Animated.Value;
+  /** Pre-built Reanimated animated style for slide-from-bottom animation */
+  cameraAnimatedStyle: AnimatedStyle;
   /** Whether the camera is currently open (controls CameraView mount) */
   isOpen: boolean;
   /** Ref to the CameraView for taking pictures */
@@ -50,7 +50,7 @@ interface WardrobeCameraOverlayProps {
 }
 
 export default function WardrobeCameraOverlay({
-  translateY,
+  cameraAnimatedStyle,
   isOpen,
   cameraRef,
   onCameraReady,
@@ -150,7 +150,7 @@ export default function WardrobeCameraOverlay({
   if (mode === 'crop' && capturedUri) {
     return (
       <Animated.View
-        style={[styles.container, { transform: [{ translateY }] }]}
+        style={[styles.container, cameraAnimatedStyle]}
       >
         <CropEditor
           imageUri={capturedUri}
@@ -166,7 +166,7 @@ export default function WardrobeCameraOverlay({
   // Camera viewfinder mode
   return (
     <Animated.View
-      style={[styles.container, { transform: [{ translateY }] }]}
+      style={[styles.container, cameraAnimatedStyle]}
     >
       <CameraView
         ref={cameraRef}

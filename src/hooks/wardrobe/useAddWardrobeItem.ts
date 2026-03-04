@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Alert } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWardrobe } from './useWardrobe';
@@ -276,12 +276,12 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
 
   const handleSubmit = useCallback(async () => {
     if (!user || !wardrobeId) {
-      Alert.alert('Error', 'Please sign in to add items');
+      showErrorToast('Please sign in to add items');
       return;
     }
 
     if (selectedImages.length === 0) {
-      Alert.alert('Error', 'Please select at least one image');
+      showErrorToast('Please select at least one image');
       return;
     }
 
@@ -312,7 +312,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
       );
 
       if (error) {
-        Alert.alert('Error', error.message || 'Failed to create item');
+        showErrorToast(error.message || 'Failed to create item');
         setLoading(false);
         return;
       }
@@ -366,7 +366,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
         logWardrobeAddTiming('navigation_dispatched');
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'An unexpected error occurred');
+      showErrorToast(error.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }

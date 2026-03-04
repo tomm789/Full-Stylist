@@ -10,7 +10,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +24,7 @@ import {
 } from '@/components/calendar';
 import { LoadingSpinner } from '@/components/shared';
 import { KeyboardAwareScreen } from '@/components/shared/layout';
+import { showErrorToast } from '@/utils/toast';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -98,7 +98,7 @@ export default function CalendarEntryScreen() {
   const handleSave = async () => {
     if (!dateKey) return;
     if (!selectedPreset) {
-      Alert.alert('Missing slot', 'Please select a slot preset');
+      showErrorToast('Please select a slot preset');
       return;
     }
 
@@ -113,7 +113,7 @@ export default function CalendarEntryScreen() {
       });
 
       if (error) {
-        Alert.alert('Error', 'Failed to update entry');
+        showErrorToast('Failed to update entry');
       } else {
         goBack();
       }
@@ -130,7 +130,7 @@ export default function CalendarEntryScreen() {
     });
 
     if (error) {
-      Alert.alert('Error', error.message || 'Failed to create entry');
+      showErrorToast(error.message || 'Failed to create entry');
     } else {
       goBack();
     }
@@ -140,13 +140,13 @@ export default function CalendarEntryScreen() {
 
   const handleCreatePreset = async () => {
     if (!newPresetName.trim()) {
-      Alert.alert('Error', 'Please enter a preset name');
+      showErrorToast('Please enter a preset name');
       return;
     }
 
     const { error } = await createPreset(newPresetName.trim());
     if (error) {
-      Alert.alert('Error', `Failed to create preset: ${error.message || error}`);
+      showErrorToast(`Failed to create preset: ${error.message || error}`);
       return;
     }
 

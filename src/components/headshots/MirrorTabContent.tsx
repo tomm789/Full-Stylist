@@ -11,7 +11,6 @@
 
 import React from 'react';
 import {
-  Animated,
   Platform,
   Text,
   TextInput,
@@ -19,6 +18,8 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
+import type { AnimatedStyle } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { PillButton, GenerationThumbnailStrip } from '@/components/shared';
@@ -47,16 +48,16 @@ interface MirrorTabContentProps {
   previewImageUrl: string | null;
   onPreviewPress: () => void;
   onMenuPress?: () => void;
-  generateOverlayOpacity: Animated.AnimatedInterpolation<number>;
+  generateOverlayStyle: AnimatedStyle;
   previewIsGenerated: boolean;
   onRestoreSelfie: () => void;
 
   // Generation state
   generating: boolean;
-  dialogLine1Opacity: Animated.Value;
-  dialogLine2Opacity: Animated.Value;
-  dialogLine3Opacity: Animated.Value;
-  dialogLine4Opacity: Animated.Value;
+  dialogLine1Style: AnimatedStyle;
+  dialogLine2Style: AnimatedStyle;
+  dialogLine3Style: AnimatedStyle;
+  dialogLine4Style: AnimatedStyle;
 
   // Preview state
   previewHasImage: boolean;
@@ -131,14 +132,14 @@ export default function MirrorTabContent({
   previewImageUrl,
   onPreviewPress,
   onMenuPress,
-  generateOverlayOpacity,
+  generateOverlayStyle,
   previewIsGenerated,
   onRestoreSelfie,
   generating,
-  dialogLine1Opacity,
-  dialogLine2Opacity,
-  dialogLine3Opacity,
-  dialogLine4Opacity,
+  dialogLine1Style,
+  dialogLine2Style,
+  dialogLine3Style,
+  dialogLine4Style,
   previewHasImage,
   activeImageVariation,
   isStyleDisabled,
@@ -263,7 +264,7 @@ export default function MirrorTabContent({
 
               {generating && (
                 <Animated.View
-                  style={[styles.generateOverlay, { opacity: generateOverlayOpacity }]}
+                  style={[styles.generateOverlay, generateOverlayStyle]}
                   pointerEvents="none"
                 />
               )}
@@ -294,16 +295,16 @@ export default function MirrorTabContent({
 
           {generating && (
             <View style={styles.generatingDialog}>
-              <Animated.Text style={[styles.dialogLine, { opacity: dialogLine1Opacity }]}>
+              <Animated.Text style={[styles.dialogLine, dialogLine1Style]}>
                 Ooo...
               </Animated.Text>
-              <Animated.Text style={[styles.dialogLine, { opacity: dialogLine2Opacity }]}>
+              <Animated.Text style={[styles.dialogLine, dialogLine2Style]}>
                 You don't need any make up at all honey...
               </Animated.Text>
-              <Animated.Text style={[styles.dialogLine, { opacity: dialogLine3Opacity }]}>
+              <Animated.Text style={[styles.dialogLine, dialogLine3Style]}>
                 But I love this look sister!
               </Animated.Text>
-              <Animated.Text style={[styles.dialogLine, { opacity: dialogLine4Opacity }]}>
+              <Animated.Text style={[styles.dialogLine, dialogLine4Style]}>
                 Ready?
               </Animated.Text>
             </View>

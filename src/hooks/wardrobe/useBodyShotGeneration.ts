@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
 import type { Headshot } from '@/lib/wardrobe/items-types';
 import { getUserSettings, updateUserSettings } from '@/lib/settings';
@@ -174,7 +174,7 @@ export function useBodyShotGeneration({ userId, outfitCreatorMode }: UseBodyShot
     ) => {
       if (!userId) return;
       if (!currentBodyShotId) {
-        Alert.alert('No body shot', 'Please take a mirror selfie to continue.');
+        showErrorToast('Please take a mirror selfie to continue.');
         return;
       }
       try {

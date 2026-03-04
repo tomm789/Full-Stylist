@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Alert, Share, Platform } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useAuth } from '@/contexts/AuthContext';
@@ -188,7 +189,7 @@ export function useHeadshotView({ headshotId, headshotIds }: UseHeadshotViewPara
         onPress: async () => {
           const { error } = await deleteImage(currentHeadshotId, user.id);
           if (error) {
-            Alert.alert('Error', error.message || 'Failed to delete image.');
+            showErrorToast(error.message || 'Failed to delete image.');
             return;
           }
 

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Animated, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -13,8 +14,8 @@ const { spacing } = theme;
 export type OutfitsHeaderSectionProps = {
   headerReady: boolean;
   headerHeight: number | undefined;
-  headerOpacity: Animated.Value | number;
-  headerTranslate: Animated.Value | number;
+  /** Pre-built Reanimated animated style (opacity + translateY) */
+  headerAnimatedStyle: AnimatedStyle;
   uiHidden: boolean;
   onHeaderLayout: (event: any) => void;
   activeTab: OutfitsTab;
@@ -46,8 +47,7 @@ export type OutfitsHeaderSectionProps = {
 export default function OutfitsHeaderSection({
   headerReady,
   headerHeight,
-  headerOpacity,
-  headerTranslate,
+  headerAnimatedStyle,
   uiHidden,
   onHeaderLayout,
   activeTab,
@@ -80,11 +80,8 @@ export default function OutfitsHeaderSection({
     <Animated.View
       style={[
         styles.headerContainer,
-        {
-          height: headerHeight,
-          opacity: headerOpacity,
-          transform: [{ translateY: headerTranslate }],
-        },
+        { height: headerHeight },
+        headerAnimatedStyle,
       ]}
       pointerEvents={uiHidden ? 'none' : 'auto'}
     >

@@ -9,7 +9,6 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,6 +34,7 @@ import {
   LoadingSpinner,
 } from '@/components/shared';
 import { KeyboardAwareScreen } from '@/components/shared/layout';
+import { showErrorToast } from '@/utils/toast';
 
 const { spacing, borderRadius, typography } = theme;
 
@@ -157,12 +157,12 @@ export default function EditItemScreen() {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'Please enter a title');
+      showErrorToast('Please enter a title');
       return;
     }
 
     if (!selectedCategoryId) {
-      Alert.alert('Error', 'Please select a category');
+      showErrorToast('Please select a category');
       return;
     }
 

@@ -17,6 +17,7 @@ import {
 } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
 import { navigateToWardrobeItem } from '@/utils/itemNavigationHelpers';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 
 interface UseWardrobeItemDetailActionsProps {
   item: WardrobeItem | null;
@@ -93,13 +94,13 @@ export function useWardrobeItemDetailActions({
       if (error) throw error;
     } catch (error: any) {
       console.error('Failed to toggle favorite:', error);
-      Alert.alert('Error', 'Failed to update favorite status');
+      showErrorToast('Failed to update favorite status');
     }
   }, [itemId, user, item]);
 
   const handleAddToOutfit = useCallback(() => {
     if (!item) {
-      Alert.alert('Error', 'Item data not loaded');
+      showErrorToast('Item data not loaded');
       return;
     }
     router.push(`/outfits/new?category_id=${item.category_id}&item_id=${item.id}`);
@@ -115,17 +116,17 @@ export function useWardrobeItemDetailActions({
       const { error } = await unsaveWardrobeItem(user.id, itemId);
       if (!error) {
         setIsSaved(false);
-        Alert.alert('Success', 'Item removed from your wardrobe');
+        showSuccessToast('Item removed from your wardrobe');
       } else {
-        Alert.alert('Error', 'Failed to remove item from wardrobe');
+        showErrorToast('Failed to remove item from wardrobe');
       }
     } else {
       const { error } = await saveWardrobeItem(user.id, itemId);
       if (!error) {
         setIsSaved(true);
-        Alert.alert('Success', 'Item saved to your wardrobe');
+        showSuccessToast('Item saved to your wardrobe');
       } else {
-        Alert.alert('Error', 'Failed to save item to wardrobe');
+        showErrorToast('Failed to save item to wardrobe');
       }
     }
 
@@ -146,18 +147,10 @@ export function useWardrobeItemDetailActions({
 
         if (error) throw error;
 
-        if (Platform.OS === 'web') {
-          alert('Item archived successfully');
-        } else {
-          Alert.alert('Success', 'Item archived successfully');
-        }
+        showSuccessToast('Item archived successfully');
         router.back();
       } catch (error: any) {
-        if (Platform.OS === 'web') {
-          alert(error.message || 'Failed to archive item');
-        } else {
-          Alert.alert('Error', error.message || 'Failed to archive item');
-        }
+        showErrorToast(error.message || 'Failed to archive item');
       }
     };
 
@@ -187,18 +180,10 @@ export function useWardrobeItemDetailActions({
         const { error } = await restoreWardrobeItem(itemId, user.id);
         if (error) throw error;
 
-        if (Platform.OS === 'web') {
-          alert('Item restored successfully');
-        } else {
-          Alert.alert('Success', 'Item restored successfully');
-        }
+        showSuccessToast('Item restored successfully');
         router.back();
       } catch (error: any) {
-        if (Platform.OS === 'web') {
-          alert(error.message || 'Failed to restore item');
-        } else {
-          Alert.alert('Error', error.message || 'Failed to restore item');
-        }
+        showErrorToast(error.message || 'Failed to restore item');
       }
     };
 

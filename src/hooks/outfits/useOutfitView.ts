@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
 import { getOutfit, archiveOutfit } from '@/lib/outfits';
+import { showErrorToast } from '@/utils/toast';
 import { getInitialCoverDataUri } from '@/lib/outfits/initialCoverCache';
 import { getWardrobeItemImages } from '@/lib/wardrobe';
 import { supabase } from '@/lib/supabase';
@@ -160,7 +160,7 @@ export function useOutfitView({
       } else if (finalJob && finalJob.status === 'failed') {
         setRenderJobId(null);
         setIsGenerating(false);
-        Alert.alert('Error', 'Outfit generation failed');
+        showErrorToast('Outfit generation failed');
       } else {
         // Polling timed out or job stuck in queued/running — clear generating state
         setRenderJobId(null);
@@ -232,7 +232,7 @@ export function useOutfitView({
         const { data, error } = await getOutfit(outfitId);
         if (!mountedRef.current) return;
         if (error || !data) {
-          Alert.alert('Error', 'Failed to load outfit');
+          showErrorToast('Failed to load outfit');
           return;
         }
 
@@ -330,7 +330,7 @@ export function useOutfitView({
       } catch (error) {
         if (!mountedRef.current) return;
         console.error('Error loading outfit:', error);
-        Alert.alert('Error', 'Failed to load outfit');
+        showErrorToast('Failed to load outfit');
       } finally {
         if (mountedRef.current) {
           setLoading(false);

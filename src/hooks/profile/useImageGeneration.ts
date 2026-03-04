@@ -4,8 +4,9 @@
  */
 
 import { useState } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { uploadAndCreateImage } from '@/lib/utils/image-helpers';
+import { showErrorToast } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
 import { updateUserProfile } from '@/lib/user';
 import {
@@ -89,7 +90,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     filePrefix: string = 'upload'
   ): Promise<{ imageId: string | null; errorMessage?: string }> => {
     if (!uploadedBlob && !uploadedUri) {
-      Alert.alert('Error', 'Please take or upload a photo first');
+      showErrorToast('Please take or upload a photo first');
       return { imageId: null, errorMessage: 'Please take or upload a photo first' };
     }
 
@@ -136,7 +137,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
 
     if (!uploadedBlob && !uploadedUri) {
             if (__DEV__) console.log('ERROR: No blob');
-      Alert.alert('Error', 'Please take or upload a photo first');
+      showErrorToast('Please take or upload a photo first');
       return null;
     }
 
@@ -271,7 +272,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     headshotId: string
   ): Promise<string | null> => {
     if (!uploadedBlob && !uploadedUri) {
-      Alert.alert('Error', 'Please take or upload a photo first');
+      showErrorToast('Please take or upload a photo first');
       return null;
     }
 
@@ -366,7 +367,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     policyBlocked?: boolean;
   }> => {
     if (!selfieImageId || !mirrorSelfieImageId) {
-      Alert.alert('Error', 'Both selfie images are required');
+      showErrorToast('Both selfie images are required');
       return { imageId: null, errorMessage: 'Both selfie images are required' };
     }
 

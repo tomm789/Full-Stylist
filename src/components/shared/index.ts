@@ -31,6 +31,10 @@ export { default as TabPillsRow } from './TabPillsRow';
 export { default as HeaderTabPill } from './HeaderTabPill';
 export { default as EdgePeekSlider } from './EdgePeekSlider';
 
+// Context Menu
+export { NativeContextMenu } from './NativeContextMenu';
+export type { ContextMenuAction } from './NativeContextMenu';
+
 // Creator
 export { default as CreatorBar } from './CreatorBar';
 

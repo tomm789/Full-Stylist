@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { haptics } from '@/utils/haptics';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { LoadingSpinner } from '@/components/shared';
@@ -131,7 +132,7 @@ export default function NotificationsScreen() {
       <TouchableOpacity
         style={[styles.notificationItem, !item.is_read && styles.unreadNotification]}
         onPress={() => handleNotificationPress(item)}
-        onLongPress={() => handleDeleteNotification(item.id)}
+        onLongPress={() => { haptics.medium(); handleDeleteNotification(item.id); }}
       >
         <View style={styles.notificationIcon}>
           {actorAvatar ? (

@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
+import { haptics } from '@/utils/haptics';
 
 const { spacing, borderRadius, typography } = theme;
 
@@ -52,6 +53,11 @@ export default function PillButton({
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  const handlePress = () => {
+    haptics.selection();
+    onPress();
+  };
+
   const isVertical = layout === 'vertical';
 
   const pillStyle = [
@@ -74,7 +80,7 @@ export default function PillButton({
   return (
     <TouchableOpacity
       style={pillStyle}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled}
       activeOpacity={0.7}
       {...props}

@@ -5,6 +5,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { Alert, Platform } from 'react-native';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { FeedItem, deletePost } from '@/lib/posts';
@@ -142,9 +143,9 @@ export function useSocialModals({
         const { error } = await deletePost(postId, user.id);
 
         if (error) {
-          alert(`Failed to delete post: ${error.message || error}`);
+          showErrorToast(`Failed to delete post: ${error.message || error}`);
         } else {
-          alert('Post deleted successfully');
+          showSuccessToast('Post deleted successfully');
           await refreshFeed();
         }
         return;
@@ -162,9 +163,9 @@ export function useSocialModals({
               const { error } = await deletePost(postId, user.id);
 
               if (error) {
-                Alert.alert('Error', `Failed to delete post: ${error.message || error}`);
+                showErrorToast(`Failed to delete post: ${error.message || error}`);
               } else {
-                Alert.alert('Success', 'Post deleted successfully');
+                showSuccessToast('Post deleted successfully');
                 await refreshFeed();
               }
             },
@@ -195,7 +196,7 @@ export function useSocialModals({
       try {
         const { error } = await unfollowUser(user.id, userId);
         if (error) {
-          Alert.alert('Error', error.message || 'Failed to unfollow user');
+          showErrorToast(error.message || 'Failed to unfollow user');
         } else {
           setFollowStatuses((prev) => {
             const updated = new Map(prev);
@@ -204,7 +205,7 @@ export function useSocialModals({
           });
         }
       } catch (error: any) {
-        Alert.alert('Error', error.message || 'Failed to unfollow user');
+        showErrorToast(error.message || 'Failed to unfollow user');
       } finally {
         setUnfollowingUserId(null);
       }

@@ -10,14 +10,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
-  Alert,
   Platform,
-  Animated,
   TouchableOpacity,
   useWindowDimensions,
   LayoutAnimation,
   UIManager,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -46,9 +45,9 @@ import { useWardrobeItemActions } from '@/hooks/wardrobe/useWardrobeItemActions'
 import {
   EmptyState,
   LoadingOverlay,
-  LoadingSpinner,
   HeaderTabPill,
 } from '@/components/shared';
+import { SkeletonGrid } from '@/components/shared/loading';
 import type { ThumbnailItem } from '@/components/shared';
 import { WardrobeTabIcon } from '@/components/icons/tabs';
 
@@ -85,6 +84,7 @@ import { useCreatorReset } from '@/hooks/wardrobe/useCreatorReset';
 import { useOutfitSelectionFlow } from '@/hooks/wardrobe/useOutfitSelectionFlow';
 import { useWardrobeCameraFlow } from '@/hooks/wardrobe/useWardrobeCameraFlow';
 import { useGenerateOutfitFlow } from '@/hooks/wardrobe/useGenerateOutfitFlow';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 
 const CREATOR_BAR_HEIGHT = 60;
 
@@ -279,8 +279,7 @@ export default function WardrobeScreen() {
   // ── Header scroll hide ───────────────────────────────────────────────────────
   const {
     headerHeight,
-    headerOpacity,
-    headerTranslate,
+    headerAnimatedStyle,
     headerReady,
     uiHidden,
     handleHeaderLayout,
@@ -376,9 +375,9 @@ export default function WardrobeScreen() {
     const newOutfitId = await saveVariationAsOutfit(variationId, user.id);
     if (newOutfitId) {
       sessionData.refreshVariations();
-      Alert.alert('Saved', 'Outfit saved as a copy.');
+      showSuccessToast('Outfit saved as a copy.');
     } else {
-      Alert.alert('Error', 'Failed to save outfit.');
+      showErrorToast('Failed to save outfit.');
     }
   }, [user?.id, sessionData.refreshVariations]);
 
@@ -499,7 +498,7 @@ export default function WardrobeScreen() {
   ) {
     return (
       <View style={commonStyles.loadingContainer}>
-        <LoadingSpinner text="Loading wardrobe..." />
+        <SkeletonGrid preset="wardrobe" count={15} />
       </View>
     );
   }
@@ -554,11 +553,8 @@ export default function WardrobeScreen() {
       <Animated.View
         style={[
           styles.headerContainer,
-          {
-            height: headerHeight,
-            opacity: headerOpacity,
-            transform: [{ translateY: headerTranslate }],
-          },
+          { height: headerHeight },
+          headerAnimatedStyle,
         ]}
         pointerEvents={uiHidden ? 'none' : 'auto'}
       >

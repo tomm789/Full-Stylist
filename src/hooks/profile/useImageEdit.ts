@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
 import { supabase } from '@/lib/supabase';
+import { showErrorToast, showSuccessToast } from '@/utils/toast';
 import { updateUserSettings } from '@/lib/settings';
 
 interface ImageDetails {
@@ -109,7 +109,7 @@ export function useImageEdit({
         originalMakeupStyle,
       });
     } catch (error: any) {
-      Alert.alert('Error', error.message || `Failed to load ${imageType}`);
+      showErrorToast(error.message || `Failed to load ${imageType}`);
     } finally {
       setLoading(false);
     }
@@ -162,7 +162,7 @@ export function useImageEdit({
 
       return imageRecord.id;
     } catch (error: any) {
-      Alert.alert('Error', error.message || `Failed to duplicate ${imageType}`);
+      showErrorToast(error.message || `Failed to duplicate ${imageType}`);
       return null;
     } finally {
       setDuplicating(false);
@@ -214,7 +214,7 @@ export function useImageEdit({
 
       return true;
     } catch (error: any) {
-      Alert.alert('Error', error.message || `Failed to delete ${imageType}`);
+      showErrorToast(error.message || `Failed to delete ${imageType}`);
       return false;
     } finally {
       setDeleting(false);
@@ -234,11 +234,11 @@ export function useImageEdit({
 
       if (error) throw error;
 
-      Alert.alert('Success', `${displayName} set as active`);
+      showSuccessToast(`${displayName} set as active`);
       return true;
     } catch (error: any) {
       const displayName = imageType === 'headshot' ? 'headshot' : 'studio model';
-      Alert.alert('Error', error.message || `Failed to set ${displayName} as active`);
+      showErrorToast(error.message || `Failed to set ${displayName} as active`);
       return false;
     }
   };

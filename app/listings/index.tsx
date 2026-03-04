@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getUserListings, ListingWithImages, deleteListing } from '@/lib/listings';
 import { supabase } from '@/lib/supabase';
 import { Alert } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 
 export default function MyListingsScreen() {
@@ -57,7 +58,7 @@ export default function MyListingsScreen() {
         onPress: async () => {
           const { error } = await deleteListing(user.id, listingId);
           if (error) {
-            Alert.alert('Error', `Failed to delete: ${error.message || error}`);
+            showErrorToast(`Failed to delete: ${error.message || error}`);
           } else {
             await loadListings();
           }

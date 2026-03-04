@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { KeyboardAwareScreen } from '@/components/shared/layout';
@@ -30,27 +31,27 @@ export default function SignUpScreen() {
     const trimmedEmail = email.trim();
     
     if (!trimmedEmail) {
-      Alert.alert('Error', 'Please enter your email');
+      showErrorToast('Please enter your email');
       return;
     }
 
     if (!validateEmail(trimmedEmail)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      showErrorToast('Please enter a valid email address');
       return;
     }
 
     if (!password.trim()) {
-      Alert.alert('Error', 'Please enter a password');
+      showErrorToast('Please enter a password');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      showErrorToast('Password must be at least 6 characters');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showErrorToast('Passwords do not match');
       return;
     }
 
@@ -65,7 +66,7 @@ export default function SignUpScreen() {
         if (session) {
           await signOut();
         }
-        Alert.alert('Error', error.message || 'Failed to sign up');
+        showErrorToast(error.message || 'Failed to sign up');
         setLoading(false);
         return;
       }
@@ -103,7 +104,7 @@ export default function SignUpScreen() {
       }
     } catch (error: any) {
       console.error('[SignUp] Unexpected error:', error);
-      Alert.alert('Error', error.message || 'An unexpected error occurred');
+      showErrorToast(error.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }

@@ -11,6 +11,7 @@ import { OutfitWithRating } from '@/lib/outfits';
 import { ScheduleInfo } from '@/types/outfits';
 import { postGridStyles } from '@/components/social/PostGrid';
 import MyOutfitFeedCard from './MyOutfitFeedCard';
+import { haptics } from '@/utils/haptics';
 import { typography, spacing } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -61,6 +62,7 @@ export function MyOutfitGridItem({
   };
 
   const handleLongPress = () => {
+    haptics.medium();
     if (!selectionMode) {
       onActivateSelection();
     }

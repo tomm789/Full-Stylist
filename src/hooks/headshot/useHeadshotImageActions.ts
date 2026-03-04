@@ -5,6 +5,7 @@
  */
 
 import { Alert, Platform, Share } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import { useCallback } from 'react';
 import * as FileSystem from 'expo-file-system/legacy';
 import { deleteImage } from '@/lib/utils/image-helpers';
@@ -99,7 +100,7 @@ export function useHeadshotImageActions({
             const variationId = previewVariationId;
             const { error: deleteError } = await deleteImage(imageId, userId);
             if (deleteError) {
-              Alert.alert('Error', deleteError.message || 'Failed to delete image.');
+              showErrorToast(deleteError.message || 'Failed to delete image.');
               return;
             }
             if (variationId) {

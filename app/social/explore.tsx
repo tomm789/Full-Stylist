@@ -15,7 +15,8 @@ import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPublicOutfits } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
-import { LoadingSpinner, EmptyState } from '@/components/shared';
+import { EmptyState } from '@/components/shared';
+import { SkeletonGrid } from '@/components/shared/loading';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -83,7 +84,7 @@ export default function ExploreScreen() {
   if (loading) {
     return (
       <View style={commonStyles.loadingContainer}>
-        <LoadingSpinner />
+        <SkeletonGrid preset="outfit" count={12} />
       </View>
     );
   }

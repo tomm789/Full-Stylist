@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { MutableRefObject } from 'react';
-import { Alert } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import {
   getActiveBatchJob,
   getRecentBatchJob,
@@ -305,7 +305,7 @@ export function useWardrobeItemCache({
       } catch (error: any) {
         if (cancelled) return;
         console.error('Failed to load item data:', error);
-        Alert.alert('Error', 'Failed to load item details');
+        showErrorToast('Failed to load item details');
       } finally {
         if (!cancelled) {
           setLoading(false);

@@ -6,7 +6,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { Alert } from 'react-native';
+import { showSuccessToast } from '@/utils/toast';
 import { hairPresets } from '@/lib/headshot/hairPresets';
 import { makeupPresets } from '@/lib/headshot/makeupPresets';
 import type { PresetCategory, PresetOption } from '@/lib/headshot/presetTypes';
@@ -75,7 +75,7 @@ export function usePresetDisplay({ editTab, activeTab, activeCategoryId }: UsePr
   }, [editTab, presets, activeCategoryId]);
 
   const handleInfoPress = React.useCallback((option: PresetOption) => {
-    Alert.alert(option.title, option.description);
+    showSuccessToast(`${option.title}: ${option.description}`);
   }, []);
 
   return {

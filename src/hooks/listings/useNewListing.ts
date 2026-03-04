@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { createListing } from '@/lib/listings';
@@ -105,12 +105,12 @@ export function useNewListing(): UseNewListingReturn {
     if (!user || !selectedItem) return;
 
     if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
-      Alert.alert('Error', 'Please enter a valid price');
+      showErrorToast('Please enter a valid price');
       return;
     }
 
     if (selectedImageIds.size === 0) {
-      Alert.alert('Error', 'Please select at least one original image');
+      showErrorToast('Please select at least one original image');
       return;
     }
 
@@ -128,14 +128,10 @@ export function useNewListing(): UseNewListingReturn {
         throw error;
       }
 
-      Alert.alert('Success', 'Listing created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
+      showSuccessToast('Listing created successfully!');
+      router.back();
     } catch (error: any) {
-      Alert.alert('Error', `Failed to create listing: ${error.message || error}`);
+      showErrorToast(`Failed to create listing: ${error.message || error}`);
     } finally {
       setSaving(false);
     }

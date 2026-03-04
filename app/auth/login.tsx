@@ -4,9 +4,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
+import { showErrorToast, showSuccessToast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { KeyboardAwareScreen } from '@/components/shared/layout';
@@ -22,12 +22,12 @@ export default function LoginScreen() {
 
   const handleSignIn = async () => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email');
+      showErrorToast('Please enter your email');
       return;
     }
 
     if (!useMagicLink && !password.trim()) {
-      Alert.alert('Error', 'Please enter your password');
+      showErrorToast('Please enter your password');
       return;
     }
 
@@ -51,14 +51,11 @@ export default function LoginScreen() {
           userMessage = 'Network error. Please check your connection and try again.';
         }
         
-        Alert.alert('Sign In Error', userMessage);
+        showErrorToast(userMessage);
       } else {
         console.log('[Login] Sign in successful');
         if (useMagicLink) {
-          Alert.alert(
-            'Check your email',
-            'We sent you a magic link. Click it to sign in.\n\nNote: If you don\'t see the email, check your spam folder. Make sure email is configured in your Supabase project settings.'
-          );
+          showSuccessToast('We sent you a magic link. Check your email to sign in.');
         } else {
           console.log('[Login] Password sign in successful, navigating to index for profile check');
           // Navigate to index route which will check profile and redirect appropriately
@@ -68,7 +65,7 @@ export default function LoginScreen() {
     } catch (error: any) {
       console.error('[Login] Unexpected error during sign in:', error);
       const errorMessage = error?.message || error?.toString() || 'An unexpected error occurred';
-      Alert.alert('Error', errorMessage);
+      showErrorToast(errorMessage);
     } finally {
       setLoading(false);
     }

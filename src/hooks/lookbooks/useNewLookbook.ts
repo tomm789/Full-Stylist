@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { saveLookbook } from '@/lib/lookbooks';
@@ -102,12 +102,12 @@ export function useNewLookbook(): UseNewLookbookReturn {
     if (!user) return;
 
     if (!title.trim()) {
-      Alert.alert('Error', 'Please enter a title for your lookbook');
+      showErrorToast('Please enter a title for your lookbook');
       return;
     }
 
     if (type === 'custom_manual' && selectedOutfits.size === 0) {
-      Alert.alert('Error', 'Please select at least one outfit for your lookbook');
+      showErrorToast('Please select at least one outfit for your lookbook');
       return;
     }
 
@@ -137,7 +137,7 @@ export function useNewLookbook(): UseNewLookbookReturn {
         router.back();
       }
     } catch (error: any) {
-      Alert.alert('Error', `Failed to create lookbook: ${error.message || error}`);
+      showErrorToast(`Failed to create lookbook: ${error.message || error}`);
     } finally {
       setSaving(false);
     }

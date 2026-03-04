@@ -4,7 +4,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import { createCalendarEntry, deleteCalendarEntry, getOutfitScheduledDates, CalendarEntry } from '@/lib/calendar';
 import { theme } from '@/styles';
 import { PrimaryButton, ScheduleCalendar } from '@/components/shared';
@@ -82,7 +83,7 @@ export default function OutfitScheduleSection({
     if (existingEntry) {
       const { error } = await deleteCalendarEntry(existingEntry.id);
       if (error) {
-        Alert.alert('Error', error.message || 'Failed to remove scheduled date');
+        showErrorToast(error.message || 'Failed to remove scheduled date');
       }
     } else {
       const { error } = await createCalendarEntry(userId, dateKey, {
@@ -91,7 +92,7 @@ export default function OutfitScheduleSection({
         sort_order: 0,
       });
       if (error) {
-        Alert.alert('Error', error.message || 'Failed to schedule outfit');
+        showErrorToast(error.message || 'Failed to schedule outfit');
       }
     }
 

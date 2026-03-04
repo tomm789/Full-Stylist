@@ -7,11 +7,12 @@
 
 import React from 'react';
 import {
-  Animated,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
+import type { AnimatedStyle } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -25,7 +26,7 @@ type HeadshotSlideItemProps = {
   onPreviewPress: () => void;
   onMenuPress: () => void;
   generating: boolean;
-  generateOverlayOpacity: Animated.AnimatedInterpolation<number>;
+  generateOverlayStyle: AnimatedStyle;
   previewIsGenerated: boolean;
   onRestoreSelfie: () => void;
   isStyleDisabled: boolean;
@@ -38,7 +39,7 @@ const HeadshotSlideItem = React.memo(
     onPreviewPress,
     onMenuPress,
     generating,
-    generateOverlayOpacity,
+    generateOverlayStyle,
     previewIsGenerated,
     onRestoreSelfie,
     isStyleDisabled,
@@ -81,7 +82,7 @@ const HeadshotSlideItem = React.memo(
 
             {generating && item.url && (
               <Animated.View
-                style={[styles.generateOverlay, { opacity: generateOverlayOpacity }]}
+                style={[styles.generateOverlay, generateOverlayStyle]}
                 pointerEvents="none"
               />
             )}

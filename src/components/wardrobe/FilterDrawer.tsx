@@ -4,8 +4,9 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
-import { BottomSheet, PrimaryButton, FilterPillGroup, FilterAccordionSection } from '@/components/shared';
+import { View, Text, StyleSheet, Switch } from 'react-native';
+import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { ThemedBottomSheet, PrimaryButton, FilterPillGroup, FilterAccordionSection } from '@/components/shared';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -69,7 +70,7 @@ export default function FilterDrawer({
   };
 
   return (
-    <BottomSheet
+    <ThemedBottomSheet
       visible={visible}
       onClose={onClose}
       title="Filters"
@@ -89,7 +90,7 @@ export default function FilterDrawer({
         </View>
       }
     >
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <BottomSheetScrollView showsVerticalScrollIndicator={false}>
         {/* Favorites Toggle */}
         <View style={styles.section}>
           <View style={styles.toggleRow}>
@@ -283,8 +284,8 @@ export default function FilterDrawer({
             />
           </FilterAccordionSection>
         )}
-      </ScrollView>
-    </BottomSheet>
+      </BottomSheetScrollView>
+    </ThemedBottomSheet>
   );
 }
 

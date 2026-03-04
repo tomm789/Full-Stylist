@@ -17,8 +17,8 @@ import {
   View,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  PanResponder,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -101,19 +101,16 @@ export default function CalendarDaySheet({
     }).start();
   };
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_evt, gestureState) =>
-        Math.abs(gestureState.dy) > 6 && Math.abs(gestureState.dx) < 12,
-      onPanResponderRelease: (_evt, gestureState) => {
-        if (!expanded && gestureState.dy < -40) {
-          expandSheet();
-        } else if (expanded && gestureState.dy > 40 && scrollOffsetRef.current <= 0) {
-          collapseToSheet();
-        }
-      },
-    })
-  ).current;
+  const panGesture = Gesture.Pan()
+    .activeOffsetY([-5, 5])
+    .failOffsetX([-12, 12])
+    .onEnd((e) => {
+      if (!expanded && e.translationY < -40) {
+        expandSheet();
+      } else if (expanded && e.translationY > 40 && scrollOffsetRef.current <= 0) {
+        collapseToSheet();
+      }
+    });
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
@@ -145,9 +142,11 @@ export default function CalendarDaySheet({
       >
         <Pressable onPress={() => {}}>
           <Animated.View style={[styles.sheet, { height: sheetHeight }, expanded && styles.sheetExpanded]}>
-            <View style={styles.dragHandleWrap} {...panResponder.panHandlers}>
-              <View style={styles.dragHandle} />
-            </View>
+            <GestureDetector gesture={panGesture}>
+              <View style={styles.dragHandleWrap}>
+                <View style={styles.dragHandle} />
+              </View>
+            </GestureDetector>
 
             <View style={[styles.header, expanded && styles.headerExpanded]}>
               <TouchableOpacity

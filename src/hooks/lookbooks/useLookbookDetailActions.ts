@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { deleteLookbook, saveLookbook, Lookbook } from '@/lib/lookbooks';
@@ -12,6 +12,7 @@ import { createPost } from '@/lib/posts';
 import { getUserOutfits } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 
 interface UseLookbookDetailActionsProps {
   lookbook: Lookbook | null;
@@ -132,7 +133,7 @@ export function useLookbookDetailActions({
       visibility: 'public' | 'followers' | 'private_link' | 'private'
     ) => {
       if (!user || !lookbook || !title.trim()) {
-        Alert.alert('Error', 'Title is required');
+        showErrorToast('Title is required');
         return;
       }
 
@@ -152,13 +153,13 @@ export function useLookbookDetailActions({
         );
 
         if (error) {
-          Alert.alert('Error', 'Failed to update lookbook');
+          showErrorToast('Failed to update lookbook');
         } else {
           setShowEditModal(false);
           await onRefresh();
         }
       } catch (error: any) {
-        Alert.alert('Error', error.message || 'Failed to update lookbook');
+        showErrorToast(error.message || 'Failed to update lookbook');
       }
     },
     [user, lookbook, outfits, onRefresh]
@@ -180,15 +181,11 @@ export function useLookbookDetailActions({
             const { error } = await deleteLookbook(user.id, lookbook.id);
 
             if (error) {
-              Alert.alert('Error', 'Failed to delete lookbook');
+              showErrorToast('Failed to delete lookbook');
               setDeleting(false);
             } else {
-              Alert.alert('Success', 'Lookbook deleted', [
-                {
-                  text: 'OK',
-                  onPress: () => router.back(),
-                },
-              ]);
+              showSuccessToast('Lookbook deleted');
+              router.back();
             }
           },
         },
@@ -211,24 +208,12 @@ export function useLookbookDetailActions({
       );
 
       if (error) {
-        if (Platform.OS === 'web') {
-          alert(`Failed to publish: ${error.message || error}`);
-        } else {
-          Alert.alert('Error', `Failed to publish: ${error.message || error}`);
-        }
+        showErrorToast(`Failed to publish: ${error.message || error}`);
       } else {
-        if (Platform.OS === 'web') {
-          alert('Lookbook published to feed!');
-        } else {
-          Alert.alert('Success', 'Lookbook published to feed!', [{ text: 'OK' }]);
-        }
+        showSuccessToast('Lookbook published to feed!');
       }
     } catch (error: any) {
-      if (Platform.OS === 'web') {
-        alert(error.message || 'An unexpected error occurred');
-      } else {
-        Alert.alert('Error', error.message || 'An unexpected error occurred');
-      }
+      showErrorToast(error.message || 'An unexpected error occurred');
     } finally {
       setPublishing(false);
     }

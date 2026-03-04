@@ -4,8 +4,8 @@
  */
 
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { showErrorToast } from '@/utils/toast';
 import { initializeUserProfile } from '@/lib/user';
 
 type OnboardingStep = 'account' | 'selfie' | 'mirror';
@@ -47,25 +47,22 @@ export function useOnboarding({
 
   const completeAccount = async () => {
     if (!userId) {
-      Alert.alert('Error', 'You must be signed in to complete onboarding');
+      showErrorToast('You must be signed in to complete onboarding');
       return;
     }
 
     if (!handle.trim()) {
-      Alert.alert('Error', 'Please enter a handle');
+      showErrorToast('Please enter a handle');
       return;
     }
 
     if (!validateHandle(handle.trim())) {
-      Alert.alert(
-        'Invalid Handle',
-        'Handle must be 3-20 characters and contain only letters, numbers, and underscores'
-      );
+      showErrorToast('Handle must be 3-20 characters and contain only letters, numbers, and underscores');
       return;
     }
 
     if (!displayName.trim()) {
-      Alert.alert('Error', 'Please enter a display name');
+      showErrorToast('Please enter a display name');
       return;
     }
 
@@ -86,15 +83,15 @@ export function useOnboarding({
 
       if (error) {
         if (error.code === '23505') {
-          Alert.alert('Error', 'This handle is already taken. Please choose another.');
+          showErrorToast('This handle is already taken. Please choose another.');
         } else {
-          Alert.alert('Error', error.message || 'Failed to create profile');
+          showErrorToast(error.message || 'Failed to create profile');
         }
       } else {
         setCurrentStep('selfie');
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'An unexpected error occurred');
+      showErrorToast(error.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }

@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
 import { getUserSettings, updateUserSettings } from '@/lib/settings';
+import { showErrorToast, showSuccessToast } from '@/utils/toast';
 import { getPublicImageUrl, getUserGeneratedImages } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
 import { syncBodyshotAfterActiveHeadshotSet, waitForAIJobCompletion } from '@/lib/ai-jobs';
@@ -190,10 +190,7 @@ export function useProfileImages({
               message: syncResult.message,
             });
             if (!mountedRef.current) return;
-            Alert.alert(
-              'Body Shot Notice',
-              'Headshot is active, but we could not sync your body shot.'
-            );
+            showErrorToast('Headshot is active, but we could not sync your body shot.');
             return;
           }
 
@@ -215,10 +212,7 @@ export function useProfileImages({
                 error: completedJob?.error,
               });
               if (!mountedRef.current) return;
-              Alert.alert(
-                'Body Shot Notice',
-                'Headshot is active, but generating a matching body shot failed.'
-              );
+              showErrorToast('Headshot is active, but generating a matching body shot failed.');
               return;
             }
 
@@ -238,15 +232,12 @@ export function useProfileImages({
             message: syncError?.message,
           });
           if (!mountedRef.current) return;
-          Alert.alert(
-            'Body Shot Notice',
-            'Headshot is active, but we could not sync your body shot.'
-          );
+          showErrorToast('Headshot is active, but we could not sync your body shot.');
         }
       })();
     } catch (error: any) {
       if (mountedRef.current) {
-        Alert.alert('Error', 'Failed to set active headshot');
+        showErrorToast('Failed to set active headshot');
       }
     }
   };
@@ -267,7 +258,7 @@ export function useProfileImages({
       setBodyShotImageUrl(imageUrls.get(imageId) || null);
     } catch (error: any) {
       if (mountedRef.current) {
-        Alert.alert('Error', 'Failed to set active body shot');
+        showErrorToast('Failed to set active body shot');
       }
     }
   };

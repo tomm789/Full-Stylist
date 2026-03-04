@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Alert, Platform } from 'react-native';
 import { getOutfit, saveOutfit, archiveOutfit } from '@/lib/outfits';
+import { showErrorToast, showSuccessToast } from '@/utils/toast';
 import type { Router } from 'expo-router';
 
 export type UseOutfitActionsParams = {
@@ -38,7 +39,7 @@ export function useOutfitActions({
       const { data, error } = await getOutfit(outfitId);
 
       if (error || !data) {
-        Alert.alert('Error', error?.message || 'Failed to load outfit');
+        showErrorToast(error?.message || 'Failed to load outfit');
         return;
       }
 
@@ -61,7 +62,7 @@ export function useOutfitActions({
       );
 
       if (saveError) {
-        Alert.alert('Error', saveError?.message || 'Failed to duplicate outfit');
+        showErrorToast(saveError?.message || 'Failed to duplicate outfit');
         return;
       }
 
@@ -85,18 +86,10 @@ export function useOutfitActions({
       const confirmArchive = async () => {
         const { error } = await archiveOutfit(userId, outfitId);
         if (error) {
-          if (Platform.OS === 'web') {
-            alert(error?.message || 'Failed to archive outfit');
-          } else {
-            Alert.alert('Error', error?.message || 'Failed to archive outfit');
-          }
+          showErrorToast(error?.message || 'Failed to archive outfit');
           return;
         }
-        if (Platform.OS === 'web') {
-          alert('Outfit archived');
-        } else {
-          Alert.alert('Success', 'Outfit archived');
-        }
+        showSuccessToast('Outfit archived');
         if (options?.onAfterArchive) {
           await options.onAfterArchive();
         } else {

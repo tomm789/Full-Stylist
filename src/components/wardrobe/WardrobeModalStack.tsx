@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { showSuccessToast } from '@/utils/toast';
 import {
   ItemDetailModal,
   OutfitCreatorOptionsModal,
@@ -77,7 +78,7 @@ export default function WardrobeModalStack({
             if (!selectedItem) return;
             onItemAddToOutfit(selectedItem);
             onCloseItemModal();
-            Alert.alert('Added to outfit', 'Tip: Long hold an item to add it to your outfit.');
+            showSuccessToast('Added to outfit. Tip: Long hold an item to add it to your outfit.');
           }}
           onOpenDetail={onItemOpenDetail}
           onEdit={onItemEdit}
@@ -109,7 +110,7 @@ export default function WardrobeModalStack({
 
       {Platform.OS !== 'web' && (
         <WardrobeCameraOverlay
-          translateY={wardrobeCamera.cameraTranslateY}
+          cameraAnimatedStyle={wardrobeCamera.cameraAnimatedStyle}
           isOpen={wardrobeCamera.isOpen}
           cameraRef={wardrobeCamera.cameraRef}
           onCameraReady={wardrobeCamera.onCameraReady}

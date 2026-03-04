@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 import { getLookbook, getUserLookbooks, saveLookbook } from '@/lib/lookbooks';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 
 type LookbookVisibility = 'public' | 'followers' | 'private_link';
 
@@ -81,11 +81,11 @@ export function useLookbookSelection({
   const handleCreateLookbook = useCallback(async () => {
     if (!userId) return;
     if (!lookbookTitle.trim()) {
-      Alert.alert('Error', 'Please enter a title for your lookbook');
+      showErrorToast('Please enter a title for your lookbook');
       return;
     }
     if (selectedOutfitIds.size === 0) {
-      Alert.alert('Error', 'Please select at least one outfit');
+      showErrorToast('Please select at least one outfit');
       return;
     }
 
@@ -106,13 +106,13 @@ export function useLookbookSelection({
         throw error;
       }
 
-      Alert.alert('Success', 'Lookbook created');
+      showSuccessToast('Lookbook created');
       exitSelectionMode();
       if (lookbook?.id) {
         onNavigateToLookbook(lookbook.id);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create lookbook');
+      showErrorToast(error.message || 'Failed to create lookbook');
     } finally {
       setLookbookSaving(false);
     }
@@ -129,7 +129,7 @@ export function useLookbookSelection({
   const handleAddToExistingLookbook = useCallback(async () => {
     if (!userId || !selectedLookbookId) return;
     if (selectedOutfitIds.size === 0) {
-      Alert.alert('Error', 'Please select at least one outfit');
+      showErrorToast('Please select at least one outfit');
       return;
     }
 
@@ -162,11 +162,11 @@ export function useLookbookSelection({
         throw error;
       }
 
-      Alert.alert('Success', 'Outfits added to lookbook');
+      showSuccessToast('Outfits added to lookbook');
       exitSelectionMode();
       onNavigateToLookbook(data.lookbook.id);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to update lookbook');
+      showErrorToast(error.message || 'Failed to update lookbook');
     } finally {
       setLookbookSaving(false);
     }

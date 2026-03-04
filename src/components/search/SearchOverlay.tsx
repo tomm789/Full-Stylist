@@ -3,8 +3,9 @@
  * Slides in the search results panel from the right.
  */
 
-import React, { useMemo, useEffect, useRef } from 'react';
-import { Animated, StyleSheet } from 'react-native';
+import React, { useMemo, useEffect } from 'react';
+import { StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate } from 'react-native-reanimated';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 import type { SearchResult, SearchResultType } from '@/hooks/useSearch';
@@ -35,24 +36,20 @@ export default function SearchOverlay({
 }: SearchOverlayProps) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const anim = useRef(new Animated.Value(open ? 1 : 0)).current;
+  const progress = useSharedValue(open ? 1 : 0);
 
   useEffect(() => {
-    const animation = Animated.timing(anim, {
-      toValue: open ? 1 : 0,
-      duration: 180,
-      useNativeDriver: false,
-    });
+    progress.value = withTiming(open ? 1 : 0, { duration: 180 });
+  }, [open]);
 
-    animation.start();
-
-    // Cleanup: Stop animation and remove listeners on unmount or when dependencies change
-    return () => {
-      animation.stop();
-      anim.stopAnimation();
-      anim.removeAllListeners();
-    };
-  }, [anim, open]);
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [
+      {
+        translateX: interpolate(progress.value, [0, 1], [width || 0, 0]),
+      },
+    ],
+  }));
 
   return (
     <Animated.View
@@ -60,17 +57,7 @@ export default function SearchOverlay({
       style={[
         styles.container,
         { top: topOffset },
-        {
-          opacity: anim,
-          transform: [
-            {
-              translateX: anim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [width || 0, 0],
-              }),
-            },
-          ],
-        },
+        animatedStyle,
       ]}
     >
       <SearchResultsPanel

@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import {
   createHeadshotGenerationVariation,
   updateHeadshotGenerationSession,
@@ -104,7 +104,7 @@ export function useHeadshotGeneration({
     if (previewSource === 'upload') {
       const { imageId, errorMessage } = await saveUploadedImage(userId, 'selfie');
       if (!imageId) {
-        Alert.alert('Error', errorMessage || 'Failed to save selfie.');
+        showErrorToast(errorMessage || 'Failed to save selfie.');
         return;
       }
       await updateUserSettings(userId, { selfie_image_id: imageId });
@@ -122,7 +122,7 @@ export function useHeadshotGeneration({
     }
 
     if (!activeBaseImageId) {
-      Alert.alert('Photo Required', 'Select a selfie or headshot before generating variations.');
+      showErrorToast('Select a selfie or headshot before generating variations.');
       return;
     }
 
@@ -148,10 +148,7 @@ export function useHeadshotGeneration({
     );
 
     if (!hasPresetPrompt && !hasMaskPrompts) {
-      Alert.alert(
-        'Add Details',
-        'Add at least one preset/custom description or a draw instruction.'
-      );
+      showErrorToast('Add at least one preset/custom description or a draw instruction.');
       return;
     }
 

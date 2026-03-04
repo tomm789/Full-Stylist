@@ -13,9 +13,9 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Switch,
 } from 'react-native';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { getOutfit } from '@/lib/outfits';
@@ -125,7 +125,7 @@ export default function CreateBundleScreen() {
     if (!user || !outfit || groups.length === 0) return;
 
     if (saleMode !== 'items_only' && !bundlePrice) {
-      Alert.alert('Error', 'Please enter a bundle price');
+      showErrorToast('Please enter a bundle price');
       return;
     }
 
@@ -152,14 +152,10 @@ export default function CreateBundleScreen() {
         throw error;
       }
 
-      Alert.alert('Success', 'Bundle created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
+      showSuccessToast('Bundle created successfully!');
+      router.back();
     } catch (error: any) {
-      Alert.alert('Error', `Failed to create bundle: ${error.message || error}`);
+      showErrorToast(`Failed to create bundle: ${error.message || error}`);
     } finally {
       setSaving(false);
     }

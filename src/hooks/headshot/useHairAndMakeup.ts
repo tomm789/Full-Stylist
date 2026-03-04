@@ -8,8 +8,8 @@
  */
 
 import React, { useMemo, useRef, useState } from 'react';
-import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfileImages, useImageGeneration } from '@/hooks/profile';
 import { createHeadshotPost } from '@/lib/posts';
@@ -292,7 +292,7 @@ export function useHairAndMakeup() {
     if (previewSource === 'upload') {
       const { imageId, errorMessage } = await selfieUpload.saveUploadedImage(user.id, 'selfie');
       if (!imageId) {
-        Alert.alert('Error', errorMessage || 'Failed to save selfie.');
+        showErrorToast(errorMessage || 'Failed to save selfie.');
         return;
       }
       await updateUserSettings(user.id, { selfie_image_id: imageId });
@@ -309,7 +309,7 @@ export function useHairAndMakeup() {
     }
 
     if (!baseImageId && !previewImageId) {
-      Alert.alert('Add a Selfie', 'Take or upload a selfie to start styling.');
+      showErrorToast('Take or upload a selfie to start styling.');
       return;
     }
 
@@ -347,20 +347,20 @@ export function useHairAndMakeup() {
       visibility: 'public' | 'followers' | 'private_link' | 'private' | 'inherit' = 'public'
     ) => {
       if (!user?.id) {
-        Alert.alert('Error', 'You must be signed in to share.');
+        showErrorToast('You must be signed in to share.');
         return;
       }
       const imageId = previewVariation?.image_id ?? previewImageId;
       if (!imageId) {
-        Alert.alert('Error', 'No headshot is selected to share.');
+        showErrorToast('No headshot is selected to share.');
         return;
       }
       const { error } = await createHeadshotPost(user.id, imageId, caption, visibility);
       if (error) {
-        Alert.alert('Error', 'Failed to share headshot');
+        showErrorToast('Failed to share headshot');
         return;
       }
-      Alert.alert('Shared!', 'Your headshot has been posted to your feed.');
+      showSuccessToast('Your headshot has been posted to your feed.');
     },
     [previewVariation, previewImageId, user?.id]
   );

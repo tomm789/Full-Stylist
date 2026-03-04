@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, LayoutAnimation, LayoutChangeEvent, Platform, UIManager } from 'react-native';
-
-// Enable LayoutAnimation on Android (no-op on new architecture / Fabric)
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { LayoutChangeEvent } from 'react-native';
+import {
+  useSharedValue,
+  withTiming,
+  useAnimatedStyle,
+  cancelAnimation,
+  type SharedValue,
+} from 'react-native-reanimated';
 
 type HideHeaderOptions = {
   hideDelta?: number;
@@ -19,8 +21,10 @@ type HideHeaderOptions = {
 
 type HideHeaderResult = {
   headerHeight: number | undefined;
-  headerOpacity: Animated.Value;
-  headerTranslate: Animated.Value;
+  headerOpacity: SharedValue<number>;
+  headerTranslate: SharedValue<number>;
+  /** Pre-built animated style with opacity + translateY — use with Reanimated Animated.View */
+  headerAnimatedStyle: { opacity: number; transform: { translateY: number }[] };
   headerReady: boolean;
   uiHidden: boolean;
   handleHeaderLayout: (event: LayoutChangeEvent) => void;
@@ -47,12 +51,11 @@ export function useHideHeaderOnScroll(
   const [headerReady, setHeaderReady] = useState(false);
   const [containerHeight, setContainerHeight] = useState<number | undefined>(undefined);
   const headerHeightRef = useRef(0);
-  const headerOpacity = useRef(new Animated.Value(1)).current;
-  const headerTranslate = useRef(new Animated.Value(0)).current;
+  const headerOpacity = useSharedValue(1);
+  const headerTranslate = useSharedValue(0);
   const lastScrollY = useRef(0);
   const uiHiddenRef = useRef(false);
   const animatingRef = useRef(false);
-  const animGenRef = useRef(0);
 
   // Store onVisibilityChange in a ref so setHeaderVisible has a stable identity
   const onVisibilityChangeRef = useRef(options.onVisibilityChange);
@@ -69,37 +72,32 @@ export function useHideHeaderOnScroll(
       });
 
       animatingRef.current = true;
-      const gen = ++animGenRef.current;
       const duration = visible ? config.showDuration : config.hideDuration;
 
-      // Height — LayoutAnimation handles the layout transition natively.
-      // configureNext applies to all layout changes in the next render cycle.
-      LayoutAnimation.configureNext({
-        duration,
-        update: { type: LayoutAnimation.Types.easeInEaseOut },
-      });
+      // Container height change — use state update (layout handled by React)
       setContainerHeight(visible ? headerHeightRef.current : 0);
 
-      // Opacity + translate — native driver for smooth 60fps on UI thread
-      Animated.parallel([
-        Animated.timing(headerOpacity, {
-          toValue: visible ? 1 : 0,
-          duration,
-          useNativeDriver: true,
-        }),
-        Animated.timing(headerTranslate, {
-          toValue: visible ? 0 : config.translateAmount,
-          duration,
-          useNativeDriver: true,
-        }),
-      ]).start(({ finished }) => {
-        if (gen !== animGenRef.current) return;
+      // Opacity + translate — Reanimated withTiming on UI thread
+      headerOpacity.value = withTiming(visible ? 1 : 0, { duration });
+      headerTranslate.value = withTiming(
+        visible ? 0 : config.translateAmount,
+        { duration },
+        (finished) => {
+          // This callback runs on the UI thread; schedule JS thread work via runOnJS
+          // But since we only need to update refs and state, use a simpler approach:
+          // We'll rely on the duration timeout below instead.
+        }
+      );
+
+      // Schedule post-animation cleanup after the duration elapses
+      // This replaces the old .start() callback
+      setTimeout(() => {
         animatingRef.current = false;
         setUiHidden(uiHiddenRef.current);
-        if (finished && !uiHiddenRef.current) {
+        if (!uiHiddenRef.current) {
           setContainerHeight(headerHeightRef.current);
         }
-      });
+      }, duration + 10);
     },
     [
       config.hideDuration,
@@ -120,8 +118,8 @@ export function useHideHeaderOnScroll(
       if (animatingRef.current) return;
       if (!uiHiddenRef.current) {
         setContainerHeight(height);
-        headerOpacity.setValue(1);
-        headerTranslate.setValue(0);
+        headerOpacity.value = 1;
+        headerTranslate.value = 0;
       }
       if (!headerReady) {
         setHeaderReady(true);
@@ -162,20 +160,25 @@ export function useHideHeaderOnScroll(
     lastScrollY.current = 0;
   }, []);
 
-  // Cleanup all animation listeners on unmount
+  // Cleanup animations on unmount
   useEffect(() => {
     return () => {
-      headerOpacity.stopAnimation();
-      headerOpacity.removeAllListeners();
-      headerTranslate.stopAnimation();
-      headerTranslate.removeAllListeners();
+      cancelAnimation(headerOpacity);
+      cancelAnimation(headerTranslate);
     };
   }, [headerOpacity, headerTranslate]);
+
+  // Pre-built animated style for consumers
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: headerOpacity.value,
+    transform: [{ translateY: headerTranslate.value }],
+  }));
 
   return {
     headerHeight: containerHeight,
     headerOpacity,
     headerTranslate,
+    headerAnimatedStyle,
     headerReady,
     uiHidden,
     handleHeaderLayout,

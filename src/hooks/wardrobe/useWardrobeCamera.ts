@@ -5,7 +5,14 @@
  */
 
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { Animated, Dimensions, Alert } from 'react-native';
+import { Dimensions } from 'react-native';
+import {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
+import { showErrorToast } from '@/utils/toast';
 import { CameraView } from 'expo-camera';
 import { useCameraPermissions } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
@@ -25,7 +32,10 @@ interface UseWardrobeCameraReturn {
   cameraReady: boolean;
 
   // Animation value (slide from bottom)
-  cameraTranslateY: Animated.Value;
+  cameraTranslateY: SharedValue<number>;
+
+  /** Pre-built animated style with translateY — use with Reanimated Animated.View */
+  cameraAnimatedStyle: { transform: { translateY: number }[] };
 
   // Camera ref
   cameraRef: React.RefObject<CameraView | null>;
@@ -55,7 +65,12 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
   const isAnimating = useRef(false);
 
   // Slide-from-bottom animation (starts off-screen below)
-  const cameraTranslateY = useRef(new Animated.Value(screenHeight)).current;
+  const cameraTranslateY = useSharedValue(screenHeight);
+
+  // Pre-built animated style
+  const cameraAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: cameraTranslateY.value }],
+  }));
 
   // Permissions
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -90,7 +105,7 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
       if (!cameraPermission?.granted) {
         const result = await requestCameraPermission();
         if (!result.granted) {
-          Alert.alert('Permission Required', 'Please grant camera permissions to use this feature.');
+          showErrorToast('Please grant camera permissions to use this feature.');
           return;
         }
       }
@@ -98,13 +113,10 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
       isAnimating.current = true;
       setIsOpen(true);
 
-      Animated.timing(cameraTranslateY, {
-        toValue: 0,
-        duration: ANIMATION_DURATION,
-        useNativeDriver: true,
-      }).start(() => {
+      cameraTranslateY.value = withTiming(0, { duration: ANIMATION_DURATION });
+      setTimeout(() => {
         isAnimating.current = false;
-      });
+      }, ANIMATION_DURATION + 10);
     })();
   }, [isOpen, cameraPermission, requestCameraPermission, cameraTranslateY]);
 
@@ -112,15 +124,12 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
     if (isAnimating.current || !isOpen) return;
     isAnimating.current = true;
 
-    Animated.timing(cameraTranslateY, {
-      toValue: screenHeight,
-      duration: ANIMATION_DURATION,
-      useNativeDriver: true,
-    }).start(() => {
+    cameraTranslateY.value = withTiming(screenHeight, { duration: ANIMATION_DURATION });
+    setTimeout(() => {
       isAnimating.current = false;
       setIsOpen(false);
       setCameraReady(false);
-    });
+    }, ANIMATION_DURATION + 10);
   }, [isOpen, cameraTranslateY, screenHeight]);
 
   const onCameraReady = useCallback(() => {
@@ -150,7 +159,7 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
   const pickFromLibrary = useCallback(async (): Promise<CapturedImage | null> => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please grant photo library permissions.');
+      showErrorToast('Please grant photo library permissions.');
       return null;
     }
 
@@ -176,6 +185,7 @@ export function useWardrobeCamera(): UseWardrobeCameraReturn {
     isOpen,
     cameraReady,
     cameraTranslateY,
+    cameraAnimatedStyle,
     cameraRef,
     open,
     close,

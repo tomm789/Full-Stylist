@@ -13,6 +13,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
@@ -108,18 +109,10 @@ export default function LookbookViewScreen() {
     const confirmArchive = async () => {
       const { error } = await archiveLookbook(user.id, lookbook.id);
       if (error) {
-        if (Platform.OS === 'web') {
-          alert(error?.message || 'Failed to archive lookbook');
-        } else {
-          Alert.alert('Error', error?.message || 'Failed to archive lookbook');
-        }
+        showErrorToast(error?.message || 'Failed to archive lookbook');
         return;
       }
-      if (Platform.OS === 'web') {
-        alert('Lookbook archived');
-      } else {
-        Alert.alert('Success', 'Lookbook archived');
-      }
+      showSuccessToast('Lookbook archived');
       await refresh();
     };
 
@@ -148,18 +141,10 @@ export default function LookbookViewScreen() {
     const confirmRestore = async () => {
       const { error } = await restoreLookbook(user.id, lookbook.id);
       if (error) {
-        if (Platform.OS === 'web') {
-          alert(error?.message || 'Failed to restore lookbook');
-        } else {
-          Alert.alert('Error', error?.message || 'Failed to restore lookbook');
-        }
+        showErrorToast(error?.message || 'Failed to restore lookbook');
         return;
       }
-      if (Platform.OS === 'web') {
-        alert('Lookbook restored');
-      } else {
-        Alert.alert('Success', 'Lookbook restored');
-      }
+      showSuccessToast('Lookbook restored');
       await refresh();
     };
 

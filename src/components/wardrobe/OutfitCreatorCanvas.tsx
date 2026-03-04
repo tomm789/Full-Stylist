@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   LayoutChangeEvent,
-  PanResponder,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
@@ -180,30 +180,38 @@ function DragLayer({
   onRelease,
   style,
 }: DragLayerProps) {
-  // Mutate this ref every render so the PanResponder always calls the latest handler
-  // without ever being recreated mid-gesture.
-  const cbRef = useRef({ disabled, onTap, onGrant, onMove, onRelease });
-  cbRef.current = { disabled, onTap, onGrant, onMove, onRelease };
-
-  // Create the responder once per mount. Closures read cbRef.current, not captured values.
-  const panRef = useRef<ReturnType<typeof PanResponder.create> | null>(null);
-  if (!panRef.current) {
-    panRef.current = PanResponder.create({
-      onStartShouldSetPanResponder: () => !cbRef.current.disabled,
-      // Do NOT use onMoveShouldSetPanResponder: it would steal gestures from
-      // arrow buttons (TouchableOpacity siblings rendered after DragLayer) after
-      // any finger movement, preventing their onPress from ever firing.
-      onPanResponderGrant: () => cbRef.current.onGrant(),
-      onPanResponderMove: (_evt, gs) => cbRef.current.onMove(gs.dx, gs.dy),
-      onPanResponderRelease: (_evt, gs) => {
-        if (Math.abs(gs.dx) < 3 && Math.abs(gs.dy) < 3) cbRef.current.onTap();
-        cbRef.current.onRelease();
-      },
-      onPanResponderTerminate: () => cbRef.current.onRelease(),
+  const tapGesture = Gesture.Tap()
+    .enabled(!disabled)
+    .maxDistance(3)
+    .onEnd(() => {
+      onTap();
     });
-  }
 
-  return <View {...panRef.current!.panHandlers} style={style} />;
+  const panGesture = Gesture.Pan()
+    .enabled(!disabled)
+    .minDistance(1)
+    .onBegin(() => {
+      onGrant();
+    })
+    .onUpdate((e) => {
+      onMove(e.translationX, e.translationY);
+    })
+    .onEnd(() => {
+      onRelease();
+    })
+    .onFinalize((_e, success) => {
+      if (!success) onRelease();
+    });
+
+  // Tap takes priority: if the finger lifts within 3px, it's a tap, not a drag.
+  // Race ensures only one gesture activates.
+  const composed = Gesture.Race(tapGesture, panGesture);
+
+  return (
+    <GestureDetector gesture={composed}>
+      <View style={style} />
+    </GestureDetector>
+  );
 }
 
 type ResizeHandlesProps = {
@@ -214,56 +222,78 @@ type ResizeHandlesProps = {
   styles: ReturnType<typeof createStyles>;
 };
 
-function ResizeHandles({ disabled, onActivate, onRelease, onResize, styles }: ResizeHandlesProps) {
-  // Mutate this ref every render so responders always call the latest handlers.
-  const cbRef = useRef({ disabled, onActivate, onRelease, onResize });
-  cbRef.current = { disabled, onActivate, onRelease, onResize };
-
-  // Lazy-init: create all four responders once per mount.
-  type Responder = ReturnType<typeof PanResponder.create>;
-  const respondersRef = useRef<{ tl: Responder; tr: Responder; bl: Responder; br: Responder } | null>(null);
-  if (!respondersRef.current) {
-    const makeR = (handle: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight') =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => !cbRef.current.disabled,
-        onMoveShouldSetPanResponder: () => !cbRef.current.disabled,
-        onPanResponderGrant: () => cbRef.current.onActivate(),
-        onPanResponderMove: (_evt, gs) => cbRef.current.onResize(handle, gs.dx, gs.dy),
-        onPanResponderRelease: () => cbRef.current.onRelease(),
-        onPanResponderTerminate: () => cbRef.current.onRelease(),
-      });
-    respondersRef.current = {
-      tl: makeR('topLeft'),
-      tr: makeR('topRight'),
-      bl: makeR('bottomLeft'),
-      br: makeR('bottomRight'),
-    };
-  }
-  const { tl, tr, bl, br } = respondersRef.current;
+function ResizeHandle({
+  handle,
+  disabled,
+  onActivate,
+  onRelease,
+  onResize,
+  style,
+}: {
+  handle: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
+  disabled?: boolean;
+  onActivate: () => void;
+  onRelease: () => void;
+  onResize: (handle: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight', dx: number, dy: number) => void;
+  style: StyleProp<ViewStyle>;
+}) {
+  const gesture = Gesture.Pan()
+    .enabled(!disabled)
+    .hitSlop({ top: 14, left: 14, right: 14, bottom: 14 })
+    .onBegin(() => {
+      onActivate();
+    })
+    .onUpdate((e) => {
+      onResize(handle, e.translationX, e.translationY);
+    })
+    .onEnd(() => {
+      onRelease();
+    })
+    .onFinalize((_e, success) => {
+      if (!success) onRelease();
+    });
 
   return (
+    <GestureDetector gesture={gesture}>
+      <View style={style} />
+    </GestureDetector>
+  );
+}
+
+function ResizeHandles({ disabled, onActivate, onRelease, onResize, styles }: ResizeHandlesProps) {
+  return (
     <>
-      {/* Use View, not Pressable: Pressable spreads its own eventHandlers after restProps,
-          silently overriding the panHandlers and making the PanResponder unreachable. */}
-      <View
+      <ResizeHandle
+        handle="topLeft"
+        disabled={disabled}
+        onActivate={onActivate}
+        onRelease={onRelease}
+        onResize={onResize}
         style={[styles.resizeHandle, styles.handleTopLeft]}
-        hitSlop={{ top: 14, left: 14, right: 14, bottom: 14 }}
-        {...tl.panHandlers}
       />
-      <View
+      <ResizeHandle
+        handle="topRight"
+        disabled={disabled}
+        onActivate={onActivate}
+        onRelease={onRelease}
+        onResize={onResize}
         style={[styles.resizeHandle, styles.handleTopRight]}
-        hitSlop={{ top: 14, left: 14, right: 14, bottom: 14 }}
-        {...tr.panHandlers}
       />
-      <View
+      <ResizeHandle
+        handle="bottomLeft"
+        disabled={disabled}
+        onActivate={onActivate}
+        onRelease={onRelease}
+        onResize={onResize}
         style={[styles.resizeHandle, styles.handleBottomLeft]}
-        hitSlop={{ top: 14, left: 14, right: 14, bottom: 14 }}
-        {...bl.panHandlers}
       />
-      <View
+      <ResizeHandle
+        handle="bottomRight"
+        disabled={disabled}
+        onActivate={onActivate}
+        onRelease={onRelease}
+        onResize={onResize}
         style={[styles.resizeHandle, styles.handleBottomRight]}
-        hitSlop={{ top: 14, left: 14, right: 14, bottom: 14 }}
-        {...br.panHandlers}
       />
     </>
   );

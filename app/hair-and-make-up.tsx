@@ -6,12 +6,12 @@
 
 import React, { useMemo } from 'react';
 import {
-  Animated,
   Modal,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { PanGestureHandler } from 'react-native-gesture-handler';
@@ -66,8 +66,7 @@ export default function HairAndMakeUpScreen() {
 
   const {
     headerHeight,
-    headerOpacity,
-    headerTranslate,
+    headerAnimatedStyle,
     headerReady,
     uiHidden,
     handleHeaderLayout,
@@ -167,7 +166,7 @@ export default function HairAndMakeUpScreen() {
     if (variation) state.setPreviewFromVariation(variation);
   }, [state.completedVariations, state.setPreviewFromVariation, state.handleRestoreSelfie]);
 
-  const { dialogLine1Opacity, dialogLine2Opacity, dialogLine3Opacity, dialogLine4Opacity } =
+  const { dialogLine1Style, dialogLine2Style, dialogLine3Style, dialogLine4Style } =
     useGenerationDialogAnimation(state.generating);
 
   const handleEdgeSwipeStart = React.useCallback(() => {
@@ -264,7 +263,7 @@ export default function HairAndMakeUpScreen() {
       <View style={commonStyles.container}>
         {!isFullscreenDraw && (
           <Animated.View
-            style={[styles.headerContainer, { height: headerHeight, opacity: headerOpacity, transform: [{ translateY: headerTranslate }] }]}
+            style={[styles.headerContainer, { height: headerHeight }, headerAnimatedStyle]}
             pointerEvents={uiHidden ? 'none' : 'auto'}
           >
             <View onLayout={handleHeaderLayout}>
@@ -347,14 +346,14 @@ export default function HairAndMakeUpScreen() {
             previewImageUrl={state.previewImageUrl}
             onPreviewPress={state.handlePreviewPress}
             onMenuPress={() => state.setShowFaceMenu(true)}
-            generateOverlayOpacity={state.generateOverlayOpacity}
+            generateOverlayStyle={state.generateOverlayStyle}
             previewIsGenerated={state.previewIsGenerated}
             onRestoreSelfie={state.handleRestoreSelfie}
             generating={state.generating}
-            dialogLine1Opacity={dialogLine1Opacity}
-            dialogLine2Opacity={dialogLine2Opacity}
-            dialogLine3Opacity={dialogLine3Opacity}
-            dialogLine4Opacity={dialogLine4Opacity}
+            dialogLine1Style={dialogLine1Style}
+            dialogLine2Style={dialogLine2Style}
+            dialogLine3Style={dialogLine3Style}
+            dialogLine4Style={dialogLine4Style}
             previewHasImage={state.previewHasImage}
             activeImageVariation={state.activeImageVariation}
             isStyleDisabled={state.isStyleDisabled}

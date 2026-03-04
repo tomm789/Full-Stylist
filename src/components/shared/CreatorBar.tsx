@@ -5,8 +5,9 @@
  * Used by both outfit creator (wardrobe) and headshot creator (hair & makeup).
  */
 
-import React, { useMemo, useEffect, useRef } from 'react';
-import { View, TouchableOpacity, StyleSheet, Text, Animated } from 'react-native';
+import React, { useMemo, useEffect } from 'react';
+import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, shadows } from '@/styles';
@@ -38,19 +39,19 @@ export default function CreatorBar({
 }: CreatorBarProps) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const opacity = useSharedValue(0);
   const isDisabled = isGenerating || disabled;
 
   useEffect(() => {
-    Animated.timing(opacityAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [opacityAnim]);
+    opacity.value = withTiming(1, { duration: 300 });
+  }, []);
+
+  const animatedContainerStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
   return (
-    <Animated.View style={[styles.container, { bottom: spacing.xl + bottomOffset, opacity: opacityAnim }, isDisabled && styles.containerDisabled]}>
+    <Animated.View style={[styles.container, { bottom: spacing.xl + bottomOffset }, animatedContainerStyle, isDisabled && styles.containerDisabled]}>
       <View style={styles.inner}>
         <TouchableOpacity
           style={styles.generateButton}

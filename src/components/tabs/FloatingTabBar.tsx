@@ -1,10 +1,12 @@
 import React from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { useDerivedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { borderRadius, shadows, spacing, typography } from '@/styles/theme';
+import { haptics } from '@/utils/haptics';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 export interface FloatingTabBarProps extends BottomTabBarProps {
@@ -19,9 +21,14 @@ export function FloatingTabBar(props: FloatingTabBarProps) {
   const colors = useThemeColors();
   const { tabBarOpacity, tabBarDimOpacity } = useFloatingTabBar();
   const containerZIndex = props.menuActive ? 60 : 40;
-  const containerOpacity = props.menuActive
-    ? 1
-    : Animated.multiply(tabBarOpacity, tabBarDimOpacity);
+
+  const combinedOpacity = useDerivedValue(
+    () => tabBarOpacity.value * tabBarDimOpacity.value
+  );
+
+  const animatedContainerStyle = useAnimatedStyle(() => ({
+    opacity: props.menuActive ? 1 : combinedOpacity.value,
+  }));
 
   if (props.menuActive) {
     return (
@@ -34,8 +41,8 @@ export function FloatingTabBar(props: FloatingTabBarProps) {
             borderColor: 'rgba(255, 255, 255, 0.18)',
             zIndex: containerZIndex,
             ...shadows.lg,
-            opacity: containerOpacity,
           },
+          animatedContainerStyle,
         ]}
       >
         <BlurView
@@ -97,8 +104,8 @@ export function FloatingTabBar(props: FloatingTabBarProps) {
           borderColor: 'rgba(255, 255, 255, 0.18)',
           zIndex: containerZIndex,
           ...shadows.lg,
-          opacity: containerOpacity,
         },
+        animatedContainerStyle,
       ]}
     >
       <BlurView
@@ -124,6 +131,7 @@ export function FloatingTabBar(props: FloatingTabBarProps) {
           const label = options.tabBarLabel ?? options.title ?? route.name;
 
           const onPress = () => {
+            haptics.selection();
             const event = props.navigation.emit({
               type: 'tabPress',
               target: route.key,

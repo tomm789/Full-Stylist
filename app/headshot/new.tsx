@@ -10,13 +10,13 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
+import { showSuccessToast } from '@/utils/toast';
 import { useImageGeneration } from '@/hooks/profile';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import ErrorModal from '@/components/ErrorModal';
@@ -65,7 +65,7 @@ export default function NewHeadshotScreen() {
     console.log('[PERF] Backend processing duration:', backendProcessingTime.toFixed(2), 'ms');
 
     if (imageId) {
-      Alert.alert('Success', 'Headshot generated successfully!');
+      showSuccessToast('Headshot generated successfully!');
       // Pass timing data via route params
       router.replace({
         pathname: `/headshot/${imageId}` as any,

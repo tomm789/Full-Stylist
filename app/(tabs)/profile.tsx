@@ -19,7 +19,7 @@ import {
   ProfileTabs,
   EditProfileModal,
 } from '@/components/profile';
-import { LoadingSpinner } from '@/components/shared';
+import { SkeletonGrid, SkeletonProfileCard } from '@/components/shared/loading';
 
 type TabType = 'headshots' | 'bodyshots';
 
@@ -89,7 +89,8 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <LoadingSpinner size="large" />
+        <SkeletonProfileCard />
+        <SkeletonGrid preset="outfit" count={9} />
       </View>
     );
   }

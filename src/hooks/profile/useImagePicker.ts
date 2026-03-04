@@ -4,8 +4,9 @@
  */
 
 import { useState } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { showErrorToast } from '@/utils/toast';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { uriToBlob } from '@/lib/utils/image-helpers';
 
@@ -70,10 +71,7 @@ export function useImagePicker() {
 
     const { status } = await permissionFn();
     if (status !== 'granted') {
-      Alert.alert(
-        'Permission Required',
-        'Please grant ' + (useCamera ? 'camera' : 'camera roll') + ' permissions'
-      );
+      showErrorToast('Please grant ' + (useCamera ? 'camera' : 'camera roll') + ' permissions');
       return;
     }
 
@@ -109,7 +107,7 @@ export function useImagePicker() {
   const pickHeadshotLibraryImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please grant camera roll permissions');
+      showErrorToast('Please grant camera roll permissions');
       return;
     }
 

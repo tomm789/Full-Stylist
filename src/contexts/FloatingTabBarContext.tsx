@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef } from 'react';
-import { Animated } from 'react-native';
+import { useSharedValue, withTiming } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 
 type TabBarTiming = {
   hideDuration?: number;
@@ -7,8 +8,8 @@ type TabBarTiming = {
 };
 
 type FloatingTabBarContextValue = {
-  tabBarOpacity: Animated.Value;
-  tabBarDimOpacity: Animated.Value;
+  tabBarOpacity: SharedValue<number>;
+  tabBarDimOpacity: SharedValue<number>;
   setTabBarDimmed: (dimmed: boolean, timing?: TabBarTiming) => void;
   setTabBarOpacity: (opacity: number, timing?: TabBarTiming) => void;
 };
@@ -23,8 +24,8 @@ const DIMMED_OPACITY = 0.65;
 const FloatingTabBarContext = createContext<FloatingTabBarContextValue | null>(null);
 
 export function FloatingTabBarProvider({ children }: { children: React.ReactNode }) {
-  const tabBarOpacity = useRef(new Animated.Value(1)).current;
-  const tabBarDimOpacity = useRef(new Animated.Value(1)).current;
+  const tabBarOpacity = useSharedValue(1);
+  const tabBarDimOpacity = useSharedValue(1);
   const dimmedRef = useRef(false);
 
   const setTabBarDimmed = useCallback(
@@ -34,11 +35,7 @@ export function FloatingTabBarProvider({ children }: { children: React.ReactNode
       const duration = dimmed
         ? timing?.hideDuration ?? DEFAULT_TIMING.hideDuration
         : timing?.showDuration ?? DEFAULT_TIMING.showDuration;
-      Animated.timing(tabBarDimOpacity, {
-        toValue: dimmed ? DIMMED_OPACITY : 1,
-        duration,
-        useNativeDriver: false,
-      }).start();
+      tabBarDimOpacity.value = withTiming(dimmed ? DIMMED_OPACITY : 1, { duration });
     },
     [tabBarDimOpacity]
   );
@@ -48,11 +45,7 @@ export function FloatingTabBarProvider({ children }: { children: React.ReactNode
       const duration = opacity === 0
         ? timing?.hideDuration ?? DEFAULT_TIMING.hideDuration
         : timing?.showDuration ?? DEFAULT_TIMING.showDuration;
-      Animated.timing(tabBarOpacity, {
-        toValue: opacity,
-        duration,
-        useNativeDriver: false,
-      }).start();
+      tabBarOpacity.value = withTiming(opacity, { duration });
     },
     [tabBarOpacity]
   );
@@ -74,10 +67,16 @@ export function FloatingTabBarProvider({ children }: { children: React.ReactNode
   );
 }
 
-const NOOP_OPACITY = new Animated.Value(1);
+const noopSharedValue: SharedValue<number> = {
+  value: 1,
+  addListener: () => {},
+  removeListener: () => {},
+  modify: () => {},
+} as unknown as SharedValue<number>;
+
 const noopFallback: FloatingTabBarContextValue = {
-  tabBarOpacity: NOOP_OPACITY,
-  tabBarDimOpacity: NOOP_OPACITY,
+  tabBarOpacity: noopSharedValue,
+  tabBarDimOpacity: noopSharedValue,
   setTabBarDimmed: () => {},
   setTabBarOpacity: () => {},
 };

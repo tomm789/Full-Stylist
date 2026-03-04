@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import {
   EntityAttribute,
   AttributeDefinition,
@@ -122,13 +122,13 @@ export function useAttributeEditor({
       setEditingAttributeTypeKey(null);
       setEditingAttributeValues({});
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to update attributes');
+      showErrorToast(error.message || 'Failed to update attributes');
     }
   }, [editingAttributeTypeKey, editingAttributeValues, onUpdateAttribute, onDeleteAttribute]);
 
   const handleAddAttribute = useCallback(async () => {
     if (!newAttributeKey.trim() || !newAttributeValue.trim()) {
-      Alert.alert('Error', 'Please select an attribute type and enter a value');
+      showErrorToast('Please select an attribute type and enter a value');
       return;
     }
 
@@ -138,7 +138,7 @@ export function useAttributeEditor({
       setNewAttributeKey('');
       setNewAttributeValue('');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to add attribute');
+      showErrorToast(error.message || 'Failed to add attribute');
     }
   }, [newAttributeKey, newAttributeValue, onCreateAttribute]);
 

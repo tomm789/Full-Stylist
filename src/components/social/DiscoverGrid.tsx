@@ -18,6 +18,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { FeedItem } from '@/lib/posts';
+import { haptics } from '@/utils/haptics';
 import { spacing, typography } from '@/styles';
 import PostGrid, { postGridStyles } from './PostGrid';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -128,6 +129,7 @@ export function DiscoverGrid({
 
     const handleLongPress = () => {
       if (!isOutfit || !onItemLongPress) return;
+      haptics.medium();
       onItemLongPress(item);
     };
 

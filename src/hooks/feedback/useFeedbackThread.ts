@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import {
   getFeedbackThread,
   updateFeedbackThread,
@@ -83,7 +83,7 @@ export function useFeedbackThread({
       }
       return false;
     } catch (error: any) {
-      Alert.alert('Error', `Failed to post comment: ${error.message || error}`);
+      showErrorToast(`Failed to post comment: ${error.message || error}`);
       return false;
     } finally {
       setSubmittingComment(false);
@@ -108,7 +108,7 @@ export function useFeedbackThread({
         setThread(updatedThread);
       }
     } catch (error: any) {
-      Alert.alert('Error', `Failed to update status: ${error.message || error}`);
+      showErrorToast(`Failed to update status: ${error.message || error}`);
     }
   };
 

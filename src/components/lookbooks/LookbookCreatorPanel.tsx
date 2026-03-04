@@ -23,6 +23,7 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
+import { haptics } from '@/utils/haptics';
 import { ImagePlaceholder } from '@/components/shared';
 import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
@@ -210,7 +211,7 @@ export default function LookbookCreatorPanel({
   // ── Collapsed row item ───────────────────────────────────────────────────
   const renderRowItem = ({ item, drag, isActive }: RenderItemParams<OutfitItem>) => (
     <TouchableOpacity
-      onLongPress={drag}
+      onLongPress={() => { haptics.medium(); drag(); }}
       style={[styles.rowCard, isActive && { opacity: 0.7 }]}
       activeOpacity={0.9}
     >
@@ -239,7 +240,7 @@ export default function LookbookCreatorPanel({
   // ── Expanded grid item ───────────────────────────────────────────────────
   const renderGridItem = ({ item, drag, isActive }: RenderItemParams<OutfitItem>) => (
     <TouchableOpacity
-      onLongPress={drag}
+      onLongPress={() => { haptics.medium(); drag(); }}
       style={[styles.gridCell, isActive && { opacity: 0.7 }]}
       activeOpacity={0.9}
     >

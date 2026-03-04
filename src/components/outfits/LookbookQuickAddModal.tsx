@@ -8,12 +8,12 @@ import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheet } from '@/components/shared';
+import { ThemedBottomSheet } from '@/components/shared';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -46,7 +46,7 @@ export default function LookbookQuickAddModal({
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="Add Lookbook Tab">
+    <ThemedBottomSheet visible={visible} onClose={onClose} title="Add Lookbook Tab">
       <TouchableOpacity
         style={styles.createRow}
         onPress={() => {
@@ -67,7 +67,7 @@ export default function LookbookQuickAddModal({
           <ActivityIndicator size="small" color={colors.primary} />
         </View>
       ) : (
-        <FlatList
+        <BottomSheetFlatList
           data={lookbooks}
           keyExtractor={(item) => item.id}
           initialNumToRender={8}
@@ -94,7 +94,7 @@ export default function LookbookQuickAddModal({
           }
         />
       )}
-    </BottomSheet>
+    </ThemedBottomSheet>
   );
 }
 

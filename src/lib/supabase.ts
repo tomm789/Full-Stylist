@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getAuthStorage } from './secureStorage';
 
 export const SUPABASE_CONFIG = {
   DEV_MODE: process.env.NODE_ENV !== 'production',
@@ -35,10 +36,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Corrected client initialization
+const authStorage = getAuthStorage();
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+    ...(authStorage && { storage: authStorage }),
   },
   global: {
     headers: {

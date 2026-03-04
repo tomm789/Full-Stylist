@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,7 +18,7 @@ import { useArchivedLookbooks } from '@/hooks/lookbooks';
 import { useWardrobe, useArchivedWardrobeItems } from '@/hooks/wardrobe';
 import { OutfitCard } from '@/components/outfits';
 import ItemGrid from '@/components/wardrobe/ItemGrid';
-import { Header, LoadingSpinner } from '@/components/shared';
+import { Header, LoadingSpinner, NativeContextMenu } from '@/components/shared';
 import { HeaderIconButton } from '@/components/shared/layout';
 import { DropdownMenuModal, DropdownMenuItem } from '@/components/shared/modals';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
@@ -29,6 +28,8 @@ import { restoreWardrobeItem } from '@/lib/wardrobe';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
 import { createStyles } from './archive.styles';
+import { haptics } from '@/utils/haptics';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 
 type ArchiveTab = 'outfits' | 'lookbooks' | 'wardrobe';
 
@@ -40,8 +41,6 @@ export default function ArchiveScreen() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ArchiveTab>('outfits');
 
-  const [openOutfitId, setOpenOutfitId] = useState<string | null>(null);
-  const [openLookbookId, setOpenLookbookId] = useState<string | null>(null);
   const [openWardrobeItemId, setOpenWardrobeItemId] = useState<string | null>(null);
 
   const outfitsState = useArchivedOutfits({ userId: user?.id });
@@ -65,21 +64,12 @@ export default function ArchiveScreen() {
       {
         text: 'Restore',
         onPress: async () => {
-          setOpenOutfitId(null);
           const { error } = await restoreOutfit(user.id, outfitId);
           if (error) {
-            if (Platform.OS === 'web') {
-              alert(error?.message || 'Failed to restore outfit');
-            } else {
-              Alert.alert('Error', error?.message || 'Failed to restore outfit');
-            }
+            showErrorToast(error?.message || 'Failed to restore outfit');
             return;
           }
-          if (Platform.OS === 'web') {
-            alert('Outfit restored');
-          } else {
-            Alert.alert('Success', 'Outfit restored');
-          }
+          showSuccessToast('Outfit restored');
           await outfitsState.refresh();
         },
       },
@@ -93,21 +83,12 @@ export default function ArchiveScreen() {
       {
         text: 'Restore',
         onPress: async () => {
-          setOpenLookbookId(null);
           const { error } = await restoreLookbook(user.id, lookbookId);
           if (error) {
-            if (Platform.OS === 'web') {
-              alert(error?.message || 'Failed to restore lookbook');
-            } else {
-              Alert.alert('Error', error?.message || 'Failed to restore lookbook');
-            }
+            showErrorToast(error?.message || 'Failed to restore lookbook');
             return;
           }
-          if (Platform.OS === 'web') {
-            alert('Lookbook restored');
-          } else {
-            Alert.alert('Success', 'Lookbook restored');
-          }
+          showSuccessToast('Lookbook restored');
           await lookbooksState.refresh();
         },
       },
@@ -124,18 +105,10 @@ export default function ArchiveScreen() {
           setOpenWardrobeItemId(null);
           const { error } = await restoreWardrobeItem(itemId, user.id);
           if (error) {
-            if (Platform.OS === 'web') {
-              alert(error?.message || 'Failed to restore item');
-            } else {
-              Alert.alert('Error', error?.message || 'Failed to restore item');
-            }
+            showErrorToast(error?.message || 'Failed to restore item');
             return;
           }
-          if (Platform.OS === 'web') {
-            alert('Item restored');
-          } else {
-            Alert.alert('Success', 'Item restored');
-          }
+          showSuccessToast('Item restored');
           await wardrobeState.refresh();
         },
       },
@@ -173,13 +146,23 @@ export default function ArchiveScreen() {
           const imageLoading = !outfitsState.imageCache.has(item.id);
 
           return (
-            <OutfitCard
-              outfit={item}
-              imageUrl={imageUrl}
-              imageLoading={imageLoading}
-              onPress={() => router.push(`/outfits/${item.id}/view`)}
-              onLongPress={() => setOpenOutfitId(item.id)}
-            />
+            <NativeContextMenu
+              actions={[
+                { id: 'restore', title: 'Restore', image: 'arrow.uturn.backward' },
+                { id: 'view', title: 'View', image: 'eye' },
+              ]}
+              onAction={(actionId) => {
+                if (actionId === 'restore') handleRestoreOutfit(item.id);
+                if (actionId === 'view') router.push(`/outfits/${item.id}/view`);
+              }}
+            >
+              <OutfitCard
+                outfit={item}
+                imageUrl={imageUrl}
+                imageLoading={imageLoading}
+                onPress={() => router.push(`/outfits/${item.id}/view`)}
+              />
+            </NativeContextMenu>
           );
         }}
       />
@@ -213,27 +196,36 @@ export default function ArchiveScreen() {
         refreshing={lookbooksState.loading}
         onRefresh={lookbooksState.refresh}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={postGridStyles.gridItem}
-            onPress={() => router.push(`/lookbooks/${item.id}`)}
-            onLongPress={() => setOpenLookbookId(item.id)}
-            delayLongPress={500}
-            activeOpacity={0.8}
+          <NativeContextMenu
+            actions={[
+              { id: 'restore', title: 'Restore', image: 'arrow.uturn.backward' },
+              { id: 'view', title: 'View', image: 'eye' },
+            ]}
+            onAction={(actionId) => {
+              if (actionId === 'restore') handleRestoreLookbook(item.id);
+              if (actionId === 'view') router.push(`/lookbooks/${item.id}`);
+            }}
           >
-            <View style={styles.lookbookThumbnail}>
-              <Text style={styles.lookbookIcon}>📚</Text>
-            </View>
-            <View style={postGridStyles.infoOverlay}>
-              <Text style={styles.lookbookTitle} numberOfLines={2}>
-                {item.title || 'Untitled lookbook'}
-              </Text>
-              {item.description ? (
-                <Text style={styles.lookbookDescription} numberOfLines={1}>
-                  {item.description}
+            <TouchableOpacity
+              style={postGridStyles.gridItem}
+              onPress={() => router.push(`/lookbooks/${item.id}`)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.lookbookThumbnail}>
+                <Text style={styles.lookbookIcon}>📚</Text>
+              </View>
+              <View style={postGridStyles.infoOverlay}>
+                <Text style={styles.lookbookTitle} numberOfLines={2}>
+                  {item.title || 'Untitled lookbook'}
                 </Text>
-              ) : null}
-            </View>
-          </TouchableOpacity>
+                {item.description ? (
+                  <Text style={styles.lookbookDescription} numberOfLines={1}>
+                    {item.description}
+                  </Text>
+                ) : null}
+              </View>
+            </TouchableOpacity>
+          </NativeContextMenu>
         )}
       />
     );
@@ -253,7 +245,7 @@ export default function ArchiveScreen() {
         items={wardrobeState.items}
         imageCache={wardrobeState.imageCache}
         onItemPress={(item) => router.push(`/wardrobe/item/${item.id}`)}
-        onItemLongPress={(item) => setOpenWardrobeItemId(item.id)}
+        onItemLongPress={(item) => { haptics.medium(); setOpenWardrobeItemId(item.id); }}
         onRefresh={wardrobeState.refresh}
         refreshing={wardrobeState.refreshing}
         showFavorite={false}
@@ -296,50 +288,6 @@ export default function ArchiveScreen() {
         {activeTab === 'lookbooks' && renderLookbooks()}
         {activeTab === 'wardrobe' && renderWardrobe()}
       </View>
-
-      <DropdownMenuModal
-        visible={openOutfitId !== null}
-        onClose={() => setOpenOutfitId(null)}
-        align="right"
-      >
-        <DropdownMenuItem
-          label="Restore"
-          icon="refresh-outline"
-          onPress={() => openOutfitId && handleRestoreOutfit(openOutfitId)}
-        />
-        <DropdownMenuItem
-          label="View"
-          icon="eye-outline"
-          onPress={() => {
-            if (!openOutfitId) return;
-            const targetId = openOutfitId;
-            setOpenOutfitId(null);
-            router.push(`/outfits/${targetId}/view`);
-          }}
-        />
-      </DropdownMenuModal>
-
-      <DropdownMenuModal
-        visible={openLookbookId !== null}
-        onClose={() => setOpenLookbookId(null)}
-        align="right"
-      >
-        <DropdownMenuItem
-          label="Restore"
-          icon="refresh-outline"
-          onPress={() => openLookbookId && handleRestoreLookbook(openLookbookId)}
-        />
-        <DropdownMenuItem
-          label="View"
-          icon="eye-outline"
-          onPress={() => {
-            if (!openLookbookId) return;
-            const targetId = openLookbookId;
-            setOpenLookbookId(null);
-            router.push(`/lookbooks/${targetId}`);
-          }}
-        />
-      </DropdownMenuModal>
 
       <DropdownMenuModal
         visible={openWardrobeItemId !== null}

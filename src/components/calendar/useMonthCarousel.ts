@@ -1,10 +1,19 @@
 /**
  * useMonthCarousel Hook
  * Handles animated month transitions for the calendar grid.
+ *
+ * Migrated from legacy Animated API to react-native-reanimated v4.
  */
 
-import { useMemo, useRef, useState } from 'react';
-import { Animated, Easing, LayoutChangeEvent } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { LayoutChangeEvent } from 'react-native';
+import {
+  useSharedValue,
+  withTiming,
+  Easing,
+  runOnJS,
+} from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 
 interface UseMonthCarouselOptions {
   currentDate: Date;
@@ -13,7 +22,7 @@ interface UseMonthCarouselOptions {
 
 interface UseMonthCarouselReturn {
   gridDates: Date[];
-  slideX: Animated.Value;
+  slideX: SharedValue<number>;
   slideDirection: number | null;
   containerWidth: number;
   isAnimating: boolean;
@@ -30,55 +39,75 @@ export function useMonthCarousel({
   const [containerWidth, setContainerWidth] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const slideX = useRef(new Animated.Value(0)).current;
+  const slideX = useSharedValue(0);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  const animateMonthChange = (direction: number) => {
-    if (isAnimating) {
-      return;
-    }
-
-    const newDate = new Date(year, month + direction, 1);
-    if (!containerWidth) {
-      onNavigate(direction);
-      return;
-    }
-
-    setIsAnimating(true);
-    setSlideDirection(direction);
-    setNextDate(newDate);
-
-    const startX = direction === 1 ? 0 : -containerWidth;
-    const endX = direction === 1 ? -containerWidth : 0;
-
-    slideX.setValue(startX);
-
-    Animated.timing(slideX, {
-      toValue: endX,
-      duration: 260,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => {
+  const onAnimationComplete = useCallback(
+    (direction: number) => {
       onNavigate(direction);
       setSlideDirection(null);
       setNextDate(null);
       setIsAnimating(false);
-      slideX.setValue(0);
-    });
-  };
+      slideX.value = 0;
+    },
+    [onNavigate, slideX],
+  );
 
-  const handleMonthNavigate = (direction: number) => {
-    animateMonthChange(direction);
-  };
+  const animateMonthChange = useCallback(
+    (direction: number) => {
+      if (isAnimating) {
+        return;
+      }
 
-  const handleCalendarLayout = (event: LayoutChangeEvent) => {
-    const { width } = event.nativeEvent.layout;
-    if (width && width !== containerWidth) {
-      setContainerWidth(width);
-    }
-  };
+      const newDate = new Date(year, month + direction, 1);
+      if (!containerWidth) {
+        onNavigate(direction);
+        return;
+      }
+
+      setIsAnimating(true);
+      setSlideDirection(direction);
+      setNextDate(newDate);
+
+      const startX = direction === 1 ? 0 : -containerWidth;
+      const endX = direction === 1 ? -containerWidth : 0;
+
+      slideX.value = startX;
+
+      slideX.value = withTiming(
+        endX,
+        {
+          duration: 260,
+          easing: Easing.out(Easing.cubic),
+        },
+        (finished) => {
+          if (finished) {
+            runOnJS(onAnimationComplete)(direction);
+          }
+        },
+      );
+    },
+    [isAnimating, year, month, containerWidth, onNavigate, slideX, onAnimationComplete],
+  );
+
+  const handleMonthNavigate = useCallback(
+    (direction: number) => {
+      animateMonthChange(direction);
+    },
+    [animateMonthChange],
+  );
+
+  const handleCalendarLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const { width } = event.nativeEvent.layout;
+      if (width && width !== containerWidth) {
+        setContainerWidth(width);
+      }
+    },
+    [containerWidth],
+  );
 
   const gridDates = useMemo(() => {
     if (!slideDirection || !nextDate) {

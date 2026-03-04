@@ -18,10 +18,12 @@ import {
   Alert,
   Animated,
   useWindowDimensions,
-  PanResponder,
   TextInput,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { showErrorToast } from '@/utils/toast';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useDayEntries,
@@ -139,7 +141,7 @@ export default function CalendarDayScreen() {
   const handleSaveEntry = useCallback(async () => {
     if (!currentDateKey) return;
     if (!selectedPreset) {
-      Alert.alert('Missing slot', 'Please select a slot preset');
+      showErrorToast('Please select a slot preset');
       return;
     }
 
@@ -153,7 +155,7 @@ export default function CalendarDayScreen() {
         notes: editNotes.trim() || null,
       });
       if (error) {
-        Alert.alert('Error', 'Failed to update entry');
+        showErrorToast('Failed to update entry');
       } else {
         resetForm();
         setViewMode('list');
@@ -167,7 +169,7 @@ export default function CalendarDayScreen() {
         sort_order: entries.length,
       });
       if (error) {
-        Alert.alert('Error', error.message || 'Failed to create entry');
+        showErrorToast(error.message || 'Failed to create entry');
       } else {
         resetForm();
         setViewMode('list');
@@ -179,12 +181,12 @@ export default function CalendarDayScreen() {
 
   const handleCreatePreset = useCallback(async () => {
     if (!newPresetName.trim()) {
-      Alert.alert('Error', 'Please enter a preset name');
+      showErrorToast('Please enter a preset name');
       return;
     }
     const { error } = await createPreset(newPresetName.trim());
     if (error) {
-      Alert.alert('Error', `Failed to create preset: ${error.message || error}`);
+      showErrorToast(`Failed to create preset: ${error.message || error}`);
       return;
     }
     setNewPresetName('');
@@ -224,22 +226,18 @@ export default function CalendarDayScreen() {
   }, [animateToDate]);
 
   // --- Swipe gesture ---
-  const panResponder = useMemo(() =>
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        if (viewMode === 'form') return false;
-        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5;
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (viewMode === 'form') return;
-        const { dx, vx } = gestureState;
-        if (dx < -SWIPE_THRESHOLD || vx < -SWIPE_VELOCITY) {
-          animateToDate('next');
-        } else if (dx > SWIPE_THRESHOLD || vx > SWIPE_VELOCITY) {
-          animateToDate('prev');
+  const panGesture = useMemo(() =>
+    Gesture.Pan()
+      .enabled(viewMode === 'list')
+      .activeOffsetX([-10, 10])
+      .onEnd((e) => {
+        const { translationX, velocityX } = e;
+        if (translationX < -SWIPE_THRESHOLD || velocityX < -SWIPE_VELOCITY) {
+          runOnJS(animateToDate)('next');
+        } else if (translationX > SWIPE_THRESHOLD || velocityX > SWIPE_VELOCITY) {
+          runOnJS(animateToDate)('prev');
         }
-      },
-    }),
+      }),
   [animateToDate, viewMode]);
 
   const handleBack = () => {
@@ -301,9 +299,9 @@ export default function CalendarDayScreen() {
       )}
 
       {/* Animated content area */}
+      <GestureDetector gesture={panGesture}>
       <Animated.View
         style={[styles.animatedContent, { transform: [{ translateX: slideAnim }] }]}
-        {...(viewMode === 'list' ? panResponder.panHandlers : {})}
       >
         {viewMode === 'list' ? (
           /* ---------- LIST MODE ---------- */
@@ -390,6 +388,7 @@ export default function CalendarDayScreen() {
           </ScrollView>
         )}
       </Animated.View>
+      </GestureDetector>
 
       <CreatePresetModal
         visible={showCreatePresetModal}

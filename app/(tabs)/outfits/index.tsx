@@ -46,7 +46,7 @@ import { useLookbookSelection, useLookbookTabs, useLookbooks, useSystemLookbooks
 import LookbookQuickAddModal from '@/components/outfits/LookbookQuickAddModal';
 import LookbookSelectionBar from '@/components/outfits/LookbookSelectionBar';
 import { LOOKBOOK_PANEL_COLLAPSED_HEIGHT } from '@/components/lookbooks/LookbookCreatorPanel';
-import { LoadingSpinner } from '@/components/shared';
+import { SkeletonGrid } from '@/components/shared/loading';
 import { layout, spacing } from '@/styles';
 import { useSlotPresets } from '@/hooks/calendar';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
@@ -96,8 +96,7 @@ export default function OutfitsScreen() {
   const [openOutfitMenuId, setOpenOutfitMenuId] = useState<string | null>(null);
   const {
     headerHeight,
-    headerOpacity,
-    headerTranslate,
+    headerAnimatedStyle,
     headerReady,
     uiHidden,
     handleHeaderLayout,
@@ -574,7 +573,7 @@ export default function OutfitsScreen() {
   if (loading && outfits.length === 0) {
     return (
       <View style={commonStyles.loadingContainer}>
-        <LoadingSpinner text="Loading outfits..." />
+        <SkeletonGrid preset="outfit" count={12} />
       </View>
     );
   }
@@ -603,8 +602,7 @@ export default function OutfitsScreen() {
       <OutfitsHeaderSection
         headerReady={headerReady}
         headerHeight={headerHeight}
-        headerOpacity={headerOpacity}
-        headerTranslate={headerTranslate}
+        headerAnimatedStyle={headerAnimatedStyle}
         uiHidden={uiHidden}
         onHeaderLayout={handleHeaderLayout}
         activeTab={activeTab}

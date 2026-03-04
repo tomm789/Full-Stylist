@@ -42,7 +42,7 @@ import HeadshotDrawingCanvas, {
 import HeadshotCreatorContainer, { type SelectionPill } from './HeadshotCreatorContainer';
 import ColorControlsPanel from './ColorControlsPanel';
 import CreatorBar from '../shared/CreatorBar';
-import BottomSheet from '../shared/modals/BottomSheet';
+import ThemedBottomSheet from '../shared/modals/ThemedBottomSheet';
 
 const { spacing, borderRadius, typography } = theme;
 
@@ -283,7 +283,7 @@ export default function DrawModeModal({
       </Modal>
 
       {/* ── Template browser ── */}
-      <BottomSheet
+      <ThemedBottomSheet
         visible={draw.templateBrowserVisible}
         onClose={() => draw.setTemplateBrowserVisible(false)}
         title="Saved Templates"
@@ -320,7 +320,7 @@ export default function DrawModeModal({
             </TouchableOpacity>
           ))
         )}
-      </BottomSheet>
+      </ThemedBottomSheet>
     </Modal>
   );
 }

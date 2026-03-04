@@ -7,6 +7,7 @@
 import { Alert, Platform } from 'react-native';
 import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import type { WardrobeItem } from '@/lib/wardrobe';
 
 export type UseWardrobeItemActionsParams = {
@@ -34,7 +35,7 @@ export function useWardrobeItemActions({
         if (error) throw error;
         refresh();
       } catch (error: any) {
-        Alert.alert('Error', 'Failed to toggle favorite');
+        showErrorToast('Failed to toggle favorite');
         console.error('Failed to toggle favorite:', error);
       }
     },
@@ -55,17 +56,9 @@ export function useWardrobeItemActions({
         if (error) throw error;
         setShowItemModal(false);
         refresh();
-        if (Platform.OS === 'web') {
-          alert('Item deleted successfully');
-        } else {
-          Alert.alert('Success', 'Item deleted successfully');
-        }
+        showSuccessToast('Item deleted successfully');
       } catch (error: any) {
-        if (Platform.OS === 'web') {
-          alert(error.message || 'Failed to delete item');
-        } else {
-          Alert.alert('Error', error.message || 'Failed to delete item');
-        }
+        showErrorToast(error.message || 'Failed to delete item');
       }
     };
 

@@ -1,25 +1,22 @@
 /**
  * FullscreenImageModal
- * Shared fullscreen image viewer with multi-image carousel, save, and share.
+ * Shared fullscreen image viewer with pinch-to-zoom, swipe-to-dismiss, save, and share.
+ * Powered by react-native-image-viewing.
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
-  Modal,
   TouchableOpacity,
-  ScrollView,
   Share,
   Platform,
-  Alert,
   StyleSheet,
-  useWindowDimensions,
 } from 'react-native';
-import { Image } from 'expo-image';
+import ImageViewing from 'react-native-image-viewing';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 
 interface FullscreenImageModalProps {
   visible: boolean;
@@ -34,30 +31,13 @@ export function FullscreenImageModal({
   initialIndex = 0,
   onClose,
 }: FullscreenImageModalProps) {
-  const { width: screenWidth } = useWindowDimensions();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const scrollRef = useRef<ScrollView>(null);
 
-  // Sync currentIndex when initialIndex or visibility changes
-  useEffect(() => {
-    if (visible) {
-      setCurrentIndex(initialIndex);
-    }
-  }, [visible, initialIndex]);
-
-  // Scroll to correct position when modal opens with non-zero initialIndex
-  useEffect(() => {
-    if (visible && initialIndex > 0 && scrollRef.current) {
-      // Small delay to ensure ScrollView is mounted
-      const timer = setTimeout(() => {
-        scrollRef.current?.scrollTo({
-          x: initialIndex * screenWidth,
-          animated: false,
-        });
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [visible, initialIndex, screenWidth]);
+  // Map string URLs to the { uri: string } format expected by ImageViewing
+  const imagesSources = useMemo(
+    () => images.map((uri) => ({ uri })),
+    [images],
+  );
 
   const getLocalUri = useCallback(
     async (remoteUrl: string): Promise<string | null> => {
@@ -79,15 +59,12 @@ export function FullscreenImageModal({
     try {
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please allow access to save images.',
-        );
+        showErrorToast('Please allow access to save images.');
         return;
       }
       const localUri = await getLocalUri(imageUrl);
       if (!localUri) {
-        Alert.alert('Error', 'Could not download image.');
+        showErrorToast('Could not download image.');
         return;
       }
       await MediaLibrary.createAssetAsync(localUri);
@@ -96,10 +73,10 @@ export function FullscreenImageModal({
           () => {},
         );
       }
-      Alert.alert('Saved', 'Image saved to your photo library.');
+      showSuccessToast('Image saved to your photo library.');
     } catch (error) {
       console.error('Save error:', error);
-      Alert.alert('Error', 'Failed to save image.');
+      showErrorToast('Failed to save image.');
     }
   }, [currentIndex, images, getLocalUri]);
 
@@ -110,7 +87,7 @@ export function FullscreenImageModal({
     try {
       localUri = await getLocalUri(imageUrl);
       if (!localUri) {
-        Alert.alert('Error', 'Could not download image.');
+        showErrorToast('Could not download image.');
         return;
       }
       await Share.share({ url: localUri });
@@ -127,147 +104,51 @@ export function FullscreenImageModal({
     }
   }, [currentIndex, images, getLocalUri]);
 
+  const FooterComponent = useCallback(
+    () => (
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleSave}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="download-outline" size={26} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleShare}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="share-outline" size={26} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    ),
+    [handleSave, handleShare],
+  );
+
   if (images.length === 0) return null;
 
   return (
-    <Modal
+    <ImageViewing
+      images={imagesSources}
+      imageIndex={initialIndex}
       visible={visible}
-      transparent
-      animationType="fade"
       onRequestClose={onClose}
-    >
-      <View style={styles.container}>
-        {/* Close button */}
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Text style={styles.closeButtonText}>&times;</Text>
-        </TouchableOpacity>
-
-        {/* Centered content */}
-        <View style={styles.centerContent}>
-          <View style={styles.contentWrapper}>
-            {/* Image carousel */}
-            <ScrollView
-              ref={scrollRef}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onMomentumScrollEnd={(e) => {
-                const idx = Math.round(
-                  e.nativeEvent.contentOffset.x / screenWidth,
-                );
-                if (idx >= 0 && idx < images.length) {
-                  setCurrentIndex(idx);
-                }
-              }}
-              style={styles.scrollView}
-            >
-              {images.map((url, index) => (
-                <View
-                  key={`${url}-${index}`}
-                  style={[styles.imageContainer, { width: screenWidth }]}
-                >
-                  <Image
-                    source={{ uri: url }}
-                    style={styles.image}
-                    contentFit="contain"
-                  />
-                </View>
-              ))}
-            </ScrollView>
-
-            {/* Pagination indicator */}
-            {images.length > 1 && (
-              <View style={styles.indicator}>
-                <Text style={styles.indicatorText}>
-                  {currentIndex + 1} / {images.length}
-                </Text>
-              </View>
-            )}
-
-            {/* Action buttons */}
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={handleSave}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="download-outline" size={26} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={handleShare}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="share-outline" size={26} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </View>
-    </Modal>
+      onImageIndexChange={setCurrentIndex}
+      swipeToCloseEnabled
+      doubleTapToZoomEnabled
+      FooterComponent={FooterComponent}
+      backgroundColor="rgba(0, 0, 0, 0.95)"
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    zIndex: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  contentWrapper: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  scrollView: {
-    flexGrow: 0,
-  },
-  imageContainer: {
-    aspectRatio: 3 / 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  indicator: {
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginTop: 12,
-  },
-  indicatorText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  actions: {
+  footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 40,
-    marginTop: 20,
+    paddingBottom: 40,
   },
   actionButton: {
     width: 48,

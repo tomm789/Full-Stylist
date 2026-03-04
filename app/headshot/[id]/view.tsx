@@ -6,7 +6,6 @@
 
 import React, { useMemo, useCallback, useRef } from 'react';
 import {
-  Animated,
   ScrollView,
   View,
 } from 'react-native';
@@ -24,8 +23,8 @@ import { useHeadshotView } from '@/hooks/headshot/useHeadshotView';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createStyles } from './view.styles';
 
-// Static Animated.Value for non-generating state
-const ZERO_OPACITY = new Animated.Value(0);
+// Static style for non-generating state (no overlay)
+const ZERO_OVERLAY_STYLE = { opacity: 0 };
 
 export default function HeadshotViewScreen() {
   const colors = useThemeColors();
@@ -72,7 +71,7 @@ export default function HeadshotViewScreen() {
         onPreviewPress={() => openLightbox(item.url)}
         onMenuPress={handleMenuPress}
         generating={false}
-        generateOverlayOpacity={ZERO_OPACITY}
+        generateOverlayStyle={ZERO_OVERLAY_STYLE}
         previewIsGenerated={false}
         onRestoreSelfie={() => {}}
         isStyleDisabled={false}

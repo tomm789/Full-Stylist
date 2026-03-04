@@ -5,8 +5,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { showErrorToast } from '@/utils/toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useImageEdit } from './useImageEdit';
 import { useImageGeneration } from './useImageGeneration';
@@ -113,7 +113,7 @@ export function useHeadshotDetailActions({
 
   const handleRegenerate = useCallback(async () => {
     if (!user || !headshot?.originalSelfieId) {
-      Alert.alert('Error', 'Cannot regenerate without original selfie');
+      showErrorToast('Cannot regenerate without original selfie');
       return;
     }
 
@@ -175,7 +175,7 @@ export function useHeadshotDetailActions({
         setLocalPolicyVisible(true);
         return;
       }
-      Alert.alert('Error', message);
+      showErrorToast(message);
     } finally {
       setRegenerating(false);
       setLoadingMessage('');

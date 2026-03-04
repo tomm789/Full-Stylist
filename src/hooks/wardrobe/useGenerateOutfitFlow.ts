@@ -1,5 +1,5 @@
-import { Alert } from 'react-native';
 import { useCallback } from 'react';
+import { showErrorToast } from '@/utils/toast';
 import { logClientTiming } from '@/lib/perf/logClientTiming';
 import type { WardrobeItem } from '@/lib/wardrobe';
 
@@ -31,11 +31,11 @@ export function useGenerateOutfitFlow({
 }: UseGenerateOutfitFlowProps) {
   const handleGenerateOutfit = useCallback(async () => {
     if (selectedOutfitItems.length === 0) {
-      Alert.alert('Error', 'Please select items for your outfit');
+      showErrorToast('Please select items for your outfit');
       return;
     }
     if (selectedWardrobeItems.length === 0) {
-      Alert.alert('Error', 'Failed to load selected items');
+      showErrorToast('Failed to load selected items');
       return;
     }
 
@@ -52,7 +52,7 @@ export function useGenerateOutfitFlow({
     if (result.success && result.outfitId) {
       setAutoSelectNext(true);
     } else {
-      Alert.alert('Error', result.error || 'Failed to generate outfit');
+      showErrorToast(result.error || 'Failed to generate outfit');
     }
   }, [
     selectedOutfitItems,

@@ -65,7 +65,12 @@ module.exports = {
       },
     },
     scheme: 'fullstylist',
-    plugins: ['expo-router'],
+    plugins: [
+      'expo-router',
+      'expo-secure-store',
+      'expo-web-browser',
+      'expo-notifications',
+    ],
     extra: {
       // Expose environment variables to the app
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,

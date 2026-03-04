@@ -20,6 +20,7 @@ import { postGridStyles } from '@/components/social/PostGrid';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
+import { haptics } from '@/utils/haptics';
 
 const { spacing, typography } = theme;
 
@@ -45,11 +46,17 @@ const OutfitCard = React.memo(
   }: OutfitCardProps) => {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const handleLongPress = () => {
+    haptics.medium();
+    onLongPress?.();
+  };
+
     return (
       <TouchableOpacity
         style={[postGridStyles.gridItem, style]}
         onPress={onPress}
-        onLongPress={onLongPress}
+        onLongPress={handleLongPress}
         delayLongPress={500}
       >
         {imageLoading ? (

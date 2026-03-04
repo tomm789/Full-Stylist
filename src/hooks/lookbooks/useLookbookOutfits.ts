@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import { saveLookbook, Lookbook } from '@/lib/lookbooks';
 
 interface UseLookbookOutfitsProps {
@@ -52,12 +53,12 @@ export function useLookbookOutfits({
       );
 
       if (error) {
-        Alert.alert('Error', 'Failed to add outfits to lookbook');
+        showErrorToast('Failed to add outfits to lookbook');
       } else {
         await onRefresh();
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to add outfits');
+      showErrorToast(error.message || 'Failed to add outfits');
     } finally {
       setAddingOutfits(false);
     }
@@ -83,20 +84,12 @@ export function useLookbookOutfits({
       );
 
       if (error) {
-        if (Platform.OS === 'web') {
-          alert('Error: Failed to remove outfit from lookbook');
-        } else {
-          Alert.alert('Error', 'Failed to remove outfit from lookbook');
-        }
+        showErrorToast('Failed to remove outfit from lookbook');
       } else {
         onOutfitsChange(outfits.filter((o) => o.id !== outfitId));
       }
     } catch (error: any) {
-      if (Platform.OS === 'web') {
-        alert(`Error: ${error.message || 'Failed to remove outfit'}`);
-      } else {
-        Alert.alert('Error', error.message || 'Failed to remove outfit');
-      }
+      showErrorToast(error.message || 'Failed to remove outfit');
     }
   };
 

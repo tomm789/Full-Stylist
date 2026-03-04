@@ -6,8 +6,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { showSuccessToast } from '@/utils/toast';
 
 export type UseWardrobeTutorialParams = {
   userId: string | undefined;
@@ -55,7 +55,7 @@ export function useWardrobeTutorial({
   useEffect(() => {
     if (!showOutfitTipOnClose) return;
     if (showFirstTimeTutorial) return;
-    Alert.alert('Tip', 'Long hold an item to add it to your outfit.');
+    showSuccessToast('Tip: Long hold an item to add it to your outfit.');
     setShowOutfitTipOnClose(false);
   }, [showOutfitTipOnClose, showFirstTimeTutorial]);
 

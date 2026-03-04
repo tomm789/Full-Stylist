@@ -4,7 +4,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 
@@ -46,7 +47,7 @@ export function useAddWardrobeImages() {
   const handleTakePhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please grant camera permissions');
+      showErrorToast('Please grant camera permissions');
       return;
     }
 
@@ -79,7 +80,7 @@ export function useAddWardrobeImages() {
   const handleUploadPhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please grant camera roll permissions');
+      showErrorToast('Please grant camera roll permissions');
       return;
     }
 

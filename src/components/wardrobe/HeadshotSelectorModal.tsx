@@ -12,9 +12,9 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
-  Alert,
   Text,
 } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -159,11 +159,7 @@ export default function HeadshotSelectorModal({
   const handleYes = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        'Camera Permission',
-        'Camera access is required to take a mirror selfie. Please enable it in Settings.',
-        [{ text: 'OK' }]
-      );
+      showErrorToast('Camera access is required to take a mirror selfie. Please enable it in Settings.');
       return;
     }
     setModalScreen({ screen: 'camera', preview: null });
@@ -190,7 +186,7 @@ export default function HeadshotSelectorModal({
     setIsUploading(false);
 
     if (!imageId || error) {
-      Alert.alert('Upload Failed', error || 'Failed to upload your selfie. Please try again.');
+      showErrorToast(error || 'Failed to upload your selfie. Please try again.');
       return;
     }
 

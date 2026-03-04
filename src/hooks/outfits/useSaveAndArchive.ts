@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 
 interface UseSaveAndArchiveProps {
   user: { id: string } | null;
@@ -35,15 +36,14 @@ export function useSaveAndArchive({
       const savedOutfitId = await saveOutfit();
       if (savedOutfitId) {
         if (isNew) {
-          Alert.alert('Success', 'Outfit saved! You can now generate the outfit image.', [
-            { text: 'OK', onPress: () => router.replace(`/outfits/${savedOutfitId}`) },
-          ]);
+          showSuccessToast('Outfit saved! You can now generate the outfit image.');
+          router.replace(`/outfits/${savedOutfitId}`);
         } else {
-          Alert.alert('Success', 'Outfit saved!');
+          showSuccessToast('Outfit saved!');
         }
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'An unexpected error occurred');
+      showErrorToast(error.message || 'An unexpected error occurred');
     } finally {
       setSaving(false);
     }
@@ -63,10 +63,10 @@ export function useSaveAndArchive({
             const { archiveOutfit } = await import('@/lib/outfits');
             const { error } = await archiveOutfit(user.id, outfit.id);
             if (error) throw error;
-            Alert.alert('Success', 'Outfit archived');
+            showSuccessToast('Outfit archived');
             router.back();
           } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to archive outfit');
+            showErrorToast(error.message || 'Failed to archive outfit');
           } finally {
             setSaving(false);
           }

@@ -4,11 +4,12 @@
  */
 
 import React, { useMemo } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { Image } from 'expo-image';
 import { WardrobeItem } from '@/lib/wardrobe';
 import { GRID_IMAGE_PROPS } from '@/lib/images';
-import { BottomSheet } from '@/components/shared';
+import { ThemedBottomSheet } from '@/components/shared';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -35,8 +36,8 @@ export default function ItemPickerModal({
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <BottomSheet visible={visible} onClose={onClose} title={title}>
-      <FlatList
+    <ThemedBottomSheet visible={visible} onClose={onClose} title={title}>
+      <BottomSheetFlatList
         data={items}
         keyExtractor={(item) => item.id}
         initialNumToRender={8}
@@ -72,7 +73,7 @@ export default function ItemPickerModal({
         }
         contentContainerStyle={styles.listContent}
       />
-    </BottomSheet>
+    </ThemedBottomSheet>
   );
 }
 

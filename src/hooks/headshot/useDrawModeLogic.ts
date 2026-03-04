@@ -10,6 +10,7 @@
 
 import { useState, useCallback } from 'react';
 import { Alert, Keyboard } from 'react-native';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Gesture } from 'react-native-gesture-handler';
 import type React from 'react';
@@ -207,14 +208,14 @@ export function useDrawModeLogic({
   // --- Save template ---
   const handleSave = async () => {
     if (!userId || !baseImageId) {
-      Alert.alert('Cannot save', 'A headshot must be loaded before saving a template.');
+      showErrorToast('A headshot must be loaded before saving a template.');
       return;
     }
     setSaving(true);
     try {
       const maskBase64 = await drawingCanvasRef.current?.makeMaskSnapshot();
       if (!maskBase64) {
-        Alert.alert('Nothing to save', 'Draw on the image first.');
+        showErrorToast('Draw on the image first.');
         return;
       }
       const bucket = 'user-images';
@@ -244,9 +245,9 @@ export function useDrawModeLogic({
         ),
       });
       if (saveError) throw saveError;
-      Alert.alert('Saved', 'Drawing template saved successfully.');
+      showSuccessToast('Drawing template saved successfully.');
     } catch (err: any) {
-      Alert.alert('Save failed', err?.message || 'Unknown error');
+      showErrorToast(err?.message || 'Unknown error');
     } finally {
       setSaving(false);
     }

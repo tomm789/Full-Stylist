@@ -6,16 +6,16 @@
  * AFTER: ~180 lines (66% reduction)
  */
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   ScrollView,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Animated,
   TouchableOpacity,
   Text,
 } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,7 +69,7 @@ export default function CalendarScreen() {
   });
 
   const scrollRef = useRef<ScrollView>(null);
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useSharedValue(0);
   const scrollYRef = useRef(0);
   const viewportHeightRef = useRef(0);
   const [viewportHeight, setViewportHeight] = useState(0);
@@ -112,13 +112,9 @@ export default function CalendarScreen() {
     scrollRef.current?.scrollTo({ y, animated });
     if (!animated) {
       scrollYRef.current = y;
-      scrollY.setValue(y);
+      scrollY.value = y;
     }
   };
-
-  // Debug logging (removed external telemetry - use console only)
-  // const didLogInitialRef = useRef(false);
-  // Telemetry disabled - was sending data to external endpoint
 
   // Auto-open add picker if parameter is set
   useEffect(() => {
@@ -239,8 +235,8 @@ export default function CalendarScreen() {
     if (suppressScrollUpdateRef.current) {
       return;
     }
-    const scrollY = scrollYRef.current;
-    const rowIndex = Math.floor(scrollY / CALENDAR_CONFIG.ROW_HEIGHT);
+    const currentScrollY = scrollYRef.current;
+    const rowIndex = Math.floor(currentScrollY / CALENDAR_CONFIG.ROW_HEIGHT);
     const dateIndex = rowIndex * 7;
     const dateAtTop = getDateAtIndex(windowStartDate, dateIndex);
 
@@ -258,28 +254,30 @@ export default function CalendarScreen() {
     }
   };
 
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset } = event.nativeEvent;
     scrollYRef.current = contentOffset.y;
+    // Update the shared value so CalendarContinuousGrid reacts
+    scrollY.value = contentOffset.y;
 
     updateActiveMonthFromScroll();
 
     if (programmaticScrollInProgressRef.current) {
       return;
     }
-    const viewportHeight = viewportHeightRef.current;
-    const contentHeight = contentHeightRef.current;
+    const vh = viewportHeightRef.current;
+    const ch = contentHeightRef.current;
 
     if (contentOffset.y < CALENDAR_CONFIG.INFINITE_SCROLL_THRESHOLD && !isExtendingRef.current) {
       pendingScrollKeyRef.current = getMonthKey(activeMonthDate);
       extendMonths('past');
     } else if (
-      contentOffset.y + viewportHeight > contentHeight - CALENDAR_CONFIG.INFINITE_SCROLL_THRESHOLD &&
+      contentOffset.y + vh > ch - CALENDAR_CONFIG.INFINITE_SCROLL_THRESHOLD &&
       !isExtendingRef.current
     ) {
       extendMonths('future');
     }
-  };
+  }, [activeMonthDate, months, scrollY]);
 
   const handleScrollEnd = () => {
     suppressScrollUpdateRef.current = false;
@@ -379,14 +377,11 @@ export default function CalendarScreen() {
         <CalendarWeekHeader />
       </View>
 
-      <Animated.ScrollView
+      <ScrollView
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false, listener: handleScroll }
-        )}
+        onScroll={handleScroll}
         onMomentumScrollEnd={handleScrollEnd}
         onScrollEndDrag={handleScrollEnd}
         scrollEventThrottle={CALENDAR_CONFIG.EVENT_THROTTLE_MS}
@@ -408,7 +403,7 @@ export default function CalendarScreen() {
                 const y = getRowOffset(targetIndex);
                 scrollRef.current?.scrollTo({ y, animated: false });
                 scrollYRef.current = y;
-                scrollY.setValue(y);
+                scrollY.value = y;
                 setTimeout(() => {
                   programmaticScrollInProgressRef.current = false;
                 }, 400);
@@ -434,7 +429,7 @@ export default function CalendarScreen() {
           viewportHeight={viewportHeight}
           activeMonthDate={activeMonthDate}
         />
-      </Animated.ScrollView>
+      </ScrollView>
     </LinearGradient>
   );
 }

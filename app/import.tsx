@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LoadingSpinner } from '@/components/shared';
@@ -19,6 +18,7 @@ import {
   LocalStorageData,
 } from '@/lib/import';
 import { supabase } from '@/lib/supabase';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { styles } from './import.styles';
 
 export default function ImportScreen() {
@@ -73,7 +73,7 @@ export default function ImportScreen() {
       );
 
       if (wardrobeResult.error) {
-        Alert.alert('Error', `Failed to import wardrobe: ${wardrobeResult.error.message}`);
+        showErrorToast(`Failed to import wardrobe: ${wardrobeResult.error.message}`);
         setImporting(false);
         return;
       }
@@ -99,7 +99,7 @@ export default function ImportScreen() {
         );
 
         if (outfitResult.error) {
-          Alert.alert('Warning', `Some outfits failed to import: ${outfitResult.error.message}`);
+          showErrorToast(`Some outfits failed to import: ${outfitResult.error.message}`);
         }
 
         setImportResults({
@@ -117,18 +117,10 @@ export default function ImportScreen() {
       disableLocalStorageWrites();
       setImported(true);
 
-      Alert.alert(
-        'Import Complete',
-        `Imported ${wardrobeResult.data.imported} wardrobe items and ${outfits.length} outfits.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => router.push('/(tabs)/wardrobe'),
-          },
-        ]
-      );
+      showSuccessToast(`Imported ${wardrobeResult.data.imported} wardrobe items and ${outfits.length} outfits.`);
+      router.push('/(tabs)/wardrobe');
     } catch (error: any) {
-      Alert.alert('Error', `Import failed: ${error.message}`);
+      showErrorToast(`Import failed: ${error.message}`);
     } finally {
       setImporting(false);
       setProgress({ current: 0, total: 0, step: '' });

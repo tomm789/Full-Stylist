@@ -4,8 +4,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { showErrorToast } from '@/utils/toast';
 import { getUserSettings, updateUserSettings, UserSettings } from '@/lib/settings';
 
 export type AIModelSettingKey =
@@ -73,12 +73,12 @@ export function useAISettings(): AISettingsState {
       try {
         const { error } = await updateUserSettings(user.id, updates);
         if (error) {
-          Alert.alert('Error', 'Failed to update AI settings');
+          showErrorToast('Failed to update AI settings');
           return;
         }
         setSettings({ ...settings, ...updates });
       } catch (error: any) {
-        Alert.alert('Error', error.message || 'An unexpected error occurred');
+        showErrorToast(error.message || 'An unexpected error occurred');
       } finally {
         setSaving(false);
       }

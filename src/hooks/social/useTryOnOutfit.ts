@@ -4,8 +4,8 @@
  */
 
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { getOutfit, saveOutfit } from '@/lib/outfits';
 import { getOutfitRenderItemLimit } from '@/lib/ai-jobs';
 import { supabase } from '@/lib/supabase';
@@ -31,7 +31,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
 
   const tryOnOutfit = async (outfitId: string, referenceImageUrl: string | null) => {
     if (!userId) {
-      Alert.alert('Error', 'Unable to try on outfit');
+      showErrorToast('Unable to try on outfit');
       return;
     }
 
@@ -40,7 +40,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
 
     try {
       if (!referenceImageUrl) {
-        Alert.alert('Error', 'Reference image not available for this outfit.');
+        showErrorToast('Reference image not available for this outfit.');
         setTryingOnOutfit(false);
         return;
       }
@@ -52,7 +52,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
         .single();
 
       if (!userSettings?.body_shot_image_id) {
-        Alert.alert('Setup Required', 'Please upload a studio model before trying on outfits.');
+        showErrorToast('Please upload a studio model before trying on outfits.');
         setTryingOnOutfit(false);
         return;
       }
@@ -226,11 +226,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
         if (!finalJob) {
           setGeneratingOutfitId(null);
           setTryingOnOutfit(false);
-          Alert.alert(
-            'Generation In Progress',
-            'The outfit is still generating. You can check your outfits page to see when it\'s ready.',
-            [{ text: 'OK' }]
-          );
+          showSuccessToast('The outfit is still generating. Check your outfits page to see when it\'s ready.');
           return;
         }
 
@@ -246,7 +242,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
         } else if (finalJob.status === 'failed') {
           setGeneratingOutfitId(null);
           setTryingOnOutfit(false);
-          Alert.alert('Generation Failed', finalJob.error || 'Outfit generation failed');
+          showErrorToast(finalJob.error || 'Outfit generation failed');
         }
       } catch (error: any) {
         if (error?.message?.includes('URL') || error?.message?.includes('configuration')) {
@@ -259,11 +255,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
         console.error('[Social] Error polling outfit render:', error);
         setGeneratingOutfitId(null);
         setTryingOnOutfit(false);
-        Alert.alert(
-          'Generation Error',
-          'An error occurred while generating the outfit. You can check your outfits page to see if it completed.',
-          [{ text: 'OK' }]
-        );
+        showErrorToast('An error occurred while generating the outfit. Check your outfits page to see if it completed.');
       }
       
     } catch (error: any) {
@@ -282,7 +274,7 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
         }
       }
       
-      Alert.alert('Error', errorMessage);
+      showErrorToast(errorMessage);
       setTryingOnOutfit(false);
       setGeneratingOutfitId(null);
     } finally {

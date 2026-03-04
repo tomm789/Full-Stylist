@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOutfitView, useSocialEngagement, useOutfitViewActions } from '@/hooks/outfits';
@@ -146,18 +147,10 @@ export default function OutfitViewScreen() {
     const confirmRestore = async () => {
       const { error } = await restoreOutfit(user.id, outfit.id);
       if (error) {
-        if (Platform.OS === 'web') {
-          alert(error?.message || 'Failed to restore outfit');
-        } else {
-          Alert.alert('Error', error?.message || 'Failed to restore outfit');
-        }
+        showErrorToast(error?.message || 'Failed to restore outfit');
         return;
       }
-      if (Platform.OS === 'web') {
-        alert('Outfit restored');
-      } else {
-        Alert.alert('Success', 'Outfit restored');
-      }
+      showSuccessToast('Outfit restored');
       await refreshOutfit();
     };
 

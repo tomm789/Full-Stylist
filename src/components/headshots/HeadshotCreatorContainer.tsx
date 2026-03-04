@@ -5,8 +5,9 @@
  * Positioned above the CreatorBar when headshot creator mode is active.
  */
 
-import React, { useMemo, useEffect, useRef } from 'react';
-import { View, ScrollView, TouchableOpacity, Text, StyleSheet, Animated } from 'react-native';
+import React, { useMemo, useEffect } from 'react';
+import { View, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -77,18 +78,18 @@ export default function HeadshotCreatorContainer({
 }: HeadshotCreatorContainerProps) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const slideAnim = useRef(new Animated.Value(300)).current;
+  const slideX = useSharedValue(300);
 
   useEffect(() => {
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [slideAnim]);
+    slideX.value = withTiming(0, { duration: 300 });
+  }, []);
+
+  const animatedSlideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: slideX.value }],
+  }));
 
   return (
-    <Animated.View style={[styles.container, { bottom: spacing.xl + 60 + spacing.md + bottomOffset, transform: [{ translateX: slideAnim }] }]}>
+    <Animated.View style={[styles.container, { bottom: spacing.xl + 60 + spacing.md + bottomOffset }, animatedSlideStyle]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

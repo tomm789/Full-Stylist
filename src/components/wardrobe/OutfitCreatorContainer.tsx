@@ -3,8 +3,9 @@
  * Displays selected items and category shortcuts for quick filtering during outfit creation
  */
 
-import React, { useMemo, useEffect, useRef } from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import React, { useMemo, useEffect } from 'react';
+import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { ImagePlaceholder, WardrobeCategoryIcon } from '@/components/shared';
@@ -134,18 +135,18 @@ export default function OutfitCreatorContainer({
 }: OutfitCreatorContainerProps) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const slideAnim = useRef(new Animated.Value(300)).current;
+  const slideAnim = useSharedValue(300);
 
   useEffect(() => {
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [slideAnim]);
+    slideAnim.value = withTiming(0, { duration: 300 });
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: slideAnim.value }],
+  }));
 
   return (
-    <Animated.View style={[styles.container, { transform: [{ translateX: slideAnim }] }]}>
+    <Animated.View style={[styles.container, animatedStyle]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

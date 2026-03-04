@@ -1,57 +1,70 @@
 /**
  * useGenerationAnimation
  * Drives the pulsing overlay shown while a headshot is being generated.
- * Returns three interpolated Animated values: overlay opacity, icon scale, icon opacity.
+ * Returns three animated style objects: overlay style, icon scale style, icon opacity style.
+ *
+ * Migrated from legacy Animated API to react-native-reanimated v4.
  */
 
-import React from 'react';
-import { Animated, Easing } from 'react-native';
+import { useEffect } from 'react';
+import {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withRepeat,
+  withSequence,
+  Easing,
+  cancelAnimation,
+} from 'react-native-reanimated';
 
 type UseGenerationAnimationParams = {
   generating: boolean;
 };
 
 export function useGenerationAnimation({ generating }: UseGenerationAnimationParams) {
-  const generatePulse = React.useRef(new Animated.Value(0)).current;
+  const generatePulse = useSharedValue(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!generating) {
-      generatePulse.stopAnimation();
-      generatePulse.setValue(0);
+      cancelAnimation(generatePulse);
+      generatePulse.value = 0;
       return;
     }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(generatePulse, {
-          toValue: 1,
+    generatePulse.value = withRepeat(
+      withSequence(
+        withTiming(1, {
           duration: 600,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
         }),
-        Animated.timing(generatePulse, {
-          toValue: 0,
+        withTiming(0, {
           duration: 600,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
         }),
-      ])
+      ),
+      -1, // infinite repeats
     );
-    loop.start();
-    return () => loop.stop();
-  }, [generating, generatePulse]);
+    return () => {
+      cancelAnimation(generatePulse);
+    };
+  }, [generating]);
 
-  const generateOverlayOpacity = generatePulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.0, 0.65],
-  });
-  const generateIconScale = generatePulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.12],
-  });
-  const generateIconOpacity = generatePulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0.7],
-  });
+  const generateOverlayStyle = useAnimatedStyle(() => ({
+    opacity: generatePulse.value * 0.65, // maps [0,1] → [0, 0.65]
+  }));
 
-  return { generateOverlayOpacity, generateIconScale, generateIconOpacity };
+  const generateIconScaleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + generatePulse.value * 0.12 }], // maps [0,1] → [1, 1.12]
+  }));
+
+  const generateIconOpacityStyle = useAnimatedStyle(() => ({
+    opacity: 1 - generatePulse.value * 0.3, // maps [0,1] → [1, 0.7]
+  }));
+
+  return {
+    generateOverlayStyle,
+    generateIconScaleStyle,
+    generateIconOpacityStyle,
+    /** Raw shared value exposed for consumers that need custom interpolations */
+    generatePulse,
+  };
 }

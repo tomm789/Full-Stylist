@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
 import { getOutfit, saveOutfit } from '@/lib/outfits';
+import { showErrorToast } from '@/utils/toast';
 import {
   getWardrobeCategories,
   getWardrobeItemsByIds,
@@ -126,7 +126,7 @@ export function useOutfitEditor({
     );
 
     if (error) {
-      Alert.alert('Error', error.message || 'Failed to save outfit');
+      showErrorToast(error.message || 'Failed to save outfit');
       return null;
     }
 

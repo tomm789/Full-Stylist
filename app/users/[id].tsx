@@ -9,11 +9,11 @@ import {
   Text,
   TouchableOpacity,
   SafeAreaView,
-  Animated,
   ActivityIndicator,
   Platform,
   useWindowDimensions,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,8 +42,7 @@ export default function UserProfileScreen() {
   const showTabLabels = Platform.OS === 'web' && width >= 1024;
   const {
     headerHeight,
-    headerOpacity,
-    headerTranslate,
+    headerAnimatedStyle,
     headerReady,
     uiHidden,
     handleHeaderLayout,
@@ -238,11 +237,8 @@ export default function UserProfileScreen() {
       <Animated.View
         style={[
           styles.headerContainer,
-          {
-            height: headerHeight,
-            opacity: headerOpacity,
-            transform: [{ translateY: headerTranslate }],
-          },
+          { height: headerHeight },
+          headerAnimatedStyle,
         ]}
         pointerEvents={uiHidden ? 'none' : 'auto'}
       >

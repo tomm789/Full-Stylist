@@ -9,7 +9,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -17,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Header, HeaderActionButton, HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layout';
+import { showErrorToast } from '@/utils/toast';
 import { styles } from './new.styles';
 
 type Category = 'bug' | 'feature' | 'general' | 'other';
@@ -45,12 +45,12 @@ export default function NewFeedbackScreen() {
     if (!user) return;
 
     if (!title.trim()) {
-      Alert.alert('Error', 'Please enter a title');
+      showErrorToast('Please enter a title');
       return;
     }
 
     if (!body.trim()) {
-      Alert.alert('Error', 'Please enter a description');
+      showErrorToast('Please enter a description');
       return;
     }
 
@@ -78,7 +78,7 @@ export default function NewFeedbackScreen() {
       }
     } catch (error: any) {
       console.error('Submission error:', error);
-      Alert.alert('Error', error.message || 'Failed to create feedback thread');
+      showErrorToast(error.message || 'Failed to create feedback thread');
     } finally {
       setSubmitting(false);
     }

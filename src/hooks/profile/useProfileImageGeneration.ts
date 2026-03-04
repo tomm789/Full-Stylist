@@ -4,8 +4,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Alert } from 'react-native';
 import { useImageGeneration } from './useImageGeneration';
+import { showErrorToast, showSuccessToast } from '@/utils/toast';
 
 interface UseProfileImageGenerationReturn {
   // Headshot
@@ -52,7 +52,7 @@ export function useProfileImageGeneration(): UseProfileImageGenerationReturn {
   const handleGenerateHeadshot = useCallback(
     async (userId: string, onSuccess: () => Promise<void>) => {
       if (!headshotGeneration.uploadedBlob) {
-        Alert.alert('Error', 'Please upload a photo first');
+        showErrorToast('Please upload a photo first');
         return;
       }
 
@@ -63,7 +63,7 @@ export function useProfileImageGeneration(): UseProfileImageGenerationReturn {
       );
 
       if (imageId) {
-        Alert.alert('Success', 'Headshot generated successfully!');
+        showSuccessToast('Headshot generated successfully!');
         setHeadshotHairStyle('');
         setHeadshotMakeupStyle('');
         headshotGeneration.clearImage();
@@ -76,10 +76,7 @@ export function useProfileImageGeneration(): UseProfileImageGenerationReturn {
   const handleUploadBodyPhoto = useCallback(
     async (hasActiveHeadshot: boolean) => {
       if (!hasActiveHeadshot) {
-        Alert.alert(
-          'Headshot Required',
-          'Please generate your professional headshot first before uploading a body photo.'
-        );
+        showErrorToast('Please generate your professional headshot first before uploading a body photo.');
         return;
       }
 
@@ -95,7 +92,7 @@ export function useProfileImageGeneration(): UseProfileImageGenerationReturn {
       onSuccess: () => Promise<void>
     ) => {
       if (!bodyShotGeneration.uploadedBlob) {
-        Alert.alert('Error', 'Please upload a body photo first');
+        showErrorToast('Please upload a body photo first');
         return;
       }
 
@@ -105,7 +102,7 @@ export function useProfileImageGeneration(): UseProfileImageGenerationReturn {
       );
 
       if (imageId) {
-        Alert.alert('Success', 'Studio model generated successfully!');
+        showSuccessToast('Studio model generated successfully!');
         bodyShotGeneration.clearImage();
         await onSuccess();
       }

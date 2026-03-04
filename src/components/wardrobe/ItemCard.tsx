@@ -20,6 +20,7 @@ import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 import { WardrobeItem } from '@/lib/wardrobe';
+import { haptics } from '@/utils/haptics';
 
 const { spacing, borderRadius, typography } = theme;
 
@@ -49,6 +50,11 @@ function ItemCard({
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  const handleLongPress = () => {
+    haptics.medium();
+    onLongPress?.();
+  };
+
   const handleFavoritePress = (e: any) => {
     e.stopPropagation();
     onFavoritePress?.();
@@ -62,7 +68,7 @@ function ItemCard({
         dimmed && styles.cardDimmed,
       ]}
       onPress={onPress}
-      onLongPress={onLongPress}
+      onLongPress={handleLongPress}
       delayLongPress={500}
       activeOpacity={0.7}
     >

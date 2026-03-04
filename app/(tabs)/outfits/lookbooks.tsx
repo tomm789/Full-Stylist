@@ -29,7 +29,8 @@ import {
   SystemLookbookCard,
   SlideshowModal,
 } from '@/components/lookbooks';
-import { LoadingSpinner, EmptyState } from '@/components/shared';
+import { EmptyState } from '@/components/shared';
+import { SkeletonGrid } from '@/components/shared/loading';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
@@ -88,7 +89,7 @@ export default function LookbooksScreen() {
   if (isLoading) {
     return (
       <View style={commonStyles.loadingContainer}>
-        <LoadingSpinner text="Loading lookbooks..." />
+        <SkeletonGrid preset="lookbook" count={5} />
       </View>
     );
   }

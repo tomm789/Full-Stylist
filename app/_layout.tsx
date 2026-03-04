@@ -3,11 +3,15 @@ import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
 import { CalendarEntryFlowProvider } from '@/contexts/CalendarEntryFlowContext';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { AddToHomeScreenBanner } from '@/components/AddToHomeScreenBanner';
+import { useBiometricAuth } from '@/hooks/useBiometricAuth';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+import BiometricLockScreen from '@/components/auth/BiometricLockScreen';
 
 export default function RootLayout() {
   // Register service worker for PWA support (web only)
@@ -94,38 +98,59 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
       <KeyboardProvider>
       <ThemeProvider>
         <AuthProvider>
-          <NotificationsProvider>
-            <CalendarEntryFlowProvider>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="index" />
-                <Stack.Screen name="auth" />
-                <Stack.Screen name="onboarding" />
-                <Stack.Screen name="import" />
-                <Stack.Screen name="marketplace" />
-                <Stack.Screen name="notifications" />
-                <Stack.Screen name="search" />
-                <Stack.Screen
-                  name="calendar/day/[date]"
-                  options={{
-                    presentation: 'modal',
-                    animation: 'slide_from_bottom',
-                  }}
-                />
-                <Stack.Screen name="users/[id]" />
-                <Stack.Screen name="account-settings" />
-                <Stack.Screen name="feedback/index" />
-                <Stack.Screen name="wardrobe/item/[id]" />
-              </Stack>
-              <AddToHomeScreenBanner />
-            </CalendarEntryFlowProvider>
-          </NotificationsProvider>
+          <AppShell />
         </AuthProvider>
       </ThemeProvider>
       </KeyboardProvider>
+      </BottomSheetModalProvider>
     </GestureHandlerRootView>
+  );
+}
+
+/** Inner shell that has access to AuthContext for push + biometric features. */
+function AppShell() {
+  const { user } = useAuth();
+  const biometric = useBiometricAuth();
+
+  // Register push token when user is authenticated
+  usePushNotifications(user?.id);
+
+  return (
+    <NotificationsProvider>
+      <CalendarEntryFlowProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="index" />
+          <Stack.Screen name="auth" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="import" />
+          <Stack.Screen name="marketplace" />
+          <Stack.Screen name="notifications" />
+          <Stack.Screen name="search" />
+          <Stack.Screen
+            name="calendar/day/[date]"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen name="users/[id]" />
+          <Stack.Screen name="account-settings" />
+          <Stack.Screen name="feedback/index" />
+          <Stack.Screen name="wardrobe/item/[id]" />
+        </Stack>
+        <AddToHomeScreenBanner />
+        {biometric.isLocked && biometric.isEnabled && (
+          <BiometricLockScreen
+            biometricType={biometric.biometricType}
+            onAuthenticate={biometric.authenticate}
+          />
+        )}
+      </CalendarEntryFlowProvider>
+    </NotificationsProvider>
   );
 }

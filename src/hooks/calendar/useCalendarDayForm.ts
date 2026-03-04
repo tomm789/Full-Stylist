@@ -4,8 +4,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Alert } from 'react-native';
 import { CalendarEntry } from '@/lib/calendar';
+import { showErrorToast } from '@/utils/toast';
 
 interface UseCalendarDayFormProps {
   entries: CalendarEntry[];
@@ -111,7 +111,7 @@ export function useCalendarDayForm({
 
   const handleAddEntry = useCallback(async () => {
     if (!selectedPreset) {
-      Alert.alert('Error', 'Please select a slot preset');
+      showErrorToast('Please select a slot preset');
       return;
     }
 
@@ -126,7 +126,7 @@ export function useCalendarDayForm({
     });
 
     if (error) {
-      Alert.alert('Error', error.message || 'Failed to create entry');
+      showErrorToast(error.message || 'Failed to create entry');
     } else {
       resetForm();
       setShowAddModal(false);
@@ -160,7 +160,7 @@ export function useCalendarDayForm({
     });
 
     if (error) {
-      Alert.alert('Error', 'Failed to update entry');
+      showErrorToast('Failed to update entry');
     } else {
       resetForm();
       setShowAddModal(false);
@@ -180,7 +180,7 @@ export function useCalendarDayForm({
     const { error } = await deleteEntry(entryToDelete);
 
     if (error) {
-      Alert.alert('Error', 'Failed to delete entry');
+      showErrorToast('Failed to delete entry');
     }
 
     setShowDeleteConfirm(false);
@@ -210,14 +210,14 @@ export function useCalendarDayForm({
   const handleCreatePreset = useCallback(
     async (createPresetFn: (name: string) => Promise<{ data: any; error: any }>) => {
       if (!newPresetName.trim()) {
-        Alert.alert('Error', 'Please enter a preset name');
+        showErrorToast('Please enter a preset name');
         return;
       }
 
       const { error } = await createPresetFn(newPresetName.trim());
 
       if (error) {
-        Alert.alert('Error', `Failed to create preset: ${error.message || error}`);
+        showErrorToast(`Failed to create preset: ${error.message || error}`);
       } else {
         setNewPresetName('');
         setShowCreatePresetModal(false);

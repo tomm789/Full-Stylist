@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
+import { haptics } from '@/utils/haptics';
 
 const { spacing, borderRadius } = theme;
 
@@ -40,6 +41,11 @@ export default function IconButton({
   const colors = useThemeColors();
   const iconColor = color ?? colors.textPrimary;
 
+  const handlePress = () => {
+    haptics.light();
+    onPress();
+  };
+
   const buttonStyle = [
     variant !== 'default' && styles.button,
     variant === 'circle' && styles.circle,
@@ -52,7 +58,7 @@ export default function IconButton({
   return (
     <TouchableOpacity
       style={buttonStyle}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled}
       activeOpacity={0.7}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

@@ -4,11 +4,12 @@
  */
 
 import { useState } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { updateUserProfile } from '@/lib/user';
 import { uploadImageToStorage } from '@/lib/utils/image-helpers';
 import { supabase } from '@/lib/supabase';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 
 interface UseProfileEditProps {
   userId: string | undefined;
@@ -46,20 +47,19 @@ export function useProfileEdit({
     if (!userId) return false;
 
     if (!handle.trim()) {
-      Alert.alert('Error', 'Please enter a handle');
+      showErrorToast('Please enter a handle');
       return false;
     }
 
     if (!validateHandle(handle.trim())) {
-      Alert.alert(
-        'Invalid Handle',
+      showErrorToast(
         'Handle must be 3-20 characters and contain only letters, numbers, and underscores'
       );
       return false;
     }
 
     if (!displayName.trim()) {
-      Alert.alert('Error', 'Please enter a display name');
+      showErrorToast('Please enter a display name');
       return false;
     }
 
@@ -74,20 +74,20 @@ export function useProfileEdit({
 
       if (error) {
         if (error.code === '23505') {
-          Alert.alert('Error', 'This handle is already taken. Please choose another.');
+          showErrorToast('This handle is already taken. Please choose another.');
         } else {
-          Alert.alert('Error', error.message || 'Failed to save profile');
+          showErrorToast(error.message || 'Failed to save profile');
         }
         return false;
       }
 
-      Alert.alert('Success', 'Profile updated successfully');
+      showSuccessToast('Profile updated successfully');
       if (onSuccess) {
         await onSuccess();
       }
       return true;
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'An unexpected error occurred');
+      showErrorToast(error.message || 'An unexpected error occurred');
       return false;
     } finally {
       setSavingProfile(false);
@@ -99,7 +99,7 @@ export function useProfileEdit({
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please grant camera roll permissions');
+      showErrorToast('Please grant camera roll permissions');
       return;
     }
 
@@ -153,12 +153,12 @@ export function useProfileEdit({
 
       if (updateError) throw updateError;
 
-      Alert.alert('Success', 'Avatar updated successfully');
+      showSuccessToast('Avatar updated successfully');
       if (onSuccess) {
         await onSuccess();
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to upload avatar');
+      showErrorToast(error.message || 'Failed to upload avatar');
     } finally {
       setUploadingAvatar(false);
     }

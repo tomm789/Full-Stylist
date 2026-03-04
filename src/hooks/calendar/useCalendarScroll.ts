@@ -3,18 +3,20 @@
  * Consolidates all scroll-related state and refs for the calendar
  *
  * Manages:
- * - Animated scroll value and position tracking
+ * - Reanimated shared scroll value and position tracking
  * - Viewport and content dimensions
  * - Pending scroll operations
  * - Scroll suppression flags
  */
 
 import { useRef, useState, useCallback } from 'react';
-import { Animated, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 
 export interface CalendarScrollState {
   // Animated values
-  scrollY: Animated.Value;
+  scrollY: SharedValue<number>;
   scrollYValue: number;
 
   // Dimensions
@@ -62,7 +64,7 @@ export function useCalendarScroll(
   scrollRef: React.RefObject<ScrollView>
 ): [CalendarScrollState, CalendarScrollActions] {
   // Animated values
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useSharedValue(0);
   const scrollYRef = useRef(0);
 
   // Dimensions
@@ -115,7 +117,7 @@ export function useCalendarScroll(
 
     updateScrollY: useCallback((y: number) => {
       scrollYRef.current = y;
-      scrollY.setValue(y);
+      scrollY.value = y;
     }, [scrollY]),
 
     startExtend: useCallback(() => {
@@ -163,7 +165,7 @@ export function useCalendarScroll(
         scrollRef.current?.scrollTo({ y, animated });
         if (!animated) {
           scrollYRef.current = y;
-          scrollY.setValue(y);
+          scrollY.value = y;
         }
       },
       [scrollRef, scrollY]

@@ -1,4 +1,5 @@
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import { useCallback } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -23,7 +24,7 @@ export function useWardrobeCameraFlow({
       (async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Permission Required', 'Please grant photo library permissions.');
+          showErrorToast('Please grant photo library permissions.');
           return;
         }
         const mediaTypes = (ImagePicker as any).MediaType?.Images || 'images';

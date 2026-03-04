@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { showErrorToast } from '@/utils/toast';
 import {
   getEntityAttributes,
   getAttributeDefinitions,
@@ -82,7 +82,7 @@ export function useItemAttributes({
       if (error) throw error;
       await refreshAttributes();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to update attribute');
+      showErrorToast(error.message || 'Failed to update attribute');
     }
   };
 
@@ -94,7 +94,7 @@ export function useItemAttributes({
       if (error) throw error;
       await refreshAttributes();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to delete attribute');
+      showErrorToast(error.message || 'Failed to delete attribute');
     }
   };
 
@@ -111,7 +111,7 @@ export function useItemAttributes({
       if (error) throw error;
       await refreshAttributes();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create attribute');
+      showErrorToast(error.message || 'Failed to create attribute');
     }
   };
 

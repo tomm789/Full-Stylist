@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
@@ -156,7 +156,7 @@ export function useOutfitViewActions({
       await deleteOutfit();
       setShowDeleteConfirm(false);
       setDeleting(false);
-      Alert.alert('Success', 'Outfit archived');
+      showSuccessToast('Outfit archived');
       
       // Use replace instead of back to avoid navigation timing issues
       if (returnTo === 'outfits' || outfitIds) {
@@ -167,7 +167,7 @@ export function useOutfitViewActions({
         router.replace('/(tabs)/outfits');
       }
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to archive outfit');
+      showErrorToast('Failed to archive outfit');
       setDeleting(false);
       setShowDeleteConfirm(false);
     }
@@ -186,7 +186,7 @@ export function useOutfitViewActions({
 
       if (error) throw error;
     } catch (error) {
-      Alert.alert('Error', 'Failed to update favorite status');
+      showErrorToast('Failed to update favorite status');
     }
   }, [outfitId, user, outfit]);
 
