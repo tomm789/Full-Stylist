@@ -21,7 +21,7 @@ import { Header, HeaderIconButton } from '@/components/shared/layout';
 import { FullscreenImageModal } from '@/components/shared/modals';
 import { useHeadshotView } from '@/hooks/headshot/useHeadshotView';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { createStyles } from './_view.styles';
+import { createStyles } from '@/styles/screens/headshot-view.styles';
 
 // Static style for non-generating state (no overlay)
 const ZERO_OVERLAY_STYLE = { opacity: 0 };

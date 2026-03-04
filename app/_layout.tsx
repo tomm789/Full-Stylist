@@ -149,7 +149,6 @@ function AppShell() {
           <Stack.Screen name="users/[id]" />
           <Stack.Screen name="account-settings" />
           <Stack.Screen name="feedback/index" />
-          <Stack.Screen name="wardrobe/item/[id]" />
         </Stack>
         <AddToHomeScreenBanner />
         {biometric.isLocked && biometric.isEnabled && (

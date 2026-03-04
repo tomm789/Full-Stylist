@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSearch } from '@/hooks';
 import SearchResultsPanel from '@/components/search/SearchResultsPanel';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
-import { styles } from './_search.styles';
+import { styles } from '@/styles/screens/search.styles';
 
 export default function SearchScreen() {
   const { user } = useAuth();

@@ -27,7 +27,7 @@ import { restoreLookbook } from '@/lib/lookbooks';
 import { restoreWardrobeItem } from '@/lib/wardrobe';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
-import { createStyles } from './_archive.styles';
+import { createStyles } from '@/styles/screens/archive.styles';
 import { haptics } from '@/utils/haptics';
 import { showSuccessToast, showErrorToast } from '@/utils/toast';
 

@@ -11,7 +11,7 @@ import { showErrorToast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { KeyboardAwareScreen } from '@/components/shared/layout';
-import { styles } from './_signup.styles';
+import { styles } from '@/styles/screens/auth-signup.styles';
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');

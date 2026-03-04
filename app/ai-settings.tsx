@@ -14,7 +14,7 @@ import { useAISettings, AIModelSettingKey } from '@/hooks/profile';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
 import PrimaryButton from '@/components/shared/buttons/PrimaryButton';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { createStyles } from './_ai-settings.styles';
+import { createStyles } from '@/styles/screens/ai-settings.styles';
 import {
   MODEL_CATALOG,
   MODEL_KEYS,

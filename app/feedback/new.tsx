@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Header, HeaderActionButton, HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layout';
 import { showErrorToast } from '@/utils/toast';
-import { styles } from './_new.styles';
+import { styles } from '@/styles/screens/feedback-new.styles';
 
 type Category = 'bug' | 'feature' | 'general' | 'other';
 

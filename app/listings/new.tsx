@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import { useNewListing } from '@/hooks/listings';
 import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
-import { styles } from './_new.styles';
+import { styles } from '@/styles/screens/listings-new.styles';
 
 export default function NewListingScreen() {
   const router = useRouter();

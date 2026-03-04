@@ -72,7 +72,7 @@ import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
 import { createCommonStyles } from '@/styles/commonStyles';
-import { createStyles } from './_wardrobe.styles';
+import { createStyles } from '@/styles/screens/wardrobe-tab.styles';
 import { useSearch } from '@/hooks';
 import SearchOverlay from '@/components/search/SearchOverlay';
 import { Ionicons } from '@expo/vector-icons';

@@ -19,7 +19,7 @@ import {
 } from '@/lib/import';
 import { supabase } from '@/lib/supabase';
 import { showSuccessToast, showErrorToast } from '@/utils/toast';
-import { styles } from './_import.styles';
+import { styles } from '@/styles/screens/import.styles';
 
 export default function ImportScreen() {
   const { user } = useAuth();

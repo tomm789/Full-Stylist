@@ -50,7 +50,7 @@ import { SkeletonGrid } from '@/components/shared/loading';
 import { layout, spacing } from '@/styles';
 import { useSlotPresets } from '@/hooks/calendar';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
-import createOutfitStyles from './_styles';
+import createOutfitStyles from '@/styles/screens/outfits-tab.styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
 import { createCommonStyles } from '@/styles/commonStyles';
