@@ -16,6 +16,8 @@ type FaceMenuModalProps = {
   visible: boolean;
   onClose: () => void;
   onSetAsActiveHeadshot: () => Promise<void>;
+  onOpenInMirror?: () => void;
+  onEdit?: () => void;
   onShareToFeed: () => void;
   onShare: () => void;
   onDelete: () => void;
@@ -28,6 +30,8 @@ export default function FaceMenuModal({
   visible,
   onClose,
   onSetAsActiveHeadshot,
+  onOpenInMirror,
+  onEdit,
   onShareToFeed,
   onShare,
   onDelete,
@@ -51,6 +55,32 @@ export default function FaceMenuModal({
         }}
         disabled={!previewImageId}
       />
+      {onOpenInMirror && (
+        <>
+          <View style={dropdownMenuStyles.menuDivider} />
+          <DropdownMenuItem
+            label="Open in Mirror"
+            icon="color-wand-outline"
+            onPress={() => {
+              onClose();
+              onOpenInMirror();
+            }}
+          />
+        </>
+      )}
+      {onEdit && (
+        <>
+          <View style={dropdownMenuStyles.menuDivider} />
+          <DropdownMenuItem
+            label="Edit"
+            icon="create-outline"
+            onPress={() => {
+              onClose();
+              onEdit();
+            }}
+          />
+        </>
+      )}
       <View style={dropdownMenuStyles.menuDivider} />
       <DropdownMenuItem
         label="Share to Feed"

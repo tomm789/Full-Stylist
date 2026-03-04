@@ -14,6 +14,7 @@ import {
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -63,14 +64,18 @@ export default function SlideshowModal({
         <StatusBar hidden />
 
         {/* Close Button */}
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Text style={styles.closeButtonText}>✕</Text>
-        </TouchableOpacity>
+        <BlurView intensity={25} tint="light" style={styles.closeButton}>
+          <TouchableOpacity style={styles.controlButtonInner} onPress={onClose}>
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+        </BlurView>
 
         {/* Play/Pause Button */}
-        <TouchableOpacity style={styles.playPauseButton} onPress={onToggleAutoPlay}>
-          <Text style={styles.playPauseButtonText}>{isAutoPlaying ? '⏸' : '▶'}</Text>
-        </TouchableOpacity>
+        <BlurView intensity={25} tint="light" style={styles.playPauseButton}>
+          <TouchableOpacity style={styles.controlButtonInner} onPress={onToggleAutoPlay}>
+            <Text style={styles.playPauseButtonText}>{isAutoPlaying ? '⏸' : '▶'}</Text>
+          </TouchableOpacity>
+        </BlurView>
 
         {/* Current Slide */}
         {currentOutfit && (
@@ -89,23 +94,27 @@ export default function SlideshowModal({
                   <ActivityIndicator size="large" color={colors.white} />
                 </View>
               )}
-              <View style={styles.slideInfo}>
+              <BlurView intensity={30} tint="dark" style={styles.slideInfo}>
                 <Text style={styles.slideTitle}>
                   {currentOutfit.title || 'Untitled Outfit'}
                 </Text>
                 {currentOutfit.description && (
                   <Text style={styles.slideDescription}>{currentOutfit.description}</Text>
                 )}
-              </View>
+              </BlurView>
             </View>
 
             {/* Navigation Arrows */}
-            <TouchableOpacity style={styles.leftArrow} onPress={onPrevious}>
-              <Text style={styles.arrowText}>‹</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.rightArrow} onPress={onNext}>
-              <Text style={styles.arrowText}>›</Text>
-            </TouchableOpacity>
+            <BlurView intensity={25} tint="light" style={styles.leftArrow}>
+              <TouchableOpacity style={styles.controlButtonInner} onPress={onPrevious}>
+                <Text style={styles.arrowText}>‹</Text>
+              </TouchableOpacity>
+            </BlurView>
+            <BlurView intensity={25} tint="light" style={styles.rightArrow}>
+              <TouchableOpacity style={styles.controlButtonInner} onPress={onNext}>
+                <Text style={styles.arrowText}>›</Text>
+              </TouchableOpacity>
+            </BlurView>
 
             {/* Slide Counter */}
             <View style={styles.slideCounter}>
@@ -135,14 +144,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   closeButtonText: {
     color: colors.white,
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  controlButtonInner: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   playPauseButton: {
     position: 'absolute',
@@ -152,9 +166,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   playPauseButtonText: {
     color: colors.white,
@@ -182,7 +196,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     left: 20,
     right: 20,
     padding: spacing.md,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    overflow: 'hidden',
     borderRadius: spacing.sm,
   },
   slideTitle: {
@@ -204,9 +218,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   rightArrow: {
     position: 'absolute',
@@ -216,9 +230,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   arrowText: {
     color: colors.white,

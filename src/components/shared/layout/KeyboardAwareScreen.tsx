@@ -1,17 +1,15 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React from 'react';
 import {
   Keyboard,
   Pressable,
-  ScrollView,
   StyleSheet,
-  TextInput,
   View,
-  findNodeHandle,
   type ScrollViewProps,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { useKeyboardInsets } from '@/hooks/ui/useKeyboardInsets';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 type KeyboardAwareScreenProps = {
   children: React.ReactNode;
@@ -23,7 +21,6 @@ type KeyboardAwareScreenProps = {
   bottomSpacer?: number;
   keyboardShouldPersistTaps?: ScrollViewProps['keyboardShouldPersistTaps'];
   keyboardDismissMode?: ScrollViewProps['keyboardDismissMode'];
-  autoScrollToFocusedInput?: boolean;
 };
 
 export default function KeyboardAwareScreen({
@@ -36,91 +33,24 @@ export default function KeyboardAwareScreen({
   bottomSpacer = 0,
   keyboardShouldPersistTaps = 'handled',
   keyboardDismissMode = 'on-drag',
-  autoScrollToFocusedInput = true,
 }: KeyboardAwareScreenProps) {
-  const { bottomInset, keyboardVisible, keyboardTop } = useKeyboardInsets();
-  const scrollRef = useRef<ScrollView | null>(null);
-  const scrollYRef = useRef(0);
-
-  const ensureFocusedInputVisible = useCallback(() => {
-    if (!scrollEnabled || !autoScrollToFocusedInput || !keyboardVisible) {
-      return;
-    }
-
-    const state = TextInput.State as any;
-    const focusedInput = state.currentlyFocusedInput?.();
-    if (!focusedInput) {
-      return;
-    }
-
-    const nativeHandle =
-      typeof focusedInput === 'number'
-        ? focusedInput
-        : findNodeHandle(focusedInput);
-    if (!nativeHandle) {
-      return;
-    }
-
-    const responder = (scrollRef.current as any)?.getScrollResponder?.();
-    if (typeof responder?.scrollResponderScrollNativeHandleToKeyboard === 'function') {
-      responder.scrollResponderScrollNativeHandleToKeyboard(nativeHandle, 16, true);
-      return;
-    }
-
-    const nodeWithMeasure = focusedInput as any;
-    if (!nodeWithMeasure || typeof nodeWithMeasure.measureInWindow !== 'function') {
-      return;
-    }
-
-    nodeWithMeasure.measureInWindow((_x: number, y: number, _w: number, height: number) => {
-      const visibleBottom = keyboardTop - 16;
-      const inputBottom = y + height;
-      const overlap = inputBottom - visibleBottom;
-      if (overlap <= 0) {
-        return;
-      }
-
-      const nextY = Math.max(0, scrollYRef.current + overlap + 12);
-      scrollRef.current?.scrollTo({ y: nextY, animated: true });
-      scrollYRef.current = nextY;
-    });
-  }, [autoScrollToFocusedInput, keyboardTop, keyboardVisible, scrollEnabled]);
-
-  useEffect(() => {
-    if (!keyboardVisible || !autoScrollToFocusedInput || !scrollEnabled) {
-      return;
-    }
-
-    const timeout = setTimeout(ensureFocusedInputVisible, 48);
-    const interval = setInterval(ensureFocusedInputVisible, 180);
-
-    return () => {
-      clearTimeout(timeout);
-      clearInterval(interval);
-    };
-  }, [autoScrollToFocusedInput, ensureFocusedInputVisible, keyboardVisible, scrollEnabled]);
+  const insets = useSafeAreaInsets();
 
   const body = scrollEnabled ? (
-    <ScrollView
-      ref={scrollRef}
+    <KeyboardAwareScrollView
       style={[styles.flex, scrollViewStyle]}
       contentContainerStyle={[
         contentContainerStyle,
-        { paddingBottom: bottomInset + bottomSpacer },
+        { paddingBottom: insets.bottom + bottomSpacer },
       ]}
+      bottomOffset={80}
       keyboardShouldPersistTaps={keyboardShouldPersistTaps}
       keyboardDismissMode={keyboardDismissMode}
-      onScroll={(event) => {
-        scrollYRef.current = event.nativeEvent.contentOffset.y;
-      }}
-      scrollEventThrottle={16}
-      onMomentumScrollEnd={ensureFocusedInputVisible}
-      onScrollEndDrag={ensureFocusedInputVisible}
     >
       {children}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   ) : (
-    <View style={[styles.flex, contentContainerStyle, { paddingBottom: bottomInset + bottomSpacer }]}>
+    <View style={[styles.flex, contentContainerStyle, { paddingBottom: insets.bottom + bottomSpacer }]}>
       {children}
     </View>
   );

@@ -24,6 +24,7 @@
         "npm:browser-image-compression@^2.0.2",
         "npm:date-fns@^4.1.0",
         "npm:dotenv@^17.2.3",
+        "npm:expo-blur@~15.0.8",
         "npm:expo-camera@~17.0.10",
         "npm:expo-constants@~18.0.13",
         "npm:expo-file-system@^19.0.21",

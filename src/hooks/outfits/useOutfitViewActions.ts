@@ -88,7 +88,7 @@ export function useOutfitViewActions({
         const navItems = await Promise.all(
           idsArray.map(async (outfitId) => {
             const foundOutfit = outfitMap.get(outfitId);
-            if (!foundOutfit) return null;
+            if (!foundOutfit || !foundOutfit.cover_image_id) return null;
             const imageUrl = await getOutfitCoverImageUrl(foundOutfit);
             return {
               id: outfitId,

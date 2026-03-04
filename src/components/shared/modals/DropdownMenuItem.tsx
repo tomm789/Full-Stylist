@@ -3,10 +3,11 @@
  * Icon (left) + label; optional danger styling.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, Text, TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { dropdownMenuStyles } from './dropdownMenuStyles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createDropdownMenuStyles } from './dropdownMenuStyles';
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -27,15 +28,17 @@ export function DropdownMenuItem({
   disabled = false,
   iconColor,
 }: DropdownMenuItemProps) {
-  const color = iconColor ?? (danger ? '#ff3b30' : '#000');
+  const colors = useThemeColors();
+  const menuStyles = useMemo(() => createDropdownMenuStyles(colors), [colors]);
+  const color = iconColor ?? (danger ? '#ff3b30' : colors.textPrimary);
   const textStyle: TextStyle[] = [
-    dropdownMenuStyles.menuItemText,
-    danger && dropdownMenuStyles.menuItemTextDanger,
+    menuStyles.menuItemText,
+    danger && menuStyles.menuItemTextDanger,
   ];
 
   return (
     <TouchableOpacity
-      style={dropdownMenuStyles.menuItem}
+      style={menuStyles.menuItem}
       onPress={onPress}
       disabled={disabled}
       activeOpacity={0.7}

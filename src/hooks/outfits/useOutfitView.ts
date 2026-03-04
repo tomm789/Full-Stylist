@@ -161,6 +161,10 @@ export function useOutfitView({
         setRenderJobId(null);
         setIsGenerating(false);
         Alert.alert('Error', 'Outfit generation failed');
+      } else {
+        // Polling timed out or job stuck in queued/running — clear generating state
+        setRenderJobId(null);
+        setIsGenerating(false);
       }
     } catch (error) {
       if (
@@ -171,6 +175,8 @@ export function useOutfitView({
       }
       console.error('Error polling:', error);
       timeline?.mark('poll_error', { error: String(error) });
+      setRenderJobId(null);
+      setIsGenerating(false);
     }
   };
 

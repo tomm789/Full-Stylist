@@ -58,6 +58,12 @@ export const colors = {
   favorite: '#ff0000',
   selected: '#007AFF',
   transparent: 'transparent',
+
+  // Glass tokens
+  glassBackground: 'rgba(255, 255, 255, 0.2)',
+  glassBorder: 'rgba(255, 255, 255, 0.2)',
+  glassBackgroundDark: 'rgba(0, 0, 0, 0.2)',
+  glassBorderDark: 'rgba(0, 0, 0, 0.2)',
 } as const;
 
 export const spacing = {
@@ -130,6 +136,22 @@ export const shadows = {
   md: createShadow(2, 4, 0.15, 2),
   lg: createShadow(4, 8, 0.2, 4),
   xl: createShadow(8, 16, 0.25, 8),
+  glassCard: Platform.select({
+    web: { boxShadow: '0px 8px 32px rgba(31, 38, 135, 0.35)' },
+    default: {
+      shadowColor: '#1f2687',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.35,
+      shadowRadius: 32,
+      elevation: 12,
+    },
+  }),
+} as const;
+
+export const glass = {
+  blurIntensity: 40,
+  blurIntensityLight: 25,
+  blurIntensityHeavy: 60,
 } as const;
 
 export const layout = {

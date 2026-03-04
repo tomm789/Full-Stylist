@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { layout, spacing, borderRadius } from '@/styles/theme';
-import { useThemeColors } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
 
 type DropdownMenuModalProps = {
@@ -51,7 +52,7 @@ export function DropdownMenuModal({
   menuStyle,
   fullWidth = false,
 }: DropdownMenuModalProps) {
-  const colors = useThemeColors();
+  const { colors, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -66,13 +67,19 @@ export function DropdownMenuModal({
       >
         <View
           style={[
-            styles.menuContainer,
+            styles.menuBorder,
             fullWidth && styles.menuFullWidth,
             align === 'right' && !fullWidth && styles.rightAlign,
             menuStyle,
           ]}
         >
-          {children}
+          <BlurView
+            intensity={60}
+            tint={isDark ? 'dark' : 'light'}
+            style={[styles.menuContainer, fullWidth && styles.menuContainerFullWidth]}
+          >
+            {children}
+          </BlurView>
         </View>
       </Pressable>
     </Modal>
@@ -93,11 +100,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'stretch',
   },
 
-  menuContainer: {
-    backgroundColor: colors.background,
+  menuBorder: {
     borderRadius: borderRadius.lg,
-    padding: spacing.sm,
     minWidth: 200,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.3)' }
       : {
@@ -108,8 +115,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
           elevation: 8,
         }),
   },
+  menuContainer: {
+    overflow: 'hidden',
+    borderRadius: borderRadius.lg,
+    padding: spacing.sm,
+  },
   menuFullWidth: {
     width: '100%',
+    borderRadius: 0,
+  },
+  menuContainerFullWidth: {
     borderRadius: 0,
   },
 

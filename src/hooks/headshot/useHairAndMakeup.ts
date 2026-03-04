@@ -31,7 +31,7 @@ import { useHeadshotImageActions } from './useHeadshotImageActions';
 import { useActiveHeadshotActions } from './useActiveHeadshotActions';
 import { usePresetDisplay } from './usePresetDisplay';
 import { useGenerationAnimation } from './useGenerationAnimation';
-import type { HeadshotGenerationVariation } from '@/lib/headshot/generation';
+import { updateHeadshotGenerationVariation, type HeadshotGenerationVariation } from '@/lib/headshot/generation';
 
 // Re-export so AuthContext can import from this module (unchanged public API).
 export { clearHairMakeupSessionVisited };
@@ -102,6 +102,10 @@ export function useHairAndMakeup() {
 
   const currentDrawColor = getDrawColour('lip-styles');
 
+  // ── Session lifecycle state ────────────────────────────────────────────────
+  const [sessionActiveThisVisit, setSessionActiveThisVisit] = useState(false);
+  const [autoSelectNext, setAutoSelectNext] = useState(false);
+
   const profileInitials = useMemo(() => {
     const raw =
       (user?.user_metadata as { full_name?: string })?.full_name ||
@@ -162,6 +166,11 @@ export function useHairAndMakeup() {
     setPreviewImageUrl,
     setPreviewVariationId,
     setPreviewSource,
+    ensureSession: sessionData.ensureSession,
+    onGenerationComplete: () => {
+      setAutoSelectNext(true);
+      setSessionActiveThisVisit(true);
+    },
     setSelfieImageId: sessionData.setSelfieImageId,
     setSelfieImageUrl: sessionData.setSelfieImageUrl,
     setBaseImageId,
@@ -196,6 +205,7 @@ export function useHairAndMakeup() {
     variations,
     hiddenVariationIds,
     selfieImageId,
+    selfieImageUrl,
     previewVariationId,
     variationUrls,
     setVariationUrls,
@@ -404,6 +414,28 @@ export function useHairAndMakeup() {
     setEditorOpen(false);
   };
 
+  // ── Session lifecycle effects ────────────────────────────────────────────────
+
+  React.useEffect(() => {
+    if (autoSelectNext && varNav.completedVariations.length > 0) {
+      varNav.selectLatest();
+      setAutoSelectNext(false);
+    }
+  }, [autoSelectNext, varNav.completedVariations.length, varNav.selectLatest]);
+
+  const handleDoneSession = React.useCallback(() => {
+    sessionData.endSession();
+    varNav.clearPreview();
+    setSessionActiveThisVisit(false);
+    setAutoSelectNext(false);
+  }, [sessionData.endSession, varNav.clearPreview]);
+
+  const handleSaveVariation = React.useCallback(async (variationId: string) => {
+    if (variationId === '__selfie_ref__') return;
+    await updateHeadshotGenerationVariation(variationId, { is_saved: true });
+    await sessionData.refreshVariations();
+  }, [sessionData.refreshVariations]);
+
   // ── Return ───────────────────────────────────────────────────────────────────
 
   return {
@@ -481,6 +513,11 @@ export function useHairAndMakeup() {
     handleNavigateGeneration: varNav.handleNavigateGeneration,
     setPreviewFromVariation: varNav.setPreviewFromVariation,
     variationUrls,
+
+    // ── Session lifecycle ────────────────────────────────────────────────────
+    sessionActiveThisVisit,
+    handleDoneSession,
+    handleSaveVariation,
 
     // ── Action handlers ──────────────────────────────────────────────────────
     handlePickCamera,

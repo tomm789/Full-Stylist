@@ -5,5 +5,6 @@
 
 export { default as BottomSheet } from './BottomSheet';
 export { DropdownMenuModal } from './DropdownMenuModal';
-export { dropdownMenuStyles } from './dropdownMenuStyles';
+export { dropdownMenuStyles, createDropdownMenuStyles } from './dropdownMenuStyles';
 export { DropdownMenuItem } from './DropdownMenuItem';
+export { FullscreenImageModal } from './FullscreenImageModal';

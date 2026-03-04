@@ -49,6 +49,7 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   facePreviewSection: {
     width: '100%',
     gap: 0,
+    overflow: 'hidden',
   },
   faceEmptyCard: {
     width: '100%',
@@ -652,28 +653,6 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  lightboxOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  lightboxCloseButton: {
-    position: 'absolute',
-    top: spacing.xl,
-    right: spacing.lg,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  lightboxImage: {
-    width: '100%',
-    height: '80%',
-  },
   // Expandable pill (accessories/jewellery)
   expandedPill: {
     flexDirection: 'row',
@@ -777,6 +756,39 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontStyle: 'italic',
     color: '#1a1a1a',
     lineHeight: 30,
+  },
+  // Mirror single-image overlay controls (menu button, generate overlay, restore selfie)
+  faceMenuButton: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  generateOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.gray200,
+  },
+  restoreButton: {
+    position: 'absolute',
+    left: spacing.md,
+    bottom: spacing.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   // Advanced tab text fields
   advancedInput: {

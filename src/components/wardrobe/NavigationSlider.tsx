@@ -5,6 +5,7 @@
 
 import React, { useMemo, useRef, useEffect } from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { ImagePlaceholder } from '@/components/shared';
 import { GRID_IMAGE_PROPS } from '@/lib/images';
@@ -68,7 +69,7 @@ export default function NavigationSlider({
   if (items.length <= 1) return null;
 
   return (
-    <View style={[styles.container, style]}>
+    <BlurView intensity={50} tint="dark" style={[styles.container, style]}>
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -100,7 +101,7 @@ export default function NavigationSlider({
           );
         })}
       </ScrollView>
-    </View>
+    </BlurView>
   );
 }
 
@@ -110,9 +111,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    overflow: 'hidden',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: 'rgba(255, 255, 255, 0.15)',
     paddingVertical: spacing.md,
     paddingBottom: spacing.xl,
   },

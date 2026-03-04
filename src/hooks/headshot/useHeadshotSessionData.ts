@@ -5,10 +5,12 @@
  * Exposes resolveImageUrl and loadVariations for use by the generation hook.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   getLatestHeadshotGenerationSession,
+  createHeadshotGenerationSession,
+  updateHeadshotGenerationSession,
   listHeadshotGenerationVariations,
   type HeadshotGenerationVariation,
 } from '@/lib/headshot/generation';
@@ -75,6 +77,11 @@ export function useHeadshotSessionData({
   const [selfieImageId_state, setSelfieImageId] = useState<string | null>(null);
   const [selfieImageUrl, setSelfieImageUrl] = useState<string | null>(null);
 
+  // Ref kept in sync so callbacks always access the latest session ID
+  // without needing to be re-created on every state change.
+  const sessionIdRef = useRef<string | null>(null);
+  useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
+
   // ── Utilities ──────────────────────────────────────────────────────────────
 
   const resolveImageUrl = async (imageId: string | null): Promise<string | null> => {
@@ -113,6 +120,51 @@ export function useHeadshotSessionData({
     });
     setVariationUrls(urlMap);
   };
+
+  // ── Session lifecycle ─────────────────────────────────────────────────────
+
+  /**
+   * Find or create an active session for the current user + base image.
+   * Called lazily on first generation — not on mount.
+   */
+  const ensureSession = useCallback(async (
+    inputSnapshot: Record<string, any>
+  ): Promise<string | null> => {
+    if (!userId || !baseImageId) return null;
+
+    // Reuse an existing session
+    if (sessionIdRef.current) return sessionIdRef.current;
+
+    const existing = await getLatestHeadshotGenerationSession(userId, baseImageId);
+    if (existing) {
+      setSessionId(existing.id);
+      sessionIdRef.current = existing.id;
+      await updateHeadshotGenerationSession(existing.id, inputSnapshot);
+      return existing.id;
+    }
+
+    const created = await createHeadshotGenerationSession(userId, baseImageId, inputSnapshot);
+    if (created) {
+      setSessionId(created.id);
+      sessionIdRef.current = created.id;
+      return created.id;
+    }
+    return null;
+  }, [userId, baseImageId]);
+
+  const endSession = useCallback(() => {
+    setSessionId(null);
+    sessionIdRef.current = null;
+    setVariations([]);
+    setVariationUrls(new Map());
+    setHiddenVariationIds([]);
+  }, []);
+
+  /** Reload variations for the current session (uses ref — safe in stale closures). */
+  const refreshVariations = useCallback(async () => {
+    const sid = sessionIdRef.current;
+    if (sid) await loadVariations(sid);
+  }, [loadVariations]);
 
   // ── Data loading ───────────────────────────────────────────────────────────
 
@@ -156,7 +208,7 @@ export function useHeadshotSessionData({
         // First visit this app-session — preserve any in-progress state, just mark visited.
         hasVisitedHairMakeupThisSession = true;
       }
-      await loadVariations(session.id);
+      // Variations are NOT loaded on mount — they load lazily after first generation.
     } else {
       setSessionId(null);
       setVariations([]);
@@ -225,5 +277,8 @@ export function useHeadshotSessionData({
     setSelfieImageUrl,
     resolveImageUrl,
     loadVariations,
+    ensureSession,
+    endSession,
+    refreshVariations,
   };
 }

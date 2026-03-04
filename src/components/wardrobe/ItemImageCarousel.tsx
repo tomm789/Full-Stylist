@@ -1,22 +1,19 @@
 /**
  * ItemImageCarousel Component
- * Image carousel with modal for wardrobe items
+ * Image carousel with fullscreen modal for wardrobe items
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Modal,
-  Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { getImageUrl as getTransformedImageUrl } from '@/lib/images';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { FullscreenImageModal } from '@/components/shared/modals';
 
 interface ItemImageCarouselProps {
   images: Array<{ id: string; image_id: string; type: string; image: any }>;
@@ -47,6 +44,22 @@ export function ItemImageCarousel({
     setModalImageIndex(index);
     setShowImageModal(true);
   };
+
+  // Full-resolution URLs for the fullscreen modal
+  const fullResUrls = useMemo(
+    () =>
+      images
+        .map((img) => {
+          if (!img.image?.storage_key) return null;
+          return getTransformedImageUrl(
+            img.image.storage_bucket || 'media',
+            img.image.storage_key,
+            'full'
+          );
+        })
+        .filter(Boolean) as string[],
+    [images],
+  );
 
   if (images.length === 0) {
     return (
@@ -121,70 +134,12 @@ export function ItemImageCarousel({
         )}
       </View>
 
-      <Modal
+      <FullscreenImageModal
         visible={showImageModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowImageModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity
-            style={styles.modalCloseButton}
-            onPress={() => setShowImageModal(false)}
-          >
-            <Text style={styles.modalCloseText}>×</Text>
-          </TouchableOpacity>
-
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(event) => {
-              const containerWidth = event.nativeEvent.layoutMeasurement.width;
-              const index = Math.round(
-                event.nativeEvent.contentOffset.x / containerWidth
-              );
-              setModalImageIndex(index);
-            }}
-            style={styles.modalCarousel}
-          >
-            {images.map((itemImage) => {
-              const imageUrl = getImageUrl(itemImage.image);
-              return (
-                <View
-                  key={itemImage.id}
-                  style={[
-                    styles.modalImageContainer,
-                    { width: currentScreenWidth },
-                  ]}
-                >
-                  {imageUrl ? (
-                    <Image
-                      source={{ uri: imageUrl }}
-                      style={styles.modalImage}
-                      contentFit="contain"
-                    />
-                  ) : (
-                    <View style={styles.imagePlaceholder}>
-                      <Text style={styles.imagePlaceholderText}>
-                        No Image
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </ScrollView>
-
-          {images.length > 1 && (
-            <View style={styles.modalIndicator}>
-              <Text style={styles.modalIndicatorText}>
-                {modalImageIndex + 1} / {images.length}
-              </Text>
-            </View>
-          )}
-        </View>
-      </Modal>
+        images={fullResUrls}
+        initialIndex={modalImageIndex}
+        onClose={() => setShowImageModal(false)}
+      />
     </>
   );
 }
@@ -239,54 +194,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   indicatorText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-  },
-  modalCloseButton: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    zIndex: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCloseText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
-  },
-  modalCarousel: {
-    flex: 1,
-  },
-  modalImageContainer: {
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalImage: {
-    width: '100%',
-    height: '100%',
-  },
-  modalIndicator: {
-    position: 'absolute',
-    bottom: 40,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  modalIndicatorText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',

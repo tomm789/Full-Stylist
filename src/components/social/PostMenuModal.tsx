@@ -3,7 +3,7 @@
  * Dropdown menu for post actions (edit, delete, try on, unfollow)
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,10 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themes';
 import { FeedItem } from '@/lib/posts';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -54,6 +57,9 @@ export const PostMenuModal = ({
   onUnfollow,
   getImageUrl,
 }: PostMenuModalProps) => {
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   if (!visible || !feedItem) return null;
 
   const post = feedItem.type === 'post' ? feedItem.post! : feedItem.repost!.original_post!;
@@ -128,12 +134,17 @@ export const PostMenuModal = ({
         activeOpacity={1}
         onPress={onClose}
       >
-        <View 
+        <View
           style={[
-            styles.dropdown,
+            styles.dropdownBorder,
             buttonPosition ? calculateMenuPosition() : {},
           ]}
         >
+          <BlurView
+            intensity={60}
+            tint={isDark ? 'dark' : 'light'}
+            style={styles.dropdown}
+          >
           {isOwnPost ? (
             <>
               {isOutfit && entity && (
@@ -141,7 +152,7 @@ export const PostMenuModal = ({
                   style={styles.menuItem}
                   onPress={() => onEditOutfit(entity.id)}
                 >
-                  <Ionicons name="pencil-outline" size={18} color="#000" />
+                  <Ionicons name="pencil-outline" size={18} color={colors.textPrimary} />
                   <Text style={styles.menuItemText}>Edit Outfit</Text>
                 </TouchableOpacity>
               )}
@@ -150,7 +161,7 @@ export const PostMenuModal = ({
                   style={styles.menuItem}
                   onPress={() => onArchiveOutfit?.(entity.id)}
                 >
-                  <Ionicons name="archive-outline" size={18} color="#000" />
+                  <Ionicons name="archive-outline" size={18} color={colors.textPrimary} />
                   <Text style={styles.menuItemText}>Archive Outfit</Text>
                 </TouchableOpacity>
               )}
@@ -174,9 +185,9 @@ export const PostMenuModal = ({
                   disabled={tryingOnOutfit}
                 >
                   {tryingOnOutfit ? (
-                    <ActivityIndicator size="small" color="#007AFF" />
+                    <ActivityIndicator size="small" color={colors.primary} />
                   ) : (
-                    <Ionicons name="shirt-outline" size={18} color="#007AFF" />
+                    <Ionicons name="shirt-outline" size={18} color={colors.primary} />
                   )}
                   <Text style={[styles.menuItemText, styles.menuItemTextPrimary]}>
                     {tryingOnOutfit ? 'Generating...' : 'Try on Outfit'}
@@ -191,7 +202,7 @@ export const PostMenuModal = ({
                     onApplyLook(headshotEntity.variation_id!, headshotEntity.input_snapshot_json);
                   }}
                 >
-                  <Ionicons name="color-wand-outline" size={18} color="#007AFF" />
+                  <Ionicons name="color-wand-outline" size={18} color={colors.primary} />
                   <Text style={[styles.menuItemText, styles.menuItemTextPrimary]}>Apply This Look</Text>
                 </TouchableOpacity>
               )}
@@ -202,9 +213,9 @@ export const PostMenuModal = ({
                   disabled={unfollowingUserId === ownerId}
                 >
                   {unfollowingUserId === ownerId ? (
-                    <ActivityIndicator size="small" color="#000" />
+                    <ActivityIndicator size="small" color={colors.textPrimary} />
                   ) : (
-                    <Ionicons name="person-remove-outline" size={18} color="#000" />
+                    <Ionicons name="person-remove-outline" size={18} color={colors.textPrimary} />
                   )}
                   <Text style={styles.menuItemText}>
                     {unfollowingUserId === ownerId ? 'Unfollowing...' : 'Unfollow'}
@@ -213,36 +224,40 @@ export const PostMenuModal = ({
               )}
             </>
           )}
+          </BlurView>
         </View>
       </TouchableOpacity>
     </Modal>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
-  dropdown: {
-    backgroundColor: '#fff',
+  dropdownBorder: {
     borderRadius: 8,
     ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.25)' }
+      ? { boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.3)' }
       : {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 4,
+          shadowColor: colors.black,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
           elevation: 10,
         }),
     minWidth: 160,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.glassBorder,
     // Default positioning (used when buttonPosition is null)
     marginRight: 16,
     marginTop: 70,
     alignSelf: 'flex-end',
+  },
+  dropdown: {
+    overflow: 'hidden',
+    borderRadius: 8,
   },
   menuItem: {
     flexDirection: 'row',
@@ -250,17 +265,17 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.borderLight,
   },
   menuItemDanger: {
     borderBottomWidth: 0,
   },
   menuItemText: {
     fontSize: 14,
-    color: '#000',
+    color: colors.textPrimary,
   },
   menuItemTextPrimary: {
-    color: '#007AFF',
+    color: colors.primary,
   },
   menuItemTextDanger: {
     color: '#FF3B30',

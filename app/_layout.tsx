@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
 import { CalendarEntryFlowProvider } from '@/contexts/CalendarEntryFlowContext';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { AddToHomeScreenBanner } from '@/components/AddToHomeScreenBanner';
 
 export default function RootLayout() {
@@ -93,6 +94,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <KeyboardProvider>
       <ThemeProvider>
         <AuthProvider>
           <NotificationsProvider>
@@ -123,6 +125,7 @@ export default function RootLayout() {
           </NotificationsProvider>
         </AuthProvider>
       </ThemeProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

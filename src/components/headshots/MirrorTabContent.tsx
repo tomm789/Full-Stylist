@@ -13,7 +13,6 @@ import React from 'react';
 import {
   Animated,
   Platform,
-  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -21,7 +20,8 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { EdgePeekSlider, PillButton, GenerationThumbnailStrip } from '@/components/shared';
+import { Image as ExpoImage } from 'expo-image';
+import { PillButton, GenerationThumbnailStrip } from '@/components/shared';
 import type { ThumbnailItem } from '@/components/shared';
 import IconSegmentedToggle from '@/components/shared/buttons/IconSegmentedToggle';
 import HeadshotPromptSettings from '@/components/headshots/HeadshotPromptSettings';
@@ -31,10 +31,10 @@ import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
 import { createStyles } from '@/styles/hairAndMakeupStyles';
 import { theme } from '@/styles';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import type { EditTab } from '@/hooks/headshot/useHairAndMakeup';
 import type { HeadshotGenerationVariation } from '@/lib/headshot/generation';
 import type { PresetCategory } from '@/lib/headshot/presetTypes';
-
 const { spacing } = theme;
 
 const QUICK_ADVANCED_OPTIONS = [
@@ -43,12 +43,13 @@ const QUICK_ADVANCED_OPTIONS = [
 ];
 
 interface MirrorTabContentProps {
-  // Image slider
-  headshots: { id: string; url: string | null }[];
-  activeFaceIndex: number;
-  onIndexChange: (nextIndex: number) => void;
-  renderSliderItem: ({ item, index }: { item: { id: string; url: string | null }; index: number }) => React.ReactElement;
-  keyExtractor: (item: { id: string; url: string | null }) => string;
+  // Preview image (single base headshot — no longer a slider)
+  previewImageUrl: string | null;
+  onPreviewPress: () => void;
+  onMenuPress?: () => void;
+  generateOverlayOpacity: Animated.AnimatedInterpolation<number>;
+  previewIsGenerated: boolean;
+  onRestoreSelfie: () => void;
 
   // Generation state
   generating: boolean;
@@ -118,14 +119,21 @@ interface MirrorTabContentProps {
   thumbnailCanNavigateForward?: boolean;
   onThumbnailNavigateBack?: () => void;
   onThumbnailNavigateForward?: () => void;
+
+  // Session save/done
+  onThumbnailSave?: (id: string) => void;
+  showThumbnailSaveIndicator?: boolean;
+  onSessionDone?: () => void;
+  sessionActive?: boolean;
 }
 
 export default function MirrorTabContent({
-  headshots,
-  activeFaceIndex,
-  onIndexChange,
-  renderSliderItem,
-  keyExtractor,
+  previewImageUrl,
+  onPreviewPress,
+  onMenuPress,
+  generateOverlayOpacity,
+  previewIsGenerated,
+  onRestoreSelfie,
   generating,
   dialogLine1Opacity,
   dialogLine2Opacity,
@@ -175,6 +183,10 @@ export default function MirrorTabContent({
   thumbnailCanNavigateForward,
   onThumbnailNavigateBack,
   onThumbnailNavigateForward,
+  onThumbnailSave,
+  showThumbnailSaveIndicator,
+  onSessionDone,
+  sessionActive,
 }: MirrorTabContentProps) {
   const colors = useThemeColors();
   const { width: windowWidth } = useWindowDimensions();
@@ -214,7 +226,7 @@ export default function MirrorTabContent({
 
   return (
     <>
-      <ScrollView
+      <KeyboardAwareScrollView
         style={{ flex: 1 }}
         contentContainerStyle={[
           styles.content,
@@ -223,26 +235,50 @@ export default function MirrorTabContent({
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}
         scrollEventThrottle={scrollEventThrottle}
+        bottomOffset={80}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        {/* Image slider */}
+        {/* Single preview image */}
         <View style={styles.facePreviewSection}>
-          {headshots.length > 0 ? (
-            <EdgePeekSlider
-              data={headshots}
-              keyExtractor={keyExtractor}
-              itemWidthRatio={1}
-              aspectRatio={3 / 4}
-              gap={0}
-              initialIndex={activeFaceIndex}
-              activeIndex={activeFaceIndex}
-              extraData={activeFaceIndex}
-              enableHaptics
-              edgeSwipeEnabled={false}
-              onIndexChange={onIndexChange}
-              renderItem={renderSliderItem}
-            />
+          {previewImageUrl ? (
+            <View style={{ position: 'relative' }}>
+              <TouchableOpacity onPress={onPreviewPress} activeOpacity={0.9}>
+                <ExpoImage
+                  source={{ uri: previewImageUrl }}
+                  style={{ width: '100%', aspectRatio: 3 / 4 }}
+                  contentFit="cover"
+                />
+              </TouchableOpacity>
+
+              {onMenuPress && (
+                <TouchableOpacity
+                  style={styles.faceMenuButton}
+                  onPress={onMenuPress}
+                  accessibilityLabel="Open menu"
+                >
+                  <Ionicons name="ellipsis-vertical" size={18} color={colors.textLight} />
+                </TouchableOpacity>
+              )}
+
+              {generating && (
+                <Animated.View
+                  style={[styles.generateOverlay, { opacity: generateOverlayOpacity }]}
+                  pointerEvents="none"
+                />
+              )}
+
+              {previewIsGenerated && (
+                <TouchableOpacity
+                  style={styles.restoreButton}
+                  onPress={onRestoreSelfie}
+                  disabled={isStyleDisabled}
+                  accessibilityLabel="Restore selfie"
+                >
+                  <Ionicons name="person-circle-outline" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
           ) : (
             <View style={styles.faceEmptyCard}>
               <TouchableOpacity
@@ -275,16 +311,31 @@ export default function MirrorTabContent({
         </View>
 
         {/* Generation thumbnail strip — below slider, above controls */}
-        {!generating && thumbnailItems && thumbnailItems.length > 0 && onThumbnailSelect && (
-          <GenerationThumbnailStrip
-            items={thumbnailItems}
-            onSelect={onThumbnailSelect}
-            canNavigateBack={thumbnailCanNavigateBack}
-            canNavigateForward={thumbnailCanNavigateForward}
-            onNavigateBack={onThumbnailNavigateBack}
-            onNavigateForward={onThumbnailNavigateForward}
-            style={{ paddingHorizontal: spacing.md }}
-          />
+        {!generating && thumbnailItems && thumbnailItems.length >= 2 && onThumbnailSelect && (
+          <>
+            <GenerationThumbnailStrip
+              items={thumbnailItems}
+              onSelect={onThumbnailSelect}
+              canNavigateBack={thumbnailCanNavigateBack}
+              canNavigateForward={thumbnailCanNavigateForward}
+              onNavigateBack={onThumbnailNavigateBack}
+              onNavigateForward={onThumbnailNavigateForward}
+              onSavePress={onThumbnailSave}
+              showSaveIndicator={showThumbnailSaveIndicator}
+              style={{ paddingHorizontal: spacing.md }}
+            />
+            {sessionActive && onSessionDone && (
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.md, marginTop: spacing.xs }}>
+                <TouchableOpacity
+                  onPress={onSessionDone}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 10 }}
+                >
+                  <Ionicons name="checkmark" size={16} color={colors.primary} />
+                  <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
         )}
 
         {!generating && (
@@ -372,7 +423,7 @@ export default function MirrorTabContent({
           <HeadshotPromptSettings variation={activeImageVariation} />
         </>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Edit tab content modal (opened via header category pills) */}
       <EditTabModal

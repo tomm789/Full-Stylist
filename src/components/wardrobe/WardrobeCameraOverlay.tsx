@@ -16,6 +16,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { CameraView } from 'expo-camera';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -193,37 +194,47 @@ export default function WardrobeCameraOverlay({
 
       {/* Top bar: close, flash, flip */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={handleClose}
-          activeOpacity={0.7}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="close" size={28} color="#fff" />
-        </TouchableOpacity>
+        <BlurView intensity={30} tint="dark" style={styles.controlButton}>
+          <TouchableOpacity
+            style={styles.controlButtonInner}
+            onPress={handleClose}
+            activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="close" size={28} color="#fff" />
+          </TouchableOpacity>
+        </BlurView>
 
         <View style={styles.topBarRight}>
-          <TouchableOpacity
+          <BlurView
+            intensity={30}
+            tint="dark"
             style={[styles.controlButton, facing === 'front' && styles.controlButtonDisabled]}
-            onPress={handleToggleFlash}
-            activeOpacity={0.7}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Ionicons
-              name={flashMode === 'on' ? 'flash' : 'flash-outline'}
-              size={22}
-              color={facing === 'front' ? 'rgba(255,255,255,0.3)' : '#fff'}
-            />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.controlButtonInner}
+              onPress={handleToggleFlash}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons
+                name={flashMode === 'on' ? 'flash' : 'flash-outline'}
+                size={22}
+                color={facing === 'front' ? 'rgba(255,255,255,0.3)' : '#fff'}
+              />
+            </TouchableOpacity>
+          </BlurView>
 
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={handleFlipCamera}
-            activeOpacity={0.7}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="camera-reverse-outline" size={24} color="#fff" />
-          </TouchableOpacity>
+          <BlurView intensity={30} tint="dark" style={styles.controlButton}>
+            <TouchableOpacity
+              style={styles.controlButtonInner}
+              onPress={handleFlipCamera}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="camera-reverse-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+          </BlurView>
         </View>
       </View>
 
@@ -242,9 +253,9 @@ export default function WardrobeCameraOverlay({
               contentFit="cover"
             />
           ) : (
-            <View style={styles.thumbnailPlaceholder}>
+            <BlurView intensity={20} tint="light" style={styles.thumbnailPlaceholder}>
               <Ionicons name="images-outline" size={22} color="#fff" />
-            </View>
+            </BlurView>
           )}
         </TouchableOpacity>
 
@@ -299,7 +310,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  controlButtonInner: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -346,9 +362,9 @@ const styles = StyleSheet.create({
     width: THUMBNAIL_SIZE,
     height: THUMBNAIL_SIZE,
     borderRadius: 8,
+    overflow: 'hidden',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.5)',
-    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },

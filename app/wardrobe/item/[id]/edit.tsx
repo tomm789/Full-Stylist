@@ -8,7 +8,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -35,6 +34,7 @@ import {
   TextArea,
   LoadingSpinner,
 } from '@/components/shared';
+import { KeyboardAwareScreen } from '@/components/shared/layout';
 
 const { spacing, borderRadius, typography } = theme;
 
@@ -200,11 +200,9 @@ export default function EditItemScreen() {
         }
       />
 
-      <ScrollView
-        style={styles.scrollView}
+      <KeyboardAwareScreen
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
       >
         {/* AI Generation Status */}
         {(!aiGenerationComplete || title === 'New Item') && (
@@ -291,15 +289,12 @@ export default function EditItemScreen() {
             onCreateAttribute={createAttribute}
           />
         )}
-      </ScrollView>
+      </KeyboardAwareScreen>
     </View>
   );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
     padding: spacing.lg,
     paddingBottom: spacing.xxxl,

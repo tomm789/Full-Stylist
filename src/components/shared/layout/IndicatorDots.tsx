@@ -5,6 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
@@ -29,11 +30,11 @@ export default function IndicatorDots({
 
   if (variant === 'numeric') {
     return (
-      <View style={[styles.numericContainer, style]}>
+      <BlurView intensity={25} tint="dark" style={[styles.numericContainer, style]}>
         <Text style={styles.numericText}>
           {activeIndex + 1} / {total}
         </Text>
-      </View>
+      </BlurView>
     );
   }
 
@@ -54,10 +55,12 @@ export default function IndicatorDots({
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   numericContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    overflow: 'hidden',
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   numericText: {
     color: colors.white,

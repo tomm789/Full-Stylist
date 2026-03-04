@@ -488,7 +488,7 @@ export default function OutfitsScreen() {
       selectionMode,
       selectedOutfitIds,
       toggleOutfitSelection,
-      onOpenFeed: handleOpenMyOutfitFeed,
+      onOpenFeed: handleOutfitPress,
       onActivateSelection: () => setSelectionMode(true),
       onOpenMenu: setOpenOutfitMenuId,
       onPressOutfit: handleOutfitPress,

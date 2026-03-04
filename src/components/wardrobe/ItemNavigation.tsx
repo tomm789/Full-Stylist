@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { GRID_IMAGE_PROPS } from '@/lib/images';
 
@@ -30,7 +31,7 @@ export function ItemNavigation({
   if (items.length <= 1) return null;
 
   return (
-    <View style={styles.container}>
+    <BlurView intensity={50} tint="dark" style={styles.container}>
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -65,7 +66,7 @@ export function ItemNavigation({
           );
         })}
       </ScrollView>
-    </View>
+    </BlurView>
   );
 }
 
@@ -75,9 +76,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    overflow: 'hidden',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: 'rgba(255, 255, 255, 0.15)',
     paddingVertical: 12,
     paddingBottom: 20,
   },

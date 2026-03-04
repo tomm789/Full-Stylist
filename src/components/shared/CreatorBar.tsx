@@ -7,6 +7,7 @@
 
 import React, { useMemo, useEffect, useRef } from 'react';
 import { View, TouchableOpacity, StyleSheet, Text, Animated } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, shadows } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -69,19 +70,21 @@ export default function CreatorBar({
         </TouchableOpacity>
 
         {showOptionsButton && onOptions && (
-          <TouchableOpacity
-            style={styles.optionsButton}
-            onPress={onOptions}
-            disabled={isDisabled}
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-          >
-            <Ionicons
-              name="ellipsis-horizontal"
-              size={20}
-              color={colors.white}
-            />
-          </TouchableOpacity>
+          <BlurView intensity={20} tint="light" style={styles.optionsButton}>
+            <TouchableOpacity
+              style={styles.optionsButtonInner}
+              onPress={onOptions}
+              disabled={isDisabled}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            >
+              <Ionicons
+                name="ellipsis-horizontal"
+                size={20}
+                color={colors.white}
+              />
+            </TouchableOpacity>
+          </BlurView>
         )}
       </View>
     </Animated.View>
@@ -128,8 +131,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: borderRadius.round,
+    overflow: 'hidden',
+  },
+  optionsButtonInner: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
 });

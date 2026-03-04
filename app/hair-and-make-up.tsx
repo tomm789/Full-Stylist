@@ -19,8 +19,8 @@ import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
 import { HeaderTabPill } from '@/components/shared';
 import type { ThumbnailItem } from '@/components/shared';
+import { FullscreenImageModal } from '@/components/shared/modals';
 import HeadshotSocialTab from '@/components/headshots/HeadshotSocialTab';
-import HeadshotSlideItem from '@/components/headshots/HeadshotSlideItem';
 import DrawModeInline from '@/components/headshots/DrawModeInline';
 import MirrorTabContent from '@/components/headshots/MirrorTabContent';
 import MirrorCategoryPillsRow from '@/components/headshots/MirrorCategoryPillsRow';
@@ -55,7 +55,7 @@ export default function HairAndMakeUpScreen() {
   const commonStyles = createCommonStyles(colors);
   const state = useHairAndMakeup();
   const insets = useSafeAreaInsets();
-  const { variationId, returnToWardrobe } = useLocalSearchParams<{ variationId?: string; returnToWardrobe?: string }>();
+  const { variationId, returnToWardrobe, baseHeadshotId } = useLocalSearchParams<{ variationId?: string; returnToWardrobe?: string; baseHeadshotId?: string }>();
   const { applyLook } = useApplyLook();
   const [showShareModal, setShowShareModal] = React.useState(false);
   const [mirrorEditTabRequest, setMirrorEditTabRequest] = React.useState<EditTab | null>(null);
@@ -99,27 +99,25 @@ export default function HairAndMakeUpScreen() {
     }
   }, [variationId]);
 
+  // On mount: if a baseHeadshotId URL param was set (by "Open in Mirror" from view page),
+  // select that headshot and switch to the mirror tab
+  const appliedBaseHeadshotRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!baseHeadshotId || appliedBaseHeadshotRef.current === baseHeadshotId) return;
+    const headshot = state.allHeadshots.find((h) => h.id === baseHeadshotId);
+    if (headshot) {
+      appliedBaseHeadshotRef.current = baseHeadshotId;
+      state.handleHeadshotSelect(headshot);
+      state.setPageTab('mirror');
+    }
+  }, [baseHeadshotId, state.allHeadshots]);
+
   // Bottom padding to allow content to scroll above the floating tab bar or CreatorBar
   const floatingBarClearance = spacing.xl + 60 + spacing.md + insets.bottom;
 
   const isFocused = useIsFocused();
   const { unreadCount } = useNotifications();
   const router = useRouter();
-
-  const baseHeadshots = React.useMemo(
-    () =>
-      [...state.allHeadshots].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ),
-    [state.allHeadshots]
-  );
-  const headshots = React.useMemo(() => {
-    const selfieItem = state.selfieImageId
-      ? { id: state.selfieImageId, url: state.selfieImageUrl || null }
-      : null;
-    const filtered = baseHeadshots.filter((item) => item.id !== state.selfieImageId);
-    return selfieItem ? [selfieItem, ...filtered] : filtered;
-  }, [baseHeadshots, state.selfieImageId, state.selfieImageUrl]);
 
   // Hair length slider: extract options and find selected ID
   const hairLengthOptions = React.useMemo(() => {
@@ -139,56 +137,38 @@ export default function HairAndMakeUpScreen() {
   }, [state.previewGenerationIndex, state.completedVariations]);
 
   const headshotThumbnailItems = React.useMemo<ThumbnailItem[]>(() => {
-    return state.completedVariations.map((v) => ({
+    if (!state.sessionActiveThisVisit) return [];
+
+    const referenceCard: ThumbnailItem = {
+      id: '__selfie_ref__',
+      imageUrl: state.selfieImageUrl,
+      isActive: state.previewSource === 'selfie' || state.previewGenerationIndex === -1,
+      isSaved: true,
+      status: 'complete',
+    };
+
+    const variationCards = state.completedVariations.map((v) => ({
       id: v.id,
       imageUrl: state.variationUrls.get(v.image_id!) ?? null,
       isActive: v.id === activeVariationId,
-      isSaved: false,
+      isSaved: v.is_saved,
       status: v.status as ThumbnailItem['status'],
     }));
-  }, [state.completedVariations, state.variationUrls, activeVariationId]);
+
+    return [referenceCard, ...variationCards];
+  }, [state.sessionActiveThisVisit, state.selfieImageUrl, state.previewSource, state.previewGenerationIndex, state.completedVariations, state.variationUrls, activeVariationId]);
 
   const handleHeadshotThumbnailSelect = React.useCallback((id: string) => {
+    if (id === '__selfie_ref__') {
+      state.handleRestoreSelfie();
+      return;
+    }
     const variation = state.completedVariations.find((v) => v.id === id);
     if (variation) state.setPreviewFromVariation(variation);
-  }, [state.completedVariations, state.setPreviewFromVariation]);
+  }, [state.completedVariations, state.setPreviewFromVariation, state.handleRestoreSelfie]);
 
   const { dialogLine1Opacity, dialogLine2Opacity, dialogLine3Opacity, dialogLine4Opacity } =
     useGenerationDialogAnimation(state.generating);
-
-  const activeFaceIndex = React.useMemo(() => {
-    if (headshots.length === 0) return 0;
-    const index = headshots.findIndex((item) => item.id === state.previewImageId);
-    return index >= 0 ? index : 0;
-  }, [headshots, state.previewImageId]);
-
-  // Keep a ref for activeFaceIndex so renderSliderItem stays referentially
-  // stable across swipes. FlatList re-renders items via extraData instead.
-  const activeFaceIndexRef = React.useRef(activeFaceIndex);
-  activeFaceIndexRef.current = activeFaceIndex;
-
-  const headshotKeyExtractor = React.useCallback(
-    (item: { id: string; url: string | null }) => item.id,
-    [],
-  );
-
-  const handleSliderIndexChange = React.useCallback(
-    (nextIndex: number) => {
-      const next = headshots[nextIndex];
-      if (next) {
-        state.handleSwipeIndexChange(next);
-      }
-    },
-    [headshots, state.handleSwipeIndexChange],
-  );
-
-  const handleMenuPress = React.useCallback(
-    (item: { id: string; url: string | null }) => {
-      state.handleSwipeIndexChange(item);
-      state.setShowFaceMenu(true);
-    },
-    [state.handleSwipeIndexChange, state.setShowFaceMenu],
-  );
 
   const handleEdgeSwipeStart = React.useCallback(() => {
     if (!state.isStyleDisabled) {
@@ -250,31 +230,14 @@ export default function HairAndMakeUpScreen() {
       !state.isDrawModeOpen,
   });
 
-  const renderSliderItem = React.useCallback(
-    ({ item, index }: { item: { id: string; url: string | null }; index: number }) => (
-      <HeadshotSlideItem
-        item={item}
-        isActive={index === activeFaceIndexRef.current}
-        onPreviewPress={state.handlePreviewPress}
-        onMenuPress={() => handleMenuPress(item)}
-        generating={state.generating}
-        generateOverlayOpacity={state.generateOverlayOpacity}
-        previewIsGenerated={state.previewIsGenerated}
-        onRestoreSelfie={state.handleRestoreSelfie}
-        isStyleDisabled={state.isStyleDisabled}
-      />
-    ),
-    [state.handlePreviewPress, handleMenuPress, state.generating, state.generateOverlayOpacity, state.previewIsGenerated, state.handleRestoreSelfie, state.isStyleDisabled],
-  );
-
   const handleMirrorCategorySelect = React.useCallback((tab: EditTab) => {
     state.setEditTab(tab);
     setMirrorEditTabRequest(tab);
   }, [state.setEditTab]);
 
   const handleHeadshotPress = (item: { id: string; url: string | null }) => {
-    state.handleHeadshotSelect(item);
-    state.setPageTab('mirror');
+    const allIds = state.allHeadshots.map((h) => h.id).join(',');
+    router.push(`/headshot/${item.id}/view?headshotIds=${encodeURIComponent(allIds)}` as any);
   };
   const renderHeadshotGridItem = ({ item }: { item: { id: string; url: string | null } }) => (
     <TouchableOpacity
@@ -381,11 +344,12 @@ export default function HairAndMakeUpScreen() {
 
         {!isFullscreenDraw && state.pageTab === 'mirror' && (
           <MirrorTabContent
-            headshots={headshots}
-            activeFaceIndex={activeFaceIndex}
-            onIndexChange={handleSliderIndexChange}
-            renderSliderItem={renderSliderItem}
-            keyExtractor={headshotKeyExtractor}
+            previewImageUrl={state.previewImageUrl}
+            onPreviewPress={state.handlePreviewPress}
+            onMenuPress={() => state.setShowFaceMenu(true)}
+            generateOverlayOpacity={state.generateOverlayOpacity}
+            previewIsGenerated={state.previewIsGenerated}
+            onRestoreSelfie={state.handleRestoreSelfie}
             generating={state.generating}
             dialogLine1Opacity={dialogLine1Opacity}
             dialogLine2Opacity={dialogLine2Opacity}
@@ -435,6 +399,10 @@ export default function HairAndMakeUpScreen() {
             thumbnailCanNavigateForward={state.canNavigateForward}
             onThumbnailNavigateBack={() => state.handleNavigateGeneration('back')}
             onThumbnailNavigateForward={() => state.handleNavigateGeneration('forward')}
+            onThumbnailSave={state.handleSaveVariation}
+            showThumbnailSaveIndicator={true}
+            onSessionDone={state.handleDoneSession}
+            sessionActive={state.sessionActiveThisVisit}
           />
         )}
 
@@ -490,28 +458,11 @@ export default function HairAndMakeUpScreen() {
           </View>
         </Modal>
 
-        <Modal
+        <FullscreenImageModal
           visible={state.lightboxVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => state.setLightboxVisible(false)}
-        >
-          <View style={styles.lightboxOverlay}>
-            <TouchableOpacity
-              style={styles.lightboxCloseButton}
-              onPress={() => state.setLightboxVisible(false)}
-            >
-              <Ionicons name="close" size={22} color={colors.textLight} />
-            </TouchableOpacity>
-            {state.lightboxUrl && (
-              <ExpoImage
-                source={{ uri: state.lightboxUrl }}
-                style={styles.lightboxImage}
-                contentFit="contain"
-              />
-            )}
-          </View>
-        </Modal>
+          images={state.lightboxUrl ? [state.lightboxUrl] : []}
+          onClose={() => state.setLightboxVisible(false)}
+        />
 
         <ShareToFeedModal
           visible={showShareModal}
@@ -543,3 +494,4 @@ export default function HairAndMakeUpScreen() {
     </PanGestureHandler>
   );
 }
+

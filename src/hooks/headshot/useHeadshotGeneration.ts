@@ -7,7 +7,6 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import {
-  createHeadshotGenerationSession,
   createHeadshotGenerationVariation,
   updateHeadshotGenerationSession,
   updateHeadshotGenerationVariation,
@@ -44,6 +43,8 @@ export type UseHeadshotGenerationParams = {
   setPreviewImageUrl: (url: string | null) => void;
   setPreviewVariationId: (id: string | null) => void;
   setPreviewSource: (source: PreviewSource) => void;
+  ensureSession: (inputSnapshot: Record<string, any>) => Promise<string | null>;
+  onGenerationComplete: () => void;
   setSelfieImageId: (id: string | null) => void;
   setSelfieImageUrl: (url: string | null) => void;
   setBaseImageId: (id: string | null) => void;
@@ -74,6 +75,8 @@ export function useHeadshotGeneration({
   setPreviewImageUrl,
   setPreviewVariationId,
   setPreviewSource,
+  ensureSession,
+  onGenerationComplete,
   setSelfieImageId,
   setSelfieImageUrl,
   setBaseImageId,
@@ -123,6 +126,12 @@ export function useHeadshotGeneration({
       return;
     }
 
+    // Build draw color entries for storage (only non-empty prompts)
+    const drawColorEntries = maskColorMap
+      ?.filter((entry) => entry.customPrompt?.trim())
+      ?.map((entry) => ({ hex: entry.hex, customPrompt: entry.customPrompt!.trim() }))
+      ?? [];
+
     const inputSnapshot = {
       hairPresetIds: selectedHair,
       makeupPresetIds: selectedMakeup,
@@ -130,6 +139,7 @@ export function useHeadshotGeneration({
       accessorySubcategory,
       jewellerySubcategory,
       advancedFields,
+      ...(drawColorEntries.length > 0 ? { drawColorMap: drawColorEntries } : {}),
     };
     const promptText = buildHairMakeupPrompt(inputSnapshot) || null;
     const hasPresetPrompt = Boolean(promptText?.trim());
@@ -149,13 +159,10 @@ export function useHeadshotGeneration({
     setError(null);
 
     try {
-      let activeSessionId = sessionId;
-      if (!activeSessionId) {
-        const session = await createHeadshotGenerationSession(userId, activeBaseImageId, inputSnapshot);
-        if (!session) throw new Error('Failed to create session');
-        activeSessionId = session.id;
-        setSessionId(session.id);
-      } else {
+      const activeSessionId = await ensureSession(inputSnapshot);
+      if (!activeSessionId) throw new Error('Failed to create session');
+      if (sessionId) {
+        // Session already existed — update input_json with current selections
         await updateHeadshotGenerationSession(activeSessionId, inputSnapshot);
       }
 
@@ -241,18 +248,12 @@ export function useHeadshotGeneration({
       await updateHeadshotGenerationVariation(variation.id, {
         status: 'complete',
         image_id: generatedImageId || null,
-        is_saved: true,
+        is_saved: false,
       });
-
-      const generatedImageUrl = await resolveImageUrl(generatedImageId || null);
-
-      setPreviewImageId(generatedImageId || null);
-      setPreviewImageUrl(generatedImageUrl || previewImageUrl || null);
-      setPreviewVariationId(variation.id);
-      setPreviewSource('variation');
 
       await loadVariations(activeSessionId);
       await refreshImages();
+      onGenerationComplete();
     } catch (err: any) {
       setError(err?.message || 'Failed to generate variation');
     } finally {

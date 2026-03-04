@@ -58,6 +58,12 @@ export const lightColors = {
   favorite: '#ff0000',
   selected: '#007AFF',
   transparent: 'transparent',
+
+  // Glass tokens
+  glassBackground: 'rgba(255, 255, 255, 0.2)',
+  glassBorder: 'rgba(255, 255, 255, 0.2)',
+  glassBackgroundDark: 'rgba(0, 0, 0, 0.2)',
+  glassBorderDark: 'rgba(0, 0, 0, 0.2)',
 } as const;
 
 export const darkColors: ThemeColors = {
@@ -113,4 +119,10 @@ export const darkColors: ThemeColors = {
   favorite: '#ff0000',
   selected: '#007AFF',
   transparent: 'transparent',
+
+  // Glass tokens
+  glassBackground: 'rgba(255, 255, 255, 0.12)',
+  glassBorder: 'rgba(255, 255, 255, 0.15)',
+  glassBackgroundDark: 'rgba(0, 0, 0, 0.3)',
+  glassBorderDark: 'rgba(255, 255, 255, 0.1)',
 } as const;

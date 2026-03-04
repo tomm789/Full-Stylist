@@ -9,13 +9,13 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import SocialActionBar from '@/components/outfits/SocialActionBar';
 import CommentSection from '@/components/outfits/CommentSection';
 import { AIGenerationFeedback } from '@/components/ai';
+import { FullscreenImageModal } from '@/components/shared/modals';
 import { normalizeLabelList } from '@/lib/outfits/normalizeLabels';
 import { supabase } from '@/lib/supabase';
 import { continueTimeline } from '@/lib/perf/timeline';
@@ -198,7 +198,7 @@ export function OutfitViewContent({
               key={imageRetryKey}
               source={{ uri: coverImageUrl }}
               style={styles.coverImage}
-              contentFit="contain"
+              contentFit="cover"
               cachePolicy={renderTraceId && !coverImageDataUri ? 'none' : undefined}
               onLoadStart={handleImageLoadStart}
               onLoad={handleImageLoad}
@@ -337,39 +337,12 @@ export function OutfitViewContent({
         )}
       </View>
 
-      {/* Image Modal */}
-      <Modal
+      {/* Fullscreen Image Modal */}
+      <FullscreenImageModal
         visible={showImageModal}
-        transparent
-        animationType="fade"
-        onRequestClose={onImageModalClose}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={onImageModalClose}
-          >
-            {coverImageUrl && (
-              <Image
-                source={{ uri: coverImageUrl }}
-                style={styles.fullscreenImage}
-                contentFit="contain"
-                cachePolicy={renderTraceId && !coverImageDataUri ? 'none' : undefined}
-                onLoadStart={handleImageLoadStart}
-                onLoad={handleImageLoad}
-                onError={handleImageError}
-              />
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={onImageModalClose}
-          >
-            <Text style={styles.closeButtonText}>×</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
+        images={coverImageUrl ? [coverImageUrl] : []}
+        onClose={onImageModalClose}
+      />
     </>
   );
 }
@@ -482,34 +455,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 20,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fullscreenImage: {
-    width: '100%',
-    height: '100%',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
   },
 });

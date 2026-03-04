@@ -7,7 +7,6 @@ import React, { useMemo } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
   Text,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -27,7 +26,7 @@ import {
   LoadingSpinner,
 } from '@/components/shared';
 import { VisibilitySelector } from '@/components/wardrobe/VisibilitySelector';
-import { HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
+import { HeaderActionButton, HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layout';
 import { theme } from '@/styles';
 import { PERF_MODE } from '@/lib/perf/perfMode';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -133,11 +132,9 @@ export default function OutfitEditorScreen() {
         }
       />
 
-      <ScrollView
-        style={styles.content}
+      <KeyboardAwareScreen
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
       >
         <Input
           label="Title"
@@ -230,7 +227,7 @@ export default function OutfitEditorScreen() {
             />
           )}
         </View>
-      </ScrollView>
+      </KeyboardAwareScreen>
 
       <ItemPickerModal
         visible={actions.showItemPicker}
@@ -246,9 +243,6 @@ export default function OutfitEditorScreen() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: {
-    flex: 1,
-  },
   scrollContent: {
     padding: spacing.lg,
   },

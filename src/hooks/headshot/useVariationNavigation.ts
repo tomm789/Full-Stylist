@@ -13,6 +13,7 @@ export type UseVariationNavigationParams = {
   variations: HeadshotGenerationVariation[];
   hiddenVariationIds: string[];
   selfieImageId: string | null;
+  selfieImageUrl: string | null;
   previewVariationId: string | null;
   variationUrls: Map<string, string>;
   setVariationUrls: React.Dispatch<React.SetStateAction<Map<string, string>>>;
@@ -27,6 +28,7 @@ export function useVariationNavigation({
   variations,
   hiddenVariationIds,
   selfieImageId,
+  selfieImageUrl,
   previewVariationId,
   variationUrls,
   setVariationUrls,
@@ -118,6 +120,21 @@ export function useVariationNavigation({
     [selfieImageId, variations, setPreviewImageId, setPreviewImageUrl, setPreviewVariationId, setPreviewSource]
   );
 
+  /** Auto-select the most recent completed variation. */
+  const selectLatest = useCallback(() => {
+    if (completedVariations.length > 0) {
+      void setPreviewFromVariation(completedVariations[0]);
+    }
+  }, [completedVariations, setPreviewFromVariation]);
+
+  /** Reset preview back to the user's selfie. */
+  const clearPreview = useCallback(() => {
+    setPreviewImageId(selfieImageId);
+    setPreviewImageUrl(selfieImageUrl);
+    setPreviewVariationId(null);
+    setPreviewSource(selfieImageId ? 'selfie' : 'none');
+  }, [selfieImageId, selfieImageUrl, setPreviewImageId, setPreviewImageUrl, setPreviewVariationId, setPreviewSource]);
+
   return {
     completedVariations,
     previewGenerationIndex,
@@ -127,5 +144,7 @@ export function useVariationNavigation({
     setPreviewFromVariation,
     handleNavigateGeneration,
     handleSwipeIndexChange,
+    selectLatest,
+    clearPreview,
   };
 }

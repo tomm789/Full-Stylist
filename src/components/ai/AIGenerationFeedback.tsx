@@ -15,6 +15,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { submitAIFeedback, FEEDBACK_TAGS, type FeedbackTag } from '@/lib/ai-feedback';
 import { theme } from '@/styles';
@@ -31,20 +32,6 @@ interface AIGenerationFeedbackProps {
   /** When true, show only thumbs in bottom-right corner (feedback already given). */
   compact?: boolean;
 }
-
-const glass = {
-  backgroundColor: 'rgba(255, 255, 255, 0.25)',
-  borderWidth: 1,
-  borderColor: 'rgba(0, 0, 0, 0.12)',
-  ...(Platform.OS === 'web' ? { backdropFilter: 'blur(12px)' as const } : {}),
-};
-
-const glassDark = {
-  backgroundColor: 'rgba(0, 0, 0, 0.2)',
-  borderWidth: 1,
-  borderColor: 'rgba(0, 0, 0, 0.2)',
-  ...(Platform.OS === 'web' ? { backdropFilter: 'blur(12px)' as const } : {}),
-};
 
 export function AIGenerationFeedback({
   jobId,
@@ -102,21 +89,23 @@ export function AIGenerationFeedback({
     return (
       <>
         <View style={[styles.compactContainer, styles.pointerEventsBoxNone]}>
-          <View style={[styles.compactButtons, glassDark]}>
-            <TouchableOpacity
-              style={styles.compactThumb}
-              onPress={handleThumbsUp}
-              disabled={submitting}
-            >
-              <Ionicons name="thumbs-up" size={thumbSize} color={thumbIconColor} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.compactThumb}
-              onPress={() => setShowThumbsDownModal(true)}
-              disabled={submitting}
-            >
-              <Ionicons name="thumbs-down" size={thumbSize} color={thumbIconColor} />
-            </TouchableOpacity>
+          <View style={styles.compactButtonsBorder}>
+            <BlurView intensity={25} tint="dark" style={styles.compactButtons}>
+              <TouchableOpacity
+                style={styles.compactThumb}
+                onPress={handleThumbsUp}
+                disabled={submitting}
+              >
+                <Ionicons name="thumbs-up" size={thumbSize} color={thumbIconColor} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.compactThumb}
+                onPress={() => setShowThumbsDownModal(true)}
+                disabled={submitting}
+              >
+                <Ionicons name="thumbs-down" size={thumbSize} color={thumbIconColor} />
+              </TouchableOpacity>
+            </BlurView>
           </View>
         </View>
       </>
@@ -125,24 +114,34 @@ export function AIGenerationFeedback({
 
   return (
     <>
-      <View style={[styles.overlay, glass, styles.pointerEventsBoxNone]}>
-        <Text style={styles.prompt}>How does this look?</Text>
-        <View style={styles.buttons}>
-          <TouchableOpacity
-            style={[styles.thumbButton, glass]}
-            onPress={handleThumbsUp}
-            disabled={submitting}
-          >
-            <Ionicons name="thumbs-up" size={thumbSize} color={thumbIconColor} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.thumbButton, glass]}
-            onPress={() => setShowThumbsDownModal(true)}
-            disabled={submitting}
-          >
-            <Ionicons name="thumbs-down" size={thumbSize} color={thumbIconColor} />
-          </TouchableOpacity>
-        </View>
+      <View style={[styles.overlayBorder, styles.pointerEventsBoxNone]}>
+        <BlurView intensity={30} tint="light" style={styles.overlay}>
+          <Text style={styles.prompt}>How does this look?</Text>
+          <View style={styles.buttons}>
+            <View style={styles.thumbButtonBorder}>
+              <BlurView intensity={25} tint="light" style={styles.thumbButton}>
+                <TouchableOpacity
+                  style={styles.thumbButtonInner}
+                  onPress={handleThumbsUp}
+                  disabled={submitting}
+                >
+                  <Ionicons name="thumbs-up" size={thumbSize} color={thumbIconColor} />
+                </TouchableOpacity>
+              </BlurView>
+            </View>
+            <View style={styles.thumbButtonBorder}>
+              <BlurView intensity={25} tint="light" style={styles.thumbButton}>
+                <TouchableOpacity
+                  style={styles.thumbButtonInner}
+                  onPress={() => setShowThumbsDownModal(true)}
+                  disabled={submitting}
+                >
+                  <Ionicons name="thumbs-down" size={thumbSize} color={thumbIconColor} />
+                </TouchableOpacity>
+              </BlurView>
+            </View>
+          </View>
+        </BlurView>
       </View>
 
       <Modal
@@ -221,17 +220,23 @@ export function AIGenerationFeedback({
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  overlay: {
+  overlayBorder: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    borderRadius: 16,
+    margin: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  overlay: {
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 16,
-    margin: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   prompt: {
     fontSize: 14,
@@ -243,10 +248,20 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     gap: 20,
   },
-  thumbButton: {
+  thumbButtonBorder: {
     width: 52,
     height: 52,
     borderRadius: 26,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  thumbButton: {
+    flex: 1,
+    borderRadius: 26,
+    overflow: 'hidden',
+  },
+  thumbButtonInner: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -260,6 +275,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   pointerEventsBoxNone: {
     pointerEvents: 'box-none',
+  },
+  compactButtonsBorder: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   compactButtons: {
     flexDirection: 'row',

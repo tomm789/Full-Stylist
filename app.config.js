@@ -25,6 +25,7 @@ module.exports = {
         backgroundColor: '#ffffff',
       },
       package: 'com.fullstylist.app',
+      softwareKeyboardLayoutMode: 'adjustResize',
     },
     web: {
       favicon: './assets/favicon.png',

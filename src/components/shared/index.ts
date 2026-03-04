@@ -37,6 +37,9 @@ export { default as CreatorBar } from './CreatorBar';
 // Wardrobe
 export { default as WardrobeCategoryIcon } from './WardrobeCategoryIcon';
 
+// Glass
+export { default as GlassView } from './GlassView';
+
 // Generation
 export { default as GenerationThumbnailStrip } from './GenerationThumbnailStrip';
 export type { ThumbnailItem, GenerationThumbnailStripProps } from './GenerationThumbnailStrip';

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -28,13 +29,20 @@ export function FloatingTabBar(props: FloatingTabBarProps) {
         style={[
           floatingTabBarStyles.container,
           {
-            backgroundColor: colors.backgroundSecondary,
+            backgroundColor: 'transparent',
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.18)',
             zIndex: containerZIndex,
             ...shadows.lg,
             opacity: containerOpacity,
           },
         ]}
       >
+        <BlurView
+          intensity={40}
+          tint="light"
+          style={[StyleSheet.absoluteFillObject, { borderRadius: borderRadius.round, overflow: 'hidden' }]}
+        />
         <View style={[floatingTabBarStyles.inner, floatingTabBarStyles.menuInner]}>
           <View style={floatingTabBarStyles.menuActionsRow}>
             <TouchableOpacity
@@ -84,13 +92,20 @@ export function FloatingTabBar(props: FloatingTabBarProps) {
       style={[
         floatingTabBarStyles.container,
         {
-          backgroundColor: colors.backgroundSecondary,
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.18)',
           zIndex: containerZIndex,
           ...shadows.lg,
           opacity: containerOpacity,
         },
       ]}
     >
+      <BlurView
+        intensity={40}
+        tint="light"
+        style={[StyleSheet.absoluteFillObject, { borderRadius: borderRadius.round, overflow: 'hidden' }]}
+      />
       <View style={[floatingTabBarStyles.inner, floatingTabBarStyles.menuInner]}>
         <View style={floatingTabBarStyles.menuActionsRow}>
         {props.state.routes.map((route, index) => {
@@ -169,7 +184,6 @@ const floatingTabBarStyles = StyleSheet.create({
     left: spacing.lg,
     right: spacing.lg,
     borderRadius: borderRadius.round,
-    overflow: 'hidden',
   },
   inner: {
     flexDirection: 'row',
