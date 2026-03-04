@@ -21,7 +21,9 @@ export default function RootLayout() {
       navigator.serviceWorker
         .register('/service-worker.js')
         .then((registration) => {
-          console.log('[PWA] Service Worker registered:', registration.scope);
+                    if (__DEV__) {
+            console.log('[PWA] Service Worker registered:', registration.scope);
+          }
           
           // Check for updates periodically
           registration.addEventListener('updatefound', () => {
@@ -30,7 +32,9 @@ export default function RootLayout() {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                   // New service worker available, prompt user to refresh
-                  console.log('[PWA] New service worker available. Reload to update.');
+                                    if (__DEV__) {
+                    console.log('[PWA] New service worker available. Reload to update.');
+                  }
                   // Optionally show a toast/notification to user
                 }
               });
@@ -38,7 +42,9 @@ export default function RootLayout() {
           });
         })
         .catch((error) => {
-          console.warn('[PWA] Service Worker registration failed:', error);
+                    if (__DEV__) {
+            console.warn('[PWA] Service Worker registration failed:', error);
+          }
         });
     }
   }, []);
@@ -58,7 +64,9 @@ export default function RootLayout() {
           errorMessage.includes('FontFaceObserver') ||
           errorMessage.includes('6000ms timeout exceeded')
         ) {
-          console.warn('FontFaceObserver timeout (non-critical) - suppressed');
+                    if (__DEV__) {
+            console.warn('FontFaceObserver timeout (non-critical) - suppressed');
+          }
           if (event.preventDefault) {
             event.preventDefault();
           }

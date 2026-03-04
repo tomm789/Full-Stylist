@@ -54,15 +54,19 @@ export default function NewHeadshotScreen() {
 
     // Performance tracking: Start time (button click)
     const startTime = performance.now();
-    console.log('[PERF] Button clicked at:', startTime);
+        if (__DEV__) {
+      console.log('[PERF] Button clicked at:', startTime);
+    }
 
     const imageId = await generateHeadshot(user.id, hairStyle, makeupStyle);
 
     // Performance tracking: API response time
     const apiResponseTime = performance.now();
     const backendProcessingTime = apiResponseTime - startTime;
-    console.log('[PERF] API response received at:', apiResponseTime);
-    console.log('[PERF] Backend processing duration:', backendProcessingTime.toFixed(2), 'ms');
+        if (__DEV__) {
+      console.log('[PERF] API response received at:', apiResponseTime);
+      console.log('[PERF] Backend processing duration:', backendProcessingTime.toFixed(2), 'ms');
+    }
 
     if (imageId) {
       showSuccessToast('Headshot generated successfully!');

@@ -320,7 +320,9 @@ export function useWardrobeItemJobs({
 
     const { error: execError } = await triggerAIJobExecution(generateJob.id);
     if (execError && __DEV__) {
-      console.warn('[WardrobeItemGenerate] retry trigger error', execError);
+            if (__DEV__) {
+        console.warn('[WardrobeItemGenerate] retry trigger error', execError);
+      }
     }
   };
 

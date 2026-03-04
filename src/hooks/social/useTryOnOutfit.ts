@@ -231,14 +231,18 @@ export function useTryOnOutfit({ userId }: UseTryOnOutfitProps): UseTryOnOutfitR
         }
 
         const pollElapsedMs = Date.now() - tryOnStartMs;
-        console.info('[Social] Try-on poll succeeded', { jobId: renderJobId, outfitId: newOutfitId, elapsedMs: pollElapsedMs });
+                if (__DEV__) {
+          console.info('[Social] Try-on poll succeeded', { jobId: renderJobId, outfitId: newOutfitId, elapsedMs: pollElapsedMs });
+        }
 
         if (finalJob.status === 'succeeded') {
           setGeneratingOutfitId(null);
           setTryingOnOutfit(false);
           router.push(`/outfits/${newOutfitId}/view`);
           const navElapsedMs = Date.now() - tryOnStartMs;
-          console.info('[Social] Try-on navigation', { outfitId: newOutfitId, elapsedMs: navElapsedMs });
+                    if (__DEV__) {
+            console.info('[Social] Try-on navigation', { outfitId: newOutfitId, elapsedMs: navElapsedMs });
+          }
         } else if (finalJob.status === 'failed') {
           setGeneratingOutfitId(null);
           setTryingOnOutfit(false);

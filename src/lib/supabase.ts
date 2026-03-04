@@ -26,7 +26,9 @@ if (__DEV__) console.log('[Supabase Config] Loading environment variables...');
 if (__DEV__) console.log('[Supabase Config] EXPO_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✓ Set' : '✗ Missing');
 if (__DEV__) console.log('[Supabase Config] EXPO_PUBLICABASE_ANON_KEY:', supabaseAnonKey ? '✓ Set' : '✗ Missing');
 if (__DEV__ && supabaseAnonKey) {
-  console.log('[Supabase Config] Anon key preview:', supabaseAnonKey.substring(0, 20) + '...');
+    if (__DEV__) {
+    console.log('[Supabase Config] Anon key preview:', supabaseAnonKey.substring(0, 20) + '...');
+  }
 }
 
 if (!supabaseUrl || !supabaseAnonKey) {

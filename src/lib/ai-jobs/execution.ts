@@ -9,8 +9,10 @@ export async function triggerAIJobExecution(
   jobId: string
 ): Promise<{ error: any }> {
   const triggerStartMs = Date.now();
-  console.info('[AIJobs] triggerAIJobExecution start', { jobId });
-  console.debug('[outfit_render_timing] trigger_start', { ts: triggerStartMs, jobId });
+    if (__DEV__) {
+    console.info('[AIJobs] triggerAIJobExecution start', { jobId });
+    console.debug('[outfit_render_timing] trigger_start', { ts: triggerStartMs, jobId });
+  }
   debugIngest({ location: 'execution.ts:10', message: 'triggerAIJobExecution entry', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
   try {
@@ -87,7 +89,9 @@ export async function triggerAIJobExecution(
       });
 
       const ts = Date.now();
-      console.debug('[outfit_render_timing] trigger_timeout_or_response', { ts, jobId, status: response.status });
+            if (__DEV__) {
+        console.debug('[outfit_render_timing] trigger_timeout_or_response', { ts, jobId, status: response.status });
+      }
       debugIngest({ location: 'execution.ts:78', message: 'triggerAIJobExecution fetch response', data: { jobId, status: response.status, statusText: response.statusText, ok: response.ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
       if (!response.ok) {
@@ -108,10 +112,12 @@ export async function triggerAIJobExecution(
         debugIngest({ location: 'execution.ts:84', message: 'triggerAIJobExecution non-OK response', data: { jobId, status: response.status, responseText: responseText.substring(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
 
         if (isTimeoutResponse) {
-          console.debug(
-            '[AIJobs] Trigger timed out on server (expected in dev); job may still complete.',
-            { jobId }
-          );
+                    if (__DEV__) {
+            console.debug(
+              '[AIJobs] Trigger timed out on server (expected in dev); job may still complete.',
+              { jobId }
+            );
+          }
           return { error: null };
         }
 
@@ -136,8 +142,10 @@ export async function triggerAIJobExecution(
 
       if (isTimeoutOrAbort) {
         const ts = Date.now();
-        console.debug('[outfit_render_timing] trigger_timeout_or_response', { ts, jobId, status: 'timeout' });
-        console.debug('[AIJobs] Trigger timed out (expected); job runs on server, poll for status.', { jobId });
+                if (__DEV__) {
+          console.debug('[outfit_render_timing] trigger_timeout_or_response', { ts, jobId, status: 'timeout' });
+          console.debug('[AIJobs] Trigger timed out (expected); job runs on server, poll for status.', { jobId });
+        }
         debugIngest({
           location: 'execution.ts:91',
           message: 'triggerAIJobExecution fetch error',
@@ -169,11 +177,15 @@ export async function triggerAIJobExecution(
 
     debugIngest({ location: 'execution.ts:123', message: 'triggerAIJobExecution returning success', data: { jobId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' });
     const elapsedMs = Date.now() - triggerStartMs;
-    console.info('[AIJobs] triggerAIJobExecution end', { jobId, elapsedMs });
+        if (__DEV__) {
+      console.info('[AIJobs] triggerAIJobExecution end', { jobId, elapsedMs });
+    }
     return { error: null };
   } catch (error: any) {
     const elapsedMs = Date.now() - triggerStartMs;
-    console.info('[AIJobs] triggerAIJobExecution end (error)', { jobId, elapsedMs });
+        if (__DEV__) {
+      console.info('[AIJobs] triggerAIJobExecution end (error)', { jobId, elapsedMs });
+    }
     return { error };
   }
 }

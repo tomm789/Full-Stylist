@@ -162,12 +162,14 @@ export function useOutfitGeneration({
         setGeneratedOutfitId(outfitId);
 
         if (PERF_MODE) {
-          console.debug('[outfit_render_timing] perf_mode_enabled', {
-            ts: Date.now(),
-            traceId: timeline.traceId,
-            outfitId,
-            where: 'generation',
-          });
+                    if (__DEV__) {
+            console.debug('[outfit_render_timing] perf_mode_enabled', {
+              ts: Date.now(),
+              traceId: timeline.traceId,
+              outfitId,
+              where: 'generation',
+            });
+          }
         }
 
         setProgress({ phase: 'preparing', message: 'Preparing generation...', progress: 20 });
@@ -459,11 +461,13 @@ export function useOutfitGeneration({
         const jobStatusSucceededAt = Date.now();
         timeline.mark('poll_success', { resultKeys });
         timeline.mark('job_status_succeeded_at', { ts: jobStatusSucceededAt });
-        console.debug('[outfit_render_timing] job_status_succeeded_at', {
-          ts: jobStatusSucceededAt,
-          traceId: timeline.traceId,
-          outfitId,
-        });
+                if (__DEV__) {
+          console.debug('[outfit_render_timing] job_status_succeeded_at', {
+            ts: jobStatusSucceededAt,
+            traceId: timeline.traceId,
+            outfitId,
+          });
+        }
 
         const result = completedJob.result || {};
         if (base64Result) {
@@ -477,18 +481,22 @@ export function useOutfitGeneration({
             (completedJob as { feedback_at?: string | null }).feedback_at ?? null
           );
           timeline.mark('cover_set_base64_at', { ts: coverSetAt });
-          console.debug('[outfit_render_timing] cover_set_base64_at', {
-            ts: coverSetAt,
-            traceId: timeline.traceId,
-            outfitId,
-            from: 'generation',
-          });
+                    if (__DEV__) {
+            console.debug('[outfit_render_timing] cover_set_base64_at', {
+              ts: coverSetAt,
+              traceId: timeline.traceId,
+              outfitId,
+              from: 'generation',
+            });
+          }
         } else {
-          console.debug('[outfit_render_timing] base64_result missing', {
-            traceId: timeline.traceId,
-            outfitId,
-            resultKeys,
-          });
+                    if (__DEV__) {
+            console.debug('[outfit_render_timing] base64_result missing', {
+              traceId: timeline.traceId,
+              outfitId,
+              resultKeys,
+            });
+          }
         }
 
         // ── Session: mark variation complete ────────────────────────────────────

@@ -57,13 +57,15 @@ export function setInitialItemData(
   evictStaleEntries();
   
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    console.debug('[wardrobe_item_render_timing] setInitialItemData called', {
-      wardrobeItemId,
-      jobId,
-      traceId,
-      jobSucceededAt,
-      cacheKey,
-    });
+        if (__DEV__) {
+      console.debug('[wardrobe_item_render_timing] setInitialItemData called', {
+        wardrobeItemId,
+        jobId,
+        traceId,
+        jobSucceededAt,
+        cacheKey,
+      });
+    }
   }
 }
 
@@ -91,7 +93,9 @@ export function getInitialItemData(
   
   if (!cacheKey) {
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      console.debug('[wardrobe_item_render_timing] cache_miss', { wardrobeItemId, jobId, traceId });
+            if (__DEV__) {
+        console.debug('[wardrobe_item_render_timing] cache_miss', { wardrobeItemId, jobId, traceId });
+      }
     }
     return null;
   }
@@ -99,7 +103,9 @@ export function getInitialItemData(
   const entry = cache.get(cacheKey);
   if (!entry) {
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      console.debug('[wardrobe_item_render_timing] cache_miss', { wardrobeItemId, jobId, traceId, cacheKey });
+            if (__DEV__) {
+        console.debug('[wardrobe_item_render_timing] cache_miss', { wardrobeItemId, jobId, traceId, cacheKey });
+      }
     }
     return null;
   }
@@ -107,22 +113,26 @@ export function getInitialItemData(
   // Check if entry matches navigation context (same jobId or traceId)
   if (jobId && entry.jobId !== jobId) {
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      console.debug('[wardrobe_item_render_timing] cache_mismatch (jobId)', {
-        wardrobeItemId,
-        requestedJobId: jobId,
-        cachedJobId: entry.jobId,
-      });
+            if (__DEV__) {
+        console.debug('[wardrobe_item_render_timing] cache_mismatch (jobId)', {
+          wardrobeItemId,
+          requestedJobId: jobId,
+          cachedJobId: entry.jobId,
+        });
+      }
     }
     return null;
   }
   
   if (traceId && entry.traceId && entry.traceId !== traceId) {
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      console.debug('[wardrobe_item_render_timing] cache_mismatch (traceId)', {
-        wardrobeItemId,
-        requestedTraceId: traceId,
-        cachedTraceId: entry.traceId,
-      });
+            if (__DEV__) {
+        console.debug('[wardrobe_item_render_timing] cache_mismatch (traceId)', {
+          wardrobeItemId,
+          requestedTraceId: traceId,
+          cachedTraceId: entry.traceId,
+        });
+      }
     }
     return null;
   }
@@ -131,13 +141,15 @@ export function getInitialItemData(
   cache.delete(cacheKey);
   
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    console.debug('[wardrobe_item_render_timing] cache_hit_at', {
-      wardrobeItemId,
-      jobId: entry.jobId,
-      traceId: entry.traceId,
-      cacheKey,
-      jobSucceededAt: entry.jobSucceededAt,
-    });
+        if (__DEV__) {
+      console.debug('[wardrobe_item_render_timing] cache_hit_at', {
+        wardrobeItemId,
+        jobId: entry.jobId,
+        traceId: entry.traceId,
+        cacheKey,
+        jobSucceededAt: entry.jobSucceededAt,
+      });
+    }
   }
   
   return entry;
@@ -147,7 +159,9 @@ export function getInitialItemData(
 export function setPendingItemJob(wardrobeItemId: string, jobId: string): void {
   pendingJobs.set(wardrobeItemId, jobId);
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    console.debug('[wardrobe_item_render_timing] setPendingItemJob', { wardrobeItemId, jobId });
+        if (__DEV__) {
+      console.debug('[wardrobe_item_render_timing] setPendingItemJob', { wardrobeItemId, jobId });
+    }
   }
 }
 

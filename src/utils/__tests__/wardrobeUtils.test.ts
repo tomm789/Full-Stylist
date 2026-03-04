@@ -205,7 +205,7 @@ describe('wardrobeUtils', () => {
   });
 
   describe('parseJsonField', () => {
-    it('returns string values as-is', () => {
+    it('returns string values as-is (Supabase JSONB strings are already parsed)', () => {
       const value = '{"foo":"bar"}';
       expect(parseJsonField(value)).toBe(value);
     });

@@ -42,12 +42,14 @@ export function logJobPayloadKeysIfDebug(job: AIJob): void {
   if (flag !== true) return;
   const inputKeys = job.input && typeof job.input === 'object' ? Object.keys(job.input) : [];
   const resultKeys = job.result && typeof job.result === 'object' ? Object.keys(job.result) : [];
-  console.debug('[feedback_overlay] job payload keys', {
-    job_type: job.job_type,
-    job_id: job.id,
-    input_keys: inputKeys,
-    result_keys: resultKeys,
-  });
+    if (__DEV__) {
+    console.debug('[feedback_overlay] job payload keys', {
+      job_type: job.job_type,
+      job_id: job.id,
+      input_keys: inputKeys,
+      result_keys: resultKeys,
+    });
+  }
 }
 
 /** 30-day window for "recent succeeded job" queries. */

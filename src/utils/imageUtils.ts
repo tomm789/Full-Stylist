@@ -74,6 +74,7 @@ export async function getImageDimensions(
  * Validate image file type
  */
 export function isValidImageType(type: string): boolean {
+  if (!type || typeof type !== 'string') return false;
   const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
   return validTypes.includes(type.toLowerCase());
 }
@@ -104,18 +105,20 @@ export function getResponsiveImageDimensions(
 ): { width: number; height: number } {
   const aspectRatio = getAspectRatio(originalWidth, originalHeight);
 
-  if (maxHeight) {
-    // Fit within both max width and height
-    const widthBasedHeight = maxWidth / aspectRatio;
-    const heightBasedWidth = maxHeight * aspectRatio;
+  let width = originalWidth;
+  let height = originalHeight;
 
-    if (widthBasedHeight <= maxHeight) {
-      return { width: maxWidth, height: widthBasedHeight };
-    } else {
-      return { width: heightBasedWidth, height: maxHeight };
-    }
-  } else {
-    // Fit within max width only
-    return { width: maxWidth, height: maxWidth / aspectRatio };
+  // Scale down to fit maxWidth (never scale up)
+  if (width > maxWidth) {
+    width = maxWidth;
+    height = width / aspectRatio;
   }
+
+  // Scale down further to fit maxHeight if provided (never scale up)
+  if (maxHeight && height > maxHeight) {
+    height = maxHeight;
+    width = height * aspectRatio;
+  }
+
+  return { width, height };
 }

@@ -98,12 +98,14 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
       if (job.status === 'succeeded' && pendingItemId) {
         const jobStatusSucceededAt = Date.now();
         if (typeof __DEV__ !== 'undefined' && __DEV__) {
-          console.debug('[wardrobe_item_render_timing] job_status_succeeded_at', {
-            ts: jobStatusSucceededAt,
-            jobId: job.id,
-            jobType: job.job_type,
-            itemId: pendingItemId,
-          });
+                    if (__DEV__) {
+            console.debug('[wardrobe_item_render_timing] job_status_succeeded_at', {
+              ts: jobStatusSucceededAt,
+              jobId: job.id,
+              jobType: job.job_type,
+              itemId: pendingItemId,
+            });
+          }
         }
 
         // Primary path: wardrobe_item_generate (navigation already done; cache update for back-navigation)
@@ -175,19 +177,23 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
                 title,
                 description
               );
-              console.debug('[wardrobe_item_render_timing] cache_set_at', {
-                ts: cacheSetAt,
-                itemId: pendingItemId,
-                jobId: job.id,
-                hasTitle: !!title,
-                hasDescription: !!description,
-              });
+                            if (__DEV__) {
+                console.debug('[wardrobe_item_render_timing] cache_set_at', {
+                  ts: cacheSetAt,
+                  itemId: pendingItemId,
+                  jobId: job.id,
+                  hasTitle: !!title,
+                  hasDescription: !!description,
+                });
+              }
             } else {
-              console.debug('[wardrobe_item_render_timing] base64_result missing', {
-                itemId: pendingItemId,
-                jobId: job.id,
-                resultKeys: productShotResult ? Object.keys(productShotResult) : [],
-              });
+                            if (__DEV__) {
+                console.debug('[wardrobe_item_render_timing] base64_result missing', {
+                  itemId: pendingItemId,
+                  jobId: job.id,
+                  resultKeys: productShotResult ? Object.keys(productShotResult) : [],
+                });
+              }
             }
 
             // Product shot succeeded - update UI immediately

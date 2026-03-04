@@ -190,7 +190,9 @@ export async function waitForAIJobCompletion(
   logPrefix?: string
 ): Promise<QueryResult<AIJob>> {
   const waitStartMs = Date.now();
-  console.info('[AIJobs] waitForAIJobCompletion start', { jobId, maxAttempts, initialIntervalMs });
+    if (__DEV__) {
+    console.info('[AIJobs] waitForAIJobCompletion start', { jobId, maxAttempts, initialIntervalMs });
+  }
   debugIngest({ location: 'polling.ts:114', message: 'waitForAIJobCompletion entry', data: { jobId, maxAttempts, initialIntervalMs, logPrefix }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
 
   const useFixedInterval = initialIntervalMs <= 2000;
@@ -203,7 +205,9 @@ export async function waitForAIJobCompletion(
 
     if (completedJob) {
       const elapsedMs = Date.now() - waitStartMs;
-      console.info('[AIJobs] waitForAIJobCompletion end', { jobId, status: completedJob.status, elapsedMs });
+            if (__DEV__) {
+        console.info('[AIJobs] waitForAIJobCompletion end', { jobId, status: completedJob.status, elapsedMs });
+      }
       return { data: completedJob, error: null };
     }
 
@@ -214,13 +218,17 @@ export async function waitForAIJobCompletion(
       const { data: finalCheck } = await getAIJob(jobId);
       if (finalCheck && (finalCheck.status === 'succeeded' || finalCheck.status === 'failed')) {
         const elapsedMs = Date.now() - waitStartMs;
-        console.info('[AIJobs] waitForAIJobCompletion end (final check)', { jobId, status: finalCheck.status, elapsedMs });
+                if (__DEV__) {
+          console.info('[AIJobs] waitForAIJobCompletion end (final check)', { jobId, status: finalCheck.status, elapsedMs });
+        }
         return { data: finalCheck, error: null };
       }
     }
 
     const elapsedMs = Date.now() - waitStartMs;
-    console.info('[AIJobs] waitForAIJobCompletion end (error)', { jobId, errorMessage: error?.message, elapsedMs });
+        if (__DEV__) {
+      console.info('[AIJobs] waitForAIJobCompletion end (error)', { jobId, errorMessage: error?.message, elapsedMs });
+    }
     return { data: null, error: error || new Error('Polling timeout') };
   }
 
@@ -236,7 +244,9 @@ export async function waitForAIJobCompletion(
 
     if (completedJob) {
       const elapsedMs = Date.now() - waitStartMs;
-      console.info('[AIJobs] waitForAIJobCompletion end', { jobId, status: completedJob.status, elapsedMs });
+            if (__DEV__) {
+        console.info('[AIJobs] waitForAIJobCompletion end', { jobId, status: completedJob.status, elapsedMs });
+      }
       return { data: completedJob, error: null };
     }
 
@@ -250,7 +260,9 @@ export async function waitForAIJobCompletion(
     }
 
     const elapsedMs = Date.now() - waitStartMs;
-    console.info('[AIJobs] waitForAIJobCompletion end (error)', { jobId, errorMessage: error?.message, elapsedMs });
+        if (__DEV__) {
+      console.info('[AIJobs] waitForAIJobCompletion end (error)', { jobId, errorMessage: error?.message, elapsedMs });
+    }
     debugIngest({ location: 'polling.ts:139', message: 'waitForAIJobCompletion returning error', data: { jobId, errorMessage: error?.message }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' });
     return { data: null, error };
   }

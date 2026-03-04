@@ -121,7 +121,9 @@ export function useOutfitView({
           resultSize: typeof result === 'object' ? JSON.stringify(result).length : 0,
         });
         timeline?.mark('job_status_succeeded_at', { ts: jobStatusSucceededAt });
-        console.debug('[outfit_render_timing] job_status_succeeded_at', { ts: jobStatusSucceededAt, outfitId, from: 'view_poll' });
+                if (__DEV__) {
+          console.debug('[outfit_render_timing] job_status_succeeded_at', { ts: jobStatusSucceededAt, outfitId, from: 'view_poll' });
+        }
 
         setRenderJobId(null);
         setIsGenerating(false);
@@ -134,9 +136,13 @@ export function useOutfitView({
           const coverSetAt = Date.now();
           setCoverImageDataUri(toDataUri(result.base64_result, result.mime_type));
           timeline?.mark('cover_set_base64_at', { ts: coverSetAt });
-          console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, outfitId, from: 'view_poll' });
+                    if (__DEV__) {
+            console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, outfitId, from: 'view_poll' });
+          }
         } else {
-          console.debug('[outfit_render_timing] base64_result missing (view poll)', { outfitId, resultKeys });
+                    if (__DEV__) {
+            console.debug('[outfit_render_timing] base64_result missing (view poll)', { outfitId, resultKeys });
+          }
           const storageKey =
             result.storage_key ?? result.renders?.[0]?.storage_key;
           if (storageKey) {
@@ -214,7 +220,9 @@ export function useOutfitView({
       setLastSucceededJobFeedbackAt(null);
 
       if (PERF_MODE) {
-        console.debug('[outfit_render_timing] perf_mode_enabled', { ts: Date.now(), outfitId, where: 'view', traceId: renderTraceIdParam ?? undefined });
+                if (__DEV__) {
+          console.debug('[outfit_render_timing] perf_mode_enabled', { ts: Date.now(), outfitId, where: 'view', traceId: renderTraceIdParam ?? undefined });
+        }
       }
 
       try {
@@ -226,7 +234,9 @@ export function useOutfitView({
           setJobSucceededAt(cached.jobSucceededAt);
           if (cached.jobId) setLastSucceededJobId(cached.jobId);
           if (cached.feedbackAt !== undefined) setLastSucceededJobFeedbackAt(cached.feedbackAt);
-          console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, outfitId, from: 'cache' });
+                    if (__DEV__) {
+            console.debug('[outfit_render_timing] cover_set_base64_at', { ts: coverSetAt, outfitId, from: 'cache' });
+          }
         }
 
         const { data, error } = await getOutfit(outfitId);

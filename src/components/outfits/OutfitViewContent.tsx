@@ -145,7 +145,9 @@ export function OutfitViewContent({
       ? Math.round(ts - jobSucceededAt)
       : undefined;
     timeline?.mark('image_load_start', { uriType, msSinceJobSucceeded });
-    console.debug('[outfit_render_timing] image_load_start_at', { ts, uriType, msSinceJobSucceeded });
+        if (__DEV__) {
+      console.debug('[outfit_render_timing] image_load_start_at', { ts, uriType, msSinceJobSucceeded });
+    }
   }, [timeline, uriType, jobSucceededAt]);
 
   const handleImageLoad = useCallback(() => {
@@ -154,7 +156,9 @@ export function OutfitViewContent({
       ? Math.round(ts - jobSucceededAt)
       : undefined;
     timeline?.mark('image_load_end', { uriType, msSinceJobSucceeded });
-    console.debug('[outfit_render_timing] image_load_end_at', { ts, uriType, msSinceJobSucceeded });
+        if (__DEV__) {
+      console.debug('[outfit_render_timing] image_load_end_at', { ts, uriType, msSinceJobSucceeded });
+    }
     if (!onCoverImageLoad) return;
     if (didFireCoverLoadRef.current) return;
     didFireCoverLoadRef.current = true;
@@ -165,7 +169,9 @@ export function OutfitViewContent({
     const retryCount = imageRetryCountRef.current;
     const delay = IMAGE_RETRY_DELAYS[retryCount] ?? 2000;
     timeline?.mark('image_load_error', { uriType, retryCount, delay });
-    console.debug('[outfit_render_timing] image_load_error', { uriType, retryCount, delay });
+        if (__DEV__) {
+      console.debug('[outfit_render_timing] image_load_error', { uriType, retryCount, delay });
+    }
     if (retryCount >= MAX_IMAGE_RETRIES) {
       if (onCoverImageErrorAfterRetries && !didFireErrorFallbackRef.current) {
         didFireErrorFallbackRef.current = true;

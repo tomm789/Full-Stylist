@@ -41,10 +41,12 @@ export function useDescriptionPolling({ onSuccess }: UseDescriptionPollingOption
     startedAtRef.current = null;
     outfitIdRef.current = null;
     if (outfitId) {
-      console.debug('[outfit_render_timing] description_poll_stopped', {
-        outfitId,
-        reason: 'cleanup',
-      });
+            if (__DEV__) {
+        console.debug('[outfit_render_timing] description_poll_stopped', {
+          outfitId,
+          reason: 'cleanup',
+        });
+      }
     }
   }, []);
 
@@ -56,7 +58,9 @@ export function useDescriptionPolling({ onSuccess }: UseDescriptionPollingOption
 
     startedAtRef.current = Date.now();
     outfitIdRef.current = outfitId;
-    console.debug('[outfit_render_timing] description_poll_started', { outfitId });
+        if (__DEV__) {
+      console.debug('[outfit_render_timing] description_poll_started', { outfitId });
+    }
 
     intervalRef.current = setInterval(async () => {
       const started = startedAtRef.current;
@@ -67,10 +71,12 @@ export function useDescriptionPolling({ onSuccess }: UseDescriptionPollingOption
         intervalRef.current = null;
         startedAtRef.current = null;
         outfitIdRef.current = null;
-        console.debug('[outfit_render_timing] description_poll_timeout', {
-          outfitId,
-          elapsedMs: elapsed,
-        });
+                if (__DEV__) {
+          console.debug('[outfit_render_timing] description_poll_timeout', {
+            outfitId,
+            elapsedMs: elapsed,
+          });
+        }
         return;
       }
 
@@ -86,10 +92,12 @@ export function useDescriptionPolling({ onSuccess }: UseDescriptionPollingOption
           intervalRef.current = null;
           startedAtRef.current = null;
           outfitIdRef.current = null;
-          console.debug('[outfit_render_timing] description_poll_stopped', {
-            outfitId,
-            reason: 'success',
-          });
+                    if (__DEV__) {
+            console.debug('[outfit_render_timing] description_poll_stopped', {
+              outfitId,
+              reason: 'success',
+            });
+          }
 
           const description: OutfitDescription = {
             description: data.description ?? '',

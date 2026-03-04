@@ -23,7 +23,9 @@ export function setInitialCoverDataUri(
 ): void {
   cache.set(outfitId, { dataUri, jobSucceededAt, jobId, feedbackAt });
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    console.debug('[outfit_render_timing] setInitialCoverDataUri called', { outfitId, jobSucceededAt, jobId });
+        if (__DEV__) {
+      console.debug('[outfit_render_timing] setInitialCoverDataUri called', { outfitId, jobSucceededAt, jobId });
+    }
   }
 }
 

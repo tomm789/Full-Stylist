@@ -32,7 +32,9 @@ export default function Index() {
         // If we have access_token in hash, Supabase client will auto-process it
         // We just need to trigger getSession() to let it process
         if (hashAccessToken && hashType) {
-          console.log('[Index] Supabase redirect detected in URL hash, type:', hashType);
+                    if (__DEV__) {
+            console.log('[Index] Supabase redirect detected in URL hash, type:', hashType);
+          }
           setProcessingToken(true);
           
           try {
@@ -45,12 +47,16 @@ export default function Index() {
               console.error('[Index] Error getting session from hash:', sessionError);
               setError(sessionError.message || 'Failed to process magic link');
             } else if (sessionData.session) {
-              console.log('[Index] Session created from magic link redirect');
+                            if (__DEV__) {
+                console.log('[Index] Session created from magic link redirect');
+              }
               // Clear URL hash
               window.history.replaceState({}, '', window.location.pathname);
               // Session will trigger auth state change, navigation happens in next effect
             } else {
-              console.log('[Index] No session found after processing hash');
+                            if (__DEV__) {
+                console.log('[Index] No session found after processing hash');
+              }
             }
           } catch (err: any) {
             console.error('[Index] Exception processing hash:', err);
@@ -67,7 +73,9 @@ export default function Index() {
       const finalType = type as 'magiclink' | 'email' | null;
       
       if (finalToken && finalType && (finalType === 'magiclink' || finalType === 'email')) {
-        console.log('[Index] Token detected in URL params, type:', finalType);
+                if (__DEV__) {
+          console.log('[Index] Token detected in URL params, type:', finalType);
+        }
         setProcessingToken(true);
         
         try {
@@ -81,14 +89,18 @@ export default function Index() {
               window.history.replaceState({}, '', window.location.pathname);
             }
           } else if (verifiedSession) {
-            console.log('[Index] Token verified successfully, session created');
+                        if (__DEV__) {
+              console.log('[Index] Token verified successfully, session created');
+            }
             // Clear URL parameters
             if (typeof window !== 'undefined') {
               window.history.replaceState({}, '', window.location.pathname);
             }
             // Session will be updated via auth state change, navigation will happen in next effect
           } else {
-            console.log('[Index] Token verified but no session returned');
+                        if (__DEV__) {
+              console.log('[Index] Token verified but no session returned');
+            }
           }
         } catch (err: any) {
           console.error('[Index] Exception processing token:', err);
@@ -107,37 +119,51 @@ export default function Index() {
 
   useEffect(() => {
     if (loading || processingToken) {
-      console.log('[Index] Auth still loading or processing token...');
+            if (__DEV__) {
+        console.log('[Index] Auth still loading or processing token...');
+      }
       return;
     }
 
     const checkProfile = async () => {
       try {
         
-        console.log('[Index] Checking authentication state...');
+                if (__DEV__) {
+          console.log('[Index] Checking authentication state...');
+        }
         
         if (!session) {
-          console.log('[Index] No session found, redirecting to login');
+                    if (__DEV__) {
+            console.log('[Index] No session found, redirecting to login');
+          }
           // Not authenticated - redirect to auth
           router.replace('/auth/login');
           return;
         }
 
-        console.log('[Index] Session found, checking profile for user:', session.user.id);
+                if (__DEV__) {
+          console.log('[Index] Session found, checking profile for user:', session.user.id);
+        }
 
         // Check if profile is complete
         const profileComplete = await isUserProfileComplete(session.user.id);
         
-        console.log('[Index] Profile complete check result:', profileComplete);
+                if (__DEV__) {
+          console.log('[Index] Profile complete check result:', profileComplete);
+        }
         
         if (!profileComplete) {
-          console.log('[Index] Profile incomplete, redirecting to onboarding');
+                    if (__DEV__) {
+            console.log('[Index] Profile incomplete, redirecting to onboarding');
+          }
           // Profile incomplete - redirect to onboarding
           router.replace('/onboarding');
           return;
         }
 
-        console.log('[Index] Profile complete, redirecting to main app');
+                if (__DEV__) {
+          console.log('[Index] Profile complete, redirecting to main app');
+        }
         // Profile complete - redirect to main app
         router.replace('/(tabs)/wardrobe');
         
@@ -147,7 +173,9 @@ export default function Index() {
         
         // If there's an error, still try to navigate to onboarding
         // as the user might just need to complete their profile
-        console.log('[Index] Error occurred, redirecting to onboarding as fallback');
+                if (__DEV__) {
+          console.log('[Index] Error occurred, redirecting to onboarding as fallback');
+        }
         try {
           router.replace('/onboarding');
         } catch (navError) {

@@ -193,16 +193,20 @@ export default function BodyshotDetailScreen() {
                   const transferAndRender = renderCompleteTime - apiResponseTime;
                   
                   // Log performance breakdown table
-                  console.log('\n╔════════════════════════════════════════════════════════╗');
-                  console.log('║         AI IMAGE GENERATION PERFORMANCE BREAKDOWN      ║');
-                  console.log('╠════════════════════════════════════════════════════════╣');
-                  console.log(`║ Total User Wait:        ${totalUserWait.toFixed(2).padStart(10)} ms ║`);
-                  console.log(`║ Backend Processing:     ${backendProcessing.toFixed(2).padStart(10)} ms ║`);
-                  console.log(`║ Transfer & Render:      ${transferAndRender.toFixed(2).padStart(10)} ms ║`);
-                  console.log('╚════════════════════════════════════════════════════════╝');
-                  console.log(`\n[PERF] Transfer & Render is the bottleneck: ${transferAndRender.toFixed(2)}ms\n`);
+                                    if (__DEV__) {
+                    console.log('\n╔════════════════════════════════════════════════════════╗');
+                    console.log('║         AI IMAGE GENERATION PERFORMANCE BREAKDOWN      ║');
+                    console.log('╠════════════════════════════════════════════════════════╣');
+                    console.log(`║ Total User Wait:        ${totalUserWait.toFixed(2).padStart(10)} ms ║`);
+                    console.log(`║ Backend Processing:     ${backendProcessing.toFixed(2).padStart(10)} ms ║`);
+                    console.log(`║ Transfer & Render:      ${transferAndRender.toFixed(2).padStart(10)} ms ║`);
+                    console.log('╚════════════════════════════════════════════════════════╝');
+                    console.log(`\n[PERF] Transfer & Render is the bottleneck: ${transferAndRender.toFixed(2)}ms\n`);
+                  }
                 } else {
-                  console.log('[PERF] Image loaded at:', renderCompleteTime);
+                                    if (__DEV__) {
+                    console.log('[PERF] Image loaded at:', renderCompleteTime);
+                  }
                 }
               }}
             />

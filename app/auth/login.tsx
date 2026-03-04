@@ -32,7 +32,9 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    console.log('[Login] Attempting sign in with email:', email, 'Magic link:', useMagicLink);
+        if (__DEV__) {
+      console.log('[Login] Attempting sign in with email:', email, 'Magic link:', useMagicLink);
+    }
 
     try {
       const { error } = await signIn(email, useMagicLink ? undefined : password);
@@ -53,11 +55,15 @@ export default function LoginScreen() {
         
         showErrorToast(userMessage);
       } else {
-        console.log('[Login] Sign in successful');
+                if (__DEV__) {
+          console.log('[Login] Sign in successful');
+        }
         if (useMagicLink) {
           showSuccessToast('We sent you a magic link. Check your email to sign in.');
         } else {
-          console.log('[Login] Password sign in successful, navigating to index for profile check');
+                    if (__DEV__) {
+            console.log('[Login] Password sign in successful, navigating to index for profile check');
+          }
           // Navigate to index route which will check profile and redirect appropriately
           router.replace('/');
         }

@@ -117,7 +117,9 @@ export function useRenderPipeline({
         const gridResult = await generateAndUploadGrid(imageUrls, user.id);
         stackedImageId = gridResult?.storagePath ?? null;
         if (stackedImageId && __DEV__) {
-          console.log(`[OutfitEditor] Grid uploaded successfully: ${stackedImageId}`);
+                    if (__DEV__) {
+            console.log(`[OutfitEditor] Grid uploaded successfully: ${stackedImageId}`);
+          }
         }
       }
 
@@ -211,12 +213,14 @@ export function useRenderPipeline({
       const result = completedJob.result ?? {};
       const jobStatusSucceededAt = Date.now();
       timeline.mark('job_status_succeeded_at', { ts: jobStatusSucceededAt });
-      console.debug('[outfit_render_timing] job_status_succeeded_at', {
-        ts: jobStatusSucceededAt,
-        outfitId: savedOutfitId,
-        from: 'editor',
-        traceId: timeline.traceId,
-      });
+            if (__DEV__) {
+        console.debug('[outfit_render_timing] job_status_succeeded_at', {
+          ts: jobStatusSucceededAt,
+          outfitId: savedOutfitId,
+          from: 'editor',
+          traceId: timeline.traceId,
+        });
+      }
 
       if (base64Result) {
         const dataUri = toDataUri(base64Result, result.mime_type);
@@ -227,23 +231,27 @@ export function useRenderPipeline({
           completedJob.id,
           (completedJob as { feedback_at?: string | null }).feedback_at ?? null
         );
-        console.debug('[outfit_render_timing] cover_set_base64_at', {
-          ts: Date.now(),
-          outfitId: savedOutfitId,
-          from: 'editor',
-          traceId: timeline.traceId,
-        });
+                if (__DEV__) {
+          console.debug('[outfit_render_timing] cover_set_base64_at', {
+            ts: Date.now(),
+            outfitId: savedOutfitId,
+            from: 'editor',
+            traceId: timeline.traceId,
+          });
+        }
       }
 
       setRendering(false);
       const query = timeline.traceId ? `?renderTraceId=${encodeURIComponent(timeline.traceId)}` : '';
       router.push(`/outfits/${savedOutfitId}/view${query}`);
       timeline.mark('navigate_to_view');
-      console.debug('[outfit_render_timing] navigate_to_view_at', {
-        ts: Date.now(),
-        outfitId: savedOutfitId,
-        traceId: timeline.traceId,
-      });
+            if (__DEV__) {
+        console.debug('[outfit_render_timing] navigate_to_view_at', {
+          ts: Date.now(),
+          outfitId: savedOutfitId,
+          traceId: timeline.traceId,
+        });
+      }
     } catch (error: any) {
       console.error('Render error:', error);
       stopAll();

@@ -18,7 +18,9 @@ const PERF_LOGS_ENABLED =
 function log(traceId: string, msSinceStart: number, name: string, extra?: Record<string, unknown>) {
   if (!PERF_LOGS_ENABLED) return;
   const payload = extra ? { ...extra } : {};
-  console.debug(`[perf] ${traceId} +${msSinceStart}ms ${name}`, Object.keys(payload).length ? payload : '');
+    if (__DEV__) {
+    console.debug(`[perf] ${traceId} +${msSinceStart}ms ${name}`, Object.keys(payload).length ? payload : '');
+  }
 }
 
 export interface Timeline {
@@ -37,7 +39,9 @@ export function startTimeline(label?: string): Timeline {
   const startMs = Date.now();
   const traceId = `${startMs}-${Math.random().toString(36).slice(2, 9)}`;
   if (PERF_LOGS_ENABLED) {
-    console.debug(`[perf] ${traceId} 0ms start`, label ? { label } : '');
+        if (__DEV__) {
+      console.debug(`[perf] ${traceId} 0ms start`, label ? { label } : '');
+    }
   }
 
   return {
@@ -61,7 +65,9 @@ export function startTimeline(label?: string): Timeline {
 export function continueTimeline(traceId: string): Timeline {
   const startMs = Date.now();
   if (PERF_LOGS_ENABLED) {
-    console.debug(`[perf] ${traceId} 0ms continue`);
+        if (__DEV__) {
+      console.debug(`[perf] ${traceId} 0ms continue`);
+    }
   }
   return {
     traceId,

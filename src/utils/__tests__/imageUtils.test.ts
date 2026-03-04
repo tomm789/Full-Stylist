@@ -21,8 +21,8 @@ describe('imageUtils pure helpers', () => {
       expect(isValidImageType('')).toBe(false);
     });
 
-    it('throws for undefined input', () => {
-      expect(() => isValidImageType(undefined as any)).toThrow();
+    it('returns false for undefined input', () => {
+      expect(isValidImageType(undefined as any)).toBe(false);
     });
   });
 
@@ -61,24 +61,32 @@ describe('imageUtils pure helpers', () => {
   });
 
   describe('getResponsiveImageDimensions', () => {
-    it('fits to max width when only max width is provided', () => {
+    it('does not upscale images smaller than max', () => {
       expect(getResponsiveImageDimensions(500, 250, 1000)).toEqual({
-        width: 1000,
-        height: 500,
+        width: 500,
+        height: 250,
       });
     });
 
-    it('scales down wider images while preserving ratio', () => {
+    it('scales down images larger than max width', () => {
       expect(getResponsiveImageDimensions(2000, 1000, 1000)).toEqual({
         width: 1000,
         height: 500,
       });
     });
 
-    it('scales down taller images within width and height constraints', () => {
-      const result = getResponsiveImageDimensions(1000, 2000, 800, 600);
-      expect(result.width).toBeCloseTo(300);
-      expect(result.height).toBe(600);
+    it('scales down to fit both maxWidth and maxHeight', () => {
+      expect(getResponsiveImageDimensions(1000, 2000, 800, 600)).toEqual({
+        width: 300,
+        height: 600,
+      });
+    });
+
+    it('returns original dimensions when within all constraints', () => {
+      expect(getResponsiveImageDimensions(400, 300, 800, 600)).toEqual({
+        width: 400,
+        height: 300,
+      });
     });
 
     it('handles square max constraints', () => {

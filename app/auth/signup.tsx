@@ -73,7 +73,9 @@ export default function SignUpScreen() {
 
       // Check if user was automatically signed in (email confirmation disabled)
       if (signUpSession && signUpUser) {
-        console.log('[SignUp] User automatically signed in, navigating to onboarding');
+                if (__DEV__) {
+          console.log('[SignUp] User automatically signed in, navigating to onboarding');
+        }
         // Set flag so useEffect knows we just signed up
         setHasJustSignedUp(true);
         // Clear form
@@ -85,7 +87,9 @@ export default function SignUpScreen() {
         router.replace('/onboarding');
       } else {
         // Email confirmation required
-        console.log('[SignUp] Email confirmation required');
+                if (__DEV__) {
+          console.log('[SignUp] Email confirmation required');
+        }
         Alert.alert(
           'Check your email',
           'We sent you a confirmation email. Please verify your email to continue.',
@@ -114,7 +118,9 @@ export default function SignUpScreen() {
   // Only navigate if we just signed up, not if there's an existing session from a previous invalid signup
   useEffect(() => {
     if (hasJustSignedUp && session && user) {
-      console.log('[SignUp] Session detected after signup, navigating to onboarding');
+            if (__DEV__) {
+        console.log('[SignUp] Session detected after signup, navigating to onboarding');
+      }
       // User confirmed email or was auto-signed in
       setHasJustSignedUp(false); // Reset flag
       router.replace('/onboarding');

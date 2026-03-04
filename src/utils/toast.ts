@@ -18,7 +18,9 @@ try {
 
 export function showToast({ title, message, preset = 'done', duration = 2 }: ToastOptions) {
   if (Platform.OS === 'web') {
-    console.log(`[Toast] ${title}${message ? `: ${message}` : ''}`);
+        if (__DEV__) {
+      console.log(`[Toast] ${title}${message ? `: ${message}` : ''}`);
+    }
     return;
   }
 

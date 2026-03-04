@@ -115,10 +115,12 @@ export default function ItemDetailScreen() {
     // Set fallback timeout to mount carousel if image never loads
     fallbackTimeoutRef.current = setTimeout(() => {
       if (!didFireImageLoadRef.current && !showCarousel) {
-        console.debug('[wardrobe_item_render_timing] carousel_mounted_fallback_timeout', {
-          itemId: id,
-          msSinceMount: DEFERRED_CAROUSEL_FALLBACK_MS,
-        });
+                if (__DEV__) {
+          console.debug('[wardrobe_item_render_timing] carousel_mounted_fallback_timeout', {
+            itemId: id,
+            msSinceMount: DEFERRED_CAROUSEL_FALLBACK_MS,
+          });
+        }
         setShowCarousel(true);
       }
     }, DEFERRED_CAROUSEL_FALLBACK_MS);
@@ -138,12 +140,14 @@ export default function ItemDetailScreen() {
       ? Math.round(imageLoadStartAt - jobSucceededAt)
       : undefined;
     if (isPerfLogsEnabled()) {
-      console.debug('[wardrobe_item_render_timing] image_load_start_at', {
-        ts: imageLoadStartAt,
-        itemId: id,
-        uriType: 'dataUri',
-        msSinceJobSucceeded,
-      });
+            if (__DEV__) {
+        console.debug('[wardrobe_item_render_timing] image_load_start_at', {
+          ts: imageLoadStartAt,
+          itemId: id,
+          uriType: 'dataUri',
+          msSinceJobSucceeded,
+        });
+      }
     }
   }, [id, jobSucceededAt, timeline]);
   
@@ -156,12 +160,14 @@ export default function ItemDetailScreen() {
       ? Math.round(imageLoadEndAt - jobSucceededAt)
       : undefined;
     if (isPerfLogsEnabled()) {
-      console.debug('[wardrobe_item_render_timing] image_load_end_at', {
-        ts: imageLoadEndAt,
-        itemId: id,
-        uriType: 'dataUri',
-        msSinceJobSucceeded,
-      });
+            if (__DEV__) {
+        console.debug('[wardrobe_item_render_timing] image_load_end_at', {
+          ts: imageLoadEndAt,
+          itemId: id,
+          uriType: 'dataUri',
+          msSinceJobSucceeded,
+        });
+      }
     }
     setShowCarousel(true);
     if (fallbackTimeoutRef.current) {
@@ -175,7 +181,9 @@ export default function ItemDetailScreen() {
     didFireErrorFallbackRef.current = true;
     if (isPerfLogsEnabled()) timeline?.mark('image_load_error');
     if (isPerfLogsEnabled()) {
-      console.debug('[wardrobe_item_render_timing] image_load_error', { itemId: id, uriType: 'dataUri' });
+            if (__DEV__) {
+        console.debug('[wardrobe_item_render_timing] image_load_error', { itemId: id, uriType: 'dataUri' });
+      }
     }
     setImageLoadError(true);
     setShowCarousel(true);
