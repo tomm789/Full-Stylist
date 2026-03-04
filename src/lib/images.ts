@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { getOutfit } from './outfits';
+import { getOutfit } from './outfits/core';
 import { getWardrobeItemImages } from './wardrobe';
 import { getImageUrl, type ImageSizeClass } from './images/transforms';
 

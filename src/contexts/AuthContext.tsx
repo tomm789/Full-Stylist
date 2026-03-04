@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState, useCall
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { debugIngest } from '@/lib/ai-jobs/debug-ingest';
-import { clearHairMakeupSessionVisited } from '@/hooks/headshot/useHairAndMakeup';
+import { clearHairMakeupSessionVisited } from '@/hooks/headshot/useHeadshotSessionData';
 
 interface AuthContextType {
   session: Session | null;

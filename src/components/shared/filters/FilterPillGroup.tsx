@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { PillButton } from '@/components/shared';
+import PillButton from '@/components/shared/buttons/PillButton';
 import { theme } from '@/styles';
 
 const { spacing } = theme;

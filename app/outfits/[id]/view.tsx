@@ -48,7 +48,7 @@ import {
 import { restoreOutfit } from '@/lib/outfits';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
-import { createStyles } from './view.styles';
+import { createStyles } from './_view.styles';
 
 
 export default function OutfitViewScreen() {

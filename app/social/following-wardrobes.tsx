@@ -21,7 +21,7 @@ import { supabase } from '@/lib/supabase';
 import { LoadingSpinner, EmptyState } from '@/components/shared';
 import { createCommonStyles } from '@/styles/commonStyles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { createStyles } from './following-wardrobes.styles';
+import { createStyles } from './_following-wardrobes.styles';
 import type { WardrobeItem } from '@/lib/wardrobe';
 
 interface FollowedUser {

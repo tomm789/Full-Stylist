@@ -26,7 +26,7 @@ import { Header } from '@/components/shared/layout';
 import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
-import { createStyles } from './[id]/styles';
+import { createStyles } from './[id]/_styles';
 
 type TabType = 'outfits' | 'lookbooks' | 'wardrobe';
 

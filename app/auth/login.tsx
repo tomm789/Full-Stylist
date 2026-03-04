@@ -10,7 +10,7 @@ import { showErrorToast, showSuccessToast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { KeyboardAwareScreen } from '@/components/shared/layout';
-import { styles } from './login.styles';
+import { styles } from './_login.styles';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');

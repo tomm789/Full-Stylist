@@ -45,7 +45,7 @@ import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { createCommonStyles } from '@/styles/commonStyles';
-import { createStyles } from './styles';
+import { createStyles } from './_styles';
 
 const { spacing } = theme;
 

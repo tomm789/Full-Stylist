@@ -5,7 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { ActivityIndicator, Modal, Text, View, StyleSheet } from 'react-native';
-import { SortModal } from '@/components/outfits';
+import SortModal from '@/components/outfits/SortModal';
 import type { SortOption, SortOrder } from '@/hooks/outfits';
 import { CommentsModal, GeneratingOutfitModal, PostMenuModal } from '@/components/social';
 import { SlideshowModal } from '@/components/lookbooks';

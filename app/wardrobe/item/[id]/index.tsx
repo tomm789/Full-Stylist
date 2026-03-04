@@ -38,7 +38,7 @@ import { Header, HeaderIconButton } from '@/components/shared/layout';
 import { LoadingSpinner } from '@/components/shared';
 import { createCommonStyles } from '@/styles/commonStyles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { createStyles } from './styles';
+import { createStyles } from './_styles';
 
 export default function ItemDetailScreen() {
   const colors = useThemeColors();

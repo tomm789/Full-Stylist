@@ -28,7 +28,7 @@ import {
   dropdownMenuStyles,
 } from '@/components/shared/modals';
 import { Header, HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layout';
-import { styles } from './[id]/styles';
+import { styles } from './[id]/_styles';
 
 export default function HeadshotDetailScreen() {
   const router = useRouter();

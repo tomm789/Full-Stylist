@@ -1,12 +1,10 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import { showSuccessToast } from '@/utils/toast';
-import {
-  ItemDetailModal,
-  OutfitCreatorOptionsModal,
-  HeadshotSelectorModal,
-  WardrobeCameraOverlay,
-} from '@/components/wardrobe';
+import ItemDetailModal from '@/components/wardrobe/ItemDetailModal';
+import OutfitCreatorOptionsModal from '@/components/wardrobe/OutfitCreatorOptionsModal';
+import HeadshotSelectorModal from '@/components/wardrobe/HeadshotSelectorModal';
+import WardrobeCameraOverlay from '@/components/wardrobe/WardrobeCameraOverlay';
 
 interface WardrobeModalStackProps {
   activeTab: string;

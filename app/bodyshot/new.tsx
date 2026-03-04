@@ -21,7 +21,7 @@ import { useNewBodyshot } from '@/hooks/profile';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { createStyles } from './new.styles';
+import { createStyles } from './_new.styles';
 
 export default function NewBodyshotScreen() {
   const colors = useThemeColors();

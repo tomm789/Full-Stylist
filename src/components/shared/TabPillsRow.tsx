@@ -6,7 +6,7 @@
 import React, { useMemo } from 'react';
 import { View, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { PillButton } from '@/components/shared';
+import PillButton from '@/components/shared/buttons/PillButton';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
