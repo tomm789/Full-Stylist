@@ -1,7 +1,8 @@
 import { Platform } from 'react-native';
 import { showErrorToast } from '@/utils/toast';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import { submitWardrobeImage } from '@/lib/wardrobe/submitWardrobeImage';
 
 interface WardrobeCameraLike {
   open: () => void;
@@ -10,15 +11,21 @@ interface WardrobeCameraLike {
 
 interface UseWardrobeCameraFlowProps {
   wardrobeCamera: WardrobeCameraLike;
-  router: { push: (path: any) => void };
+  router: { push: (path: any) => void; replace: (path: any) => void };
   setTabBarOpacity: (value: number) => void;
+  userId: string | undefined;
+  wardrobeId: string | null;
 }
 
 export function useWardrobeCameraFlow({
   wardrobeCamera,
   router,
   setTabBarOpacity,
+  userId,
+  wardrobeId,
 }: UseWardrobeCameraFlowProps) {
+  const [submittingItem, setSubmittingItem] = useState(false);
+
   const handleOpenCamera = useCallback(() => {
     if (Platform.OS === 'web') {
       (async () => {
@@ -47,9 +54,26 @@ export function useWardrobeCameraFlow({
     (croppedUri: string) => {
       wardrobeCamera.close();
       setTabBarOpacity(1);
-      router.push(`/wardrobe/add?imageUri=${encodeURIComponent(croppedUri)}` as any);
+
+      if (!userId || !wardrobeId) {
+        showErrorToast('Please sign in to add items');
+        return;
+      }
+
+      setSubmittingItem(true);
+
+      submitWardrobeImage(userId, wardrobeId, croppedUri)
+        .then(({ itemId }) => {
+          router.replace(`/wardrobe/item/${itemId}?refresh=${Date.now()}` as any);
+        })
+        .catch((err: any) => {
+          showErrorToast(err.message || 'Failed to add item');
+        })
+        .finally(() => {
+          setSubmittingItem(false);
+        });
     },
-    [wardrobeCamera, setTabBarOpacity, router]
+    [wardrobeCamera, setTabBarOpacity, userId, wardrobeId, router]
   );
 
   const handleCameraClose = useCallback(() => {
@@ -57,5 +81,5 @@ export function useWardrobeCameraFlow({
     setTabBarOpacity(1);
   }, [wardrobeCamera, setTabBarOpacity]);
 
-  return { handleOpenCamera, handleCameraImageReady, handleCameraClose };
+  return { handleOpenCamera, handleCameraImageReady, handleCameraClose, submittingItem };
 }

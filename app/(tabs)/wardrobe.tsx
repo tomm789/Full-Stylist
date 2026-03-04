@@ -382,10 +382,12 @@ export default function WardrobeScreen() {
   }, [user?.id, sessionData.refreshVariations]);
 
   // ── Camera navigation ────────────────────────────────────────────────────────
-  const { handleOpenCamera, handleCameraImageReady, handleCameraClose } = useWardrobeCameraFlow({
+  const { handleOpenCamera, handleCameraImageReady, handleCameraClose, submittingItem } = useWardrobeCameraFlow({
     wardrobeCamera,
     router,
     setTabBarOpacity,
+    userId: user?.id,
+    wardrobeId,
   });
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -546,8 +548,8 @@ export default function WardrobeScreen() {
   return (
     <View style={commonStyles.container}>
       <LoadingOverlay
-        visible={PERF_MODE ? false : generating}
-        message={progress.message || 'Generating outfit...'}
+        visible={PERF_MODE ? false : (generating || submittingItem)}
+        message={submittingItem ? 'Adding item to wardrobe...' : (progress.message || 'Generating outfit...')}
       />
 
       <Animated.View

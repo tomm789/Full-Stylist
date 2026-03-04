@@ -49,6 +49,9 @@ export {
   getCategoriesWithSubcategories,
 } from './categories';
 
+// Re-export submission helper
+export { submitWardrobeImage } from './submitWardrobeImage';
+
 // Re-export from diagnostics
 export {
   findOrphanedImages,
