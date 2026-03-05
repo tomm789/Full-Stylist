@@ -131,6 +131,13 @@ export function useWardrobeItems({
     setRefreshing(false);
   }, [loadItems]);
 
+  // Clear stale items immediately when category changes so the loading
+  // spinner shows instead of items from the previous category.
+  useEffect(() => {
+    setAllItems([]);
+    setHasLoaded(false);
+  }, [categoryId]);
+
   // Auto-load on mount and when dependencies change
   useEffect(() => {
     if (autoLoad && wardrobeId && userId) {

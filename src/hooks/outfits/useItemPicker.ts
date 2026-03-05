@@ -1,73 +1,83 @@
-import { useState, useCallback } from 'react';
+/**
+ * useItemPicker Hook
+ * Manages item selection state for the outfit editor.
+ * Works with WardrobeBrowserModal — the modal handles its own data loading,
+ * so this hook only tracks selection state + wardrobe ID.
+ */
+
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { getWardrobeItems, getSavedWardrobeItems, WardrobeItem } from '@/lib/wardrobe';
+import type { WardrobeItem } from '@/lib/wardrobe';
 
 interface UseItemPickerProps {
   user: { id: string } | null;
+  outfitItems: Map<string, WardrobeItem>;
   setOutfitItems: Dispatch<SetStateAction<Map<string, WardrobeItem>>>;
   ensureItemImageUrls: (itemIds: string[]) => Promise<void>;
 }
 
 export interface UseItemPickerReturn {
-  showItemPicker: boolean;
+  showBrowser: boolean;
+  setShowBrowser: (show: boolean) => void;
   selectedCategory: string | null;
-  categoryItems: WardrobeItem[];
-  setShowItemPicker: (show: boolean) => void;
-  openItemPicker: (categoryId: string) => Promise<void>;
+  wardrobeId: string | null;
+  selectedItemIds: string[];
+  openBrowser: (categoryId?: string) => void;
   selectItem: (item: WardrobeItem) => Promise<void>;
   removeItem: (categoryId: string) => void;
 }
 
 export function useItemPicker({
   user,
+  outfitItems,
   setOutfitItems,
   ensureItemImageUrls,
 }: UseItemPickerProps): UseItemPickerReturn {
-  const [showItemPicker, setShowItemPicker] = useState(false);
+  const [showBrowser, setShowBrowser] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [categoryItems, setCategoryItems] = useState<WardrobeItem[]>([]);
+  const [wardrobeId, setWardrobeId] = useState<string | null>(null);
 
-  const openItemPicker = useCallback(
-    async (categoryId: string) => {
-      if (!user) return;
-
-      setSelectedCategory(categoryId);
-
+  // Fetch default wardrobe ID once on mount
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
       const { getDefaultWardrobeId } = await import('@/lib/wardrobe');
-      const { data: defaultWardrobeId } = await getDefaultWardrobeId(user.id);
-      if (!defaultWardrobeId) return;
+      const { data } = await getDefaultWardrobeId(user.id);
+      if (!cancelled && data) setWardrobeId(data);
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
-      const { data: ownedItems } = await getWardrobeItems(defaultWardrobeId, {
-        category_id: categoryId,
-      });
-      const { data: savedItems } = await getSavedWardrobeItems(user.id, {
-        category_id: categoryId,
-      });
+  // Derive selected item IDs for highlighting in the browser modal
+  const selectedItemIds = useMemo(
+    () => Array.from(outfitItems.values()).map((item) => item.id),
+    [outfitItems]
+  );
 
-      const items = [...(ownedItems || []), ...(savedItems || [])];
-      setCategoryItems(items);
-
-      if (items.length > 0) {
-        await ensureItemImageUrls(items.map((item) => item.id));
-      }
-
-      setShowItemPicker(true);
+  const openBrowser = useCallback(
+    (categoryId?: string) => {
+      setSelectedCategory(categoryId ?? null);
+      setShowBrowser(true);
     },
-    [user, ensureItemImageUrls]
+    []
   );
 
   const selectItem = useCallback(
     async (item: WardrobeItem) => {
-      if (!selectedCategory) return;
+      // If opened for a specific category, place item in that slot
+      // Otherwise, use the item's own category_id
+      const catId = selectedCategory || item.category_id;
+      if (!catId) return;
 
       setOutfitItems((prev) => {
         const updated = new Map(prev);
-        updated.set(selectedCategory, item);
+        updated.set(catId, item);
         return updated;
       });
 
       await ensureItemImageUrls([item.id]);
-      setShowItemPicker(false);
+      setShowBrowser(false);
       setSelectedCategory(null);
     },
     [selectedCategory, setOutfitItems, ensureItemImageUrls]
@@ -85,11 +95,12 @@ export function useItemPicker({
   );
 
   return {
-    showItemPicker,
+    showBrowser,
+    setShowBrowser,
     selectedCategory,
-    categoryItems,
-    setShowItemPicker,
-    openItemPicker,
+    wardrobeId,
+    selectedItemIds,
+    openBrowser,
     selectItem,
     removeItem,
   };

@@ -1,3 +1,10 @@
+/**
+ * useRenderPipeline Hook
+ * Orchestrates outfit image generation with session/variation tracking.
+ * After generation completes, stays on the editor page and updates the
+ * session thumbnail strip instead of navigating away.
+ */
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { WardrobeItem } from '@/lib/wardrobe';
 import { showErrorToast } from '@/utils/toast';
@@ -10,6 +17,10 @@ import { generateAndUploadGrid } from '@/lib/outfits/generateAndUploadGrid';
 import { useDescriptionPolling } from '@/lib/outfits/useDescriptionPolling';
 import { useItemRevealAnimation } from '@/hooks/outfits/useItemRevealAnimation';
 import { useOutfitRenderJob } from '@/hooks/outfits/useOutfitRenderJob';
+import {
+  createOutfitVariation,
+  updateOutfitVariation,
+} from '@/lib/outfits/sessions';
 
 interface UseRenderPipelineProps {
   user: { id: string } | null;
@@ -20,6 +31,10 @@ interface UseRenderPipelineProps {
   saveOutfit: () => Promise<string | null>;
   router: { push: (path: string) => void };
   onDescriptionReady?: () => void;
+  // Session integration
+  ensureSession: () => Promise<string | null>;
+  refreshVariations: () => Promise<void>;
+  selectLatest: () => void;
 }
 
 export interface UseRenderPipelineReturn {
@@ -38,8 +53,11 @@ export function useRenderPipeline({
   itemImageUrls,
   notes,
   saveOutfit,
-  router,
+  router: _router,
   onDescriptionReady,
+  ensureSession,
+  refreshVariations,
+  selectLatest,
 }: UseRenderPipelineProps): UseRenderPipelineReturn {
   const [rendering, setRendering] = useState(false);
   const [generationPhase, setGenerationPhase] = useState<'items' | 'analysis' | 'finalizing'>(
@@ -91,6 +109,8 @@ export function useRenderPipeline({
     setGenerationPhase('items');
     setActiveMessage(null);
 
+    let variationId: string | null = null;
+
     try {
       const savedOutfitId = await saveOutfit();
       if (!savedOutfitId) {
@@ -98,6 +118,9 @@ export function useRenderPipeline({
         setRendering(false);
         return;
       }
+
+      // Ensure session exists for variation tracking
+      const sessionId = await ensureSession();
 
       let stackedImageId: string | null = null;
       const itemsToStack = Array.from(outfitItems.values());
@@ -117,9 +140,7 @@ export function useRenderPipeline({
         const gridResult = await generateAndUploadGrid(imageUrls, user.id);
         stackedImageId = gridResult?.storagePath ?? null;
         if (stackedImageId && __DEV__) {
-                    if (__DEV__) {
-            console.log(`[OutfitEditor] Grid uploaded successfully: ${stackedImageId}`);
-          }
+          console.log(`[OutfitEditor] Grid uploaded successfully: ${stackedImageId}`);
         }
       }
 
@@ -155,6 +176,33 @@ export function useRenderPipeline({
         userSettings?.ai_model_outfit_render ||
         userSettings?.ai_model_preference ||
         'gemini-2.5-flash-image';
+
+      // Create pending variation record
+      if (sessionId) {
+        const snapshotItems = selected.map((s, i) => ({
+          wardrobe_item_id: s.wardrobe_item_id,
+          category_id: s.category_id,
+          position: i,
+          text_snapshot: s.text_snapshot as Record<string, unknown>,
+        }));
+        const variation = await createOutfitVariation({
+          session_id: sessionId,
+          user_id: user.id,
+          outfit_id: savedOutfitId,
+          status: 'pending',
+          input_snapshot_json: {
+            items: snapshotItems,
+            canvas_layout: null,
+            canvas_trim_map: null,
+            body_shot_image_id: userSettings.body_shot_image_id,
+            model_preference: modelPreference,
+            stacked_image_id: stackedImageId,
+          },
+        });
+        variationId = variation?.id ?? null;
+        // Refresh so the pending thumbnail shows in the strip
+        await refreshVariations();
+      }
 
       const timeline = startTimeline('outfit_render_editor');
       timeline.mark('generate_press');
@@ -197,15 +245,21 @@ export function useRenderPipeline({
 
       if (!completedJob) {
         timeline.mark('poll_timeout');
+        // Update variation to failed on timeout
+        if (variationId) {
+          await updateOutfitVariation(variationId, { status: 'failed' });
+          await refreshVariations();
+        }
         setRendering(false);
-        const q = timeline.traceId ? `?renderTraceId=${encodeURIComponent(timeline.traceId)}` : '';
-        router.push(`/outfits/${savedOutfitId}/view${q}`);
-        timeline.mark('navigate_to_view');
         return;
       }
 
       if (completedJob.status === 'failed') {
         showErrorToast(completedJob.error ?? 'Outfit generation failed');
+        if (variationId) {
+          await updateOutfitVariation(variationId, { status: 'failed' });
+          await refreshVariations();
+        }
         setRendering(false);
         return;
       }
@@ -213,14 +267,9 @@ export function useRenderPipeline({
       const result = completedJob.result ?? {};
       const jobStatusSucceededAt = Date.now();
       timeline.mark('job_status_succeeded_at', { ts: jobStatusSucceededAt });
-            if (__DEV__) {
-        console.debug('[outfit_render_timing] job_status_succeeded_at', {
-          ts: jobStatusSucceededAt,
-          outfitId: savedOutfitId,
-          from: 'editor',
-          traceId: timeline.traceId,
-        });
-      }
+
+      const generatedImageId =
+        result.image_id ?? result.generated_image_id ?? result.output_image_id ?? null;
 
       if (base64Result) {
         const dataUri = toDataUri(base64Result, result.mime_type);
@@ -231,30 +280,28 @@ export function useRenderPipeline({
           completedJob.id,
           (completedJob as { feedback_at?: string | null }).feedback_at ?? null
         );
-                if (__DEV__) {
-          console.debug('[outfit_render_timing] cover_set_base64_at', {
-            ts: Date.now(),
-            outfitId: savedOutfitId,
-            from: 'editor',
-            traceId: timeline.traceId,
-          });
-        }
+      }
+
+      // Update variation to complete with the generated image
+      if (variationId) {
+        await updateOutfitVariation(variationId, {
+          ai_job_id: completedJob.id,
+          image_id: generatedImageId,
+          status: 'complete',
+        });
+        await refreshVariations();
+        selectLatest();
       }
 
       setRendering(false);
-      const query = timeline.traceId ? `?renderTraceId=${encodeURIComponent(timeline.traceId)}` : '';
-      router.push(`/outfits/${savedOutfitId}/view${query}`);
-      timeline.mark('navigate_to_view');
-            if (__DEV__) {
-        console.debug('[outfit_render_timing] navigate_to_view_at', {
-          ts: Date.now(),
-          outfitId: savedOutfitId,
-          traceId: timeline.traceId,
-        });
-      }
+      timeline.mark('generation_complete');
     } catch (error: any) {
       console.error('Render error:', error);
       stopAll();
+      if (variationId) {
+        await updateOutfitVariation(variationId, { status: 'failed' }).catch(() => {});
+        await refreshVariations().catch(() => {});
+      }
       showErrorToast(error.message || 'An unexpected error occurred');
       setRendering(false);
     }
@@ -265,11 +312,13 @@ export function useRenderPipeline({
     categories,
     notes,
     saveOutfit,
-    router,
     runRenderJob,
     revealAnimation,
     descriptionPolling,
     stopAll,
+    ensureSession,
+    refreshVariations,
+    selectLatest,
   ]);
 
   return {

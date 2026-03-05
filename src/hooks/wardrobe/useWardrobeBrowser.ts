@@ -73,10 +73,14 @@ export function useWardrobeBrowser({
     setSelectedSubcategoryId(null);
   }, [selectedCategoryId, loadSubcategories]);
 
+  // Sync category when the modal opens or when initialCategoryId changes while open.
+  // Using a layout-phase effect to minimize the frame of stale state.
   useEffect(() => {
     const isOpening = enabled && !wasEnabledRef.current;
-    if (isOpening && initialCategoryId) {
+    if (isOpening) {
+      // Always reset to initialCategoryId on open (even if null → show all)
       setSelectedCategoryId(initialCategoryId);
+      setSelectedSubcategoryId(null);
     }
     wasEnabledRef.current = enabled;
   }, [enabled, initialCategoryId]);
