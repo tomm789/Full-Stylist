@@ -37,7 +37,7 @@ export async function createRepost(
       .select('id')
       .eq('user_id', userId)
       .eq('original_post_id', originalPostId)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       // Already reposted, return existing
@@ -108,7 +108,7 @@ export async function hasReposted(
     .select('id')
     .eq('user_id', userId)
     .eq('original_post_id', originalPostId)
-    .single();
+    .maybeSingle();
 
   return !!data;
 }

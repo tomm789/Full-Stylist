@@ -11,7 +11,7 @@ import { DiscoverGrid } from '@/components/social/DiscoverGrid';
 import { PostMenuModal, CommentsModal } from '@/components/social';
 import { useHeadshotFollowingFeed } from '@/hooks/social/useHeadshotFollowingFeed';
 import { useHeadshotDiscoverFeed } from '@/hooks/social/useHeadshotDiscoverFeed';
-import { useSocialEngagement } from '@/hooks/social/useSocialEngagement';
+import { useEngagementFeed } from '@/hooks/engagement';
 import { useSocialModals } from '@/hooks/social/useSocialModals';
 import { FeedItem } from '@/lib/posts';
 
@@ -40,19 +40,19 @@ export default function HeadshotSocialTab({
   const activeFeed = activeTab === 'following' ? following : discover;
   const headshotImages = activeFeed.headshotImages;
 
-  const engagementCounts =
+  const feedEngagementCounts =
     'engagementCounts' in activeFeed ? activeFeed.engagementCounts : {};
-  const setEngagementCounts =
-    'setEngagementCounts' in activeFeed
-      ? (activeFeed as typeof following).setEngagementCounts
-      : () => {};
 
-  const { handleLike, handleSave, handleRepost } = useSocialEngagement({
-    userId: currentUserId,
-    engagementCounts,
-    setEngagementCounts,
-    onRepost: activeFeed.refresh,
+  const eng = useEngagementFeed(currentUserId, {
+    initialCounts: feedEngagementCounts,
+    onRepost: async () => { await activeFeed.refresh(); },
   });
+
+  React.useEffect(() => {
+    eng.seedCounts(feedEngagementCounts);
+  }, [feedEngagementCounts]);
+
+  const { handleLike, handleSave, handleRepost } = eng;
 
   const modals = useSocialModals({ refreshFeed: activeFeed.refresh });
 

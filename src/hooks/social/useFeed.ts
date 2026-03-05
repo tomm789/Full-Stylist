@@ -13,15 +13,7 @@ import { isFollowing } from '@/lib/user';
 import { getRepostCount, hasReposted } from '@/lib/reposts';
 import { batchGetOutfitCoverImages } from '@/utils/batchImageHelpers';
 
-interface EngagementCounts {
-  likes: number;
-  saves: number;
-  comments: number;
-  reposts: number;
-  hasLiked: boolean;
-  hasSaved: boolean;
-  hasReposted: boolean;
-}
+import type { EngagementCounts } from '@/hooks/engagement';
 
 interface UseFeedProps {
   userId: string | undefined;
@@ -343,4 +335,4 @@ export function useFeed({
   };
 }
 
-export type { EngagementCounts };
+export type { EngagementCounts } from '@/hooks/engagement';

@@ -17,7 +17,8 @@ import {
 import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { useOutfitView, useSocialEngagement, useOutfitViewActions } from '@/hooks/outfits';
+import { useOutfitView, useOutfitViewActions } from '@/hooks/outfits';
+import { useEngagementEntity } from '@/hooks/engagement';
 import { useCalendarDayForm, useSlotPresets } from '@/hooks/calendar';
 import {
   OutfitViewContent,
@@ -110,7 +111,7 @@ export default function OutfitViewScreen() {
     loadComments,
     submitComment,
     triggerLoadEngagement,
-  } = useSocialEngagement('outfit', id, user?.id, PERF_MODE ? { deferInitialFetch: true } : undefined);
+  } = useEngagementEntity('outfit', id, user?.id, PERF_MODE ? { deferInitialFetch: true } : undefined);
 
   // PERF_MODE: fallback trigger engagement after delay if image never loads (triggerLoadEngagement is single-fire inside hook)
   const DEFERRED_ENGAGEMENT_FALLBACK_MS = 4000;

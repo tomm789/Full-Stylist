@@ -9,7 +9,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import SocialActionBar from '@/components/outfits/SocialActionBar';
-import { useSocialEngagement } from '@/hooks/outfits/useSocialEngagement';
+import { useEngagementEntity } from '@/hooks/engagement';
 import { OutfitWithRating } from '@/lib/outfits';
 import { formatTimestamp } from '@/utils/formatUtils';
 import { OutfitScheduleStatus, ScheduleInfo } from '@/types/outfits';
@@ -44,7 +44,7 @@ const MyOutfitFeedCard = React.memo(
   }: MyOutfitFeedCardProps) => {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-    const engagement = useSocialEngagement('outfit', outfit.id, userId);
+    const engagement = useEngagementEntity('outfit', outfit.id, userId);
 
     return (
       <View style={styles.myFeedCard}>

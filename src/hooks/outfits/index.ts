@@ -6,7 +6,6 @@
 export { useOutfits } from './useOutfits';
 export { useArchivedOutfits } from './useArchivedOutfits';
 export { useOutfitFilters } from './useOutfitFilters';
-export { useSocialEngagement } from './useSocialEngagement';
 export { useOutfitGeneration } from './useOutfitGeneration';
 export { useBackgroundGridGenerator } from './useBackgroundGridGenerator';
 export { useOutfitView } from './useOutfitView';

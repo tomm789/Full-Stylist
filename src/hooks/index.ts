@@ -14,7 +14,6 @@ export * from './ai';
 
 export { useOutfits } from './outfits/useOutfits';
 export { useOutfitFilters } from './outfits/useOutfitFilters';
-export { useSocialEngagement } from './outfits/useSocialEngagement';
 export { useOutfitGeneration } from './outfits/useOutfitGeneration';
 
 export type { SortOption, SortOrder } from './outfits/useOutfitFilters';

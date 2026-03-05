@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { useFeed, useSocialEngagement, useSocialModals, useTryOnOutfit, useFeedSlideshow } from '@/hooks/social';
+import { useFeed, useSocialModals, useTryOnOutfit, useFeedSlideshow } from '@/hooks/social';
+import { useEngagementFeed } from '@/hooks/engagement';
 import { useApplyLook } from '@/hooks/headshot/useApplyLook';
 import { FeedItemComponent } from '@/components/social/FeedItem';
 import { PostMenuModal, CommentsModal, SlideshowModal } from '@/components/social';
@@ -43,8 +44,7 @@ export default function UserFeedScreen() {
     outfitImages,
     lookbookImages,
     headshotImages,
-    engagementCounts,
-    setEngagementCounts,
+    engagementCounts: feedEngagementCounts,
     followStatuses,
     loading,
     refresh,
@@ -56,12 +56,17 @@ export default function UserFeedScreen() {
   const { applyLook } = useApplyLook();
 
   // Social engagement (like, save, repost)
-  const { handleLike, handleSave, handleRepost } = useSocialEngagement({
-    userId: user?.id,
-    engagementCounts,
-    setEngagementCounts,
-    onRepost: refresh,
+  const eng = useEngagementFeed(user?.id, {
+    initialCounts: feedEngagementCounts,
+    onRepost: async (postId) => { await refresh(); },
   });
+
+  useEffect(() => {
+    eng.seedCounts(feedEngagementCounts);
+  }, [feedEngagementCounts]);
+
+  const { handleLike, handleSave, handleRepost } = eng;
+  const engagementCounts = eng.counts;
 
   // Modal state: menu, comments, find-similar, follow/unfollow
   const modals = useSocialModals({ refreshFeed: refresh });
@@ -299,21 +304,7 @@ export default function UserFeedScreen() {
         onCommentsUpdate={modals.setComments}
         onCountUpdate={(count) => {
           if (commentsPostId) {
-            setEngagementCounts((prev) => ({
-              ...prev,
-              [commentsPostId]: {
-                ...(prev[commentsPostId] || {
-                  likes: 0,
-                  saves: 0,
-                  comments: 0,
-                  reposts: 0,
-                  hasLiked: false,
-                  hasSaved: false,
-                  hasReposted: false,
-                }),
-                comments: count,
-              },
-            }));
+            eng.updateCommentCount(commentsPostId, count);
           }
         }}
       />

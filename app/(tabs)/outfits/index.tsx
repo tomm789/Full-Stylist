@@ -37,11 +37,11 @@ import { OutfitScheduleStatus } from '@/types/outfits';
 import {
   useFeed,
   useDiscoverFeed,
-  useEngagementActions,
   useFeedSlideshow,
   useTryOnOutfit,
   useSocialModals,
 } from '@/hooks/social';
+import { useEngagementFeed } from '@/hooks/engagement';
 import { useLookbookSelection, useLookbookTabs, useLookbooks, useSystemLookbooks } from '@/hooks/lookbooks';
 import LookbookQuickAddModal from '@/components/outfits/LookbookQuickAddModal';
 import LookbookSelectionBar from '@/components/outfits/LookbookSelectionBar';
@@ -303,14 +303,17 @@ export default function OutfitsScreen() {
   const [showGridOutfits, setShowGridOutfits] = useState(true);
   const [showGridLookbooks, setShowGridLookbooks] = useState(true);
   const [selectedOccasions, setSelectedOccasions] = useState<string[]>([]);
+  const eng = useEngagementFeed(user?.id, {
+    initialCounts: feedEngagementCounts,
+    onRepost: async (postId) => { await refreshFeed(); },
+  });
   const {
-    engagementCounts,
-    setEngagementCounts,
+    counts: engagementCounts,
     handleLike,
     handleSave,
     handleRepost,
     updateCommentCount,
-  } = useEngagementActions(user?.id);
+  } = eng;
 
   const {
     slideshowVisible,
@@ -330,16 +333,12 @@ export default function OutfitsScreen() {
   const modals = useSocialModals({ refreshFeed });
 
   React.useEffect(() => {
-    setEngagementCounts(feedEngagementCounts);
-  }, [feedEngagementCounts, setEngagementCounts]);
+    eng.seedCounts(feedEngagementCounts);
+  }, [feedEngagementCounts]);
 
   React.useEffect(() => {
     modals.setFollowStatuses(feedFollowStatuses);
   }, [feedFollowStatuses, modals]);
-
-  const handleRepostWithRefresh = useCallback(async (postId: string) => {
-    await handleRepost(postId, refreshFeed);
-  }, [handleRepost, refreshFeed]);
 
   const handleSwitchToFeed = useCallback(() => {
     setHeaderVisible(true);
@@ -401,7 +400,7 @@ export default function OutfitsScreen() {
     engagementCounts,
     onLike: handleLike,
     onComment: modals.openComments,
-    onRepost: handleRepostWithRefresh,
+    onRepost: handleRepost,
     onSave: handleSave,
     onFindSimilar: modals.handleFindSimilar,
     openSlideshow,

@@ -7,16 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getFeed, FeedItem } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
 import { getRepostCount, hasReposted } from '@/lib/reposts';
-
-interface EngagementCounts {
-  likes: number;
-  saves: number;
-  comments: number;
-  reposts: number;
-  hasLiked: boolean;
-  hasSaved: boolean;
-  hasReposted: boolean;
-}
+import type { EngagementCounts } from '@/hooks/engagement';
 
 interface UseHeadshotFollowingFeedProps {
   userId: string | undefined;
