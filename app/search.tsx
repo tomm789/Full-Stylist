@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -8,13 +8,16 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThemeColors } from '@/contexts/ThemeContext';
 import { useSearch } from '@/hooks';
 import SearchResultsPanel from '@/components/search/SearchResultsPanel';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
-import { styles } from '@/styles/screens/search.styles';
+import { createStyles } from '@/styles/screens/search.styles';
 
 export default function SearchScreen() {
   const { user } = useAuth();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { filter } = useLocalSearchParams<{ filter?: string | string[] }>();
 
@@ -68,7 +71,7 @@ export default function SearchScreen() {
 
       {/* Search Input */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+        <Ionicons name="search" size={20} color={colors.textTertiary} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search users, outfits, lookbooks..."
@@ -80,7 +83,7 @@ export default function SearchScreen() {
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-            <Ionicons name="close-circle" size={20} color="#999" />
+            <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
           </TouchableOpacity>
         )}
       </View>

@@ -54,6 +54,28 @@ export const colors = {
   overlayDark: 'rgba(0, 0, 0, 0.7)',
   overlayHeavy: 'rgba(0, 0, 0, 0.95)',
   
+  // Tinted backgrounds
+  primaryTint: '#e7f3ff',
+  warningBackground: '#fff3e0',
+  successBackground: '#d4edda',
+  warningBannerBackground: '#fff3cd',
+
+  // Tinted text
+  successText: '#155724',
+  warningBannerText: '#856404',
+  primaryAccent: '#0066cc',
+
+  // Social action colors
+  repost: '#00ba7c',
+
+  // Notification colors
+  notificationPurple: '#5555ff',
+  unreadBackground: '#f8f8ff',
+  iconFallbackBackground: '#e8e8f0',
+
+  // System gray
+  systemGray: '#8e8e93',
+
   // Special colors
   favorite: '#ff0000',
   selected: '#007AFF',
@@ -113,6 +135,7 @@ export const typography = {
     tight: 16,
     snug: 18,
     normal: 20,
+    medium: 22,
     relaxed: 24,
     loose: 28,
   },

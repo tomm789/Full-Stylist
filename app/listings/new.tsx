@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,14 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
+import { useThemeColors } from '@/contexts/ThemeContext';
 import { useNewListing } from '@/hooks/listings';
 import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
-import { styles } from '@/styles/screens/listings-new.styles';
+import { createStyles } from '@/styles/screens/listings-new.styles';
 
 export default function NewListingScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const {
     items,

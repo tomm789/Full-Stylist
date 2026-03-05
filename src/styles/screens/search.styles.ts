@@ -1,30 +1,34 @@
 import { StyleSheet } from 'react-native';
+import { theme } from '@/styles';
+import type { ThemeColors } from '@/styles/themeColors';
 
-export const styles = StyleSheet.create({
+const { spacing, typography } = theme;
+
+export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafafa',
+    backgroundColor: colors.backgroundSecondary,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.borderLight,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: '#000',
-    paddingVertical: 8,
+    fontSize: typography.fontSize.base,
+    color: colors.textPrimary,
+    paddingVertical: spacing.sm,
   },
   clearButton: {
-    padding: 4,
+    padding: spacing.xs,
   },
   // Results UI extracted to SearchResultsPanel
 });

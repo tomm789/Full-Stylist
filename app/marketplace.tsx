@@ -90,7 +90,7 @@ export default function MarketplaceScreen() {
   if (loading && listings.length === 0) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />
+        <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
       </View>
     );
   }

@@ -54,6 +54,28 @@ export const lightColors = {
   overlayDark: 'rgba(0, 0, 0, 0.7)',
   overlayHeavy: 'rgba(0, 0, 0, 0.95)',
 
+  // Tinted backgrounds
+  primaryTint: '#e7f3ff',
+  warningBackground: '#fff3e0',
+  successBackground: '#d4edda',
+  warningBannerBackground: '#fff3cd',
+
+  // Tinted text
+  successText: '#155724',
+  warningBannerText: '#856404',
+  primaryAccent: '#0066cc',
+
+  // Social action colors
+  repost: '#00ba7c',
+
+  // Notification colors
+  notificationPurple: '#5555ff',
+  unreadBackground: '#f8f8ff',
+  iconFallbackBackground: '#e8e8f0',
+
+  // System gray
+  systemGray: '#8e8e93',
+
   // Special colors (same in both themes)
   favorite: '#ff0000',
   selected: '#007AFF',
@@ -114,6 +136,28 @@ export const darkColors: ThemeColors = {
   overlayLight: 'rgba(255, 255, 255, 0.15)',
   overlayDark: 'rgba(0, 0, 0, 0.7)',
   overlayHeavy: 'rgba(0, 0, 0, 0.95)',
+
+  // Tinted backgrounds
+  primaryTint: '#1a2a3d',
+  warningBackground: '#2a1f0a',
+  successBackground: '#0a2a12',
+  warningBannerBackground: '#2a2300',
+
+  // Tinted text
+  successText: '#6bcf7f',
+  warningBannerText: '#e0c96a',
+  primaryAccent: '#5ac8fa',
+
+  // Social action colors
+  repost: '#00ba7c',
+
+  // Notification colors
+  notificationPurple: '#5555ff',
+  unreadBackground: '#12121a',
+  iconFallbackBackground: '#1a1a28',
+
+  // System gray
+  systemGray: '#636366',
 
   // Special colors (same in both themes)
   favorite: '#ff0000',

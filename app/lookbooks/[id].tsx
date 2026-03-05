@@ -133,7 +133,7 @@ export default function LookbookDetailScreen() {
                   accessibilityLabel="Edit lookbook"
                 />
                 {actions.publishing ? (
-                  <ActivityIndicator size="small" color="#007AFF" />
+                  <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
                   <HeaderIconButton
                     icon="paper-plane-outline"
@@ -143,11 +143,11 @@ export default function LookbookDetailScreen() {
                   />
                 )}
                 {actions.deleting ? (
-                  <ActivityIndicator size="small" color="#FF3B30" />
+                  <ActivityIndicator size="small" color={colors.error} />
                 ) : (
                   <HeaderIconButton
                     icon="trash-outline"
-                    color="#FF3B30"
+                    color={colors.error}
                     onPress={actions.handleDelete}
                     disabled={actions.deleting}
                     accessibilityLabel="Delete lookbook"

@@ -36,7 +36,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import type { EditTab } from '@/hooks/headshot/useHairAndMakeup';
 import type { HeadshotGenerationVariation } from '@/lib/headshot/generation';
 import type { PresetCategory } from '@/lib/headshot/presetTypes';
-const { spacing } = theme;
+const { spacing, typography } = theme;
 
 const QUICK_ADVANCED_OPTIONS = [
   { value: 'quick', label: 'Quick', icon: 'flash-outline' as const },
@@ -308,7 +308,7 @@ export default function MirrorTabContent({
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 10 }}
                 >
                   <Ionicons name="checkmark" size={16} color={colors.primary} />
-                  <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Done</Text>
+                  <Text style={{ color: colors.primary, fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold }}>Done</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -376,7 +376,7 @@ export default function MirrorTabContent({
                   value={inlineHairDesc}
                   onChangeText={handleHairDescChange}
                 />
-                <View style={[styles.customHeader, { marginTop: 12 }]}>
+                <View style={[styles.customHeader, { marginTop: spacing.md }]}>
                   <Text style={styles.customHint}>Make-up Description</Text>
                 </View>
                 <TextInput

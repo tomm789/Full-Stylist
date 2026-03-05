@@ -3,7 +3,7 @@
  * Edit, regenerate, duplicate, or delete headshot
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThemeColors } from '@/contexts/ThemeContext';
 import { useHeadshotDetailActions } from '@/hooks/headshot';
 import { getRecentHeadshotJobForImage, getAIJobNoStore } from '@/lib/ai-jobs';
 import { checkFeedbackExistsForJob } from '@/lib/ai-feedback';
@@ -28,11 +29,13 @@ import {
   dropdownMenuStyles,
 } from '@/components/shared/modals';
 import { Header, HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layout';
-import { styles } from '@/styles/screens/headshot-detail.styles';
+import { createStyles } from '@/styles/screens/headshot-detail.styles';
 
 export default function HeadshotDetailScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { id: headshotId, perfStartTime, perfApiResponseTime } = useLocalSearchParams();
 
   const {
@@ -153,7 +156,7 @@ export default function HeadshotDetailScreen() {
               closeMenu();
               setAsActive();
             }}
-            iconColor="#34c759"
+            iconColor={colors.success}
           />
           <View style={dropdownMenuStyles.menuDivider} />
           <DropdownMenuItem
@@ -270,7 +273,7 @@ export default function HeadshotDetailScreen() {
               style={styles.actionButton}
               onPress={setAsActive}
             >
-              <Ionicons name="checkmark-circle-outline" size={24} color="#34c759" />
+              <Ionicons name="checkmark-circle-outline" size={24} color={colors.success} />
               <Text style={styles.actionButtonText}>Set as Active</Text>
             </TouchableOpacity>
 
@@ -280,9 +283,9 @@ export default function HeadshotDetailScreen() {
               disabled={duplicating}
             >
               {duplicating ? (
-                <ActivityIndicator color="#007AFF" size="small" />
+                <ActivityIndicator color={colors.primary} size="small" />
               ) : (
-                <Ionicons name="copy-outline" size={24} color="#007AFF" />
+                <Ionicons name="copy-outline" size={24} color={colors.primary} />
               )}
               <Text style={styles.actionButtonText}>Duplicate</Text>
             </TouchableOpacity>
@@ -297,7 +300,7 @@ export default function HeadshotDetailScreen() {
             onPress={handleRegenerate}
             disabled={regenerating || !headshot.originalSelfieId}
           >
-            <Ionicons name="sparkles-outline" size={20} color="#fff" />
+            <Ionicons name="sparkles-outline" size={20} color={colors.textLight} />
             <Text style={styles.generateButtonText}>
               {regenerating ? loadingMessage : 'Regenerate'}
             </Text>
@@ -340,7 +343,7 @@ export default function HeadshotDetailScreen() {
                 disabled={deleting}
               >
                 {deleting ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={colors.textLight} size="small" />
                 ) : (
                   <Text style={styles.confirmDeleteButtonText}>Delete</Text>
                 )}

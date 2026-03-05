@@ -106,7 +106,7 @@ export default function SessionPreviewStrip({
             onPress={() => onViewOutfit(previewOutfitId)}
           >
             <Ionicons name="eye-outline" size={16} color={colors.textPrimary} />
-            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>
+            <Text style={{ color: colors.textPrimary, fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.semibold }}>
               View
             </Text>
           </TouchableOpacity>
@@ -124,7 +124,7 @@ export default function SessionPreviewStrip({
           onPress={onClose}
         >
           <Ionicons name="checkmark" size={16} color={colors.primary} />
-          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Done</Text>
+          <Text style={{ color: colors.primary, fontSize: theme.typography.fontSize.md, fontWeight: theme.typography.fontWeight.semibold }}>Done</Text>
         </TouchableOpacity>
       </View>
     </View>

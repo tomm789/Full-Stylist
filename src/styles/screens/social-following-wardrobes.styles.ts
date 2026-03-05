@@ -1,5 +1,8 @@
 import { StyleSheet } from 'react-native';
+import { theme } from '@/styles';
 import type { ThemeColors } from '@/styles/themeColors';
+
+const { spacing, borderRadius, typography } = theme;
 
 export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
@@ -7,14 +10,14 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.background,
   },
   list: {
-    padding: 16,
+    padding: spacing.lg,
   },
   userCard: {
     flexDirection: 'row',
     backgroundColor: colors.backgroundSecondary,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     alignItems: 'flex-start',
   },
   userInfo: {
@@ -26,31 +29,31 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   avatarPlaceholder: {
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: colors.gray200,
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   userText: {
     flex: 1,
   },
   displayName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
     marginBottom: 2,
   },
   handle: {
-    fontSize: 14,
+    fontSize: typography.fontSize.md,
     color: colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   itemCount: {
-    fontSize: 12,
+    fontSize: typography.fontSize.xs,
     color: colors.textTertiary,
   },
   previewGrid: {
@@ -58,20 +61,20 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     height: 84,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginLeft: 12,
+    marginLeft: spacing.md,
   },
   previewImage: {
     width: 26,
     height: 26,
     margin: 1,
-    borderRadius: 4,
+    borderRadius: spacing.xs,
     backgroundColor: colors.backgroundTertiary,
   },
   previewPlaceholder: {
     width: 26,
     height: 26,
     margin: 1,
-    borderRadius: 4,
+    borderRadius: spacing.xs,
     backgroundColor: colors.backgroundTertiary,
   },
 });

@@ -1,31 +1,32 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '@/styles';
+import type { ThemeColors } from '@/styles/themeColors';
 
-const { borderRadius, spacing } = theme;
+const { spacing, borderRadius, typography } = theme;
 
-export const styles = StyleSheet.create({
+export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: spacing.xl,
     justifyContent: 'center',
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontWeight: typography.fontWeight.bold,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.xxxl,
     textAlign: 'center',
   },
   form: {
@@ -33,39 +34,39 @@ export const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-    backgroundColor: '#f9f9f9',
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: typography.fontSize.base,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.backgroundSecondary,
   },
   button: {
-    backgroundColor: '#000',
+    backgroundColor: colors.backgroundDark,
     borderRadius: borderRadius.round,
     minHeight: spacing.huge + spacing.sm,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.textLight,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
   },
   linkText: {
-    color: '#007AFF',
-    fontSize: 14,
+    color: colors.primary,
+    fontSize: typography.fontSize.md,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: spacing.xxl,
   },
   footerText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
   },
 });

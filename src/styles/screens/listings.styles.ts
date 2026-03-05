@@ -76,11 +76,11 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#ff3b30',
+    borderColor: colors.error,
     borderRadius: borderRadius.sm,
   },
   deleteButtonText: {
-    color: '#ff3b30',
+    color: colors.error,
     fontSize: typography.fontSize.xs,
     fontWeight: '600',
   },

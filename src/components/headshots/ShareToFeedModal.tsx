@@ -9,7 +9,7 @@ import { Modal, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { theme } from '@/styles';
 
-const { spacing } = theme;
+const { spacing, typography, borderRadius } = theme;
 
 interface ShareToFeedModalProps {
   visible: boolean;
@@ -36,7 +36,7 @@ export default function ShareToFeedModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity
-        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
+        style={{ flex: 1, backgroundColor: colors.overlayLight }}
         activeOpacity={1}
         onPress={onClose}
       >
@@ -48,14 +48,14 @@ export default function ShareToFeedModal({
             left: 0,
             right: 0,
             backgroundColor: colors.background,
-            borderTopLeftRadius: 16,
-            borderTopRightRadius: 16,
+            borderTopLeftRadius: borderRadius.xl,
+            borderTopRightRadius: borderRadius.xl,
             padding: spacing.lg,
             paddingBottom: spacing.xxl,
             gap: spacing.md,
           }}
         >
-          <Text style={{ fontSize: 18, fontWeight: '600', color: colors.textPrimary }}>
+          <Text style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
             Share to Feed
           </Text>
           <TextInput
@@ -67,7 +67,7 @@ export default function ShareToFeedModal({
             style={{
               borderWidth: 1,
               borderColor: colors.border,
-              borderRadius: 8,
+              borderRadius: borderRadius.md,
               padding: spacing.sm,
               color: colors.textPrimary,
               minHeight: 80,
@@ -79,12 +79,12 @@ export default function ShareToFeedModal({
             disabled={sharing}
             style={{
               backgroundColor: colors.primary,
-              borderRadius: 8,
+              borderRadius: borderRadius.md,
               paddingVertical: spacing.sm + 2,
               alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>
+            <Text style={{ color: colors.textLight, fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.base }}>
               {sharing ? 'Sharing...' : 'Share'}
             </Text>
           </TouchableOpacity>

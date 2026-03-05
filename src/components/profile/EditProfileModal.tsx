@@ -3,7 +3,7 @@
  * Modal for editing profile (handle, display name, avatar)
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,142 @@ import {
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themeColors';
+
+const { spacing, borderRadius, typography } = theme;
+
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlayLight,
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: borderRadius.xxl,
+    borderTopRightRadius: borderRadius.xxl,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  modalTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  modalBody: {
+    padding: spacing.xl,
+  },
+  avatarPreview: {
+    width: 100,
+    height: 100,
+    alignSelf: 'center',
+    marginBottom: spacing.lg,
+  },
+  avatarEdit: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  sectionLabel: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: typography.letterSpacing.relaxed,
+    marginBottom: spacing.sm,
+  },
+  clearButton: {
+    alignSelf: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  clearButtonText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.error,
+  },
+  headshotRow: {
+    gap: spacing.md,
+    paddingBottom: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  headshotCard: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: colors.transparent,
+  },
+  headshotCardSelected: {
+    borderColor: colors.primary,
+  },
+  headshotImage: {
+    width: '100%',
+    height: '100%',
+  },
+  newHeadshotCard: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  newHeadshotText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.primary,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  label: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
+    color: colors.textPrimary,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: typography.fontSize.base,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  hint: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  saveButton: {
+    backgroundColor: colors.textPrimary,
+    borderRadius: borderRadius.md,
+    padding: spacing.lg,
+    alignItems: 'center',
+    marginTop: spacing.xxl,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+  },
+});
 
 interface EditProfileModalProps {
   visible: boolean;
@@ -51,6 +187,8 @@ export function EditProfileModal({
   onSave,
   saving,
 }: EditProfileModalProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const avatarUrl = selectedAvatarUrl || headshotUrl;
 
   return (
@@ -65,7 +203,7 @@ export function EditProfileModal({
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Edit Profile</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#000" />
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -78,7 +216,7 @@ export function EditProfileModal({
                   contentFit="cover"
                 />
               ) : (
-                <Ionicons name="person-circle-outline" size={100} color="#999" />
+                <Ionicons name="person-circle-outline" size={100} color={colors.textTertiary} />
               )}
             </View>
 
@@ -110,7 +248,7 @@ export function EditProfileModal({
                 );
               })}
               <TouchableOpacity style={styles.newHeadshotCard} onPress={onCreateHeadshot}>
-                <Ionicons name="add" size={24} color="#007AFF" />
+                <Ionicons name="add" size={24} color={colors.primary} />
                 <Text style={styles.newHeadshotText}>New</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -144,7 +282,7 @@ export function EditProfileModal({
               disabled={saving}
             >
               {saving ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.textLight} />
               ) : (
                 <Text style={styles.saveButtonText}>Save Changes</Text>
               )}
@@ -155,134 +293,3 @@ export function EditProfileModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000',
-  },
-  modalBody: {
-    padding: 20,
-  },
-  avatarPreview: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  avatarEdit: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 8,
-  },
-  clearButton: {
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-  },
-  clearButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#ff3b30',
-  },
-  headshotRow: {
-    gap: 12,
-    paddingBottom: 8,
-    marginBottom: 8,
-  },
-  headshotCard: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  headshotCardSelected: {
-    borderColor: '#007AFF',
-  },
-  headshotImage: {
-    width: '100%',
-    height: '100%',
-  },
-  newHeadshotCard: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 1,
-    borderColor: '#d0d0d0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    backgroundColor: '#f9f9f9',
-  },
-  newHeadshotText: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    marginTop: 16,
-    color: '#000',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#f9f9f9',
-  },
-  hint: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  saveButton: {
-    backgroundColor: '#000',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

@@ -28,7 +28,7 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderBottomColor: colors.gray200,
   },
   unreadNotification: {
-    backgroundColor: '#f8f8ff',
+    backgroundColor: colors.unreadBackground,
   },
   notificationIcon: {
     width: 40,
@@ -47,14 +47,14 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#e8e8f0',
+    backgroundColor: colors.iconFallbackBackground,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarInitial: {
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
-    color: '#5555ff',
+    color: colors.notificationPurple,
   },
   iconText: {
     fontSize: 20,

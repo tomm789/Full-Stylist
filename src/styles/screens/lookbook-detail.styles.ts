@@ -50,6 +50,6 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   addOutfitsButtonText: {
     color: colors.white,
     fontSize: typography.fontSize.base,
-    fontWeight: '600',
+    fontWeight: typography.fontWeight.semibold,
   },
 });

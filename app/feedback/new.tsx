@@ -3,7 +3,7 @@
  * Create new feedback thread
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,10 +14,11 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThemeColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { Header, HeaderActionButton, HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layout';
 import { showErrorToast } from '@/utils/toast';
-import { styles } from '@/styles/screens/feedback-new.styles';
+import { createStyles } from '@/styles/screens/feedback-new.styles';
 
 type Category = 'bug' | 'feature' | 'general' | 'other';
 
@@ -30,6 +31,8 @@ const CATEGORIES: { value: Category; label: string; icon: string }[] = [
 
 export default function NewFeedbackScreen() {
   const { user } = useAuth();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const [category, setCategory] = useState<Category>('general');
   const [title, setTitle] = useState('');
@@ -123,7 +126,7 @@ export default function NewFeedbackScreen() {
                 <Ionicons
                   name={cat.icon as any}
                   size={24}
-                  color={category === cat.value ? '#007AFF' : '#999'}
+                  color={category === cat.value ? colors.primary : colors.textTertiary}
                 />
                 <Text
                   style={[
@@ -173,17 +176,17 @@ export default function NewFeedbackScreen() {
         <View style={styles.tipsSection}>
           <Text style={styles.tipsTitle}>Tips for good feedback:</Text>
           <View style={styles.tip}>
-            <Ionicons name="checkmark-circle" size={16} color="#34c759" />
+            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
             <Text style={styles.tipText}>Be specific and descriptive</Text>
           </View>
           <View style={styles.tip}>
-            <Ionicons name="checkmark-circle" size={16} color="#34c759" />
+            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
             <Text style={styles.tipText}>
               Include steps to reproduce (for bugs)
             </Text>
           </View>
           <View style={styles.tip}>
-            <Ionicons name="checkmark-circle" size={16} color="#34c759" />
+            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
             <Text style={styles.tipText}>Explain the use case (for features)</Text>
           </View>
         </View>

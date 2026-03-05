@@ -254,15 +254,15 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginBottom: spacing.sm + spacing.xs / 2,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
     paddingHorizontal: spacing.md,
   },
   addButton: {
-    fontSize: 14,
+    fontSize: typography.fontSize.md,
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: typography.fontWeight.semibold,
   },
   horizontalList: {
     paddingHorizontal: spacing.md,
@@ -270,19 +270,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   loadingModal: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: colors.overlayDark,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingContent: {
     padding: spacing.xl + spacing.lg,
     borderRadius: spacing.sm + spacing.xs / 2,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: colors.overlayHeavy,
     alignItems: 'center',
   },
   loadingText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: typography.fontSize.base,
     marginTop: spacing.md,
   },
 });

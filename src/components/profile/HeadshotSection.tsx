@@ -3,7 +3,7 @@
  * Headshot generation section for profile images
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,11 @@ import {
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { ProfileImageGallery } from './ProfileImageGallery';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themeColors';
+
+const { spacing, borderRadius, typography } = theme;
 
 interface ProfileImage {
   id: string;
@@ -37,6 +42,107 @@ interface HeadshotSectionProps {
   onSelectImage: (imageId: string) => Promise<void>;
 }
 
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  section: {
+    marginBottom: spacing.huge,
+  },
+  sectionTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  hint: {
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+  },
+  inputContainer: {
+    marginBottom: spacing.lg,
+  },
+  label: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+    marginTop: spacing.md,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: typography.fontSize.base,
+    backgroundColor: colors.background,
+    marginBottom: spacing.xs,
+  },
+  inputHint: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textTertiary,
+    marginBottom: spacing.sm,
+  },
+  previewContainer: {
+    marginBottom: spacing.lg,
+  },
+  previewLabel: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  imagePreview: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  uploadedPreview: {
+    marginBottom: spacing.lg,
+  },
+  uploadedImage: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.backgroundTertiary,
+    marginBottom: spacing.md,
+  },
+  uploadButton: {
+    backgroundColor: colors.backgroundDark,
+    borderRadius: borderRadius.md,
+    padding: spacing.lg,
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  uploadButtonText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  generateButton: {
+    backgroundColor: colors.backgroundDark,
+    borderRadius: borderRadius.md,
+    padding: spacing.lg,
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  generateButtonText: {
+    color: colors.textLight,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  cancelButton: {
+    backgroundColor: colors.backgroundTertiary,
+    borderRadius: borderRadius.md,
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: colors.textSecondary,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+  },
+});
+
 export function HeadshotSection({
   hairStyle,
   makeupStyle,
@@ -52,6 +158,9 @@ export function HeadshotSection({
   onClearImage,
   onSelectImage,
 }: HeadshotSectionProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Professional Headshot</Text>
@@ -117,7 +226,7 @@ export function HeadshotSection({
             disabled={generating}
           >
             {generating ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.textLight} />
             ) : (
               <Text style={styles.generateButtonText}>Generate Headshot</Text>
             )}
@@ -149,104 +258,3 @@ export function HeadshotSection({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  section: {
-    marginBottom: 40,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-  },
-  hint: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    marginBottom: 4,
-  },
-  inputHint: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 8,
-  },
-  previewContainer: {
-    marginBottom: 16,
-  },
-  previewLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-  },
-  imagePreview: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-  },
-  uploadedPreview: {
-    marginBottom: 16,
-  },
-  uploadedImage: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    marginBottom: 12,
-  },
-  uploadButton: {
-    backgroundColor: '#000',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  uploadButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  generateButton: {
-    backgroundColor: '#000',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  generateButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  cancelButton: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

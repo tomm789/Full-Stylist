@@ -8,37 +8,40 @@
 
 import { StyleSheet } from 'react-native';
 import type { ThemeColors } from '@/styles/themeColors';
+import { theme } from '@/styles';
+
+const { spacing, borderRadius, typography } = theme;
 
 export const createDropdownMenuStyles = (colors: ThemeColors) => StyleSheet.create({
   menuTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
     color: colors.textSecondary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: typography.letterSpacing.normal,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    gap: 12,
-    borderRadius: 8,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
+    borderRadius: borderRadius.md,
   },
   menuItemText: {
-    fontSize: 16,
+    fontSize: typography.fontSize.base,
     color: colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: typography.fontWeight.medium,
   },
   menuDivider: {
     height: 1,
     backgroundColor: colors.borderLight,
-    marginVertical: 4,
+    marginVertical: spacing.xs,
   },
   menuItemTextDanger: {
-    color: '#ff3b30',
+    color: colors.error,
   },
 });
 

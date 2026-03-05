@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,13 @@ import {
 import { showErrorToast, showSuccessToast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThemeColors } from '@/contexts/ThemeContext';
 import { KeyboardAwareScreen } from '@/components/shared/layout';
-import { styles } from '@/styles/screens/auth-login.styles';
+import { createStyles } from '@/styles/screens/auth-login.styles';
 
 export default function LoginScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [useMagicLink, setUseMagicLink] = useState(false);

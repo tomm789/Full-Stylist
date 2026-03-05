@@ -3,11 +3,68 @@
  * Individual search result item
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { SearchResult } from '@/hooks/search';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themeColors';
+
+const { spacing, borderRadius, typography } = theme;
+
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  resultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.backgroundTertiary,
+  },
+  resultIcon: {
+    marginRight: spacing.md,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  resultInfo: {
+    flex: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  resultTitle: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  typeLabel: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: spacing.sm,
+  },
+  typeLabelText: {
+    fontSize: 11,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textLight,
+    textTransform: 'uppercase',
+  },
+  resultSubtitle: {
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+  },
+});
 
 interface SearchResultItemProps {
   result: SearchResult;
@@ -15,6 +72,9 @@ interface SearchResultItemProps {
 }
 
 export function SearchResultItem({ result, onPress }: SearchResultItemProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const getResultIcon = (type: SearchResult['type']) => {
     switch (type) {
       case 'user':
@@ -56,7 +116,7 @@ export function SearchResultItem({ result, onPress }: SearchResultItemProps) {
             cachePolicy="memory-disk"
           />
         ) : (
-          <Ionicons name={getResultIcon(result.type)} size={48} color="#999" />
+          <Ionicons name={getResultIcon(result.type)} size={48} color={colors.textTertiary} />
         )}
       </View>
       <View style={styles.resultInfo}>
@@ -70,59 +130,7 @@ export function SearchResultItem({ result, onPress }: SearchResultItemProps) {
           <Text style={styles.resultSubtitle}>{result.subtitle}</Text>
         )}
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#999" />
+      <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  resultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  resultIcon: {
-    marginRight: 12,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#f0f0f0',
-  },
-  resultInfo: {
-    flex: 1,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  resultTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    flex: 1,
-  },
-  typeLabel: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: 8,
-  },
-  typeLabelText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#fff',
-    textTransform: 'uppercase',
-  },
-  resultSubtitle: {
-    fontSize: 14,
-    color: '#666',
-  },
-});

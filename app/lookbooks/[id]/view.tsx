@@ -319,7 +319,7 @@ export default function LookbookViewScreen() {
             <Ionicons
               name={liked ? 'heart' : 'heart-outline'}
               size={28}
-              color={liked ? '#ff0000' : '#000'}
+              color={liked ? colors.error : colors.textPrimary}
             />
             {likeCount > 0 && (
               <Text style={styles.actionCount}>{likeCount}</Text>
@@ -330,7 +330,7 @@ export default function LookbookViewScreen() {
             style={styles.actionButton}
             onPress={handleCommentPress}
           >
-            <Ionicons name="chatbubble-outline" size={26} color="#000" />
+            <Ionicons name="chatbubble-outline" size={26} color={colors.textPrimary} />
             {commentCount > 0 && (
               <Text style={styles.actionCount}>{commentCount}</Text>
             )}
@@ -340,7 +340,7 @@ export default function LookbookViewScreen() {
             <Ionicons
               name={saved ? 'bookmark' : 'bookmark-outline'}
               size={26}
-              color={saved ? '#007AFF' : '#000'}
+              color={saved ? colors.primary : colors.textPrimary}
             />
             {saveCount > 0 && (
               <Text style={styles.actionCount}>{saveCount}</Text>

@@ -3,7 +3,7 @@
  * Single feed item renderer for social feed
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -13,6 +13,11 @@ import FeedLookbookCarousel from '@/components/social/FeedLookbookCarousel';
 import HeadshotFeedCard from '@/components/social/HeadshotFeedCard';
 import { FeedItem } from '@/lib/posts';
 import { formatTimestamp } from '@/utils/formatUtils';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themeColors';
+
+const { spacing, borderRadius, typography } = theme;
 
 export interface EngagementData {
   likes: number;
@@ -59,6 +64,107 @@ const DEFAULT_COUNTS: EngagementData = {
   hasReposted: false,
 };
 
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  feedCard: {
+    backgroundColor: colors.background,
+    borderRadius: 0,
+    marginBottom: 0,
+    padding: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    marginBottom: 0,
+    position: 'relative',
+    zIndex: 1000,
+    backgroundColor: colors.background,
+  },
+  headerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  avatarFallback: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.borderLight,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    position: 'relative',
+    zIndex: 1001,
+  },
+  repostLabel: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  repostLabelName: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  ownerName: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  timestamp: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textTertiary,
+  },
+  menuContainer: {
+    position: 'relative',
+  },
+  menuButton: {
+    padding: spacing.xs,
+    marginLeft: spacing.sm,
+  },
+  caption: {
+    fontSize: typography.fontSize.md,
+    color: colors.gray800,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
+  },
+  socialActions: {
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 0,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxl,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  actionCount: {
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+    fontWeight: typography.fontWeight.semibold,
+  },
+});
+
 export const FeedItemComponent = React.memo(function FeedItemComponent({
   item,
   engagement,
@@ -84,6 +190,8 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
   setOpenMenuPostId,
 }: FeedItemProps) {
   const router = useRouter();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const post = item.type === 'post' ? item.post! : item.repost!.original_post!;
   if (!post) return null;
 
@@ -186,7 +294,7 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
               }}
               onPress={handleMenuPress}
             >
-              <Ionicons name="ellipsis-vertical" size={20} color="#000" />
+              <Ionicons name="ellipsis-vertical" size={20} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -228,13 +336,13 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
             <Ionicons
               name={counts.hasLiked ? 'heart' : 'heart-outline'}
               size={28}
-              color={counts.hasLiked ? '#ff0000' : '#000'}
+              color={counts.hasLiked ? colors.favorite : colors.textPrimary}
             />
             {counts.likes > 0 && <Text style={styles.actionCount}>{counts.likes}</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton} onPress={() => onComment(item)}>
-            <Ionicons name="chatbubble-outline" size={26} color="#000" />
+            <Ionicons name="chatbubble-outline" size={26} color={colors.textPrimary} />
             {counts.comments > 0 && <Text style={styles.actionCount}>{counts.comments}</Text>}
           </TouchableOpacity>
 
@@ -243,21 +351,21 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
               style={styles.actionButton}
               onPress={() => onApplyLook(headshotEntity.variation_id!, headshotEntity.input_snapshot_json)}
             >
-              <Ionicons name="color-wand-outline" size={26} color="#007AFF" />
+              <Ionicons name="color-wand-outline" size={26} color={colors.primary} />
             </TouchableOpacity>
           ) : onTryOnOutfitShortcut && isOutfit && entity && !isOwnPost ? (
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => onTryOnOutfitShortcut(entity.id, outfitImageUrl ?? null)}
             >
-              <Ionicons name="shirt-outline" size={26} color="#007AFF" />
+              <Ionicons name="shirt-outline" size={26} color={colors.primary} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity style={styles.actionButton} onPress={() => onRepost(post.id)}>
               <Ionicons
                 name={counts.hasReposted ? 'repeat' : 'repeat-outline'}
                 size={28}
-                color={counts.hasReposted ? '#00ba7c' : '#000'}
+                color={counts.hasReposted ? colors.repost : colors.textPrimary}
               />
               {counts.reposts > 0 && <Text style={styles.actionCount}>{counts.reposts}</Text>}
             </TouchableOpacity>
@@ -267,7 +375,7 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
             <Ionicons
               name={counts.hasSaved ? 'bookmark' : 'bookmark-outline'}
               size={26}
-              color={counts.hasSaved ? '#007AFF' : '#000'}
+              color={counts.hasSaved ? colors.primary : colors.textPrimary}
             />
             {counts.saves > 0 && <Text style={styles.actionCount}>{counts.saves}</Text>}
           </TouchableOpacity>
@@ -277,7 +385,7 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
               style={styles.actionButton}
               onPress={() => onFindSimilar('outfit', entity.id, undefined)}
             >
-              <Ionicons name="search-outline" size={26} color="#000" />
+              <Ionicons name="search-outline" size={26} color={colors.textPrimary} />
             </TouchableOpacity>
           )}
         </View>
@@ -287,104 +395,3 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
 });
 
 FeedItemComponent.displayName = 'FeedItemComponent';
-
-const styles = StyleSheet.create({
-  feedCard: {
-    backgroundColor: '#fff',
-    borderRadius: 0,
-    marginBottom: 0,
-    padding: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: '#dbdbdb',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 0,
-    position: 'relative',
-    zIndex: 1000,
-    backgroundColor: '#fff',
-  },
-  headerLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f0f0f0',
-  },
-  avatarFallback: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#e0e0e0',
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    position: 'relative',
-    zIndex: 1001,
-  },
-  repostLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
-  },
-  repostLabelName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#000',
-  },
-  ownerName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#999',
-  },
-  menuContainer: {
-    position: 'relative',
-  },
-  menuButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  caption: {
-    fontSize: 14,
-    color: '#333',
-    paddingHorizontal: 12,
-    paddingTop: 4,
-    paddingBottom: 8,
-  },
-  socialActions: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 0,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 24,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  actionCount: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '600',
-  },
-});

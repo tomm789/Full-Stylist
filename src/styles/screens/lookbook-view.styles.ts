@@ -18,7 +18,7 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   playButton: {
     fontSize: typography.fontSize.base,
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: typography.fontWeight.semibold,
   },
   playButtonDisabled: {
     opacity: 0.5,
@@ -53,7 +53,7 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderTopColor: colors.gray300,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 24,
+    gap: spacing.xxl,
   },
   actionButton: {
     flexDirection: 'row',
@@ -63,11 +63,11 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   actionCount: {
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: typography.fontWeight.semibold,
   },
   menuDivider: {
     height: 1,
     backgroundColor: colors.gray300,
-    marginVertical: 4,
+    marginVertical: spacing.xs,
   },
 });

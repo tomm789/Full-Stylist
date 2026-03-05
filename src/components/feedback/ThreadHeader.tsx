@@ -3,23 +3,44 @@
  * Header section for feedback thread
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { formatDistanceToNow } from 'date-fns';
 import { FeedbackThread } from '@/lib/feedback';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themeColors';
 
-const STATUS_COLORS = {
-  open: '#007AFF',
-  in_progress: '#ff9500',
-  resolved: '#34c759',
-  closed: '#8e8e93',
+const { spacing, borderRadius, typography } = theme;
+
+const getCategoryColor = (category: string, colors: ThemeColors): string => {
+  switch (category) {
+    case 'bug':
+      return colors.error;
+    case 'feature':
+      return colors.primary;
+    case 'general':
+      return colors.success;
+    case 'other':
+      return colors.systemGray;
+    default:
+      return colors.systemGray;
+  }
 };
 
-const CATEGORY_COLORS = {
-  bug: '#ff3b30',
-  feature: '#007AFF',
-  general: '#34c759',
-  other: '#8e8e93',
+const getStatusColor = (status: string, colors: ThemeColors): string => {
+  switch (status) {
+    case 'open':
+      return colors.primary;
+    case 'in_progress':
+      return colors.warning;
+    case 'resolved':
+      return colors.success;
+    case 'closed':
+      return colors.systemGray;
+    default:
+      return colors.systemGray;
+  }
 };
 
 interface ThreadHeaderProps {
@@ -28,22 +49,111 @@ interface ThreadHeaderProps {
   onStatusChange: (status: 'open' | 'in_progress' | 'resolved' | 'closed') => void;
 }
 
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  threadHeader: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.xxl,
+  },
+  threadBadges: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  badge: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: borderRadius.sm,
+  },
+  badgeText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+    textTransform: 'capitalize',
+  },
+  threadTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.semibold,
+    marginBottom: spacing.md,
+    color: colors.textPrimary,
+  },
+  threadBody: {
+    fontSize: typography.fontSize.base,
+    color: colors.gray800,
+    lineHeight: typography.lineHeight.relaxed,
+    marginBottom: spacing.lg,
+  },
+  threadMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  threadAuthor: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  threadTime: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textTertiary,
+  },
+  statusChanger: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  statusLabel: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    marginBottom: spacing.sm,
+    color: colors.textPrimary,
+  },
+  statusButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  statusButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+  },
+  statusButtonActive: {
+    borderWidth: 0,
+  },
+  statusButtonText: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    textTransform: 'capitalize',
+  },
+  statusButtonTextActive: {
+    color: colors.white,
+  },
+});
+
 export function ThreadHeader({
   thread,
   isOwner,
   onStatusChange,
 }: ThreadHeaderProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const categoryColor = getCategoryColor(thread.category, colors);
+  const statusColor = getStatusColor(thread.status, colors);
+
   return (
     <View style={styles.threadHeader}>
       <View style={styles.threadBadges}>
         <View
           style={[
             styles.badge,
-            { backgroundColor: CATEGORY_COLORS[thread.category] + '20' },
+            { backgroundColor: categoryColor + '20' },
           ]}
         >
           <Text
-            style={[styles.badgeText, { color: CATEGORY_COLORS[thread.category] }]}
+            style={[styles.badgeText, { color: categoryColor }]}
           >
             {thread.category}
           </Text>
@@ -51,10 +161,10 @@ export function ThreadHeader({
         <View
           style={[
             styles.badge,
-            { backgroundColor: STATUS_COLORS[thread.status] + '20' },
+            { backgroundColor: statusColor + '20' },
           ]}
         >
-          <Text style={[styles.badgeText, { color: STATUS_COLORS[thread.status] }]}>
+          <Text style={[styles.badgeText, { color: statusColor }]}>
             {thread.status.replace('_', ' ')}
           </Text>
         </View>
@@ -77,120 +187,39 @@ export function ThreadHeader({
         <View style={styles.statusChanger}>
           <Text style={styles.statusLabel}>Change Status:</Text>
           <View style={styles.statusButtons}>
-            {(['open', 'in_progress', 'resolved', 'closed'] as const).map((status) => (
-              <TouchableOpacity
-                key={status}
-                style={[
-                  styles.statusButton,
-                  thread.status === status && styles.statusButtonActive,
-                  {
-                    borderColor: STATUS_COLORS[status],
-                    backgroundColor:
-                      thread.status === status ? STATUS_COLORS[status] : 'transparent',
-                  },
-                ]}
-                onPress={() => onStatusChange(status)}
-              >
-                <Text
+            {(['open', 'in_progress', 'resolved', 'closed'] as const).map((status) => {
+              const btnColor = getStatusColor(status, colors);
+              return (
+                <TouchableOpacity
+                  key={status}
                   style={[
-                    styles.statusButtonText,
-                    thread.status === status && styles.statusButtonTextActive,
+                    styles.statusButton,
+                    thread.status === status && styles.statusButtonActive,
                     {
-                      color: thread.status === status ? '#fff' : STATUS_COLORS[status],
+                      borderColor: btnColor,
+                      backgroundColor:
+                        thread.status === status ? btnColor : colors.transparent,
                     },
                   ]}
+                  onPress={() => onStatusChange(status)}
                 >
-                  {status.replace('_', ' ')}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.statusButtonText,
+                      thread.status === status && styles.statusButtonTextActive,
+                      {
+                        color: thread.status === status ? colors.white : btnColor,
+                      },
+                    ]}
+                  >
+                    {status.replace('_', ' ')}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  threadHeader: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  threadBadges: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  threadTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#000',
-  },
-  threadBody: {
-    fontSize: 16,
-    color: '#333',
-    lineHeight: 24,
-    marginBottom: 16,
-  },
-  threadMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  threadAuthor: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-  },
-  threadTime: {
-    fontSize: 12,
-    color: '#999',
-  },
-  statusChanger: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  statusLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#000',
-  },
-  statusButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  statusButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  statusButtonActive: {
-    borderWidth: 0,
-  },
-  statusButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  statusButtonTextActive: {
-    color: '#fff',
-  },
-});

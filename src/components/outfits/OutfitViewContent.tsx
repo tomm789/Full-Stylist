@@ -3,7 +3,7 @@
  * Main content display for outfit view
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,11 @@ import { FullscreenImageModal } from '@/components/shared/modals';
 import { normalizeLabelList } from '@/lib/outfits/normalizeLabels';
 import { supabase } from '@/lib/supabase';
 import { continueTimeline } from '@/lib/perf/timeline';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { theme } from '@/styles';
+import type { ThemeColors } from '@/styles/themeColors';
+
+const { spacing, borderRadius, typography } = theme;
 
 const IMAGE_RETRY_DELAYS = [500, 1000, 2000];
 const MAX_IMAGE_RETRIES = 3;
@@ -100,6 +105,8 @@ export function OutfitViewContent({
   isGenerating,
 }: OutfitViewContentProps) {
   const router = useRouter();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [imageRetryKey, setImageRetryKey] = useState(0);
   const imageRetryCountRef = useRef(0);
   const imageRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -353,90 +360,90 @@ export function OutfitViewContent({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   imageContainer: {
     width: '100%',
     aspectRatio: 3 / 4,
-    backgroundColor: '#000',
+    backgroundColor: colors.backgroundDark,
   },
   coverImage: {
     width: '100%',
     height: '100%',
   },
   commentsContainer: {
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: spacing.lg,
+    backgroundColor: colors.background,
   },
   detailsSection: {
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: spacing.lg,
+    backgroundColor: colors.background,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000',
-    marginBottom: 16,
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
   },
   notesSection: {
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
   },
   sectionLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 12,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
   notesText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: typography.fontSize.base,
+    color: colors.gray800,
     lineHeight: 24,
   },
   itemsSection: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   itemCard: {
     flexDirection: 'row',
-    padding: 12,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    marginBottom: 12,
+    padding: spacing.md,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
     alignItems: 'center',
   },
   itemImage: {
     width: 60,
     height: 60,
-    borderRadius: 8,
-    backgroundColor: '#e0e0e0',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.borderLight,
   },
   itemNumber: {
     width: 60,
     height: 60,
-    borderRadius: 8,
-    backgroundColor: '#e0e0e0',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   itemNumberText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textSecondary,
   },
   itemInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: spacing.md,
   },
   itemTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   itemDescription: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
   },
   aiSection: {
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
   },
   aiContent: {
     marginTop: 6,
@@ -446,20 +453,20 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   aiLabel: {
-    fontSize: 12,
+    fontSize: typography.fontSize.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    color: '#64748b',
-    marginBottom: 4,
+    color: colors.gray600,
+    marginBottom: spacing.xs,
   },
   aiText: {
-    fontSize: 15,
-    color: '#111827',
+    fontSize: typography.fontSize.base,
+    color: colors.gray900,
     lineHeight: 22,
   },
   aiEmptyText: {
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: typography.fontSize.md,
+    color: colors.gray500,
     lineHeight: 20,
   },
 });

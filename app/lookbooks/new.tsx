@@ -63,7 +63,7 @@ export default function NewLookbookScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -223,7 +223,7 @@ export default function NewLookbookScreen() {
 
       {saving && (
         <View style={styles.savingOverlay}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.savingText}>Creating lookbook...</Text>
         </View>
       )}

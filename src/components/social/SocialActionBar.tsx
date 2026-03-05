@@ -11,7 +11,7 @@ import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themeColors';
 
-const { spacing } = theme;
+const { spacing, typography } = theme;
 
 interface SocialActionBarProps {
   counts: EngagementCounts;
@@ -48,7 +48,7 @@ export default function SocialActionBar({
           <Ionicons
             name={counts.hasLiked ? 'heart' : 'heart-outline'}
             size={28}
-            color={counts.hasLiked ? '#ff0000' : colors.textPrimary}
+            color={counts.hasLiked ? colors.favorite : colors.textPrimary}
           />
         )}
         {counts.likes > 0 && <Text style={styles.actionCount}>{counts.likes}</Text>}
@@ -70,7 +70,7 @@ export default function SocialActionBar({
           <Ionicons
             name={counts.hasReposted ? 'repeat' : 'repeat-outline'}
             size={28}
-            color={counts.hasReposted ? '#00ba7c' : colors.textPrimary}
+            color={counts.hasReposted ? colors.repost : colors.textPrimary}
           />
         )}
         {counts.reposts > 0 && <Text style={styles.actionCount}>{counts.reposts}</Text>}
@@ -112,8 +112,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     gap: spacing.xs + spacing.xs / 4,
   },
   actionCount: {
-    fontSize: 14,
+    fontSize: typography.fontSize.md,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: typography.fontWeight.semibold,
   },
 });

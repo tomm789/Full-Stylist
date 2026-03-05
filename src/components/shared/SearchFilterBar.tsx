@@ -3,10 +3,54 @@
  * Filter chips for search results
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SearchResultType } from '@/hooks/search';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themeColors';
+
+const { spacing, borderRadius, typography } = theme;
+
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  filterWrapper: {
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.backgroundTertiary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterChipIcon: {
+    marginRight: spacing.xs,
+  },
+  filterChipText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.textSecondary,
+  },
+  filterChipTextActive: {
+    color: colors.textLight,
+  },
+});
 
 interface SearchFilterBarProps {
   selectedFilter: SearchResultType | 'all';
@@ -17,6 +61,9 @@ export function SearchFilterBar({
   selectedFilter,
   onFilterChange,
 }: SearchFilterBarProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const filters: Array<{ type: SearchResultType | 'all'; label: string; icon: string }> = [
     { type: 'all', label: 'All', icon: 'grid-outline' },
     { type: 'user', label: 'Users', icon: 'person-outline' },
@@ -44,7 +91,7 @@ export function SearchFilterBar({
                 <Ionicons
                   name={filter.icon as any}
                   size={14}
-                  color={isActive ? '#fff' : '#666'}
+                  color={isActive ? colors.textLight : colors.textSecondary}
                   style={styles.filterChipIcon}
                 />
               )}
@@ -63,42 +110,3 @@ export function SearchFilterBar({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  filterWrapper: {
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#f0f0f0',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  filterChipActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  filterChipIcon: {
-    marginRight: 4,
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#666',
-  },
-  filterChipTextActive: {
-    color: '#fff',
-  },
-});

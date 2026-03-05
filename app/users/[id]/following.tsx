@@ -220,7 +220,7 @@ export default function FollowingScreen() {
             disabled={isFollowLoading}
           >
             {isFollowLoading ? (
-              <ActivityIndicator size="small" color={isFollowing ? colors.primary : '#fff'} />
+              <ActivityIndicator size="small" color={isFollowing ? colors.primary : colors.white} />
             ) : (
               <Text
                 style={[
@@ -338,7 +338,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderColor: colors.border,
   },
   followButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.semibold,
   },

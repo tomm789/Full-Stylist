@@ -3,43 +3,43 @@
  * Display feedback thread in list
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedbackThread } from '@/lib/feedback';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themeColors';
 
-interface FeedbackCardProps {
-  thread: FeedbackThread;
-  onPress: () => void;
-}
+const { spacing, borderRadius, typography } = theme;
 
-const getCategoryColor = (category: string): string => {
+const getCategoryColor = (category: string, colors: ThemeColors): string => {
   switch (category) {
     case 'bug':
-      return '#ff3b30';
+      return colors.error;
     case 'feature':
-      return '#007AFF';
+      return colors.primary;
     case 'general':
-      return '#34c759';
+      return colors.success;
     case 'other':
-      return '#8e8e93';
+      return colors.systemGray;
     default:
-      return '#8e8e93';
+      return colors.systemGray;
   }
 };
 
-const getStatusColor = (status: string): string => {
+const getStatusColor = (status: string, colors: ThemeColors): string => {
   switch (status) {
     case 'open':
-      return '#007AFF';
+      return colors.primary;
     case 'in_progress':
-      return '#ff9500';
+      return colors.warning;
     case 'resolved':
-      return '#34c759';
+      return colors.success;
     case 'closed':
-      return '#8e8e93';
+      return colors.systemGray;
     default:
-      return '#8e8e93';
+      return colors.systemGray;
   }
 };
 
@@ -78,9 +78,100 @@ const formatTimestamp = (timestamp: string): string => {
   return posted.toLocaleDateString('en-US', options);
 };
 
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  card: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  header: {
+    marginBottom: spacing.sm,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  badges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  title: {
+    flex: 1,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginRight: spacing.sm,
+  },
+  categoryBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.lg,
+  },
+  categoryText: {
+    fontSize: 11,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.lg,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  body: {
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+    lineHeight: typography.lineHeight.normal,
+    marginBottom: spacing.md,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  meta: {
+    flex: 1,
+  },
+  author: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  time: {
+    fontSize: 11,
+    color: colors.textTertiary,
+  },
+  stats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  commentCount: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textSecondary,
+  },
+});
+
+interface FeedbackCardProps {
+  thread: FeedbackThread;
+  onPress: () => void;
+}
+
 export function FeedbackCard({ thread, onPress }: FeedbackCardProps) {
-  const categoryColor = getCategoryColor(thread.category);
-  const statusColor = getStatusColor(thread.status);
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const categoryColor = getCategoryColor(thread.category, colors);
+  const statusColor = getStatusColor(thread.status, colors);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
@@ -120,94 +211,10 @@ export function FeedbackCard({ thread, onPress }: FeedbackCardProps) {
           <Text style={styles.time}>{formatTimestamp(thread.created_at)}</Text>
         </View>
         <View style={styles.stats}>
-          <Ionicons name="chatbubble-outline" size={16} color="#666" />
+          <Ionicons name="chatbubble-outline" size={16} color={colors.textSecondary} />
           <Text style={styles.commentCount}>{thread.comment_count || 0}</Text>
         </View>
       </View>
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  header: {
-    marginBottom: 8,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  badges: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  title: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginRight: 8,
-  },
-  categoryBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  categoryText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  body: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  meta: {
-    flex: 1,
-  },
-  author: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 2,
-  },
-  time: {
-    fontSize: 11,
-    color: '#999',
-  },
-  stats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  commentCount: {
-    fontSize: 12,
-    color: '#666',
-  },
-});

@@ -9,7 +9,7 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     padding: 20,
   },
   errorText: {
-    color: '#ff0000',
+    color: colors.error,
     fontSize: 16,
     marginBottom: 8,
     textAlign: 'center',

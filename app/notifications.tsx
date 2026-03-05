@@ -204,7 +204,7 @@ export default function NotificationsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="notifications-outline" size={64} color="#ccc" />
+            <Ionicons name="notifications-outline" size={64} color={colors.gray400} />
             <Text style={styles.emptyText}>No notifications yet</Text>
             <Text style={styles.emptySubtext}>
               When people interact with your content, you'll see it here

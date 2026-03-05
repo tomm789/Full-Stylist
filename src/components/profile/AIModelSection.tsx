@@ -3,9 +3,14 @@
  * AI model selection section for account settings
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Switch } from 'react-native';
 import PrimaryButton from '@/components/shared/buttons/PrimaryButton';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themeColors';
+
+const { spacing, borderRadius, typography } = theme;
 
 interface AIModelSectionProps {
   aiModelPreference: string;
@@ -16,6 +21,141 @@ interface AIModelSectionProps {
   onOpenAISettings?: () => void;
 }
 
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  section: {
+    marginBottom: spacing.xxxl,
+  },
+  sectionTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    marginBottom: spacing.md,
+  },
+  hint: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  optionsList: {
+    gap: spacing.sm,
+  },
+  option: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+  },
+  optionSelected: {
+    borderColor: colors.textPrimary,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  optionText: {
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+  },
+  optionTextSelected: {
+    color: colors.textPrimary,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  optionSubtext: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textTertiary,
+    marginTop: spacing.xs,
+  },
+  headshotToggleSection: {
+    marginBottom: spacing.xxxl,
+    paddingBottom: spacing.xxl,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  headshotToggleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  headshotToggleLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  headshotToggleTitle: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    marginRight: spacing.sm,
+  },
+  betaBadge: {
+    backgroundColor: colors.backgroundTertiary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  betaBadgeText: {
+    fontSize: 10,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+  },
+  passwordContainer: {
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  passwordLabel: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.medium,
+    marginBottom: spacing.sm,
+    color: colors.gray800,
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
+    padding: 10,
+    fontSize: typography.fontSize.md,
+    backgroundColor: colors.background,
+    marginBottom: spacing.md,
+  },
+  passwordButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  passwordButton: {
+    flex: 1,
+    padding: 10,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+  },
+  passwordButtonCancel: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  passwordButtonConfirm: {
+    backgroundColor: colors.backgroundDark,
+  },
+  passwordButtonText: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  passwordButtonCancelText: {
+    color: colors.gray800,
+  },
+  passwordButtonConfirmText: {
+    color: colors.textLight,
+  },
+  advancedSettings: {
+    marginTop: spacing.lg,
+    alignItems: 'flex-start',
+  },
+});
+
 export function AIModelSection({
   aiModelPreference,
   saving,
@@ -24,6 +164,9 @@ export function AIModelSection({
   onHeadshotToggle,
   onOpenAISettings,
 }: AIModelSectionProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [showPasswordInput, setShowPasswordInput] = useState(false);
   const [password, setPassword] = useState('');
   const [showModelPasswordInput, setShowModelPasswordInput] = useState(false);
@@ -235,138 +378,3 @@ export function AIModelSection({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  hint: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  optionsList: {
-    gap: 8,
-  },
-  option: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-  },
-  optionSelected: {
-    borderColor: '#000',
-    backgroundColor: '#f0f0f0',
-  },
-  optionText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  optionTextSelected: {
-    color: '#000',
-    fontWeight: '600',
-  },
-  optionSubtext: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  headshotToggleSection: {
-    marginBottom: 32,
-    paddingBottom: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headshotToggleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  headshotToggleLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 12,
-  },
-  headshotToggleTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  betaBadge: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  betaBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#666',
-    textTransform: 'uppercase',
-  },
-  passwordContainer: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  passwordLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-    color: '#333',
-  },
-  passwordInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 6,
-    padding: 10,
-    fontSize: 14,
-    backgroundColor: '#fff',
-    marginBottom: 12,
-  },
-  passwordButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  passwordButton: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  passwordButtonCancel: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  passwordButtonConfirm: {
-    backgroundColor: '#000',
-  },
-  passwordButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  passwordButtonCancelText: {
-    color: '#333',
-  },
-  passwordButtonConfirmText: {
-    color: '#fff',
-  },
-  advancedSettings: {
-    marginTop: 16,
-    alignItems: 'flex-start',
-  },
-});

@@ -3,7 +3,7 @@
  * Modal showing instructions for adding app to home screen on iOS
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,12 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { lightColors } from '@/styles/themeColors';
+import type { ThemeColors } from '@/styles/themeColors';
+import { theme } from '@/styles';
+
+const { spacing, borderRadius, typography } = theme;
 
 interface AddToHomeScreenInstructionsModalProps {
   visible: boolean;
@@ -23,6 +29,9 @@ export function AddToHomeScreenInstructionsModal({
   visible,
   onClose,
 }: AddToHomeScreenInstructionsModalProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   // Web-only styles (React Native Web compatible)
   const webStyles: any = Platform.OS === 'web'
     ? {
@@ -32,12 +41,12 @@ export function AddToHomeScreenInstructionsModal({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: lightColors.overlayLight,
           justifyContent: 'flex-end' as const,
           zIndex: 10000,
         },
         modalContent: {
-          backgroundColor: '#ffffff',
+          backgroundColor: lightColors.background,
           borderTopLeftRadius: '20px',
           borderTopRightRadius: '20px',
           maxHeight: '80vh',
@@ -47,26 +56,26 @@ export function AddToHomeScreenInstructionsModal({
         modalTitle: {
           fontSize: '22px',
           fontWeight: '700' as const,
-          color: '#000000',
+          color: lightColors.textPrimary,
         },
         stepNumber: {
           width: '32px',
           height: '32px',
           borderRadius: '16px',
-          backgroundColor: '#007AFF',
+          backgroundColor: lightColors.primary,
           justifyContent: 'center' as const,
           alignItems: 'center' as const,
           marginRight: '12px',
         },
         stepText: {
           fontSize: '16px',
-          color: '#000000',
+          color: lightColors.textPrimary,
           lineHeight: '24px',
           flex: 1,
         },
         noteText: {
           fontSize: '14px',
-          color: '#666666',
+          color: lightColors.textSecondary,
           lineHeight: '20px',
           fontStyle: 'italic' as const,
         },
@@ -75,17 +84,17 @@ export function AddToHomeScreenInstructionsModal({
           paddingBottom: '20px',
           paddingHorizontal: '20px',
           borderTopWidth: '1px',
-          borderTopColor: '#e0e0e0',
+          borderTopColor: lightColors.borderLight,
         },
         gotItButton: {
-          backgroundColor: '#007AFF',
+          backgroundColor: lightColors.primary,
           borderRadius: '12px',
           paddingVertical: '14px',
           paddingHorizontal: '24px',
           alignItems: 'center' as const,
         },
         gotItButtonText: {
-          color: '#ffffff',
+          color: lightColors.textLight,
           fontSize: '16px',
           fontWeight: '600' as const,
         },
@@ -169,10 +178,10 @@ export function AddToHomeScreenInstructionsModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlayLight,
     justifyContent: 'flex-end',
   },
   modalBackdrop: {
@@ -183,88 +192,88 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   modalContent: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: borderRadius.xxl,
+    borderTopRightRadius: borderRadius.xxl,
     maxHeight: '80%',
-    paddingBottom: 20,
+    paddingBottom: spacing.xl,
   },
   modalHeader: {
-    padding: 20,
-    paddingBottom: 16,
+    padding: spacing.xl,
+    paddingBottom: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.borderLight,
   },
   modalTitle: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#000000',
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textPrimary,
   },
   modalBody: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.xl,
   },
   instructionsContainer: {
-    paddingVertical: 20,
+    paddingVertical: spacing.xl,
   },
   stepContainer: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
     alignItems: 'flex-start',
   },
   stepNumber: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
     flexShrink: 0,
   },
   stepNumberText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: colors.textLight,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.bold,
   },
   stepText: {
-    fontSize: 16,
-    color: '#000000',
+    fontSize: typography.fontSize.base,
+    color: colors.textPrimary,
     lineHeight: 24,
     flex: 1,
   },
   boldText: {
-    fontWeight: '600',
+    fontWeight: typography.fontWeight.semibold,
   },
   noteContainer: {
-    marginTop: 8,
-    padding: 16,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
+    marginTop: spacing.sm,
+    padding: spacing.lg,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.lg,
   },
   noteText: {
-    fontSize: 14,
-    color: '#666666',
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
     lineHeight: 20,
     fontStyle: 'italic',
   },
   modalFooter: {
-    paddingTop: 16,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.borderLight,
   },
   gotItButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
     paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
     alignItems: 'center',
   },
   gotItButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.textLight,
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
   },
 });

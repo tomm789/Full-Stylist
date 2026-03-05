@@ -1,5 +1,8 @@
 import { StyleSheet } from 'react-native';
+import { theme } from '@/styles';
 import type { ThemeColors } from '@/styles/themeColors';
+
+const { spacing, borderRadius, typography } = theme;
 
 export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
@@ -8,7 +11,7 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   headerRightButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
   deleteButton: {
     // No special background, icon color indicates delete
@@ -22,36 +25,36 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingBottom: 100,
   },
   detailsContent: {
-    padding: 20,
+    padding: spacing.xl,
     backgroundColor: colors.background,
   },
   itemTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.bold,
     color: colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   itemBrand: {
-    fontSize: 18,
+    fontSize: typography.fontSize.lg,
     color: colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   itemCategory: {
-    fontSize: 14,
+    fontSize: typography.fontSize.md,
     color: colors.textTertiary,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   itemDescription: {
-    fontSize: 16,
+    fontSize: typography.fontSize.base,
     color: colors.gray800,
-    marginBottom: 20,
-    lineHeight: 24,
+    marginBottom: spacing.xl,
+    lineHeight: typography.lineHeight.relaxed,
   },
   emptyText: {
     color: '#fff', // On dark image viewer background
-    fontSize: 16,
+    fontSize: typography.fontSize.base,
     textAlign: 'center',
-    marginTop: 40,
+    marginTop: spacing.huge,
   },
   fastPathImageContainer: {
     aspectRatio: 1,
@@ -70,71 +73,71 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   generatingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   generatingOverlayText: {
     color: '#fff', // Overlay text always white on dark overlay
-    fontSize: 16,
-    marginTop: 12,
-    fontWeight: '500',
+    fontSize: typography.fontSize.base,
+    marginTop: spacing.md,
+    fontWeight: typography.fontWeight.medium,
   },
   carouselWrapper: {
     position: 'relative',
   },
   titleSkeleton: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   descriptionSkeleton: {
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   skeletonLine: {
-    height: 16,
+    height: spacing.lg,
     backgroundColor: colors.gray200,
-    borderRadius: 4,
-    marginBottom: 8,
+    borderRadius: spacing.xs,
+    marginBottom: spacing.sm,
     width: '100%',
   },
   skeletonLineShort: {
     width: '60%',
   },
   generationErrorBox: {
-    marginBottom: 16,
-    padding: 12,
+    marginBottom: spacing.lg,
+    padding: spacing.md,
     backgroundColor: colors.error + '10',
-    borderRadius: 8,
+    borderRadius: borderRadius.md,
   },
   generationErrorText: {
     color: colors.error,
-    fontSize: 14,
-    marginBottom: 8,
+    fontSize: typography.fontSize.md,
+    marginBottom: spacing.sm,
   },
   retryButton: {
     alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
     backgroundColor: colors.primary,
-    borderRadius: 8,
+    borderRadius: borderRadius.md,
   },
   retryButtonText: {
     color: '#fff', // Button text always white on primary bg
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
   },
   imageErrorContainer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: spacing.xl,
     alignSelf: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   imageErrorText: {
     color: '#fff', // Overlay text always white
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
   },
   imagePlaceholder: {
     aspectRatio: 1,

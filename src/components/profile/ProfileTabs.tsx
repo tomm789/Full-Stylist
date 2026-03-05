@@ -3,7 +3,7 @@
  * Tab navigation for headshots and bodyshots
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,75 @@ import {
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
+import { theme } from '@/styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import type { ThemeColors } from '@/styles/themeColors';
+
+const { spacing, typography } = theme;
+
 type TabType = 'headshots' | 'bodyshots';
+
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.transparent,
+  },
+  tabActive: {
+    borderBottomColor: colors.textPrimary,
+  },
+  tabText: {
+    fontSize: typography.fontSize.md,
+    color: colors.textTertiary,
+    fontWeight: typography.fontWeight.medium,
+  },
+  tabTextActive: {
+    color: colors.textPrimary,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  tabContent: {
+    backgroundColor: colors.background,
+    minHeight: 400,
+  },
+  uploadCard: {
+    backgroundColor: colors.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadCardContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.sm,
+  },
+  uploadCardText: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.primary,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
+  emptyState: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  emptyText: {
+    fontSize: typography.fontSize.md,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+  },
+});
 
 interface ProfileTabsProps {
   activeTab: TabType;
@@ -37,6 +105,9 @@ export function ProfileTabs({
   onNewHeadshot,
   onNewBodyShot,
 }: ProfileTabsProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const renderTabBar = () => (
     <View style={styles.tabsContainer}>
       <TouchableOpacity
@@ -46,7 +117,7 @@ export function ProfileTabs({
         <Ionicons
           name="person-outline"
           size={24}
-          color={activeTab === 'headshots' ? '#000' : '#999'}
+          color={activeTab === 'headshots' ? colors.textPrimary : colors.textTertiary}
         />
         <Text style={[styles.tabText, activeTab === 'headshots' && styles.tabTextActive]}>
           Headshots
@@ -59,7 +130,7 @@ export function ProfileTabs({
         <Ionicons
           name="body-outline"
           size={24}
-          color={activeTab === 'bodyshots' ? '#000' : '#999'}
+          color={activeTab === 'bodyshots' ? colors.textPrimary : colors.textTertiary}
         />
         <Text style={[styles.tabText, activeTab === 'bodyshots' && styles.tabTextActive]}>
           Body Shots
@@ -84,7 +155,7 @@ export function ProfileTabs({
                     onPress={onNewHeadshot}
                   >
                     <View style={styles.uploadCardContent}>
-                      <Ionicons name="add-circle-outline" size={48} color="#007AFF" />
+                      <Ionicons name="add-circle-outline" size={48} color={colors.primary} />
                       <Text style={styles.uploadCardText}>New Headshot</Text>
                     </View>
                   </TouchableOpacity>
@@ -125,7 +196,7 @@ export function ProfileTabs({
                     onPress={onNewBodyShot}
                   >
                     <View style={styles.uploadCardContent}>
-                      <Ionicons name="add-circle-outline" size={48} color="#007AFF" />
+                      <Ionicons name="add-circle-outline" size={48} color={colors.primary} />
                       <Text style={styles.uploadCardText}>New Body Shot</Text>
                     </View>
                   </TouchableOpacity>
@@ -161,65 +232,3 @@ export function ProfileTabs({
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 8,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabActive: {
-    borderBottomColor: '#000',
-  },
-  tabText: {
-    fontSize: 14,
-    color: '#999',
-    fontWeight: '500',
-  },
-  tabTextActive: {
-    color: '#000',
-    fontWeight: '600',
-  },
-  tabContent: {
-    backgroundColor: '#fff',
-    minHeight: 400,
-  },
-  uploadCard: {
-    backgroundColor: '#f9f9f9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  uploadCardContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
-  },
-  uploadCardText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#007AFF',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  emptyState: {
-    width: '100%',
-    alignItems: 'center',
-    paddingVertical: 48,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 12,
-  },
-});

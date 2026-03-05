@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,10 +19,13 @@ import {
 } from '@/lib/import';
 import { supabase } from '@/lib/supabase';
 import { showSuccessToast, showErrorToast } from '@/utils/toast';
-import { styles } from '@/styles/screens/import.styles';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createStyles } from '@/styles/screens/import.styles';
 
 export default function ImportScreen() {
   const { user } = useAuth();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const [localStorageData, setLocalStorageData] = useState<LocalStorageData | null>(null);
   const [loading, setLoading] = useState(true);

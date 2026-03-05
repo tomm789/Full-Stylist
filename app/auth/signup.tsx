@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,13 @@ import {
 import { showErrorToast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThemeColors } from '@/contexts/ThemeContext';
 import { KeyboardAwareScreen } from '@/components/shared/layout';
-import { styles } from '@/styles/screens/auth-signup.styles';
+import { createStyles } from '@/styles/screens/auth-signup.styles';
 
 export default function SignUpScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

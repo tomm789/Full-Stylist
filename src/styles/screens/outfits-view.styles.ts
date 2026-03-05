@@ -1,5 +1,8 @@
 import { StyleSheet } from 'react-native';
+import { theme } from '@/styles';
 import type { ThemeColors } from '@/styles/themeColors';
+
+const { spacing, borderRadius, typography } = theme;
 
 export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: {
@@ -10,61 +13,61 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   errorText: {
     color: colors.error,
-    fontSize: 16,
+    fontSize: typography.fontSize.base,
     textAlign: 'center',
-    marginTop: 40,
+    marginTop: spacing.huge,
   },
   deleteModalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.overlayLight,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.xl,
   },
   deleteModalContent: {
     backgroundColor: colors.background,
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xxl,
     width: '100%',
     maxWidth: 400,
   },
   deleteModalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    marginBottom: spacing.md,
     textAlign: 'center',
     color: colors.textPrimary,
   },
   deleteModalMessage: {
-    fontSize: 14,
+    fontSize: typography.fontSize.md,
     color: colors.textSecondary,
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
     textAlign: 'center',
   },
   deleteModalButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
   },
   deleteModalButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
   },
   cancelButton: {
     backgroundColor: colors.backgroundTertiary,
   },
   cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
   },
   confirmDeleteButton: {
     backgroundColor: colors.error,
   },
   confirmDeleteButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
     color: colors.white,
   },
 });

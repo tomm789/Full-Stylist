@@ -23,7 +23,7 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   label: {
     fontSize: typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: typography.fontWeight.semibold,
     color: colors.black,
     marginBottom: spacing.xs,
     marginTop: spacing.md,
@@ -55,13 +55,13 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   typeOptionActive: {
     borderColor: colors.primary,
-    backgroundColor: '#e7f3ff',
+    backgroundColor: colors.primaryTint,
   },
   typeOptionText: {
     fontSize: typography.fontSize.base,
-    fontWeight: '600',
+    fontWeight: typography.fontWeight.semibold,
     color: colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   typeOptionTextActive: {
     color: colors.primary,
@@ -85,7 +85,7 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   visibilityOptionActive: {
     borderColor: colors.primary,
-    backgroundColor: '#e7f3ff',
+    backgroundColor: colors.primaryTint,
   },
   visibilityOptionText: {
     fontSize: typography.fontSize.sm,
@@ -93,7 +93,7 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   visibilityOptionTextActive: {
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: typography.fontWeight.semibold,
   },
   outfitsHeader: {
     flexDirection: 'row',
@@ -119,7 +119,7 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   emptyButtonText: {
     color: colors.white,
     fontSize: typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: typography.fontWeight.semibold,
   },
   savingOverlay: {
     position: 'absolute',
@@ -127,7 +127,7 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.overlayLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
