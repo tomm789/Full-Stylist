@@ -168,10 +168,7 @@ export async function saveLookbook(
       // Update existing lookbook
       const { data: updatedLookbook, error: updateError } = await supabase
         .from('lookbooks')
-        .update({
-          ...lookbookData,
-          updated_at: new Date().toISOString(),
-        })
+        .update(lookbookData)
         .eq('id', lookbookData.id)
         .eq('owner_user_id', userId)
         .select()

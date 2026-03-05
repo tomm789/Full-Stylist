@@ -23,20 +23,14 @@ export async function likeEntity(
     // Check if already liked (.maybeSingle() avoids 406 when no row exists)
     const { data: existing } = await supabase
       .from('likes')
-      .select('id')
+      .select('*')
       .eq('user_id', userId)
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .maybeSingle();
 
     if (existing) {
-      // Already liked, return existing
-      const { data: like } = await supabase
-        .from('likes')
-        .select('*')
-        .eq('id', existing.id)
-        .single();
-      return { data: like, error: null };
+      return { data: existing, error: null };
     }
 
     // Create new like

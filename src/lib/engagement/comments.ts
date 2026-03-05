@@ -151,10 +151,7 @@ export async function updateComment(
   try {
     const { data: comment, error } = await supabase
       .from('comments')
-      .update({
-        body,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ body })
       .eq('id', commentId)
       .eq('user_id', userId)
       .select(

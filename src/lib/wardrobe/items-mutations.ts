@@ -116,10 +116,7 @@ export async function updateWardrobeItem(
   try {
     const { data, error } = await supabase
       .from('wardrobe_items')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updates)
       .eq('id', itemId)
       .eq('owner_user_id', userId)
       .select()

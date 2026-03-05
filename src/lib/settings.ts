@@ -59,14 +59,10 @@ export async function updateUserSettings(
   userId: string,
   updates: Partial<UserSettings>
 ): Promise<{ error: any }> {
-  const updatePayload = {
-    ...updates,
-    updated_at: new Date().toISOString(),
-  };
-
+  // updated_at is handled automatically by the set_updated_at trigger (0054)
   const { data, error: updateError } = await supabase
     .from('user_settings')
-    .update(updatePayload)
+    .update(updates)
     .eq('user_id', userId)
     .select('user_id')
     .maybeSingle();
@@ -84,7 +80,6 @@ export async function updateUserSettings(
     .insert({
       user_id: userId,
       ...updates,
-      updated_at: updatePayload.updated_at,
     });
 
   return { error: insertError };

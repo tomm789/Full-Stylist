@@ -58,22 +58,27 @@ export async function getFeedbackThreads(
       throw error;
     }
 
-    // Get comment counts for each thread
-    const threadsWithCounts = await Promise.all(
-      (threads || []).map(async (thread) => {
-        const { count } = await supabase
-          .from('comments')
-          .select('*', { count: 'exact', head: true })
-          .eq('entity_type', 'feedback_thread')
-          .eq('entity_id', thread.id)
-          .is('deleted_at', null);
+    // Batch-fetch comment counts in a single query instead of N+1
+    const threadIds = (threads || []).map(t => t.id);
+    const countMap = new Map<string, number>();
 
-        return {
-          ...thread,
-          comment_count: count || 0,
-        };
-      })
-    );
+    if (threadIds.length > 0) {
+      const { data: commentRows } = await supabase
+        .from('comments')
+        .select('entity_id')
+        .eq('entity_type', 'feedback_thread')
+        .in('entity_id', threadIds)
+        .is('deleted_at', null);
+
+      (commentRows || []).forEach(c => {
+        countMap.set(c.entity_id, (countMap.get(c.entity_id) || 0) + 1);
+      });
+    }
+
+    const threadsWithCounts = (threads || []).map(thread => ({
+      ...thread,
+      comment_count: countMap.get(thread.id) || 0,
+    }));
 
     return { data: threadsWithCounts as any, error: null };
   } catch (error: any) {

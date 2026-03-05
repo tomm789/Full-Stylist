@@ -23,20 +23,14 @@ export async function saveEntity(
     // Check if already saved (.maybeSingle() avoids 406 when no row exists)
     const { data: existing } = await supabase
       .from('saves')
-      .select('id')
+      .select('*')
       .eq('user_id', userId)
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .maybeSingle();
 
     if (existing) {
-      // Already saved, return existing
-      const { data: save } = await supabase
-        .from('saves')
-        .select('*')
-        .eq('id', existing.id)
-        .single();
-      return { data: save, error: null };
+      return { data: existing, error: null };
     }
 
     // Create new save

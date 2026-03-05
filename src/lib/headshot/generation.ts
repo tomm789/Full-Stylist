@@ -167,7 +167,6 @@ export async function setActiveHeadshot(
     .from('user_settings')
     .update({
       headshot_image_id: headshotImageId,
-      updated_at: new Date().toISOString(),
     })
     .eq('user_id', userId)
     .single();

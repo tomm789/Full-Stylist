@@ -110,10 +110,7 @@ export async function updateCalendarEntry(
 }> {
   const { data, error } = await supabase
     .from('calendar_entries')
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updates)
     .eq('id', entryId)
     .select()
     .single();

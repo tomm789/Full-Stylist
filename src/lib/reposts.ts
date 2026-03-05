@@ -34,19 +34,13 @@ export async function createRepost(
     // Check if already reposted
     const { data: existing } = await supabase
       .from('reposts')
-      .select('id')
+      .select('*')
       .eq('user_id', userId)
       .eq('original_post_id', originalPostId)
       .maybeSingle();
 
     if (existing) {
-      // Already reposted, return existing
-      const { data: repost } = await supabase
-        .from('reposts')
-        .select('*')
-        .eq('id', existing.id)
-        .single();
-      return { data: repost, error: null };
+      return { data: existing, error: null };
     }
 
     // Create new repost

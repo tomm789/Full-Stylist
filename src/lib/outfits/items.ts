@@ -75,10 +75,7 @@ export async function saveOutfit(
       // Update existing outfit
       const { data: updatedOutfit, error: updateError } = await supabase
         .from('outfits')
-        .update({
-          ...outfitData,
-          updated_at: new Date().toISOString(),
-        })
+        .update(outfitData)
         .eq('id', outfitData.id)
         .eq('owner_user_id', userId)
         .select()
@@ -173,11 +170,15 @@ export async function addItemToOutfit(
 }> {
   try {
     // Delete existing item in category if present (unique constraint)
-    await supabase
+    const { error: deleteError } = await supabase
       .from('outfit_items')
       .delete()
       .eq('outfit_id', outfitId)
       .eq('category_id', categoryId);
+
+    if (deleteError) {
+      throw deleteError;
+    }
 
     // Insert new item
     const { data, error } = await supabase
@@ -236,17 +237,19 @@ export async function reorderOutfitItems(
   itemPositions: Array<{ id: string; position: number }>
 ): Promise<{ error: any }> {
   try {
-    // Update each item's position
-    for (const item of itemPositions) {
-      const { error } = await supabase
-        .from('outfit_items')
-        .update({ position: item.position })
-        .eq('id', item.id)
-        .eq('outfit_id', outfitId);
+    const results = await Promise.all(
+      itemPositions.map(item =>
+        supabase
+          .from('outfit_items')
+          .update({ position: item.position })
+          .eq('id', item.id)
+          .eq('outfit_id', outfitId)
+      )
+    );
 
-      if (error) {
-        throw error;
-      }
+    const firstError = results.find(r => r.error)?.error;
+    if (firstError) {
+      throw firstError;
     }
 
     return { error: null };

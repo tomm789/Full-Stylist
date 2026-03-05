@@ -129,21 +129,26 @@ export async function getDeactivationStatus(userId: string): Promise<{
 export async function deleteAccountPermanently(userId: string): Promise<DeletionResult> {
   try {
     // 1. Delete engagement data (likes, saves, comments)
-    await Promise.all([
+    const engagementResults = await Promise.all([
       supabase.from('likes').delete().eq('user_id', userId),
       supabase.from('saves').delete().eq('user_id', userId),
       supabase.from('comments').delete().eq('user_id', userId),
       supabase.from('reposts').delete().eq('user_id', userId),
     ]);
+    const engagementError = engagementResults.find(r => r.error)?.error;
+    if (engagementError) throw engagementError;
 
     // 2. Delete posts
-    await supabase.from('posts').delete().eq('owner_user_id', userId);
+    const { error: postsError } = await supabase.from('posts').delete().eq('owner_user_id', userId);
+    if (postsError) throw postsError;
 
     // 3. Delete follows (both directions)
-    await Promise.all([
+    const followResults = await Promise.all([
       supabase.from('follows').delete().eq('follower_user_id', userId),
       supabase.from('follows').delete().eq('followed_user_id', userId),
     ]);
+    const followError = followResults.find(r => r.error)?.error;
+    if (followError) throw followError;
 
     // 4. Delete lookbook entries and lookbooks
     const { data: lookbooks } = await supabase
@@ -153,30 +158,38 @@ export async function deleteAccountPermanently(userId: string): Promise<Deletion
 
     if (lookbooks && lookbooks.length > 0) {
       const lookbookIds = lookbooks.map(lb => lb.id);
-      await supabase
+      const { error: loError } = await supabase
         .from('lookbook_outfits')
         .delete()
         .in('lookbook_id', lookbookIds);
-      await supabase
+      if (loError) throw loError;
+
+      const { error: lbError } = await supabase
         .from('lookbooks')
         .delete()
         .eq('owner_user_id', userId);
+      if (lbError) throw lbError;
     }
 
     // 5. Delete outfits
-    await supabase.from('outfits').delete().eq('owner_user_id', userId);
+    const { error: outfitsError } = await supabase.from('outfits').delete().eq('owner_user_id', userId);
+    if (outfitsError) throw outfitsError;
 
     // 6. Delete images
-    await supabase.from('images').delete().eq('owner_user_id', userId);
+    const { error: imagesError } = await supabase.from('images').delete().eq('owner_user_id', userId);
+    if (imagesError) throw imagesError;
 
     // 7. Delete user settings
-    await supabase.from('user_settings').delete().eq('user_id', userId);
+    const { error: settingsError } = await supabase.from('user_settings').delete().eq('user_id', userId);
+    if (settingsError) throw settingsError;
 
-    // 8. Delete notifications
-    await Promise.all([
-      supabase.from('notifications').delete().eq('user_id', userId),
+    // 8. Delete notifications (column is recipient_user_id, not user_id)
+    const notifResults = await Promise.all([
+      supabase.from('notifications').delete().eq('recipient_user_id', userId),
       supabase.from('notifications').delete().eq('actor_user_id', userId),
     ]);
+    const notifError = notifResults.find(r => r.error)?.error;
+    if (notifError) throw notifError;
 
     // 9. Delete user profile (last, after all related data)
     const { error: profileError } = await supabase
