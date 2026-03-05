@@ -2,7 +2,7 @@
  * Outfits Screen (Refactored)
  * Main outfits screen with grid, explore, and scheduling flows.
  */
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   useWindowDimensions,
@@ -74,8 +74,8 @@ const STATUS_LABELS: Record<OutfitScheduleStatus, string> = {
 
 export default function OutfitsScreen() {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
-  const styles = createOutfitStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
+  const styles = useMemo(() => createOutfitStyles(colors), [colors]);
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -337,9 +337,32 @@ export default function OutfitsScreen() {
     modals.setFollowStatuses(feedFollowStatuses);
   }, [feedFollowStatuses, modals]);
 
-  const handleRepostWithRefresh = async (postId: string) => {
+  const handleRepostWithRefresh = useCallback(async (postId: string) => {
     await handleRepost(postId, refreshFeed);
-  };
+  }, [handleRepost, refreshFeed]);
+
+  const handleSwitchToFeed = useCallback(() => {
+    setHeaderVisible(true);
+    resetScroll();
+    setActiveView('feed');
+  }, [setHeaderVisible, resetScroll, setActiveView]);
+
+  const handleOpenPostFeed = useCallback((postId: string, ownerUserId: string) => {
+    router.push(`/users/${ownerUserId}/feed?postId=${postId}`);
+  }, [router]);
+
+  const handleOpenLookbook = useCallback((lookbookId: string) => {
+    router.push(`/lookbooks/${lookbookId}`);
+  }, [router]);
+
+  const handleViewOutfit = useCallback((outfitId: string) => {
+    router.push(`/outfits/${outfitId}/view`);
+  }, [router]);
+
+  const handleCreateLookbookFromTab = useCallback(() => {
+    setSelectionMode(true);
+    setLookbookPickerVisible(true);
+  }, [setSelectionMode, setLookbookPickerVisible]);
 
   const {
     activeFeedItems,
@@ -369,15 +392,9 @@ export default function OutfitsScreen() {
     showGridLookbooks,
     selectedOccasions,
     showFavoritesOnly: filters.showFavoritesOnly,
-    onSwitchToFeed: () => {
-      setHeaderVisible(true);
-      resetScroll();
-      setActiveView('feed');
-    },
-    onOpenPostFeed: (postId, ownerUserId) => {
-      router.push(`/users/${ownerUserId}/feed?postId=${postId}`);
-    },
-    onOpenLookbook: (lookbookId) => router.push(`/lookbooks/${lookbookId}`),
+    onSwitchToFeed: handleSwitchToFeed,
+    onOpenPostFeed: handleOpenPostFeed,
+    onOpenLookbook: handleOpenLookbook,
     outfitImages,
     lookbookImages,
     currentUserId: user?.id,
@@ -432,17 +449,17 @@ export default function OutfitsScreen() {
     resetScroll();
   }, [activeTab]);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setFollowingRefreshing(true);
     await Promise.all([refreshFeed(), loadSavedEntities()]);
     setFollowingRefreshing(false);
-  };
+  }, [refreshFeed, loadSavedEntities, setFollowingRefreshing]);
 
-  const onDiscoverRefresh = async () => {
+  const onDiscoverRefresh = useCallback(async () => {
     setExploreRefreshing(true);
     await Promise.all([refreshDiscover(), loadSavedEntities()]);
     setExploreRefreshing(false);
-  };
+  }, [refreshDiscover, loadSavedEntities, setExploreRefreshing]);
 
   const { handleOutfitPress } = useOutfitNavigation(
     router as any,
@@ -530,9 +547,7 @@ export default function OutfitsScreen() {
     tryOnOutfit,
     tryingOnOutfit,
     onArchiveOutfit: handleArchiveOutfitFromPostMenu,
-    onViewOutfit: (outfitId: string) => {
-      router.push(`/outfits/${outfitId}/view`);
-    },
+    onViewOutfit: handleViewOutfit,
     generationOutfitId: generatingOutfitId,
     slideshow: {
       loading: slideshowLoading,
@@ -688,10 +703,7 @@ export default function OutfitsScreen() {
             allLookbooks.length === 0 && systemLookbooks.every((lb) => lb.outfits.length === 0)
           }
           onScroll={handleGridScroll}
-          onCreateLookbook={() => {
-            setSelectionMode(true);
-            setLookbookPickerVisible(true);
-          }}
+          onCreateLookbook={handleCreateLookbookFromTab}
           onNavigate={(path) => router.push(path as any)}
           listBottomPadding={listBottomPadding}
           styles={styles}

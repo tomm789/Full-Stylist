@@ -6,7 +6,7 @@
  * AFTER: ~200 lines (70% reduction)
  */
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -40,7 +40,7 @@ const { spacing, typography } = theme;
 
 export default function LookbooksScreen() {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
@@ -84,6 +84,36 @@ export default function LookbooksScreen() {
     }
   };
 
+  const renderSystemLookbookItem = useCallback(({ item }: { item: typeof systemLookbooks[number] }) => (
+    <SystemLookbookCard
+      lookbook={item}
+      onPress={() =>
+        router.push(
+          `/lookbooks/system-${item.category}?lookbookIds=${encodeURIComponent(
+            systemLookbookIds
+          )}`
+        )
+      }
+      onPlayPress={() => openSystemSlideshow(item.category)}
+    />
+  ), [router, systemLookbookIds, openSystemSlideshow]);
+
+  const renderCustomLookbookItem = useCallback(({ item }: { item: typeof lookbooks[number] }) => (
+    <LookbookCard
+      lookbook={item}
+      thumbnailUrl={thumbnails.get(item.id) || null}
+      loading={loadingIds.has(item.id)}
+      onPress={() =>
+        router.push(
+          `/lookbooks/${item.id}?lookbookIds=${encodeURIComponent(
+            customLookbookIds
+          )}`
+        )
+      }
+      onPlayPress={() => openLookbookSlideshow(item.id)}
+    />
+  ), [router, thumbnails, loadingIds, customLookbookIds, openLookbookSlideshow]);
+
   const isLoading = loading && lookbooks.length === 0 && systemLookbooks.length === 0;
 
   if (isLoading) {
@@ -121,19 +151,7 @@ export default function LookbooksScreen() {
                   initialNumToRender={8}
                   maxToRenderPerBatch={4}
                   windowSize={5}
-                  renderItem={({ item }) => (
-                    <SystemLookbookCard
-                      lookbook={item}
-                      onPress={() =>
-                        router.push(
-                          `/lookbooks/system-${item.category}?lookbookIds=${encodeURIComponent(
-                            systemLookbookIds
-                          )}`
-                        )
-                      }
-                      onPlayPress={() => openSystemSlideshow(item.category)}
-                    />
-                  )}
+                  renderItem={renderSystemLookbookItem}
                   keyExtractor={(item) => item.category}
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.horizontalList}
@@ -156,21 +174,7 @@ export default function LookbooksScreen() {
                   initialNumToRender={8}
                   maxToRenderPerBatch={4}
                   windowSize={5}
-                  renderItem={({ item }) => (
-                    <LookbookCard
-                      lookbook={item}
-                      thumbnailUrl={thumbnails.get(item.id) || null}
-                      loading={loadingIds.has(item.id)}
-                      onPress={() =>
-                        router.push(
-                          `/lookbooks/${item.id}?lookbookIds=${encodeURIComponent(
-                            customLookbookIds
-                          )}`
-                        )
-                      }
-                      onPlayPress={() => openLookbookSlideshow(item.id)}
-                    />
-                  )}
+                  renderItem={renderCustomLookbookItem}
                   keyExtractor={(item) => item.id}
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.horizontalList}

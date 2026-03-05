@@ -33,7 +33,7 @@ const { spacing, borderRadius, typography } = theme;
 
 export default function AddItemScreen() {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { action, imageUri } = useLocalSearchParams<{ action?: string; imageUri?: string }>();

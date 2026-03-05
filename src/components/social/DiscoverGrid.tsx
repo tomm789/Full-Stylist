@@ -4,7 +4,7 @@
  * Shows public posts from all users (same grid layout as ProfileTabs)
  */
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -105,7 +105,7 @@ export function DiscoverGrid({
     }
   };
 
-  const renderGridItem = ({ item }: { item: FeedItem }) => {
+  const renderGridItem = useCallback(({ item }: { item: FeedItem }) => {
     const isHeadshot = item.post?.entity_type === 'headshot';
     const entity = item.entity?.outfit || item.entity?.lookbook;
     const headshotEntity = item.entity?.headshot;
@@ -183,7 +183,7 @@ export function DiscoverGrid({
         )}
       </TouchableOpacity>
     );
-  };
+  }, [images, selectedIds, selectionMode, onToggleSelection, onItemLongPress, colors.textTertiary, showOwnerOverlay, styles.ownerHandle, handlePostPress, handleOwnerPress]);
 
   if (loading && feed.length === 0) {
     return (

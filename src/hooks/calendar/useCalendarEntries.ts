@@ -4,7 +4,8 @@
  * Includes retry logic with exponential backoff for resilience
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getCalendarEntries, CalendarEntry } from '@/lib/calendar';
 import { supabase } from '@/lib/supabase';
 import { CALENDAR_CONFIG } from '@/lib/calendar/config';
@@ -23,9 +24,69 @@ interface UseCalendarEntriesReturn {
   refresh: () => Promise<void>;
 }
 
-interface CoverImageData {
-  storage_key: string;
-  storage_bucket: string;
+interface CalendarEntriesQueryData {
+  entries: Map<string, CalendarEntry[]>;
+  outfitImages: Map<string, string | null>;
+}
+
+async function fetchWithRetry(
+  userId: string,
+  startDate: string,
+  endDate: string,
+  retryAttempt = 0
+): Promise<CalendarEntry[]> {
+  const { data: monthEntries, error: fetchError } = await getCalendarEntries(userId, startDate, endDate);
+
+  if (fetchError) {
+    if (retryAttempt < CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS) {
+      const delayMs = CALENDAR_CONFIG.INITIAL_RETRY_DELAY_MS * Math.pow(2, retryAttempt);
+      if (__DEV__) console.warn(`Calendar entries load failed, retrying in ${delayMs}ms (attempt ${retryAttempt + 1}/${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS}):`, fetchError);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+      return fetchWithRetry(userId, startDate, endDate, retryAttempt + 1);
+    }
+    throw new Error(`Failed to load calendar entries after ${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS} retries: ${fetchError.message}`);
+  }
+
+  return monthEntries || [];
+}
+
+async function loadOutfitImages(entries: CalendarEntry[]): Promise<Map<string, string | null>> {
+  const imagesMap = new Map<string, string | null>();
+  const outfitIds = [...new Set(entries.filter((e) => e.outfit_id).map((e) => e.outfit_id!))];
+
+  const outfitPromises = outfitIds.map((outfitId) =>
+    Promise.race([
+      supabase
+        .from('outfits')
+        .select(
+          'id, cover_image_id, cover_image:images!cover_image_id(storage_key, storage_bucket)'
+        )
+        .eq('id', outfitId)
+        .single(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Outfit ${outfitId} load timeout after ${CALENDAR_CONFIG.OUTFIT_LOAD_TIMEOUT_MS}ms`)), CALENDAR_CONFIG.OUTFIT_LOAD_TIMEOUT_MS)
+      ),
+    ]).catch(() => ({ data: null, error: 'timeout' } as { data: any; error: string }))
+  );
+
+  const outfitResults = await Promise.all(outfitPromises);
+
+  for (const result of outfitResults) {
+    const outfit = (result as any).data;
+    const coverImage = Array.isArray(outfit?.cover_image) ? outfit?.cover_image?.[0] : outfit?.cover_image;
+    if (coverImage?.storage_key) {
+      const storageBucket = (coverImage as any).storage_bucket || 'media';
+      const { data: urlData } = supabase.storage
+        .from(storageBucket)
+        .getPublicUrl((coverImage as any).storage_key);
+
+      if (urlData?.publicUrl) {
+        imagesMap.set(outfit.id, urlData.publicUrl);
+      }
+    }
+  }
+
+  return imagesMap;
 }
 
 export function useCalendarEntries({
@@ -33,159 +94,46 @@ export function useCalendarEntries({
   startDate,
   endDate,
 }: UseCalendarEntriesProps): UseCalendarEntriesReturn {
-  const [entries, setEntries] = useState<Map<string, CalendarEntry[]>>(new Map());
-  const [outfitImages, setOutfitImages] = useState<Map<string, string | null>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const hasLoadedOnceRef = useRef(false);
-  const isMountedRef = useRef(true);
+  const queryClient = useQueryClient();
+  const queryKey = useMemo(
+    () => ['calendarEntries', userId, startDate, endDate] as const,
+    [userId, startDate, endDate]
+  );
 
-  const loadEntriesInternal = async (mountedRef: { current: boolean }, retryAttempt = 0): Promise<void> => {
-    if (!userId) {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
-      return;
-    }
-
-    const shouldShowLoading = !hasLoadedOnceRef.current;
-    if (shouldShowLoading) {
-      setLoading(true);
-    }
-
-    try {
-      const { data: monthEntries, error: fetchError } = await getCalendarEntries(userId, startDate, endDate);
-
-      if (fetchError) {
-        if (retryAttempt < CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS) {
-          const delayMs = CALENDAR_CONFIG.INITIAL_RETRY_DELAY_MS * Math.pow(2, retryAttempt);
-                    if (__DEV__) console.warn(`Calendar entries load failed, retrying in ${delayMs}ms (attempt ${retryAttempt + 1}/${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS}):`, fetchError);
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-          if (mountedRef.current) {
-            return loadEntriesInternal(mountedRef, retryAttempt + 1);
-          }
-        } else {
-          throw new Error(`Failed to load calendar entries after ${CALENDAR_CONFIG.MAX_RETRY_ATTEMPTS} retries: ${fetchError.message}`);
-        }
-      }
-
-      if (!mountedRef.current) return;
+  const { data, isLoading, error: queryError } = useQuery<CalendarEntriesQueryData>({
+    queryKey,
+    queryFn: async () => {
+      const monthEntries = await fetchWithRetry(userId!, startDate, endDate);
 
       const entriesMap = new Map<string, CalendarEntry[]>();
-      if (monthEntries) {
-        monthEntries.forEach((entry) => {
-          const entryWithJoins = entry as CalendarEntry & { calendar_days?: { date: string } };
-          const date = entryWithJoins.calendar_days?.date;
-          if (date) {
-            const existing = entriesMap.get(date) || [];
-            existing.push(entry);
-            entriesMap.set(date, existing);
-          }
-        });
-      }
-
-      setEntries(entriesMap);
-      setError(null);
-      if (shouldShowLoading) {
-        setLoading(false);
-      }
-      hasLoadedOnceRef.current = true;
-
-      if (monthEntries) {
-        void loadOutfitImages(monthEntries, mountedRef);
-      }
-    } catch (err) {
-      if (!mountedRef.current) return;
-      const error = err instanceof Error ? err : new Error(String(err));
-      console.error('Error loading calendar entries:', error);
-      setError(error);
-      if (shouldShowLoading) {
-        setLoading(false);
-      }
-    } finally {
-      if (mountedRef.current && shouldShowLoading) {
-        setLoading(false);
-      }
-      if (mountedRef.current) {
-        hasLoadedOnceRef.current = true;
-      }
-    }
-  };
-
-  const refresh = async (): Promise<void> => {
-    await loadEntriesInternal(isMountedRef);
-  };
-
-  const loadOutfitImages = async (
-    entries: CalendarEntry[],
-    mountedRef: { current: boolean }
-  ) => {
-    const imagesMap = new Map<string, string | null>();
-
-    // Get unique outfit IDs
-    const outfitIds = [...new Set(entries.filter((e) => e.outfit_id).map((e) => e.outfit_id!))];
-
-    // Load cover images for all outfits in parallel with timeout
-    const outfitPromises = outfitIds.map((outfitId) =>
-      Promise.race([
-        supabase
-          .from('outfits')
-          .select(
-            'id, cover_image_id, cover_image:images!cover_image_id(storage_key, storage_bucket)'
-          )
-          .eq('id', outfitId)
-          .single(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error(`Outfit ${outfitId} load timeout after ${CALENDAR_CONFIG.OUTFIT_LOAD_TIMEOUT_MS}ms`)), CALENDAR_CONFIG.OUTFIT_LOAD_TIMEOUT_MS)
-        ),
-      ]).catch(() => ({ data: null, error: 'timeout' })) // Graceful fallback if timeout occurs
-    );
-
-    const outfitResults = await Promise.all(outfitPromises);
-
-    // Cancel if component unmounted while promises were pending
-    if (!mountedRef.current) return;
-
-    for (const { data: outfit } of outfitResults) {
-      const coverImage = Array.isArray(outfit?.cover_image) ? outfit?.cover_image?.[0] : outfit?.cover_image;
-      if (coverImage?.storage_key) {
-        const storageBucket = (coverImage as any).storage_bucket || 'media';
-        const { data: urlData } = supabase.storage
-          .from(storageBucket)
-          .getPublicUrl((coverImage as any).storage_key);
-
-        if (urlData?.publicUrl) {
-          imagesMap.set(outfit.id, urlData.publicUrl);
+      monthEntries.forEach((entry) => {
+        const entryWithJoins = entry as CalendarEntry & { calendar_days?: { date: string } };
+        const date = entryWithJoins.calendar_days?.date;
+        if (date) {
+          const existing = entriesMap.get(date) || [];
+          existing.push(entry);
+          entriesMap.set(date, existing);
         }
-      }
-    }
-
-    // Only update state if component is still mounted
-    if (mountedRef.current) {
-      setOutfitImages((prev) => {
-        const next = new Map(prev);
-        imagesMap.forEach((value, key) => {
-          next.set(key, value);
-        });
-        return next;
       });
-    }
-  };
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    void loadEntriesInternal(isMountedRef);
+      const outfitImages = await loadOutfitImages(monthEntries);
 
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, [userId, startDate, endDate]);
+      return { entries: entriesMap, outfitImages };
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 3, // 3 minutes
+    retry: false, // We handle retries internally with exponential backoff
+  });
+
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
 
   return {
-    entries,
-    outfitImages,
-    loading,
-    error,
+    entries: data?.entries ?? new Map(),
+    outfitImages: data?.outfitImages ?? new Map(),
+    loading: isLoading,
+    error: queryError as Error | null,
     refresh,
   };
 }

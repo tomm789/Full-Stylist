@@ -9,7 +9,7 @@
  * Extracted from hair-and-make-up.tsx to keep the screen file thin.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Platform,
   Text,
@@ -184,7 +184,7 @@ export default function MirrorTabContent({
   const colors = useThemeColors();
   const { width: windowWidth } = useWindowDimensions();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
 
   const [editModalVisible, setEditModalVisible] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<'quick' | 'advanced'>('quick');

@@ -3,13 +3,19 @@
  * Manages user lookbooks with thumbnails
  */
 
-import { useState, useEffect } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUserLookbooks, getLookbook, Lookbook } from '@/lib/lookbooks';
 import { getUserOutfits } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 
 interface UseLookbooksProps {
   userId: string | undefined;
+}
+
+interface LookbooksQueryData {
+  lookbooks: Lookbook[];
+  thumbnails: Map<string, string | null>;
 }
 
 interface UseLookbooksReturn {
@@ -21,80 +27,63 @@ interface UseLookbooksReturn {
 }
 
 export function useLookbooks({ userId }: UseLookbooksProps): UseLookbooksReturn {
-  const [lookbooks, setLookbooks] = useState<Lookbook[]>([]);
-  const [thumbnails, setThumbnails] = useState<Map<string, string | null>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
+  const queryKey = useMemo(() => ['lookbooks', userId] as const, [userId]);
 
-  const loadLookbooks = async () => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
+  const { data, isLoading, isFetching } = useQuery<LookbooksQueryData>({
+    queryKey,
+    queryFn: async () => {
+      const { data } = await getUserLookbooks(userId!);
+      if (!data) return { lookbooks: [], thumbnails: new Map() };
 
-    setLoading(true);
+      const customLookbooks = data.filter((lb) => lb.type.startsWith('custom_'));
+      const thumbnailMap = new Map<string, string | null>();
 
-    try {
-      const { data } = await getUserLookbooks(userId);
-      if (data) {
-        const customLookbooks = data.filter((lb) => lb.type.startsWith('custom_'));
-        setLookbooks(customLookbooks);
+      const { data: allOutfits } = await getUserOutfits(userId!);
 
-        // Mark all as loading
-        setLoadingIds(new Set(customLookbooks.map((lb) => lb.id)));
-
-        // Load thumbnails for each lookbook
-        const { data: allOutfits } = await getUserOutfits(userId);
-        const thumbnailMap = new Map<string, string | null>();
-
-        if (allOutfits) {
-          const thumbnailPromises = customLookbooks.map(async (lookbook) => {
-            if (lookbook.type === 'custom_manual') {
-              const { data: lookbookData } = await getLookbook(lookbook.id);
-              if (lookbookData && lookbookData.outfits.length > 0) {
-                const firstOutfit = allOutfits.find(
-                  (o: any) => o.id === lookbookData.outfits[0].outfit_id
-                );
-                if (firstOutfit) {
-                  const imageUrl = await getOutfitCoverImageUrl(firstOutfit);
-                  return { id: lookbook.id, url: imageUrl };
-                }
+      if (allOutfits) {
+        const thumbnailPromises = customLookbooks.map(async (lookbook) => {
+          if (lookbook.type === 'custom_manual') {
+            const { data: lookbookData } = await getLookbook(lookbook.id);
+            if (lookbookData && lookbookData.outfits.length > 0) {
+              const firstOutfit = allOutfits.find(
+                (o: any) => o.id === lookbookData.outfits[0].outfit_id
+              );
+              if (firstOutfit) {
+                const imageUrl = await getOutfitCoverImageUrl(firstOutfit);
+                return { id: lookbook.id, url: imageUrl };
               }
             }
-            return null;
-          });
+          }
+          return null;
+        });
 
-          const results = await Promise.all(thumbnailPromises);
-          results.forEach((result) => {
-            if (result) {
-              thumbnailMap.set(result.id, result.url);
-            }
-          });
-        }
-
-        setThumbnails(thumbnailMap);
-        setLoadingIds(new Set());
+        const results = await Promise.all(thumbnailPromises);
+        results.forEach((result) => {
+          if (result) {
+            thumbnailMap.set(result.id, result.url);
+          }
+        });
       }
-    } catch (error) {
-      console.error('Error loading lookbooks:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const refresh = async () => {
-    await loadLookbooks();
-  };
+      return { lookbooks: customLookbooks, thumbnails: thumbnailMap };
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-  useEffect(() => {
-    loadLookbooks();
-  }, [userId]);
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
 
   return {
-    lookbooks,
-    thumbnails,
-    loading,
-    loadingIds,
+    lookbooks: data?.lookbooks ?? [],
+    thumbnails: data?.thumbnails ?? new Map(),
+    loading: isLoading,
+    // While fetching, show which lookbooks are loading thumbnails
+    loadingIds: isFetching && !isLoading
+      ? new Set((data?.lookbooks ?? []).map((lb) => lb.id))
+      : new Set(),
     refresh,
   };
 }

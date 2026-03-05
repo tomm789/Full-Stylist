@@ -22,7 +22,7 @@ import type { ThemeColors } from '@/styles/themes';
 export default function FeedbackThreadDetailScreen() {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
   const { id: threadId } = useLocalSearchParams();

@@ -3,7 +3,7 @@
  * Individual day cell with outfit preview
  */
 
-import React, { useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { ImageStyle } from 'react-native';
 import { Image } from 'expo-image';
@@ -23,7 +23,7 @@ interface CalendarDayCellProps {
   onPress: () => void;
 }
 
-export default function CalendarDayCell({
+const CalendarDayCell = memo(function CalendarDayCell({
   date,
   entries,
   outfitImages,
@@ -226,4 +226,6 @@ export default function CalendarDayCell({
       )}
     </TouchableOpacity>
   );
-}
+});
+
+export default CalendarDayCell;

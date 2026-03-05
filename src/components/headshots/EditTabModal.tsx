@@ -5,7 +5,7 @@
  * Extracted from hair-and-make-up.tsx to reduce screen file size.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Modal,
   ScrollView,
@@ -108,7 +108,7 @@ export default function EditTabModal({
 }: EditTabModalProps) {
   const colors = useThemeColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
 
   const tabTitle =
     editTab === 'quick' ? 'Quick' :

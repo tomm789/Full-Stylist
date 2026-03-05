@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { getImageUrl, ImageSizeClass } from '../images/transforms';
 
 /**
  * Get images for a wardrobe item
@@ -133,7 +134,8 @@ export function buildWardrobeItemsImageUrlCache(
       sort_order: number;
       image: any;
     }>
-  >
+  >,
+  size: ImageSizeClass = 'thumb'
 ): Map<string, string | null> {
   const urlCache = new Map<string, string | null>();
   const imageUrlCache = new Map<string, string | null>();
@@ -152,10 +154,8 @@ export function buildWardrobeItemsImageUrlCache(
     const cacheKey = `${storageBucket}:${storageKey}`;
 
     if (!imageUrlCache.has(cacheKey)) {
-      const { data: urlData } = supabase.storage
-        .from(storageBucket)
-        .getPublicUrl(storageKey);
-      imageUrlCache.set(cacheKey, urlData?.publicUrl || null);
+      const url = getImageUrl(storageBucket, storageKey, size);
+      imageUrlCache.set(cacheKey, url || null);
     }
 
     urlCache.set(itemId, imageUrlCache.get(cacheKey) ?? null);

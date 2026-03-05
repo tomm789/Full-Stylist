@@ -3,7 +3,7 @@
  * Inline loading spinner with optional text
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, ViewStyle } from 'react-native';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -25,7 +25,7 @@ export default function LoadingSpinner({
   style,
 }: LoadingSpinnerProps) {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const resolvedColor = color ?? colors.primary;
   return (
     <View style={[styles.container, style]}>

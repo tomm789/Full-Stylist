@@ -14,23 +14,24 @@ import HeadshotFeedCard from '@/components/social/HeadshotFeedCard';
 import { FeedItem } from '@/lib/posts';
 import { formatTimestamp } from '@/utils/formatUtils';
 
+export interface EngagementData {
+  likes: number;
+  saves: number;
+  comments: number;
+  reposts: number;
+  hasLiked: boolean;
+  hasSaved: boolean;
+  hasReposted: boolean;
+}
+
 interface FeedItemProps {
   item: FeedItem;
-  engagementCounts: Record<
-    string,
-    {
-      likes: number;
-      saves: number;
-      comments: number;
-      reposts: number;
-      hasLiked: boolean;
-      hasSaved: boolean;
-      hasReposted: boolean;
-    }
-  >;
-  outfitImages: Map<string, string | null>;
+  engagement: EngagementData | undefined;
+  outfitImageUrl: string | null;
+  outfitImageLoading: boolean;
+  headshotImageUrl: string | null;
+  headshotImageLoading: boolean;
   lookbookImages: Map<string, string | null>;
-  headshotImages?: Map<string, string | null>;
   currentUserId: string | undefined;
   onLike: (postId: string) => void;
   onComment: (item: FeedItem) => void;
@@ -48,12 +49,24 @@ interface FeedItemProps {
   setOpenMenuPostId: (postId: string | null) => void;
 }
 
+const DEFAULT_COUNTS: EngagementData = {
+  likes: 0,
+  saves: 0,
+  comments: 0,
+  reposts: 0,
+  hasLiked: false,
+  hasSaved: false,
+  hasReposted: false,
+};
+
 export const FeedItemComponent = React.memo(function FeedItemComponent({
   item,
-  engagementCounts,
-  outfitImages,
+  engagement,
+  outfitImageUrl,
+  outfitImageLoading,
+  headshotImageUrl,
+  headshotImageLoading,
   lookbookImages,
-  headshotImages,
   currentUserId,
   onLike,
   onComment,
@@ -74,15 +87,7 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
   const post = item.type === 'post' ? item.post! : item.repost!.original_post!;
   if (!post) return null;
 
-  const counts = engagementCounts[post.id] || {
-    likes: 0,
-    saves: 0,
-    comments: 0,
-    reposts: 0,
-    hasLiked: false,
-    hasSaved: false,
-    hasReposted: false,
-  };
+  const counts = engagement || DEFAULT_COUNTS;
 
   const isOutfit = post.entity_type === 'outfit';
   const isHeadshot = post.entity_type === 'headshot';
@@ -172,7 +177,6 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
               }}
               style={styles.menuButton}
               onLayout={(event) => {
-                const { x, y, width, height } = event.nativeEvent.layout;
                 const buttonRef = menuButtonRefs.current.get(post.id);
                 if (buttonRef) {
                   buttonRef.measureInWindow((winX: number, winY: number, winWidth: number, winHeight: number) => {
@@ -192,9 +196,9 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
       {isOutfit && entity && (
         <FeedOutfitCard
           outfit={entity}
-          imageUrl={outfitImages.get(entity.id) || null}
+          imageUrl={outfitImageUrl ?? null}
           onPress={() => router.push(`/outfits/${entity.id}/view`)}
-          loading={!outfitImages.has(entity.id)}
+          loading={outfitImageLoading}
         />
       )}
       {!isOutfit && !isHeadshot && entity && (
@@ -209,8 +213,8 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
       {isHeadshot && headshotEntity && (
         <HeadshotFeedCard
           headshot={headshotEntity}
-          imageUrl={headshotImages?.get(headshotEntity.id) ?? null}
-          loading={!headshotImages?.has(headshotEntity.id)}
+          imageUrl={headshotImageUrl ?? null}
+          loading={headshotImageLoading}
         />
       )}
 
@@ -244,7 +248,7 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
           ) : onTryOnOutfitShortcut && isOutfit && entity && !isOwnPost ? (
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => onTryOnOutfitShortcut(entity.id, outfitImages.get(entity.id) ?? null)}
+              onPress={() => onTryOnOutfitShortcut(entity.id, outfitImageUrl ?? null)}
             >
               <Ionicons name="shirt-outline" size={26} color="#007AFF" />
             </TouchableOpacity>

@@ -1,10 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import {
   FlatList,
-  LayoutAnimation,
-  Platform,
   StyleSheet,
-  UIManager,
   View,
   ViewStyle,
 } from 'react-native';
@@ -33,13 +30,6 @@ const DEFAULT_CATEGORY_ORDER = [
   'sleepwear & loungewear',
   'intimates',
 ];
-
-if (
-  Platform.OS === 'android' &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
@@ -110,7 +100,6 @@ export default function BrowserCategoryBar({
     selectedCategoryId !== null && subcategories.length > 0;
 
   const handleCategoryPress = useCallback((categoryId: string | null) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     onSelectCategory(categoryId);
   }, [onSelectCategory]);
 

@@ -3,7 +3,7 @@
  * Reusable header with back button, title, and actions
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,7 +36,7 @@ export default function Header({
   variant = 'default',
 }: HeaderProps) {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const router = useRouter();
 
   const handleBack = () => {

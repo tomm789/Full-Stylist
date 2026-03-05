@@ -13,15 +13,8 @@ import {
   Platform,
   TouchableOpacity,
   useWindowDimensions,
-  LayoutAnimation,
-  UIManager,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
-
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -91,7 +84,7 @@ const CREATOR_BAR_HEIGHT = 60;
 
 export default function WardrobeScreen() {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
@@ -432,12 +425,10 @@ export default function WardrobeScreen() {
   });
 
   const handleToggleExpanded = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsCreatorExpanded((prev) => !prev);
   }, []);
 
   const handleSetExpanded = useCallback((value: boolean) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsCreatorExpanded(value);
   }, []);
 

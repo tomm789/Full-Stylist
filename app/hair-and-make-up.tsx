@@ -53,7 +53,7 @@ const { spacing } = theme;
 export default function HairAndMakeUpScreen() {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const state = useHairAndMakeup();
   const insets = useSafeAreaInsets();
   const { variationId, returnToWardrobe, baseHeadshotId } = useLocalSearchParams<{ variationId?: string; returnToWardrobe?: string; baseHeadshotId?: string }>();

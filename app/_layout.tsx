@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
@@ -105,6 +107,7 @@ export default function RootLayout() {
   }, []);
 
   return (
+    <QueryClientProvider client={queryClient}>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
       <KeyboardProvider>
@@ -116,6 +119,7 @@ export default function RootLayout() {
       </KeyboardProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
+    </QueryClientProvider>
   );
 }
 

@@ -3,7 +3,8 @@
  * Load user profile, settings, posts, and images
  */
 
-import { useState, useEffect } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFullUserProfile, updateUserProfile } from '@/lib/user';
 import { getUserSettings } from '@/lib/settings';
 import { getFeed, FeedItem } from '@/lib/posts';
@@ -25,7 +26,7 @@ interface UseProfileDataReturn {
   refresh: () => Promise<void>;
 }
 
-// 🔥 OPTIMIZATION: Batch generate public URLs (no async needed!)
+// Batch generate public URLs (no async needed)
 function batchGenerateImageUrls(
   images: Array<{ id: string; storage_bucket?: string | null; storage_key?: string | null; created_at: string }>
 ): Array<{ id: string; url: string; created_at: string }> {
@@ -43,46 +44,41 @@ function batchGenerateImageUrls(
     });
 }
 
+interface ProfileQueryData {
+  profile: any | null;
+  settings: any | null;
+  posts: FeedItem[];
+  postImages: Map<string, string | null>;
+  headshotImages: Array<{ id: string; url: string; created_at: string }>;
+  bodyShotImages: Array<{ id: string; url: string; created_at: string }>;
+}
+
 export function useProfileData({
   userId,
 }: UseProfileDataProps): UseProfileDataReturn {
-  const [profile, setProfile] = useState<any | null>(null);
-  const [settings, setSettings] = useState<any | null>(null);
-  const [posts, setPosts] = useState<FeedItem[]>([]);
-  const [postImages, setPostImages] = useState<Map<string, string | null>>(new Map());
-  const [headshotImages, setHeadshotImages] = useState<Array<{ id: string; url: string; created_at: string }>>([]);
-  const [bodyShotImages, setBodyShotImages] = useState<Array<{ id: string; url: string; created_at: string }>>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const queryKey = useMemo(() => ['profileData', userId] as const, [userId]);
 
-  const loadData = async () => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // 🔥 OPTIMIZATION: Load profile, settings, posts, and images in parallel
+  const { data, isLoading } = useQuery<ProfileQueryData>({
+    queryKey,
+    queryFn: async () => {
       const [
         { data: profileData },
         { data: settingsData },
         { data: feedData },
         { data: allImages },
       ] = await Promise.all([
-        getFullUserProfile(userId),
-        getUserSettings(userId),
-        getFeed(userId, 50, 0),
+        getFullUserProfile(userId!),
+        getUserSettings(userId!),
+        getFeed(userId!, 50, 0),
         supabase
           .from('images')
           .select('id, storage_bucket, storage_key, created_at')
-          .eq('owner_user_id', userId)
+          .eq('owner_user_id', userId!)
           .order('created_at', { ascending: false })
           .limit(100),
       ]);
 
-      // Collect all data into locals before setting any state
-      // so React 18 batches all updates into a single render
       let localProfile = profileData || null;
       const localSettings = settingsData;
       let localPosts: FeedItem[] = [];
@@ -107,7 +103,6 @@ export function useProfileData({
         }
       }
 
-      // Batch generate URLs for profile images (sync — no async needed)
       if (allImages) {
         localHeadshots = batchGenerateImageUrls(
           allImages.filter((img) =>
@@ -134,36 +129,31 @@ export function useProfileData({
         }
       }
 
-      // Set ALL state in one synchronous tick — React batches into one render
-      setProfile(localProfile);
-      setSettings(localSettings);
-      setPosts(localPosts);
-      setPostImages(localPostImages);
-      setHeadshotImages(localHeadshots);
-      setBodyShotImages(localBodyShots);
-    } catch (error) {
-      console.error('Error loading profile data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return {
+        profile: localProfile,
+        settings: localSettings,
+        posts: localPosts,
+        postImages: localPostImages,
+        headshotImages: localHeadshots,
+        bodyShotImages: localBodyShots,
+      };
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 3, // 3 minutes
+  });
 
-  const refresh = async () => {
-    await loadData();
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [userId]);
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
 
   return {
-    profile,
-    settings,
-    posts,
-    postImages,
-    headshotImages,
-    bodyShotImages,
-    loading,
+    profile: data?.profile ?? null,
+    settings: data?.settings ?? null,
+    posts: data?.posts ?? [],
+    postImages: data?.postImages ?? new Map(),
+    headshotImages: data?.headshotImages ?? [],
+    bodyShotImages: data?.bodyShotImages ?? [],
+    loading: isLoading,
     refresh,
   };
 }

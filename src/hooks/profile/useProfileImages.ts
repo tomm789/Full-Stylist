@@ -3,9 +3,10 @@
  * Manage profile images (headshots and body shots)
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUserSettings, updateUserSettings } from '@/lib/settings';
-import { showErrorToast, showSuccessToast } from '@/utils/toast';
+import { showErrorToast } from '@/utils/toast';
 import { getPublicImageUrl, getUserGeneratedImages } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
 import { syncBodyshotAfterActiveHeadshotSet, waitForAIJobCompletion } from '@/lib/ai-jobs';
@@ -33,129 +34,115 @@ interface UseProfileImagesReturn {
   setActiveBodyShot: (imageId: string) => Promise<void>;
 }
 
+async function loadImageUrls(
+  imageIds: string[]
+): Promise<Map<string, string | null>> {
+  const urls = new Map<string, string | null>();
+  if (imageIds.length === 0) return urls;
+
+  const { data: images } = await supabase
+    .from('images')
+    .select('id, storage_bucket, storage_key')
+    .in('id', imageIds);
+
+  images?.forEach((image) => {
+    urls.set(image.id, getPublicImageUrl(image));
+  });
+
+  return urls;
+}
+
+async function fetchProfileImages(userId: string) {
+  const { data: settings, error: settingsError } = await getUserSettings(userId);
+
+  if (settingsError) {
+    console.error('Settings load error:', settingsError);
+    return null;
+  }
+
+  let headshotImageUrl: string | null = null;
+  let bodyShotImageUrl: string | null = null;
+  let activeHeadshotId: string | null = null;
+  let activeBodyShotId: string | null = null;
+
+  if (settings) {
+    activeHeadshotId = settings.headshot_image_id || null;
+    activeBodyShotId = settings.body_shot_image_id || null;
+
+    const imageIds: string[] = [];
+    if (activeHeadshotId) imageIds.push(activeHeadshotId);
+    if (activeBodyShotId) imageIds.push(activeBodyShotId);
+
+    if (imageIds.length > 0) {
+      try {
+        const imageUrls = await Promise.race([
+          loadImageUrls(imageIds),
+          new Promise<Map<string, string | null>>((resolve) =>
+            setTimeout(() => resolve(new Map()), 5000)
+          ),
+        ]);
+        if (activeHeadshotId) {
+          headshotImageUrl = imageUrls.get(activeHeadshotId) || null;
+        }
+        if (activeBodyShotId) {
+          bodyShotImageUrl = imageUrls.get(activeBodyShotId) || null;
+        }
+      } catch {
+        if (__DEV__) console.warn('Active image load timeout');
+      }
+    }
+  }
+
+  let allHeadshots: ProfileImage[] = [];
+  let allBodyShots: ProfileImage[] = [];
+  try {
+    const result = await Promise.race([
+      getUserGeneratedImages(userId),
+      new Promise<{ headshots: ProfileImage[]; bodyShots: ProfileImage[] }>((resolve) =>
+        setTimeout(() => resolve({ headshots: [], bodyShots: [] }), 10000)
+      ),
+    ]);
+    allHeadshots = result.headshots;
+    allBodyShots = result.bodyShots;
+  } catch {
+    if (__DEV__) console.warn('Gallery load timeout');
+  }
+
+  return {
+    headshotImageUrl,
+    bodyShotImageUrl,
+    allHeadshots,
+    allBodyShots,
+    activeHeadshotId,
+    activeBodyShotId,
+  };
+}
+
 export function useProfileImages({
   userId,
 }: UseProfileImagesProps): UseProfileImagesReturn {
-  const [loading, setLoading] = useState(true);
-  const [headshotImageUrl, setHeadshotImageUrl] = useState<string | null>(null);
-  const [bodyShotImageUrl, setBodyShotImageUrl] = useState<string | null>(null);
-  const [allHeadshots, setAllHeadshots] = useState<ProfileImage[]>([]);
-  const [allBodyShots, setAllBodyShots] = useState<ProfileImage[]>([]);
-  const [activeHeadshotId, setActiveHeadshotId] = useState<string | null>(null);
-  const [activeBodyShotId, setActiveBodyShotId] = useState<string | null>(null);
-  const mountedRef = useRef(true);
+  const queryClient = useQueryClient();
+  // Local overrides for optimistic updates from setActiveHeadshot/setActiveBodyShot
+  const [localOverrides, setLocalOverrides] = useState<{
+    activeHeadshotId?: string;
+    headshotImageUrl?: string | null;
+    activeBodyShotId?: string;
+    bodyShotImageUrl?: string | null;
+  }>({});
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  const { data, isLoading } = useQuery({
+    queryKey: ['profileImages', userId],
+    queryFn: () => fetchProfileImages(userId!),
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 5,
+  });
 
-  const loadImageUrls = async (
-    imageIds: string[]
-  ): Promise<Map<string, string | null>> => {
-    const urls = new Map<string, string | null>();
-    if (imageIds.length === 0) {
-      return urls;
-    }
+  const refreshImages = useCallback(async () => {
+    setLocalOverrides({});
+    await queryClient.invalidateQueries({ queryKey: ['profileImages', userId] });
+  }, [queryClient, userId]);
 
-    const { data: images } = await supabase
-      .from('images')
-      .select('id, storage_bucket, storage_key')
-      .in('id', imageIds);
-
-    images?.forEach((image) => {
-      urls.set(image.id, getPublicImageUrl(image));
-    });
-
-    return urls;
-  };
-
-  const refreshImages = async () => {
-    if (!userId) return;
-    if (!mountedRef.current) return;
-
-    setLoading(true);
-
-    try {
-      const { data: settings, error: settingsError } = await getUserSettings(
-        userId
-      );
-      if (!mountedRef.current) return;
-
-      if (settingsError) {
-        console.error('Settings load error:', settingsError);
-        return;
-      }
-
-      if (settings) {
-        const imageIds: string[] = [];
-        if (settings.headshot_image_id) {
-          setActiveHeadshotId(settings.headshot_image_id);
-          imageIds.push(settings.headshot_image_id);
-        }
-        if (settings.body_shot_image_id) {
-          setActiveBodyShotId(settings.body_shot_image_id);
-          imageIds.push(settings.body_shot_image_id);
-        }
-
-        if (imageIds.length > 0) {
-          try {
-            const imageUrls = await Promise.race([
-              loadImageUrls(imageIds),
-              new Promise<Map<string, string | null>>((resolve) =>
-                setTimeout(() => resolve(new Map()), 5000)
-              ),
-            ]);
-            if (!mountedRef.current) return;
-            if (settings.headshot_image_id) {
-              setHeadshotImageUrl(
-                imageUrls.get(settings.headshot_image_id) || null
-              );
-            }
-            if (settings.body_shot_image_id) {
-              setBodyShotImageUrl(
-                imageUrls.get(settings.body_shot_image_id) || null
-              );
-            }
-          } catch (e) {
-                        if (__DEV__) console.warn('Active image load timeout');
-          }
-        }
-      }
-
-      try {
-        await Promise.race([
-          loadAllGeneratedImages(),
-          new Promise((resolve) => setTimeout(resolve, 10000)),
-        ]);
-      } catch (e) {
-                if (__DEV__) console.warn('Gallery load timeout');
-      }
-    } catch (error: any) {
-      console.error('Load data error:', error);
-    } finally {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
-    }
-  };
-
-  const loadAllGeneratedImages = async () => {
-    if (!userId) return;
-
-    try {
-      const { headshots, bodyShots } = await getUserGeneratedImages(userId);
-      if (!mountedRef.current) return;
-      setAllHeadshots(headshots);
-      setAllBodyShots(bodyShots);
-    } catch (error: any) {
-      console.error('Error loading generated images:', error);
-    }
-  };
-
-  const setActiveHeadshot = async (imageId: string) => {
+  const setActiveHeadshot = useCallback(async (imageId: string) => {
     if (!userId) return;
 
     try {
@@ -163,55 +150,46 @@ export function useProfileImages({
         headshot_image_id: imageId,
       });
       if (error) throw error;
-      if (!mountedRef.current) return;
 
-      setActiveHeadshotId(imageId);
+      setLocalOverrides((prev) => ({ ...prev, activeHeadshotId: imageId }));
       const imageUrls = await loadImageUrls([imageId]);
-      if (!mountedRef.current) return;
-      setHeadshotImageUrl(imageUrls.get(imageId) || null);
+      setLocalOverrides((prev) => ({
+        ...prev,
+        activeHeadshotId: imageId,
+        headshotImageUrl: imageUrls.get(imageId) || null,
+      }));
 
-      // Run bodyshot sync in the background so headshot activation is immediate.
+      // Run bodyshot sync in background
       void (async () => {
         try {
           const syncResult = await syncBodyshotAfterActiveHeadshotSet(userId, imageId);
-          if (!mountedRef.current) return;
           if (syncResult.status === 'reused_existing' && syncResult.imageId) {
-            setActiveBodyShotId(syncResult.imageId);
             const bodyUrls = await loadImageUrls([syncResult.imageId]);
-            if (!mountedRef.current) return;
-            setBodyShotImageUrl(bodyUrls.get(syncResult.imageId) || null);
+            setLocalOverrides((prev) => ({
+              ...prev,
+              activeBodyShotId: syncResult.imageId!,
+              bodyShotImageUrl: bodyUrls.get(syncResult.imageId!) || null,
+            }));
             return;
           }
 
           if (syncResult.status === 'error') {
-                        if (__DEV__) console.warn('[useProfileImages] Active headshot set but bodyshot sync failed', {
-              userId,
-              imageId,
-              message: syncResult.message,
+            if (__DEV__) console.warn('[useProfileImages] Active headshot set but bodyshot sync failed', {
+              userId, imageId, message: syncResult.message,
             });
-            if (!mountedRef.current) return;
             showErrorToast('Headshot is active, but we could not sync your body shot.');
             return;
           }
 
           if (syncResult.status === 'generation_started' && syncResult.jobId) {
             const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
-              syncResult.jobId,
-              60,
-              2000,
-              '[BodyShotSync]'
+              syncResult.jobId, 60, 2000, '[BodyShotSync]'
             );
-            if (!mountedRef.current) return;
             if (pollError || !completedJob || completedJob.status === 'failed') {
-                            if (__DEV__) console.warn('[useProfileImages] Bodyshot generation failed after headshot activation', {
-                userId,
-                imageId,
-                jobId: syncResult.jobId,
-                pollError,
-                status: completedJob?.status,
-                error: completedJob?.error,
+              if (__DEV__) console.warn('[useProfileImages] Bodyshot generation failed', {
+                userId, imageId, jobId: syncResult.jobId, pollError,
+                status: completedJob?.status, error: completedJob?.error,
               });
-              if (!mountedRef.current) return;
               showErrorToast('Headshot is active, but generating a matching body shot failed.');
               return;
             }
@@ -219,30 +197,27 @@ export function useProfileImages({
             const generatedImageId =
               completedJob.result?.image_id || completedJob.result?.generated_image_id;
             if (generatedImageId) {
-              setActiveBodyShotId(generatedImageId);
               const bodyUrls = await loadImageUrls([generatedImageId]);
-              if (!mountedRef.current) return;
-              setBodyShotImageUrl(bodyUrls.get(generatedImageId) || null);
+              setLocalOverrides((prev) => ({
+                ...prev,
+                activeBodyShotId: generatedImageId,
+                bodyShotImageUrl: bodyUrls.get(generatedImageId) || null,
+              }));
             }
           }
         } catch (syncError: any) {
-                    if (__DEV__) console.warn('[useProfileImages] Unexpected bodyshot sync error', {
-            userId,
-            imageId,
-            message: syncError?.message,
+          if (__DEV__) console.warn('[useProfileImages] Unexpected bodyshot sync error', {
+            userId, imageId, message: syncError?.message,
           });
-          if (!mountedRef.current) return;
           showErrorToast('Headshot is active, but we could not sync your body shot.');
         }
       })();
-    } catch (error: any) {
-      if (mountedRef.current) {
-        showErrorToast('Failed to set active headshot');
-      }
+    } catch {
+      showErrorToast('Failed to set active headshot');
     }
-  };
+  }, [userId]);
 
-  const setActiveBodyShot = async (imageId: string) => {
+  const setActiveBodyShot = useCallback(async (imageId: string) => {
     if (!userId) return;
 
     try {
@@ -250,33 +225,31 @@ export function useProfileImages({
         body_shot_image_id: imageId,
       });
       if (error) throw error;
-      if (!mountedRef.current) return;
 
-      setActiveBodyShotId(imageId);
+      setLocalOverrides((prev) => ({ ...prev, activeBodyShotId: imageId }));
       const imageUrls = await loadImageUrls([imageId]);
-      if (!mountedRef.current) return;
-      setBodyShotImageUrl(imageUrls.get(imageId) || null);
-    } catch (error: any) {
-      if (mountedRef.current) {
-        showErrorToast('Failed to set active body shot');
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (userId) {
-      refreshImages();
+      setLocalOverrides((prev) => ({
+        ...prev,
+        activeBodyShotId: imageId,
+        bodyShotImageUrl: imageUrls.get(imageId) || null,
+      }));
+    } catch {
+      showErrorToast('Failed to set active body shot');
     }
   }, [userId]);
 
   return {
-    loading,
-    headshotImageUrl,
-    bodyShotImageUrl,
-    allHeadshots,
-    allBodyShots,
-    activeHeadshotId,
-    activeBodyShotId,
+    loading: isLoading,
+    headshotImageUrl: localOverrides.headshotImageUrl !== undefined
+      ? localOverrides.headshotImageUrl
+      : data?.headshotImageUrl ?? null,
+    bodyShotImageUrl: localOverrides.bodyShotImageUrl !== undefined
+      ? localOverrides.bodyShotImageUrl
+      : data?.bodyShotImageUrl ?? null,
+    allHeadshots: data?.allHeadshots ?? [],
+    allBodyShots: data?.allBodyShots ?? [],
+    activeHeadshotId: localOverrides.activeHeadshotId ?? data?.activeHeadshotId ?? null,
+    activeBodyShotId: localOverrides.activeBodyShotId ?? data?.activeBodyShotId ?? null,
     refreshImages,
     setActiveHeadshot,
     setActiveBodyShot,

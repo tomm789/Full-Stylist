@@ -1,24 +1,15 @@
 /**
  * OutfitsFeedItemRenderer Component
  * Wrapper around FeedItemComponent for Outfits social feeds.
+ * Performs per-item lookups from collection props so FeedItemComponent
+ * receives stable primitives that work with React.memo.
  */
 
 import React from 'react';
 import { FeedItem } from '@/lib/posts';
-import { FeedItemComponent } from '@/components/social';
+import { FeedItemComponent, EngagementData } from '@/components/social/FeedItem';
 
-type EngagementCounts = Record<
-  string,
-  {
-    likes: number;
-    saves: number;
-    comments: number;
-    reposts: number;
-    hasLiked: boolean;
-    hasSaved: boolean;
-    hasReposted: boolean;
-  }
->;
+type EngagementCounts = Record<string, EngagementData>;
 
 type OutfitsFeedItemRendererProps = {
   item: FeedItem;
@@ -68,11 +59,22 @@ export default function OutfitsFeedItemRenderer({
   setMenuButtonPosition,
   setOpenMenuPostId,
 }: OutfitsFeedItemRendererProps) {
+  // Per-item lookups from collections → stable primitives for React.memo
+  const post = item.type === 'post' ? item.post : item.repost?.original_post;
+  const entity = item.entity?.outfit || item.entity?.lookbook;
+
+  const engagement = post ? engagementCounts[post.id] : undefined;
+  const outfitImageUrl = entity ? (outfitImages.get(entity.id) ?? null) : null;
+  const outfitImageLoading = entity ? !outfitImages.has(entity.id) : false;
+
   return (
     <FeedItemComponent
       item={item}
-      engagementCounts={engagementCounts}
-      outfitImages={outfitImages}
+      engagement={engagement}
+      outfitImageUrl={outfitImageUrl}
+      outfitImageLoading={outfitImageLoading}
+      headshotImageUrl={null}
+      headshotImageLoading={false}
       lookbookImages={lookbookImages}
       currentUserId={currentUserId}
       onLike={onLike}

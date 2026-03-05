@@ -11,12 +11,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
-  LayoutAnimation,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
-  UIManager,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -29,11 +26,6 @@ import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
-
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 const { spacing, borderRadius, typography } = theme;
 
@@ -202,7 +194,6 @@ export default function LookbookCreatorPanel({
   }, [mountAnim, opacityAnim]);
 
   const handleToggleExpanded = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsExpanded((prev) => !prev);
   };
 

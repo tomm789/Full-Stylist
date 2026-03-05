@@ -3,7 +3,8 @@
  * Load and filter feedback threads
  */
 
-import { useState, useEffect } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { getFeedbackThreads, FeedbackThread, FeedbackThreadFilters } from '@/lib/feedback';
 
 interface UseFeedbackThreadsProps {
@@ -21,39 +22,33 @@ export function useFeedbackThreads({
   category = 'all',
   status = 'all',
 }: UseFeedbackThreadsProps): UseFeedbackThreadsReturn {
-  const [threads, setThreads] = useState<FeedbackThread[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const loadThreads = async () => {
-    setLoading(true);
+  const { data, isLoading } = useQuery({
+    queryKey: ['feedbackThreads', category, status],
+    queryFn: async () => {
+      const filters: FeedbackThreadFilters = {};
+      if (category !== 'all') {
+        filters.category = category;
+      }
+      if (status !== 'all') {
+        filters.status = status;
+      }
 
-    const filters: FeedbackThreadFilters = {};
-    if (category !== 'all') {
-      filters.category = category;
-    }
-    if (status !== 'all') {
-      filters.status = status;
-    }
+      const { data } = await getFeedbackThreads(filters);
+      return data ?? [];
+    },
+    staleTime: 1000 * 60 * 2,
+    placeholderData: keepPreviousData,
+  });
 
-    const { data } = await getFeedbackThreads(filters);
-    if (data) {
-      setThreads(data);
-    }
-
-    setLoading(false);
-  };
-
-  const refresh = async () => {
-    await loadThreads();
-  };
-
-  useEffect(() => {
-    loadThreads();
-  }, [category, status]);
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['feedbackThreads', category, status] });
+  }, [queryClient, category, status]);
 
   return {
-    threads,
-    loading,
+    threads: data ?? [],
+    loading: isLoading,
     refresh,
   };
 }

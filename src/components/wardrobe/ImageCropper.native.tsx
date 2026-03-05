@@ -1,6 +1,6 @@
 /**
- * ImageCropper base file for TypeScript resolution.
- * At runtime, Metro loads ImageCropper.web.tsx or ImageCropper.native.tsx instead.
+ * ImageCropper stub for native platforms
+ * Cropping on native uses the OS image picker, not this component
  */
 
 import React from 'react';

@@ -3,7 +3,8 @@
  * Load and cache feed items with images and engagement counts
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFeed, FeedItem } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
 import { getLookbook } from '@/lib/lookbooks';
@@ -40,14 +41,13 @@ interface UseFeedReturn {
   refresh: () => Promise<void>;
 }
 
-// 🔥 OPTIMIZATION: Batch get engagement counts in ONE query
+// Batch get engagement counts in ONE query
 async function batchGetEngagementCounts(
   postIds: string[],
   userId: string
 ): Promise<Record<string, Omit<EngagementCounts, 'reposts' | 'hasReposted'>>> {
   if (postIds.length === 0) return {};
 
-  // 🔥 Single query to get all likes, saves, and user interactions
   const [
     { data: likesData },
     { data: savesData },
@@ -55,36 +55,27 @@ async function batchGetEngagementCounts(
     { data: userLikes },
     { data: userSaves },
   ] = await Promise.all([
-    // Get all likes grouped by post
     supabase
       .from('likes')
       .select('entity_id')
       .eq('entity_type', 'post')
       .in('entity_id', postIds),
-    
-    // Get all saves grouped by post
     supabase
       .from('saves')
       .select('entity_id')
       .eq('entity_type', 'post')
       .in('entity_id', postIds),
-    
-    // Get all comments grouped by post
     supabase
       .from('comments')
       .select('entity_id')
       .eq('entity_type', 'post')
       .in('entity_id', postIds),
-    
-    // Get user's likes
     supabase
       .from('likes')
       .select('entity_id')
       .eq('entity_type', 'post')
       .eq('user_id', userId)
       .in('entity_id', postIds),
-    
-    // Get user's saves
     supabase
       .from('saves')
       .select('entity_id')
@@ -93,7 +84,6 @@ async function batchGetEngagementCounts(
       .in('entity_id', postIds),
   ]);
 
-  // Count occurrences
   const likeCounts = new Map<string, number>();
   const saveCounts = new Map<string, number>();
   const commentCounts = new Map<string, number>();
@@ -103,18 +93,14 @@ async function batchGetEngagementCounts(
   (likesData || []).forEach(({ entity_id }) => {
     likeCounts.set(entity_id, (likeCounts.get(entity_id) || 0) + 1);
   });
-
   (savesData || []).forEach(({ entity_id }) => {
     saveCounts.set(entity_id, (saveCounts.get(entity_id) || 0) + 1);
   });
-
   (commentsData || []).forEach(({ entity_id }) => {
     commentCounts.set(entity_id, (commentCounts.get(entity_id) || 0) + 1);
   });
 
-  // Build result
   const result: Record<string, Omit<EngagementCounts, 'reposts' | 'hasReposted'>> = {};
-  
   postIds.forEach(postId => {
     result[postId] = {
       likes: likeCounts.get(postId) || 0,
@@ -128,55 +114,50 @@ async function batchGetEngagementCounts(
   return result;
 }
 
+interface FeedQueryData {
+  feed: FeedItem[];
+  outfitImages: Map<string, string | null>;
+  lookbookImages: Map<string, any>;
+  headshotImages: Map<string, string | null>;
+  engagementCounts: Record<string, EngagementCounts>;
+  followStatuses: Map<string, boolean>;
+}
+
 export function useFeed({
   userId,
   filterByUserId,
   limit = 50,
 }: UseFeedProps): UseFeedReturn {
-  const [feed, setFeed] = useState<FeedItem[]>([]);
-  const [outfitImages, setOutfitImages] = useState<Map<string, string | null>>(new Map());
-  const [lookbookImages, setLookbookImages] = useState<Map<string, any>>(new Map());
-  const [headshotImages, setHeadshotImages] = useState<Map<string, string | null>>(new Map());
-  const [engagementCounts, setEngagementCounts] = useState<Record<string, EngagementCounts>>({});
-  const [followStatuses, setFollowStatuses] = useState<Map<string, boolean>>(new Map());
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const queryKey = useMemo(
+    () => ['feed', userId, filterByUserId, limit] as const,
+    [userId, filterByUserId, limit]
+  );
 
-  const loadFeed = async (cancelledRef?: { current: boolean }) => {
-    const isCancelled = () => cancelledRef?.current === true;
+  // Local state for optimistic engagement updates
+  const [engagementOverrides, setEngagementOverrides] = useState<Record<string, EngagementCounts>>({});
 
-    if (!userId) {
-      if (!isCancelled()) {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (!isCancelled()) {
-      setLoading(true);
-    }
-
-    try {
-      const { data: feedItems } = await getFeed(userId, limit, 0);
-      if (isCancelled()) return;
+  const { data, isLoading } = useQuery<FeedQueryData>({
+    queryKey,
+    queryFn: async () => {
+      const { data: feedItems } = await getFeed(userId!, limit, 0);
       if (!feedItems) {
-        if (!isCancelled()) {
-          setLoading(false);
-        }
-        return;
+        return {
+          feed: [],
+          outfitImages: new Map(),
+          lookbookImages: new Map(),
+          headshotImages: new Map(),
+          engagementCounts: {},
+          followStatuses: new Map(),
+        };
       }
 
-      // Filter by user if specified
       const filteredFeed = filterByUserId
         ? feedItems.filter((item) => {
             const post = item.type === 'post' ? item.post : item.repost?.original_post;
             return post?.owner_user_id === filterByUserId;
           })
         : feedItems;
-
-      if (isCancelled()) return;
-
-      // Collect all data into locals before setting any state
-      // so React 18 batches all updates into a single render
 
       // Extract all post IDs and owner IDs
       const postIds: string[] = [];
@@ -199,23 +180,22 @@ export function useFeed({
         userRepostData,
         followData,
       ] = await Promise.all([
-        batchGetEngagementCounts(postIds, userId),
+        batchGetEngagementCounts(postIds, userId!),
         Promise.all(postIds.map(async (postId) => ({
           postId,
           count: await getRepostCount(postId),
         }))),
         Promise.all(postIds.map(async (postId) => ({
           postId,
-          hasReposted: await hasReposted(userId, postId),
+          hasReposted: await hasReposted(userId!, postId),
         }))),
         Promise.all(
           Array.from(ownerIds).map(async (ownerId) => ({
             ownerId,
-            following: (await isFollowing(userId, ownerId)).isFollowing,
+            following: (await isFollowing(userId!, ownerId)).isFollowing,
           }))
         ),
       ]);
-      if (isCancelled()) return;
 
       // Process engagement counts
       const localCounts: Record<string, EngagementCounts> = {};
@@ -246,7 +226,6 @@ export function useFeed({
       } catch (imgErr) {
         console.error('Failed to load outfit images:', imgErr);
       }
-      if (isCancelled()) return;
 
       // Handle lookbooks
       const localLookbookImages = new Map<string, any>();
@@ -289,9 +268,8 @@ export function useFeed({
           }
         })
       );
-      if (isCancelled()) return;
 
-      // Build headshot image URL map (sync — no async needed)
+      // Build headshot image URL map (sync)
       const localHeadshotImages = new Map<string, string | null>();
       filteredFeed.forEach(item => {
         const post = item.type === 'post' ? item.post : item.repost?.original_post;
@@ -308,45 +286,59 @@ export function useFeed({
         }
       });
 
-      // Set ALL state in one synchronous tick — React batches into one render
-      if (!isCancelled()) {
-        setFeed(filteredFeed);
-        setEngagementCounts(localCounts);
-        setFollowStatuses(localFollowStatuses);
-        setOutfitImages(localOutfitImages);
-        setLookbookImages(localLookbookImages);
-        setHeadshotImages(localHeadshotImages);
-      }
-    } catch (error) {
-      console.error('Error loading feed:', error);
-    } finally {
-      if (!isCancelled()) {
-        setLoading(false);
-      }
-    }
-  };
+      return {
+        feed: filteredFeed,
+        outfitImages: localOutfitImages,
+        lookbookImages: localLookbookImages,
+        headshotImages: localHeadshotImages,
+        engagementCounts: localCounts,
+        followStatuses: localFollowStatuses,
+      };
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60, // 60 seconds
+  });
 
-  const refresh = async () => {
-    await loadFeed();
-  };
-
+  // Clear overrides when query data refreshes
   useEffect(() => {
-    const cancelledRef = { current: false };
-    void loadFeed(cancelledRef);
-    return () => {
-      cancelledRef.current = true;
-    };
-  }, [userId, filterByUserId, limit]);
+    if (data) {
+      setEngagementOverrides({});
+    }
+  }, [data]);
+
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
+
+  // Merge query engagement counts with optimistic overrides
+  const mergedEngagement = useMemo(() => {
+    const base = data?.engagementCounts ?? {};
+    if (Object.keys(engagementOverrides).length === 0) return base;
+    return { ...base, ...engagementOverrides };
+  }, [data?.engagementCounts, engagementOverrides]);
+
+  // setEngagementCounts updates overrides for optimistic UI
+  const setEngagementCounts: React.Dispatch<React.SetStateAction<Record<string, EngagementCounts>>> = useCallback(
+    (action) => {
+      setEngagementOverrides((prev) => {
+        const base = data?.engagementCounts ?? {};
+        const current = { ...base, ...prev };
+        const next = typeof action === 'function' ? action(current) : action;
+        return next;
+      });
+    },
+    [data?.engagementCounts]
+  );
 
   return {
-    feed,
-    outfitImages,
-    lookbookImages,
-    headshotImages,
-    engagementCounts,
+    feed: data?.feed ?? [],
+    outfitImages: data?.outfitImages ?? new Map(),
+    lookbookImages: data?.lookbookImages ?? new Map(),
+    headshotImages: data?.headshotImages ?? new Map(),
+    engagementCounts: mergedEngagement,
     setEngagementCounts,
-    followStatuses,
-    loading,
+    followStatuses: data?.followStatuses ?? new Map(),
+    loading: isLoading,
     refresh,
   };
 }

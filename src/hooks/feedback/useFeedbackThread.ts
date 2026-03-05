@@ -3,7 +3,8 @@
  * Load thread details, comments, and handle interactions
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { showErrorToast } from '@/utils/toast';
 import {
   getFeedbackThread,
@@ -31,38 +32,37 @@ interface UseFeedbackThreadReturn {
   ) => Promise<void>;
 }
 
+async function fetchThread(threadId: string) {
+  const [{ data: threadData }, { data: commentsData }] = await Promise.all([
+    getFeedbackThread(threadId),
+    getFeedbackThreadComments(threadId),
+  ]);
+
+  return {
+    thread: threadData ?? null,
+    comments: commentsData ?? [],
+  };
+}
+
 export function useFeedbackThread({
   threadId,
   userId,
 }: UseFeedbackThreadProps): UseFeedbackThreadReturn {
-  const [thread, setThread] = useState<FeedbackThread | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [submittingComment, setSubmittingComment] = useState(false);
 
-  const loadThread = async () => {
-    if (!threadId) return;
+  const { data, isLoading } = useQuery({
+    queryKey: ['feedbackThread', threadId],
+    queryFn: () => fetchThread(threadId!),
+    enabled: !!threadId && !!userId,
+    staleTime: 1000 * 60 * 2,
+  });
 
-    setLoading(true);
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['feedbackThread', threadId] });
+  }, [queryClient, threadId]);
 
-    const { data: threadData } = await getFeedbackThread(threadId);
-    if (threadData) {
-      setThread(threadData);
-    }
-
-    const { data: commentsData } = await getFeedbackThreadComments(threadId);
-    if (commentsData) {
-      setComments(commentsData);
-    }
-
-    setLoading(false);
-  };
-
-  const refresh = async () => {
-    await loadThread();
-  };
-
-  const submitComment = async (text: string): Promise<boolean> => {
+  const submitComment = useCallback(async (text: string): Promise<boolean> => {
     if (!userId || !threadId || !text.trim()) return false;
 
     setSubmittingComment(true);
@@ -77,8 +77,7 @@ export function useFeedbackThread({
       if (error) throw error;
 
       if (comment) {
-        setComments([comment, ...comments]);
-        await loadThread();
+        await queryClient.invalidateQueries({ queryKey: ['feedbackThread', threadId] });
         return true;
       }
       return false;
@@ -88,40 +87,37 @@ export function useFeedbackThread({
     } finally {
       setSubmittingComment(false);
     }
-  };
+  }, [userId, threadId, queryClient]);
 
-  const updateStatus = async (
+  const updateStatus = useCallback(async (
     newStatus: 'open' | 'in_progress' | 'resolved' | 'closed'
   ) => {
-    if (!userId || !thread || thread.user_id !== userId) return;
+    if (!userId || !data?.thread || data.thread.user_id !== userId) return;
 
     try {
       const { data: updatedThread, error } = await updateFeedbackThread(
         userId,
-        thread.id,
+        data.thread.id,
         { status: newStatus }
       );
 
       if (error) throw error;
 
       if (updatedThread) {
-        setThread(updatedThread);
+        queryClient.setQueryData(['feedbackThread', threadId], {
+          thread: updatedThread,
+          comments: data.comments,
+        });
       }
     } catch (error: any) {
       showErrorToast(`Failed to update status: ${error.message || error}`);
     }
-  };
-
-  useEffect(() => {
-    if (threadId && userId) {
-      loadThread();
-    }
-  }, [threadId, userId]);
+  }, [userId, data, threadId, queryClient]);
 
   return {
-    thread,
-    comments,
-    loading,
+    thread: data?.thread ?? null,
+    comments: data?.comments ?? [],
+    loading: isLoading,
     submittingComment,
     refresh,
     submitComment,

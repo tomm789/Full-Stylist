@@ -3,7 +3,8 @@
  * Manages slot presets for calendar entries
  */
 
-import { useState, useEffect } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSlotPresets, createSlotPreset, CalendarSlotPreset } from '@/lib/calendar';
 
 interface UseSlotPresetsProps {
@@ -18,34 +19,23 @@ interface UseSlotPresetsReturn {
 }
 
 export function useSlotPresets({ userId }: UseSlotPresetsProps): UseSlotPresetsReturn {
-  const [presets, setPresets] = useState<CalendarSlotPreset[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const loadPresets = async () => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
+  const { data, isLoading } = useQuery({
+    queryKey: ['slotPresets', userId],
+    queryFn: async () => {
+      const { data } = await getSlotPresets(userId!);
+      return data ?? [];
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 10,
+  });
 
-    setLoading(true);
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['slotPresets', userId] });
+  }, [queryClient, userId]);
 
-    try {
-      const { data } = await getSlotPresets(userId);
-      if (data) {
-        setPresets(data);
-      }
-    } catch (error) {
-      console.error('Error loading slot presets:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const refresh = async () => {
-    await loadPresets();
-  };
-
-  const createPreset = async (name: string) => {
+  const handleCreatePreset = useCallback(async (name: string) => {
     if (!userId) {
       return { data: null, error: { message: 'User not provided' } };
     }
@@ -53,20 +43,16 @@ export function useSlotPresets({ userId }: UseSlotPresetsProps): UseSlotPresetsR
     const result = await createSlotPreset(userId, name);
 
     if (!result.error) {
-      await refresh();
+      await queryClient.invalidateQueries({ queryKey: ['slotPresets', userId] });
     }
 
     return result;
-  };
-
-  useEffect(() => {
-    loadPresets();
-  }, [userId]);
+  }, [userId, queryClient]);
 
   return {
-    presets,
-    loading,
+    presets: data ?? [],
+    loading: isLoading,
     refresh,
-    createPreset,
+    createPreset: handleCreatePreset,
   };
 }

@@ -66,7 +66,7 @@ export default function ThemedBottomSheet({
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const snapPoints = useMemo(

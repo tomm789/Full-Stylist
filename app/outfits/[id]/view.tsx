@@ -53,7 +53,7 @@ import { createStyles } from '@/styles/screens/outfits-view.styles';
 
 export default function OutfitViewScreen() {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const {
     id,

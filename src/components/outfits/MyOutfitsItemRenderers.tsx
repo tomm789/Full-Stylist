@@ -3,7 +3,7 @@
  * Helpers for rendering my outfits grid/feed items.
  */
 
-import React, { useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
@@ -40,7 +40,7 @@ type FeedItemProps = {
   onSchedulePress: (outfitId: string) => void;
 };
 
-export function MyOutfitGridItem({
+export const MyOutfitGridItem = memo(function MyOutfitGridItem({
   item,
   imageUrl,
   imageLoading,
@@ -107,9 +107,9 @@ export function MyOutfitGridItem({
       )}
     </TouchableOpacity>
   );
-}
+});
 
-export function MyOutfitFeedItem({
+export const MyOutfitFeedItem = memo(function MyOutfitFeedItem({
   item,
   imageUrl,
   imageLoading,
@@ -133,7 +133,7 @@ export function MyOutfitFeedItem({
       onSchedulePress={onSchedulePress}
     />
   );
-}
+});
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   gridImage: {

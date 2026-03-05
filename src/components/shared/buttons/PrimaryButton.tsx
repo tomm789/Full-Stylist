@@ -3,7 +3,7 @@
  * Reusable button with consistent styling (variants, sizes, loading, optional icon)
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -50,7 +50,7 @@ export default function PrimaryButton({
   ...props
 }: PrimaryButtonProps) {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const isDisabled = !!disabled || loading;
 
   const handlePress = () => {

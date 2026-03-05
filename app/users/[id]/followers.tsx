@@ -3,7 +3,7 @@
  * List of users following the profile.
  */
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -42,7 +42,7 @@ const PAGE_SIZE = 30;
 
 export default function FollowersScreen() {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { user } = useAuth();
@@ -148,6 +148,73 @@ export default function FollowersScreen() {
     setFollowLoading(targetId, false);
   };
 
+  const renderFollowerItem = useCallback(({ item }: { item: FollowerRow }) => {
+    const user = item.follower;
+    const targetId = user?.id || item.follower_user_id;
+    const displayName = user?.display_name || user?.handle || 'User';
+    const handle = user?.handle ? `@${user.handle}` : '';
+    const avatarUrl = user?.avatar_url || null;
+    const followStatus = followStatusMap[targetId];
+    const isFollowing = followStatus?.isFollowing ?? false;
+    const followLabel = !currentUserId
+      ? null
+      : followStatus?.status === 'requested'
+        ? 'Requested'
+        : isFollowing
+          ? 'Following'
+          : 'Follow';
+    const showFollowButton = !!currentUserId && targetId !== currentUserId;
+    const isFollowLoading = followLoadingIds.has(targetId);
+
+    return (
+      <TouchableOpacity
+        style={styles.listItem}
+        onPress={() => router.push(`/users/${targetId}`)}
+      >
+        {avatarUrl ? (
+          <ExpoImage
+            source={{ uri: avatarUrl }}
+            style={styles.avatar}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <Ionicons name="person-circle-outline" size={52} color={colors.gray400} />
+        )}
+        <View style={styles.userInfo}>
+          <Text style={styles.nameText}>{displayName}</Text>
+          {handle.length > 0 && <Text style={styles.handleText}>{handle}</Text>}
+        </View>
+        {showFollowButton ? (
+          <TouchableOpacity
+            style={[
+              styles.followButton,
+              isFollowing && styles.followingButton,
+              isFollowLoading && styles.followButtonDisabled,
+            ]}
+            onPress={() => handleFollowPress(targetId)}
+            disabled={isFollowLoading}
+          >
+            {isFollowLoading ? (
+              <ActivityIndicator size="small" color={isFollowing ? colors.primary : '#fff'} />
+            ) : (
+              <Text
+                style={[
+                  styles.followButtonText,
+                  isFollowing && styles.followingButtonText,
+                ]}
+              >
+                {followLabel}
+              </Text>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <Ionicons name="chevron-forward" size={18} color={colors.gray400} />
+        )}
+      </TouchableOpacity>
+    );
+  }, [followStatusMap, currentUserId, followLoadingIds, styles, router, colors.gray400, handleFollowPress]);
+
   if (loading) {
     return (
       <View style={commonStyles.container}>
@@ -189,72 +256,7 @@ export default function FollowersScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => {
-            const user = item.follower;
-            const targetId = user?.id || item.follower_user_id;
-            const displayName = user?.display_name || user?.handle || 'User';
-            const handle = user?.handle ? `@${user.handle}` : '';
-            const avatarUrl = user?.avatar_url || null;
-            const followStatus = followStatusMap[targetId];
-            const isFollowing = followStatus?.isFollowing ?? false;
-            const followLabel = !currentUserId
-              ? null
-              : followStatus?.status === 'requested'
-                ? 'Requested'
-                : isFollowing
-                  ? 'Following'
-                  : 'Follow';
-            const showFollowButton = !!currentUserId && targetId !== currentUserId;
-            const isFollowLoading = followLoadingIds.has(targetId);
-
-            return (
-              <TouchableOpacity
-                style={styles.listItem}
-                onPress={() => router.push(`/users/${targetId}`)}
-              >
-                {avatarUrl ? (
-                  <ExpoImage
-                    source={{ uri: avatarUrl }}
-                    style={styles.avatar}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                  />
-                ) : (
-                  <Ionicons name="person-circle-outline" size={52} color={colors.gray400} />
-                )}
-                <View style={styles.userInfo}>
-                  <Text style={styles.nameText}>{displayName}</Text>
-                  {handle.length > 0 && <Text style={styles.handleText}>{handle}</Text>}
-                </View>
-                {showFollowButton ? (
-                  <TouchableOpacity
-                    style={[
-                      styles.followButton,
-                      isFollowing && styles.followingButton,
-                      isFollowLoading && styles.followButtonDisabled,
-                    ]}
-                    onPress={() => handleFollowPress(targetId)}
-                    disabled={isFollowLoading}
-                  >
-                    {isFollowLoading ? (
-                      <ActivityIndicator size="small" color={isFollowing ? colors.primary : '#fff'} />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.followButtonText,
-                          isFollowing && styles.followingButtonText,
-                        ]}
-                      >
-                        {followLabel}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                ) : (
-                  <Ionicons name="chevron-forward" size={18} color={colors.gray400} />
-                )}
-              </TouchableOpacity>
-            );
-          }}
+          renderItem={renderFollowerItem}
         />
       )}
     </View>

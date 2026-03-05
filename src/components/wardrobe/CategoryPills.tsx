@@ -10,9 +10,6 @@ import {
   StyleSheet,
   ViewStyle,
   ListRenderItemInfo,
-  LayoutAnimation,
-  Platform,
-  UIManager,
 } from 'react-native';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -24,14 +21,6 @@ const { spacing } = theme;
 const ESTIMATED_PILL_WIDTH = 80;
 const PILL_GAP = spacing.xs;
 const PILL_TOTAL_WIDTH = ESTIMATED_PILL_WIDTH + PILL_GAP;
-
-// Enable LayoutAnimation on Android
-if (
-  Platform.OS === 'android' &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 const DEFAULT_CATEGORY_ORDER = [
   'tops',
@@ -130,7 +119,6 @@ export default function CategoryPills({
   if (sortedCategories.length === 0) return null;
 
   const handleSelectCategory = (categoryId: string | null) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     onSelectCategory?.(categoryId);
   };
 

@@ -14,11 +14,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
-  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
-  UIManager,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -41,11 +39,6 @@ import {
 
 export { PANEL_HANDLE_AREA_HEIGHT, PANEL_COLLAPSED_HEIGHT } from './OutfitCreatorPanel.styles';
 export type { SelectedItem } from './PanelCards';
-
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 type TabId = 'outfit' | 'advanced';
 

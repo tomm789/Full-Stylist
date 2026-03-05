@@ -3,7 +3,8 @@
  * Manages outfit loading, caching, and refreshing
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { getUserOutfitsWithOptions, OutfitWithRating } from '@/lib/outfits';
 import { getOutfitCoverImages } from '@/lib/images';
 
@@ -15,6 +16,11 @@ interface UseOutfitsOptions {
   sortOrder?: 'asc' | 'desc';
 }
 
+interface OutfitsQueryData {
+  outfits: OutfitWithRating[];
+  imageCache: Map<string, string | null>;
+}
+
 export function useOutfits({
   userId,
   searchQuery = '',
@@ -22,16 +28,17 @@ export function useOutfits({
   sortBy = 'date',
   sortOrder = 'desc',
 }: UseOutfitsOptions) {
-  const [outfits, setOutfits] = useState<OutfitWithRating[]>([]);
-  const [imageCache, setImageCache] = useState<Map<string, string | null>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
 
-  const loadOutfits = useCallback(async () => {
-    if (!userId) return;
+  const queryKey = useMemo(
+    () => ['outfits', userId, searchQuery, favoritesOnly, sortBy, sortOrder] as const,
+    [userId, searchQuery, favoritesOnly, sortBy, sortOrder]
+  );
 
-    try {
-      const { data, error } = await getUserOutfitsWithOptions(userId, {
+  const { data, isLoading, isFetching, isSuccess } = useQuery<OutfitsQueryData>({
+    queryKey,
+    queryFn: async () => {
+      const { data, error } = await getUserOutfitsWithOptions(userId!, {
         search: searchQuery || undefined,
         favorites: favoritesOnly || undefined,
         sortBy,
@@ -40,11 +47,9 @@ export function useOutfits({
 
       if (error) {
         console.error('Failed to load outfits:', error);
-        return;
+        return { outfits: [], imageCache: new Map() };
       }
 
-      // Fetch images before setting any state so React 18 batches
-      // all updates into a single render (skeleton → loaded)
       const outfitsData = data || [];
       let imageMap = new Map<string, string | null>();
       try {
@@ -53,32 +58,24 @@ export function useOutfits({
         console.error('Failed to load outfit cover images:', imgErr);
       }
 
-      // Set both in one synchronous tick — React batches into one render
-      setOutfits(outfitsData);
-      setImageCache(imageMap);
-    } catch (error) {
-      console.error('Error loading outfits:', error);
-    }
-  }, [userId, searchQuery, favoritesOnly, sortBy, sortOrder]);
+      return { outfits: outfitsData, imageCache: imageMap };
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    placeholderData: keepPreviousData,
+  });
 
   const refresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadOutfits();
-    setRefreshing(false);
-  }, [loadOutfits]);
+    await queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
 
-  useEffect(() => {
-    if (userId) {
-      setLoading(true);
-      loadOutfits().finally(() => setLoading(false));
-    }
-  }, [userId, loadOutfits]);
+  const loadOutfits = refresh;
 
   return {
-    outfits,
-    imageCache,
-    loading,
-    refreshing,
+    outfits: data?.outfits ?? [],
+    imageCache: data?.imageCache ?? new Map<string, string | null>(),
+    loading: isLoading,
+    refreshing: isFetching && !isLoading,
     refresh,
     loadOutfits,
   };

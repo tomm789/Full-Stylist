@@ -50,7 +50,7 @@ export default function BottomSheet({
 }: BottomSheetProps) {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const bottomPadding = Math.max(spacing.xl, insets.bottom + spacing.sm);
   return (

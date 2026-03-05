@@ -3,7 +3,7 @@
  * Reusable placeholder for images that haven't loaded or don't exist
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
@@ -28,7 +28,7 @@ export default function ImagePlaceholder({
   aspectRatio = 1,
 }: ImagePlaceholderProps) {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   return (
     <View
       style={[

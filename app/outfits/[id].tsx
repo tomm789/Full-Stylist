@@ -159,7 +159,7 @@ const itemCardStyles = StyleSheet.create({
 export default function OutfitEditorScreen() {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const { id, items: itemsParam } = useLocalSearchParams<{
     id: string;
     items?: string;

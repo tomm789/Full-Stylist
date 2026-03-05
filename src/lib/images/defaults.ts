@@ -10,6 +10,7 @@ export const GRID_IMAGE_PROPS = {
 };
 
 export const DETAIL_IMAGE_PROPS = {
+  cachePolicy: 'memory-disk' as const,
   contentFit: 'contain' as const,
   priority: 'high' as const,
 };

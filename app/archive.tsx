@@ -3,7 +3,7 @@
  * Displays archived outfits, lookbooks, and wardrobe items
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -35,7 +35,7 @@ type ArchiveTab = 'outfits' | 'lookbooks' | 'wardrobe';
 
 export default function ArchiveScreen() {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { user } = useAuth();
@@ -115,6 +115,64 @@ export default function ArchiveScreen() {
     ]);
   };
 
+  const renderOutfitItem = useCallback(({ item }: { item: typeof outfitsState.outfits[number] }) => {
+    const imageUrl = outfitsState.imageCache.get(item.id) ?? null;
+    const imageLoading = !outfitsState.imageCache.has(item.id);
+
+    return (
+      <NativeContextMenu
+        actions={[
+          { id: 'restore', title: 'Restore', image: 'arrow.uturn.backward' },
+          { id: 'view', title: 'View', image: 'eye' },
+        ]}
+        onAction={(actionId) => {
+          if (actionId === 'restore') handleRestoreOutfit(item.id);
+          if (actionId === 'view') router.push(`/outfits/${item.id}/view`);
+        }}
+      >
+        <OutfitCard
+          outfit={item}
+          imageUrl={imageUrl}
+          imageLoading={imageLoading}
+          onPress={() => router.push(`/outfits/${item.id}/view`)}
+        />
+      </NativeContextMenu>
+    );
+  }, [outfitsState.imageCache, handleRestoreOutfit, router]);
+
+  const renderLookbookItem = useCallback(({ item }: { item: typeof lookbooksState.lookbooks[number] }) => (
+    <NativeContextMenu
+      actions={[
+        { id: 'restore', title: 'Restore', image: 'arrow.uturn.backward' },
+        { id: 'view', title: 'View', image: 'eye' },
+      ]}
+      onAction={(actionId) => {
+        if (actionId === 'restore') handleRestoreLookbook(item.id);
+        if (actionId === 'view') router.push(`/lookbooks/${item.id}`);
+      }}
+    >
+      <TouchableOpacity
+        style={postGridStyles.gridItem}
+        onPress={() => router.push(`/lookbooks/${item.id}`)}
+        activeOpacity={0.8}
+      >
+        <View style={styles.lookbookThumbnail}>
+          <Text style={styles.lookbookIcon}>📚</Text>
+        </View>
+        <View style={postGridStyles.infoOverlay}>
+          <Text style={styles.lookbookTitle} numberOfLines={2}>
+            {item.title || 'Untitled lookbook'}
+          </Text>
+          {item.description ? (
+            <Text style={styles.lookbookDescription} numberOfLines={1}>
+              {item.description}
+            </Text>
+          ) : null}
+        </View>
+      </TouchableOpacity>
+    </NativeContextMenu>
+  ), [handleRestoreLookbook, router, styles]);
+
   const renderOutfits = () => {
     if (outfitsState.loading && outfitsState.outfits.length === 0) {
       return (
@@ -141,30 +199,7 @@ export default function ArchiveScreen() {
         keyExtractor={(item) => item.id}
         refreshing={outfitsState.refreshing}
         onRefresh={outfitsState.refresh}
-        renderItem={({ item }) => {
-          const imageUrl = outfitsState.imageCache.get(item.id) ?? null;
-          const imageLoading = !outfitsState.imageCache.has(item.id);
-
-          return (
-            <NativeContextMenu
-              actions={[
-                { id: 'restore', title: 'Restore', image: 'arrow.uturn.backward' },
-                { id: 'view', title: 'View', image: 'eye' },
-              ]}
-              onAction={(actionId) => {
-                if (actionId === 'restore') handleRestoreOutfit(item.id);
-                if (actionId === 'view') router.push(`/outfits/${item.id}/view`);
-              }}
-            >
-              <OutfitCard
-                outfit={item}
-                imageUrl={imageUrl}
-                imageLoading={imageLoading}
-                onPress={() => router.push(`/outfits/${item.id}/view`)}
-              />
-            </NativeContextMenu>
-          );
-        }}
+        renderItem={renderOutfitItem}
       />
     );
   };
@@ -195,38 +230,7 @@ export default function ArchiveScreen() {
         keyExtractor={(item) => item.id}
         refreshing={lookbooksState.loading}
         onRefresh={lookbooksState.refresh}
-        renderItem={({ item }) => (
-          <NativeContextMenu
-            actions={[
-              { id: 'restore', title: 'Restore', image: 'arrow.uturn.backward' },
-              { id: 'view', title: 'View', image: 'eye' },
-            ]}
-            onAction={(actionId) => {
-              if (actionId === 'restore') handleRestoreLookbook(item.id);
-              if (actionId === 'view') router.push(`/lookbooks/${item.id}`);
-            }}
-          >
-            <TouchableOpacity
-              style={postGridStyles.gridItem}
-              onPress={() => router.push(`/lookbooks/${item.id}`)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.lookbookThumbnail}>
-                <Text style={styles.lookbookIcon}>📚</Text>
-              </View>
-              <View style={postGridStyles.infoOverlay}>
-                <Text style={styles.lookbookTitle} numberOfLines={2}>
-                  {item.title || 'Untitled lookbook'}
-                </Text>
-                {item.description ? (
-                  <Text style={styles.lookbookDescription} numberOfLines={1}>
-                    {item.description}
-                  </Text>
-                ) : null}
-              </View>
-            </TouchableOpacity>
-          </NativeContextMenu>
-        )}
+        renderItem={renderLookbookItem}
       />
     );
   };

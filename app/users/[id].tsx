@@ -32,7 +32,7 @@ type TabType = 'outfits' | 'lookbooks' | 'wardrobe';
 
 export default function UserProfileScreen() {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();

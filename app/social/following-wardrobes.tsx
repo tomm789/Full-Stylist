@@ -3,7 +3,7 @@
  * View wardrobes of users you follow
  */
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -158,7 +158,7 @@ export default function FollowingWardrobesScreen({
 }: FollowingWardrobesScreenProps) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<FollowedUser[]>([]);
@@ -266,6 +266,52 @@ export default function FollowingWardrobesScreen({
     loadFollowingWardrobes();
   }, [user, selectedCategoryId, selectedSubcategoryId]);
 
+  const renderUserCard = useCallback(({ item }: { item: FollowedUser }) => (
+    <TouchableOpacity
+      style={styles.userCard}
+      onPress={() => router.push(`/users/${item.id}?tab=wardrobe`)}
+    >
+      <View style={styles.userInfo}>
+        {item.avatar_url ? (
+          <ExpoImage
+            source={{ uri: item.avatar_url }}
+            style={styles.avatar}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <View style={styles.avatarPlaceholder} />
+        )}
+        <View style={styles.userText}>
+          <Text style={styles.displayName}>{item.display_name}</Text>
+          <Text style={styles.handle}>@{item.handle}</Text>
+          <Text style={styles.itemCount}>
+            {item.itemCount || 0} items
+          </Text>
+        </View>
+      </View>
+      <View style={styles.previewGrid}>
+        {Array.from({ length: PREVIEW_GRID_SIZE }).map((_, index) => {
+          const imageUrl = item.previewImages?.[index] || null;
+          return imageUrl ? (
+            <ExpoImage
+              key={`${item.id}-preview-${index}`}
+              source={{ uri: imageUrl }}
+              style={styles.previewImage}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <View
+              key={`${item.id}-preview-${index}`}
+              style={styles.previewPlaceholder}
+            />
+          );
+        })}
+      </View>
+    </TouchableOpacity>
+  ), [styles, router]);
+
   if (loading) {
     return (
       <View style={commonStyles.loadingContainer}>
@@ -287,51 +333,7 @@ export default function FollowingWardrobesScreen({
       ) : (
         <FlatList
           data={users}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.userCard}
-              onPress={() => router.push(`/users/${item.id}?tab=wardrobe`)}
-            >
-              <View style={styles.userInfo}>
-                {item.avatar_url ? (
-                  <ExpoImage
-                    source={{ uri: item.avatar_url }}
-                    style={styles.avatar}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                  />
-                ) : (
-                  <View style={styles.avatarPlaceholder} />
-                )}
-                <View style={styles.userText}>
-                  <Text style={styles.displayName}>{item.display_name}</Text>
-                  <Text style={styles.handle}>@{item.handle}</Text>
-                  <Text style={styles.itemCount}>
-                    {item.itemCount || 0} items
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.previewGrid}>
-                {Array.from({ length: PREVIEW_GRID_SIZE }).map((_, index) => {
-                  const imageUrl = item.previewImages?.[index] || null;
-                  return imageUrl ? (
-                    <ExpoImage
-                      key={`${item.id}-preview-${index}`}
-                      source={{ uri: imageUrl }}
-                      style={styles.previewImage}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                    />
-                  ) : (
-                    <View
-                      key={`${item.id}-preview-${index}`}
-                      style={styles.previewPlaceholder}
-                    />
-                  );
-                })}
-              </View>
-            </TouchableOpacity>
-          )}
+          renderItem={renderUserCard}
           keyExtractor={(item) => item.id}
           initialNumToRender={8}
           maxToRenderPerBatch={4}

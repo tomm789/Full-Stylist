@@ -3,7 +3,8 @@
  * Manages user outfits with cover images for calendar entries
  */
 
-import { useState, useEffect } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUserOutfits } from '@/lib/outfits';
 import { supabase } from '@/lib/supabase';
 
@@ -18,82 +19,66 @@ interface UseUserOutfitsReturn {
   refresh: () => Promise<void>;
 }
 
-export function useUserOutfits({ userId }: UseUserOutfitsProps): UseUserOutfitsReturn {
-  const [outfits, setOutfits] = useState<any[]>([]);
-  const [outfitImages, setOutfitImages] = useState<Map<string, string | null>>(new Map());
-  const [loading, setLoading] = useState(true);
+async function fetchUserOutfits(userId: string) {
+  const { data: userOutfits } = await getUserOutfits(userId);
+  if (!userOutfits) return { outfits: [], outfitImages: new Map<string, string | null>() };
 
-  const loadOutfits = async () => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
+  const imagesMap = new Map<string, string | null>();
+  const coverImageIds = userOutfits
+    .map((outfit) => outfit.cover_image_id)
+    .filter((id): id is string => Boolean(id));
 
-    setLoading(true);
-
+  if (coverImageIds.length > 0) {
     try {
-      const { data: userOutfits } = await getUserOutfits(userId);
-      if (userOutfits) {
-        // Build image map before setting any state so React 18 batches
-        // all updates into a single render (skeleton → loaded)
-        const imagesMap = new Map<string, string | null>();
-        const coverImageIds = userOutfits
-          .map((outfit) => outfit.cover_image_id)
-          .filter((id): id is string => Boolean(id));
+      const { data: coverImages } = await supabase
+        .from('images')
+        .select('id, storage_key, storage_bucket')
+        .in('id', coverImageIds);
 
-        if (coverImageIds.length > 0) {
-          try {
-            const { data: coverImages } = await supabase
-              .from('images')
-              .select('id, storage_key, storage_bucket')
-              .in('id', coverImageIds);
+      const coverImageMap = new Map(
+        (coverImages || []).map((image) => [image.id, image])
+      );
 
-            const coverImageMap = new Map(
-              (coverImages || []).map((image) => [image.id, image])
-            );
+      for (const outfit of userOutfits) {
+        if (!outfit.cover_image_id) continue;
+        const coverImage = coverImageMap.get(outfit.cover_image_id);
+        if (!coverImage?.storage_key) continue;
 
-            for (const outfit of userOutfits) {
-              if (!outfit.cover_image_id) continue;
-              const coverImage = coverImageMap.get(outfit.cover_image_id);
-              if (!coverImage?.storage_key) continue;
+        const storageBucket = coverImage.storage_bucket || 'media';
+        const { data: urlData } = supabase.storage
+          .from(storageBucket)
+          .getPublicUrl(coverImage.storage_key);
 
-              const storageBucket = coverImage.storage_bucket || 'media';
-              const { data: urlData } = supabase.storage
-                .from(storageBucket)
-                .getPublicUrl(coverImage.storage_key);
-
-              if (urlData?.publicUrl) {
-                imagesMap.set(outfit.id, urlData.publicUrl);
-              }
-            }
-          } catch (imgErr) {
-            console.error('Failed to load outfit images:', imgErr);
-          }
+        if (urlData?.publicUrl) {
+          imagesMap.set(outfit.id, urlData.publicUrl);
         }
-
-        // Set both in one synchronous tick — React batches into one render
-        setOutfits(userOutfits);
-        setOutfitImages(imagesMap);
       }
-    } catch (error) {
-      console.error('Error loading user outfits:', error);
-    } finally {
-      setLoading(false);
+    } catch (imgErr) {
+      console.error('Failed to load outfit images:', imgErr);
     }
-  };
+  }
 
-  const refresh = async () => {
-    await loadOutfits();
-  };
+  return { outfits: userOutfits, outfitImages: imagesMap };
+}
 
-  useEffect(() => {
-    loadOutfits();
-  }, [userId]);
+export function useUserOutfits({ userId }: UseUserOutfitsProps): UseUserOutfitsReturn {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['userOutfitsCalendar', userId],
+    queryFn: () => fetchUserOutfits(userId!),
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['userOutfitsCalendar', userId] });
+  }, [queryClient, userId]);
 
   return {
-    outfits,
-    outfitImages,
-    loading,
+    outfits: data?.outfits ?? [],
+    outfitImages: data?.outfitImages ?? new Map(),
+    loading: isLoading,
     refresh,
   };
 }

@@ -60,7 +60,7 @@ type TabType = 'outfits' | 'lookbooks';
 export default function UserProfileScreen() {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
   const { id: userId } = useLocalSearchParams<{ id: string }>();

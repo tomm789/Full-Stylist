@@ -3,7 +3,7 @@
  * Browse and filter feedback threads
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,7 @@ import type { ThemeColors } from '@/styles/themes';
 export default function FeedbackListScreen() {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<
     'bug' | 'feature' | 'general' | 'other' | 'all'
@@ -44,6 +44,13 @@ export default function FeedbackListScreen() {
     await refresh();
     setRefreshing(false);
   };
+
+  const renderFeedbackItem = useCallback(({ item }: { item: typeof threads[number] }) => (
+    <FeedbackCard
+      thread={item}
+      onPress={() => router.push(`/feedback/${item.id}`)}
+    />
+  ), [router]);
 
   if (loading && threads.length === 0) {
     return (
@@ -95,12 +102,7 @@ export default function FeedbackListScreen() {
       ) : (
         <FlatList
           data={threads}
-          renderItem={({ item }) => (
-            <FeedbackCard
-              thread={item}
-              onPress={() => router.push(`/feedback/${item.id}`)}
-            />
-          )}
+          renderItem={renderFeedbackItem}
           keyExtractor={(item) => item.id}
           initialNumToRender={8}
           maxToRenderPerBatch={4}

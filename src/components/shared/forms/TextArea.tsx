@@ -3,7 +3,7 @@
  * Reusable multi-line text input
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Input from './Input';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
@@ -14,7 +14,7 @@ interface TextAreaProps extends React.ComponentProps<typeof Input> {
 
 export default function TextArea({ rows = 3, style, ...props }: TextAreaProps) {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const textAreaStyle = [
     commonStyles.textArea,
     { height: rows * 24 }, // Approximate line height

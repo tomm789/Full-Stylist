@@ -6,7 +6,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Animated,
   Dimensions,
   Modal,
   Pressable,
@@ -18,6 +17,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from 'react-native';
+import Animated, { useSharedValue, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -50,7 +50,7 @@ export default function CalendarDaySheet({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
-  const sheetHeight = useRef(new Animated.Value(SCREEN_HEIGHT * 0.82)).current;
+  const sheetHeight = useSharedValue(SCREEN_HEIGHT * 0.82);
   const scrollOffsetRef = useRef(0);
 
   const { entries, loading, updateEntry, deleteEntry, reorderEntries } = useDayEntries({
@@ -71,34 +71,26 @@ export default function CalendarDaySheet({
     });
   }, [dateKey]);
 
+  const animatedSheetStyle = useAnimatedStyle(() => ({
+    height: sheetHeight.value,
+  }));
+
   useEffect(() => {
     if (!visible) return;
     setExpanded(false);
-    Animated.timing(sheetHeight, {
-      toValue: SCREEN_HEIGHT * 0.82,
-      duration: 220,
-      useNativeDriver: false,
-    }).start();
+    sheetHeight.value = withTiming(SCREEN_HEIGHT * 0.82, { duration: 220 });
   }, [visible, sheetHeight]);
 
   const expandSheet = () => {
     if (expanded) return;
     setExpanded(true);
-    Animated.timing(sheetHeight, {
-      toValue: SCREEN_HEIGHT,
-      duration: 220,
-      useNativeDriver: false,
-    }).start();
+    sheetHeight.value = withTiming(SCREEN_HEIGHT, { duration: 220 });
   };
 
   const collapseToSheet = () => {
     if (!expanded) return;
     setExpanded(false);
-    Animated.timing(sheetHeight, {
-      toValue: SCREEN_HEIGHT * 0.82,
-      duration: 220,
-      useNativeDriver: false,
-    }).start();
+    sheetHeight.value = withTiming(SCREEN_HEIGHT * 0.82, { duration: 220 });
   };
 
   const panGesture = Gesture.Pan()
@@ -141,7 +133,7 @@ export default function CalendarDaySheet({
         onPress={expanded ? undefined : onClose}
       >
         <Pressable onPress={() => {}}>
-          <Animated.View style={[styles.sheet, { height: sheetHeight }, expanded && styles.sheetExpanded]}>
+          <Animated.View style={[styles.sheet, animatedSheetStyle, expanded && styles.sheetExpanded]}>
             <GestureDetector gesture={panGesture}>
               <View style={styles.dragHandleWrap}>
                 <View style={styles.dragHandle} />

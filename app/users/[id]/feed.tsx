@@ -4,7 +4,7 @@
  * Supports three-dots menu, try-on, comments, and find-similar.
  */
 
-import React, { useMemo, useEffect, useRef, useState } from 'react';
+import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -26,7 +26,7 @@ import type { ThemeColors } from '@/styles/themes';
 
 export default function UserFeedScreen() {
   const colors = useThemeColors();
-  const commonStyles = createCommonStyles(colors);
+  const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
@@ -99,33 +99,49 @@ export default function UserFeedScreen() {
     return post?.id ?? null;
   };
 
-  const renderFeedItem = ({ item }: { item: any }) => (
-    <FeedItemComponent
-      item={item}
-      engagementCounts={engagementCounts}
-      outfitImages={outfitImages}
-      lookbookImages={lookbookImages}
-      headshotImages={headshotImages}
-      currentUserId={user?.id}
-      onLike={handleLike}
-      onComment={modals.openComments}
-      onRepost={handleRepost}
-      onSave={handleSave}
-      onFindSimilar={modals.handleFindSimilar}
-      onTryOnOutfitShortcut={tryOnOutfit}
-      onApplyLook={applyLook}
-      onMenuPress={(postId, position) => {
-        modals.setMenuButtonPosition(position);
-        modals.setOpenMenuPostId(modals.openMenuPostId === postId ? null : postId);
-      }}
-      onOpenSlideshow={openSlideshow}
-      menuButtonRefs={modals.menuButtonRefs}
-      menuButtonPositions={modals.menuButtonPositions}
-      openMenuPostId={modals.openMenuPostId}
-      setMenuButtonPosition={modals.setMenuButtonPosition}
-      setOpenMenuPostId={modals.setOpenMenuPostId}
-    />
-  );
+  const renderFeedItem = useCallback(({ item }: { item: any }) => {
+    // Per-item lookups from collections → stable primitives for React.memo
+    const post = item.type === 'post' ? item.post : item.repost?.original_post;
+    const entity = item.entity?.outfit || item.entity?.lookbook;
+    const headshotEntity = item.entity?.headshot;
+
+    const engagement = post ? engagementCounts[post.id] : undefined;
+    const outfitImageUrl = entity ? (outfitImages.get(entity.id) ?? null) : null;
+    const outfitImageLoading = entity ? !outfitImages.has(entity.id) : false;
+    const headshotImageUrl = headshotEntity ? (headshotImages?.get(headshotEntity.id) ?? null) : null;
+    const headshotImageLoading = headshotEntity ? !headshotImages?.has(headshotEntity.id) : false;
+
+    return (
+      <FeedItemComponent
+        item={item}
+        engagement={engagement}
+        outfitImageUrl={outfitImageUrl}
+        outfitImageLoading={outfitImageLoading}
+        headshotImageUrl={headshotImageUrl}
+        headshotImageLoading={headshotImageLoading}
+        lookbookImages={lookbookImages}
+        currentUserId={user?.id}
+        onLike={handleLike}
+        onComment={modals.openComments}
+        onRepost={handleRepost}
+        onSave={handleSave}
+        onFindSimilar={modals.handleFindSimilar}
+        onTryOnOutfitShortcut={tryOnOutfit}
+        onApplyLook={applyLook}
+        onMenuPress={(menuPostId, position) => {
+          modals.setMenuButtonPosition(position);
+          modals.setOpenMenuPostId(modals.openMenuPostId === menuPostId ? null : menuPostId);
+        }}
+        onOpenSlideshow={openSlideshow}
+        menuButtonRefs={modals.menuButtonRefs}
+        menuButtonPositions={modals.menuButtonPositions}
+        openMenuPostId={modals.openMenuPostId}
+        setMenuButtonPosition={modals.setMenuButtonPosition}
+        setOpenMenuPostId={modals.setOpenMenuPostId}
+      />
+    );
+  }, [engagementCounts, outfitImages, lookbookImages, headshotImages, user?.id,
+      handleLike, handleRepost, handleSave, modals, tryOnOutfit, applyLook, openSlideshow]);
 
   const handleScrollToIndexFailed = (info: {
     index: number;

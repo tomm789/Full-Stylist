@@ -3,7 +3,8 @@
  * Manages wardrobe items loading, caching, and state
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getWardrobeItems,
   getSavedWardrobeItems,
@@ -31,6 +32,13 @@ export interface WardrobeItemsState {
   error: Error | null;
 }
 
+interface WardrobeItemsQueryData {
+  allItems: WardrobeItem[];
+  imageCache: Map<string, string | null>;
+  entityAttributesMap: Map<string, any[]>;
+  tagsMap: Map<string, Array<{ id: string; name: string }>>;
+}
+
 export function useWardrobeItems({
   wardrobeId,
   userId,
@@ -38,32 +46,25 @@ export function useWardrobeItems({
   searchQuery,
   autoLoad = true,
 }: UseWardrobeItemsOptions) {
-  const [allItems, setAllItems] = useState<WardrobeItem[]>([]);
-  const [imageCache, setImageCache] = useState<Map<string, string | null>>(new Map());
-  const [entityAttributesMap, setEntityAttributesMap] = useState<Map<string, any[]>>(new Map());
-  const [tagsMap, setTagsMap] = useState<Map<string, Array<{ id: string; name: string }>>>(new Map());
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const queryClient = useQueryClient();
 
-  // Load items from API
-  const loadItems = useCallback(async () => {
-    if (!wardrobeId || !userId || loading) return;
+  const queryKey = useMemo(
+    () => ['wardrobeItems', wardrobeId, userId, categoryId, searchQuery] as const,
+    [wardrobeId, userId, categoryId, searchQuery]
+  );
 
-    setLoading(true);
-    setError(null);
-
-    try {
+  const { data, isLoading, isFetching, error: queryError, isFetched } = useQuery<WardrobeItemsQueryData>({
+    queryKey,
+    queryFn: async () => {
       const [
         { data: ownedItems, error: ownedError },
         { data: savedItems, error: savedError },
       ] = await Promise.all([
-        getWardrobeItems(wardrobeId, {
+        getWardrobeItems(wardrobeId!, {
           category_id: categoryId,
           search: searchQuery,
         }),
-        getSavedWardrobeItems(userId, {
+        getSavedWardrobeItems(userId!, {
           category_id: categoryId,
           search: searchQuery,
         }),
@@ -73,20 +74,17 @@ export function useWardrobeItems({
         throw ownedError || savedError;
       }
 
-      // Combine owned and saved items
       const combinedItems = [
         ...(ownedItems || []),
         ...(savedItems || []),
       ];
 
-      // Batch load images, entity attributes, and tags before setting any state
-      // so React 18 batches all updates into a single render (skeleton → loaded)
+      let newCache = new Map<string, string | null>();
+      let entityAttrsMap: any = new Map();
+      let tagsData: any = new Map();
+
       if (combinedItems.length > 0) {
         const itemIds = combinedItems.map(item => item.id);
-
-        let newCache = new Map<string, string | null>();
-        let entityAttrsMap: any = new Map();
-        let tagsData: any = new Map();
 
         try {
           const [imagesResult, attrsResult, tagsResult] = await Promise.all([
@@ -100,60 +98,37 @@ export function useWardrobeItems({
         } catch (imgErr) {
           console.error('Failed to load wardrobe item images/attributes:', imgErr);
         }
-
-        // Set all state in one synchronous tick — React batches into one render
-        setAllItems(combinedItems);
-        setImageCache((prev) => {
-          const merged = new Map(prev);
-          for (const [id, url] of newCache.entries()) {
-            merged.set(id, url);
-          }
-          return merged;
-        });
-        setEntityAttributesMap(entityAttrsMap);
-        setTagsMap(tagsData);
-      } else {
-        setAllItems(combinedItems);
       }
-    } catch (err) {
-      setError(err as Error);
-      console.error('Failed to load wardrobe items:', err);
-    } finally {
-      setLoading(false);
-      setHasLoaded(true);
-    }
-  }, [wardrobeId, userId, categoryId, searchQuery]);
 
-  // Refresh items (for pull-to-refresh)
+      return {
+        allItems: combinedItems,
+        imageCache: newCache,
+        entityAttributesMap: entityAttrsMap,
+        tagsMap: tagsData,
+      };
+    },
+    enabled: autoLoad && !!wardrobeId && !!userId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    placeholderData: keepPreviousData,
+  });
+
+  const loadItems = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
+
   const refresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadItems();
-    setRefreshing(false);
-  }, [loadItems]);
-
-  // Clear stale items immediately when category changes so the loading
-  // spinner shows instead of items from the previous category.
-  useEffect(() => {
-    setAllItems([]);
-    setHasLoaded(false);
-  }, [categoryId]);
-
-  // Auto-load on mount and when dependencies change
-  useEffect(() => {
-    if (autoLoad && wardrobeId && userId) {
-      loadItems();
-    }
-  }, [autoLoad, wardrobeId, userId, categoryId, searchQuery]);
+    await queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
 
   return {
-    allItems,
-    imageCache,
-    entityAttributesMap,
-    tagsMap,
-    loading,
-    refreshing,
-    error,
-    hasLoaded,
+    allItems: data?.allItems ?? [],
+    imageCache: data?.imageCache ?? new Map<string, string | null>(),
+    entityAttributesMap: data?.entityAttributesMap ?? new Map(),
+    tagsMap: data?.tagsMap ?? new Map(),
+    loading: isLoading,
+    refreshing: isFetching && !isLoading,
+    error: queryError as Error | null,
+    hasLoaded: isFetched,
     loadItems,
     refresh,
   };
