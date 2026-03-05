@@ -110,32 +110,42 @@ export async function createOutfitBundle(
 
     if (bundleError) throw bundleError;
 
-    for (const groupData of bundleData.groups) {
-      const { data: group, error: groupError } = await supabase
-        .from('bundle_groups')
-        .insert({
-          bundle_id: bundle.id,
-          title: groupData.title,
-          is_required: groupData.is_required,
-        })
-        .select()
-        .single();
+    // Create all groups in parallel
+    const groupResults = await Promise.all(
+      bundleData.groups.map(groupData =>
+        supabase
+          .from('bundle_groups')
+          .insert({
+            bundle_id: bundle.id,
+            title: groupData.title,
+            is_required: groupData.is_required,
+          })
+          .select()
+          .single()
+      )
+    );
 
-      if (groupError) throw groupError;
+    const groupError = groupResults.find(r => r.error)?.error;
+    if (groupError) throw groupError;
 
-      if (groupData.items && groupData.items.length > 0) {
-        const groupItemsData = groupData.items.map((item) => ({
-          group_id: group.id,
-          wardrobe_item_id: item.wardrobe_item_id,
-          quantity: item.quantity || 1,
-        }));
+    // Batch-insert all group items across all groups in one call
+    const allGroupItems = groupResults.flatMap((result, index) => {
+      const group = result.data;
+      const groupData = bundleData.groups[index];
+      if (!group || !groupData.items?.length) return [];
+      return groupData.items.map((item) => ({
+        group_id: group.id,
+        wardrobe_item_id: item.wardrobe_item_id,
+        quantity: item.quantity || 1,
+      }));
+    });
 
-        const { error: itemsError } = await supabase
-          .from('bundle_group_items')
-          .insert(groupItemsData);
+    if (allGroupItems.length > 0) {
+      const { error: itemsError } = await supabase
+        .from('bundle_group_items')
+        .insert(allGroupItems);
 
-        if (itemsError) throw itemsError;
-      }
+      if (itemsError) throw itemsError;
     }
 
     const { data: fullBundle } = await getOutfitBundle(bundle.id);

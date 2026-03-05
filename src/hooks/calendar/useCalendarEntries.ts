@@ -54,25 +54,17 @@ async function loadOutfitImages(entries: CalendarEntry[]): Promise<Map<string, s
   const imagesMap = new Map<string, string | null>();
   const outfitIds = [...new Set(entries.filter((e) => e.outfit_id).map((e) => e.outfit_id!))];
 
-  const outfitPromises = outfitIds.map((outfitId) =>
-    Promise.race([
-      supabase
-        .from('outfits')
-        .select(
-          'id, cover_image_id, cover_image:images!cover_image_id(storage_key, storage_bucket)'
-        )
-        .eq('id', outfitId)
-        .single(),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`Outfit ${outfitId} load timeout after ${CALENDAR_CONFIG.OUTFIT_LOAD_TIMEOUT_MS}ms`)), CALENDAR_CONFIG.OUTFIT_LOAD_TIMEOUT_MS)
-      ),
-    ]).catch(() => ({ data: null, error: 'timeout' } as { data: any; error: string }))
-  );
+  if (outfitIds.length === 0) return imagesMap;
 
-  const outfitResults = await Promise.all(outfitPromises);
+  // Single batch query instead of N individual queries
+  const { data: outfits } = await supabase
+    .from('outfits')
+    .select(
+      'id, cover_image_id, cover_image:images!cover_image_id(storage_key, storage_bucket)'
+    )
+    .in('id', outfitIds);
 
-  for (const result of outfitResults) {
-    const outfit = (result as any).data;
+  for (const outfit of outfits || []) {
     const coverImage = Array.isArray(outfit?.cover_image) ? outfit?.cover_image?.[0] : outfit?.cover_image;
     if (coverImage?.storage_key) {
       const storageBucket = (coverImage as any).storage_bucket || 'media';

@@ -14,3 +14,4 @@ export { useProfileImageGeneration } from './useProfileImageGeneration';
 export { useNewBodyshot } from './useNewBodyshot';
 export { useAISettings } from './useAISettings';
 export type { AIModelSettingKey, AIModelLockKey } from './useAISettings';
+export { useUserSettings } from './useUserSettings';

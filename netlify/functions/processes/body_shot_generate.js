@@ -46,15 +46,17 @@ async function processBodyShotGenerate(input, supabase, userId, perfTracker = nu
     throw new Error("Missing body reference image");
   }
 
+  // Fetch user settings once upfront (headshot fallback + model preferences)
+  const { data: userSettings } = await supabase
+    .from("user_settings")
+    .select("headshot_image_id, ai_model_preference, ai_model_body_shot_generate")
+    .eq("user_id", userId)
+    .single();
+
   // Determine the head reference: selfie override or stored headshot
   let headId = useSelfiePair ? selfie_image_id : headshot_image_id;
   if (!headId && !useSelfiePair) {
-    const { data: settings } = await supabase
-      .from("user_settings")
-      .select("headshot_image_id")
-      .eq("user_id", userId)
-      .single();
-    headId = settings?.headshot_image_id;
+    headId = userSettings?.headshot_image_id;
   }
   if (!headId) {
     throw new Error("Missing head reference image");
@@ -76,11 +78,6 @@ async function processBodyShotGenerate(input, supabase, userId, perfTracker = nu
     body_chars_before: bodyResult.base64.length,
     body_chars_after: optimizedBodyResult.base64.length
   });
-  const { data: userSettings } = await supabase
-    .from("user_settings")
-    .select("ai_model_preference, ai_model_body_shot_generate")
-    .eq("user_id", userId)
-    .single();
   // Generate the composite body shot - pass full result objects to include mime-types
   const model = resolveModelFromSettings(
     userSettings,

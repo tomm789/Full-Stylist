@@ -108,6 +108,7 @@ exports.handler = async (event) => {
       return { statusCode: 401, headers, body: JSON.stringify({ error: "Invalid token" }) };
     }
 
+    const userId = authData.user.id;
     const body = JSON.parse(event.body || "{}");
     const items = Array.isArray(body.items) ? body.items : [];
     const threshold = typeof body.threshold === "number" ? body.threshold : 15;
@@ -120,6 +121,11 @@ exports.handler = async (event) => {
       const itemId = typeof item?.itemId === "string" ? item.itemId : null;
       const storageKey = typeof item?.storageKey === "string" ? item.storageKey : null;
       if (!itemId || !storageKey) continue;
+
+      // Verify the storage key belongs to the authenticated user
+      if (!storageKey.startsWith(userId + "/")) {
+        continue;
+      }
 
       const cacheKey = `${storageKey}|${threshold}`;
       const cached = readCache(cacheKey);

@@ -7,9 +7,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserSettings, updateUserSettings, validateModelPassword, UserSettings } from '@/lib/settings';
+import { updateUserSettings, validateModelPassword, UserSettings } from '@/lib/settings';
 import { deactivateAccount, deleteAccountPermanently } from '@/lib/user';
 import { showErrorToast } from '@/utils/toast';
+import { useUserSettings } from './useUserSettings';
 
 interface UseAccountSettingsReturn {
   settings: UserSettings | null;
@@ -32,38 +33,22 @@ interface UseAccountSettingsReturn {
 export function useAccountSettings(): UseAccountSettingsReturn {
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { settings, loading, invalidate, optimisticUpdate } = useUserSettings();
   const [saving, setSaving] = useState(false);
   const [aiModelPreference, setAiModelPreference] = useState<string>('gemini-2.5-flash-image');
   const [includeHeadshotInGeneration, setIncludeHeadshotInGeneration] = useState<boolean>(false);
 
-  const loadData = useCallback(async () => {
-    if (!user) return;
-
-    setLoading(true);
-
-    // Load settings
-    const { data: settingsData, error: settingsError } = await getUserSettings(user.id);
-    if (settingsError) {
-            if (__DEV__) console.log('[AccountSettings] Settings not found, user may need to complete onboarding');
-      setSettings(null);
-    } else {
-      setSettings(settingsData);
-      if (settingsData) {
-        setAiModelPreference(settingsData.ai_model_preference || 'gemini-2.5-flash-image');
-        setIncludeHeadshotInGeneration(settingsData.include_headshot_in_generation ?? false);
-      }
-    }
-
-    setLoading(false);
-  }, [user]);
-
+  // Sync local state from shared settings
   useEffect(() => {
-    if (user) {
-      loadData();
+    if (settings) {
+      setAiModelPreference(settings.ai_model_preference || 'gemini-2.5-flash-image');
+      setIncludeHeadshotInGeneration(settings.include_headshot_in_generation ?? false);
     }
-  }, [user, loadData]);
+  }, [settings]);
+
+  const loadData = useCallback(async () => {
+    invalidate();
+  }, [invalidate]);
 
   const handleUpdateSetting = useCallback(
     async <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
@@ -77,7 +62,7 @@ export function useAccountSettings(): UseAccountSettingsReturn {
         if (error) {
           showErrorToast('Failed to update setting');
         } else {
-          setSettings({ ...settings, [key]: value });
+          optimisticUpdate({ [key]: value } as Partial<UserSettings>);
         }
       } catch (error: any) {
         showErrorToast(error.message || 'An unexpected error occurred');
@@ -85,7 +70,7 @@ export function useAccountSettings(): UseAccountSettingsReturn {
         setSaving(false);
       }
     },
-    [user, settings]
+    [user, settings, optimisticUpdate]
   );
 
   const handleModelSelection = useCallback(
@@ -149,14 +134,14 @@ export function useAccountSettings(): UseAccountSettingsReturn {
         }
 
         setAiModelPreference(model);
-        await loadData();
+        invalidate();
       } catch (error: any) {
         showErrorToast(error.message || 'An unexpected error occurred');
       } finally {
         setSaving(false);
       }
     },
-    [user, settings, loadData]
+    [user, settings, invalidate]
   );
 
   const handleHeadshotToggle = useCallback(
@@ -190,14 +175,14 @@ export function useAccountSettings(): UseAccountSettingsReturn {
         }
 
         setIncludeHeadshotInGeneration(enabled);
-        await loadData();
+        invalidate();
       } catch (error: any) {
         showErrorToast(error.message || 'An unexpected error occurred');
       } finally {
         setSaving(false);
       }
     },
-    [user, settings, loadData]
+    [user, settings, invalidate]
   );
 
   const handleSignOut = useCallback(async () => {

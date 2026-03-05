@@ -251,17 +251,19 @@ export async function updateImageSortOrder(
   imageUpdates: Array<{ image_id: string; sort_order: number }>
 ): Promise<{ error: any }> {
   try {
-    // Update each image's sort order
-    for (const update of imageUpdates) {
-      const { error } = await supabase
-        .from('wardrobe_item_images')
-        .update({ sort_order: update.sort_order })
-        .eq('wardrobe_item_id', itemId)
-        .eq('image_id', update.image_id);
+    const results = await Promise.all(
+      imageUpdates.map(update =>
+        supabase
+          .from('wardrobe_item_images')
+          .update({ sort_order: update.sort_order })
+          .eq('wardrobe_item_id', itemId)
+          .eq('image_id', update.image_id)
+      )
+    );
 
-      if (error) {
-        return { error };
-      }
+    const firstError = results.find(r => r.error)?.error;
+    if (firstError) {
+      return { error: firstError };
     }
 
     return { error: null };

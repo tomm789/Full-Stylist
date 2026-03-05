@@ -39,10 +39,10 @@ export function useEngagementFeed(
     initialCounts ?? {},
   );
 
-  // In-flight sets prevent duplicate taps while an action is pending
-  const [liking, setLiking] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState<Set<string>>(new Set());
-  const [reposting, setReposting] = useState<Set<string>>(new Set());
+  // In-flight refs prevent duplicate taps while an action is pending
+  const likingRef = useRef<Set<string>>(new Set());
+  const savingRef = useRef<Set<string>>(new Set());
+  const repostingRef = useRef<Set<string>>(new Set());
 
   // Ref to always read latest onRepost without re-creating callbacks
   const onRepostRef = useRef(onRepost);
@@ -65,24 +65,25 @@ export function useEngagementFeed(
 
   const handleLike = useCallback(
     async (entityId: string) => {
-      if (!userId || liking.has(entityId)) return;
+      if (!userId || likingRef.current.has(entityId)) return;
 
-      const prev = counts[entityId] ?? DEFAULT_ENGAGEMENT_COUNTS;
-      const wasLiked = prev.hasLiked;
+      let prev: EngagementCounts;
+      setCounts((c) => {
+        prev = c[entityId] ?? DEFAULT_ENGAGEMENT_COUNTS;
+        const wasLiked = prev.hasLiked;
+        return {
+          ...c,
+          [entityId]: {
+            ...prev,
+            hasLiked: !wasLiked,
+            likes: wasLiked ? Math.max(0, prev.likes - 1) : prev.likes + 1,
+          },
+        };
+      });
 
-      // Optimistic update
-      setCounts((c) => ({
-        ...c,
-        [entityId]: {
-          ...prev,
-          hasLiked: !wasLiked,
-          likes: wasLiked ? Math.max(0, prev.likes - 1) : prev.likes + 1,
-        },
-      }));
-
-      setLiking((s) => new Set(s).add(entityId));
+      likingRef.current.add(entityId);
       try {
-        if (wasLiked) {
+        if (prev!.hasLiked) {
           await unlikeEntity(userId, 'post', entityId);
         } else {
           await likeEntity(userId, 'post', entityId);
@@ -104,42 +105,39 @@ export function useEngagementFeed(
         // Rollback
         setCounts((c) => ({
           ...c,
-          [entityId]: prev,
+          [entityId]: prev!,
         }));
         console.error('Failed to toggle like:', error);
       } finally {
-        setLiking((s) => {
-          const next = new Set(s);
-          next.delete(entityId);
-          return next;
-        });
+        likingRef.current.delete(entityId);
       }
     },
-    [userId, counts, liking],
+    [userId],
   );
 
   // ─── Save ───────────────────────────────────────────────────────────────────
 
   const handleSave = useCallback(
     async (entityId: string) => {
-      if (!userId || saving.has(entityId)) return;
+      if (!userId || savingRef.current.has(entityId)) return;
 
-      const prev = counts[entityId] ?? DEFAULT_ENGAGEMENT_COUNTS;
-      const wasSaved = prev.hasSaved;
+      let prev: EngagementCounts;
+      setCounts((c) => {
+        prev = c[entityId] ?? DEFAULT_ENGAGEMENT_COUNTS;
+        const wasSaved = prev.hasSaved;
+        return {
+          ...c,
+          [entityId]: {
+            ...prev,
+            hasSaved: !wasSaved,
+            saves: wasSaved ? Math.max(0, prev.saves - 1) : prev.saves + 1,
+          },
+        };
+      });
 
-      // Optimistic update
-      setCounts((c) => ({
-        ...c,
-        [entityId]: {
-          ...prev,
-          hasSaved: !wasSaved,
-          saves: wasSaved ? Math.max(0, prev.saves - 1) : prev.saves + 1,
-        },
-      }));
-
-      setSaving((s) => new Set(s).add(entityId));
+      savingRef.current.add(entityId);
       try {
-        if (wasSaved) {
+        if (prev!.hasSaved) {
           await unsaveEntity(userId, 'post', entityId);
         } else {
           await saveEntity(userId, 'post', entityId);
@@ -161,44 +159,41 @@ export function useEngagementFeed(
         // Rollback
         setCounts((c) => ({
           ...c,
-          [entityId]: prev,
+          [entityId]: prev!,
         }));
         console.error('Failed to toggle save:', error);
       } finally {
-        setSaving((s) => {
-          const next = new Set(s);
-          next.delete(entityId);
-          return next;
-        });
+        savingRef.current.delete(entityId);
       }
     },
-    [userId, counts, saving],
+    [userId],
   );
 
   // ─── Repost ─────────────────────────────────────────────────────────────────
 
   const handleRepost = useCallback(
     async (entityId: string) => {
-      if (!userId || reposting.has(entityId)) return;
+      if (!userId || repostingRef.current.has(entityId)) return;
 
-      const prev = counts[entityId] ?? DEFAULT_ENGAGEMENT_COUNTS;
-      const wasReposted = prev.hasReposted;
+      let prev: EngagementCounts;
+      setCounts((c) => {
+        prev = c[entityId] ?? DEFAULT_ENGAGEMENT_COUNTS;
+        const wasReposted = prev.hasReposted;
+        return {
+          ...c,
+          [entityId]: {
+            ...prev,
+            hasReposted: !wasReposted,
+            reposts: wasReposted
+              ? Math.max(0, prev.reposts - 1)
+              : prev.reposts + 1,
+          },
+        };
+      });
 
-      // Optimistic update
-      setCounts((c) => ({
-        ...c,
-        [entityId]: {
-          ...prev,
-          hasReposted: !wasReposted,
-          reposts: wasReposted
-            ? Math.max(0, prev.reposts - 1)
-            : prev.reposts + 1,
-        },
-      }));
-
-      setReposting((s) => new Set(s).add(entityId));
+      repostingRef.current.add(entityId);
       try {
-        if (wasReposted) {
+        if (prev!.hasReposted) {
           await removeRepost(userId, entityId);
         } else {
           await createRepost(userId, entityId);
@@ -225,18 +220,14 @@ export function useEngagementFeed(
         // Rollback
         setCounts((c) => ({
           ...c,
-          [entityId]: prev,
+          [entityId]: prev!,
         }));
         console.error('Failed to toggle repost:', error);
       } finally {
-        setReposting((s) => {
-          const next = new Set(s);
-          next.delete(entityId);
-          return next;
-        });
+        repostingRef.current.delete(entityId);
       }
     },
-    [userId, counts, reposting],
+    [userId],
   );
 
   // ─── Comment count update ───────────────────────────────────────────────────
@@ -262,8 +253,8 @@ export function useEngagementFeed(
     handleSave,
     handleRepost,
     updateCommentCount,
-    liking,
-    saving,
-    reposting,
+    liking: likingRef.current,
+    saving: savingRef.current,
+    reposting: repostingRef.current,
   };
 }

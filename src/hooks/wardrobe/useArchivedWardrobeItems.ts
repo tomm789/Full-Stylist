@@ -3,7 +3,7 @@
  * Manages archived wardrobe items loading, caching, and state
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getArchivedWardrobeItems,
   getWardrobeItemsImages,
@@ -28,9 +28,11 @@ export function useArchivedWardrobeItems({
   const [imageCache, setImageCache] = useState<Map<string, string | null>>(new Map());
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const loadingRef = useRef(false);
 
   const loadItems = useCallback(async () => {
-    if (!wardrobeId || loading) return;
+    if (!wardrobeId || loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
 
     try {
@@ -57,9 +59,10 @@ export function useArchivedWardrobeItems({
     } catch (error) {
       console.error('Error loading archived wardrobe items:', error);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
-  }, [wardrobeId, categoryId, searchQuery, loading]);
+  }, [wardrobeId, categoryId, searchQuery]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);

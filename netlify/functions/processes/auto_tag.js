@@ -8,7 +8,7 @@
 // allows for easier testing and maintenance.
 
 const { PROMPTS } = require("../prompts");
-const { downloadImageFromStorage, callGeminiAPI, getGeminiApiVersion } = require("../utils");
+const { downloadImageFromStorage, callGeminiAPI, getGeminiApiVersion, resolveModelFromSettings } = require("../utils");
 
 /**
  * Process an auto-tag job by analyzing a clothing item image and
@@ -42,20 +42,31 @@ async function processAutoTag(input, supabase, perfTracker = null, timingTracker
     imageB64Promise = downloadImageFromStorage(supabase, image_ids[0], timingTracker);
   }
   
-  const [imageResult, catRes, subRes, attrRes] = await Promise.all([
+  const [imageResult, catRes, subRes, attrRes, itemRes] = await Promise.all([
     imageB64Promise,
     supabase.from("wardrobe_categories").select("id, name").order("sort_order"),
     supabase.from("wardrobe_subcategories").select("id, name, category_id").order("sort_order"),
-    supabase.from("attribute_definitions").select("id, key, name")
+    supabase.from("attribute_definitions").select("id, key, name"),
+    supabase.from("wardrobe_items").select("owner_user_id").eq("id", wardrobe_item_id).single()
   ]);
   const categories = catRes.data || [];
   const subcategories = subRes.data || [];
   const catList = categories.map((c) => c.name).join(", ");
   const subList = subcategories.map((s) => s.name).join(", ");
   const prompt = PROMPTS.AUTO_TAG(catList, subList);
-  // Call the Gemini API with the clothing image to extract JSON attributes
-  // Pass the full result object so mime-type is included
-  const model = "gemini-2.5-flash-image";
+  // Resolve model from user settings (respect ai_model_auto_tag preference)
+  let model = "gemini-2.5-flash-image";
+  const ownerId = itemRes.data?.owner_user_id;
+  if (ownerId) {
+    const { data: userSettings } = await supabase
+      .from("user_settings")
+      .select("ai_model_preference, ai_model_auto_tag")
+      .eq("user_id", ownerId)
+      .maybeSingle();
+    if (userSettings) {
+      model = resolveModelFromSettings(userSettings, "ai_model_auto_tag", "gemini-2.5-flash-image");
+    }
+  }
   const apiVersion = getGeminiApiVersion(model);
   console.log("[Gemini] ABOUT TO CALL", { job_id: jobId, model, apiVersion });
   const textResult = await callGeminiAPI(prompt, [imageResult], model, "TEXT", perfTracker, timingTracker);
@@ -73,40 +84,74 @@ async function processAutoTag(input, supabase, perfTracker = null, timingTracker
   }
   // Build a map of attribute definition keys to IDs for quick lookup
   const defMap = new Map((attrRes.data || []).map((d) => [d.key, d.id]));
-  const attributesToInsert = [];
+
+  // Collect all (defId, value) pairs from the AI result
+  const valuePairs = [];
   for (const attr of result.attributes || []) {
     const defId = defMap.get(attr.key);
     if (!defId) continue;
     for (const val of attr.values || []) {
-      // Look up existing attribute values (case‑insensitive)
-      let { data: value } = await supabase
+      valuePairs.push({ defId, value: val.value, confidence: val.confidence });
+    }
+  }
+
+  const attributesToInsert = [];
+  if (valuePairs.length > 0) {
+    // Batch-fetch all existing attribute values in one query
+    const defIds = [...new Set(valuePairs.map((p) => p.defId))];
+    const { data: existingValues } = await supabase
+      .from("attribute_values")
+      .select("id, definition_id, value")
+      .in("definition_id", defIds);
+
+    // Build lookup map: "defId|lowercase_value" → id
+    const valueMap = new Map();
+    for (const ev of existingValues || []) {
+      valueMap.set(`${ev.definition_id}|${ev.value.toLowerCase()}`, ev.id);
+    }
+
+    // Identify missing values and batch-insert them
+    const missingValues = valuePairs
+      .filter((p) => !valueMap.has(`${p.defId}|${p.value.toLowerCase()}`))
+      .map((p) => ({ definition_id: p.defId, value: p.value }));
+
+    // Deduplicate missing values by defId+lowercase value
+    const seen = new Set();
+    const uniqueMissing = missingValues.filter((mv) => {
+      const key = `${mv.definition_id}|${mv.value.toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    if (uniqueMissing.length > 0) {
+      const { data: inserted } = await supabase
         .from("attribute_values")
-        .select("id")
-        .eq("definition_id", defId)
-        .ilike("value", val.value)
-        .single();
-      // Insert new value if it doesn't exist
-      if (!value) {
-        const { data: newValue } = await supabase
-          .from("attribute_values")
-          .insert({ definition_id: defId, value: val.value })
-          .select("id")
-          .single();
-        value = newValue;
+        .upsert(uniqueMissing, { onConflict: "definition_id,value", ignoreDuplicates: true })
+        .select("id, definition_id, value");
+
+      for (const iv of inserted || []) {
+        valueMap.set(`${iv.definition_id}|${iv.value.toLowerCase()}`, iv.id);
       }
-      if (value?.id) {
+    }
+
+    // Build entity_attributes rows
+    for (const pair of valuePairs) {
+      const valueId = valueMap.get(`${pair.defId}|${pair.value.toLowerCase()}`);
+      if (valueId) {
         attributesToInsert.push({
           entity_type: "wardrobe_item",
           entity_id: wardrobe_item_id,
-          definition_id: defId,
-          value_id: value.id,
-          raw_value: val.value,
-          confidence: val.confidence,
+          definition_id: pair.defId,
+          value_id: valueId,
+          raw_value: pair.value,
+          confidence: pair.confidence,
           source: "ai"
         });
       }
     }
   }
+
   // Insert any new attributes into the entity_attributes table
   if (attributesToInsert.length) {
     await supabase.from("entity_attributes").insert(attributesToInsert);

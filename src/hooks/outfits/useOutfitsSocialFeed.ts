@@ -53,12 +53,6 @@ export function useOutfitsSocialFeed({
     loadSavedEntities();
   }, [loadSavedEntities]);
 
-  useEffect(() => {
-    if (showFavoritesOnly) {
-      loadSavedEntities();
-    }
-  }, [showFavoritesOnly, loadSavedEntities]);
-
   const applySavedFilter = useCallback(
     (items: FeedItem[]) => {
       if (!showFavoritesOnly) return items;

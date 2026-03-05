@@ -3,10 +3,11 @@
  * Manage per-generation AI model settings and lock flags
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { showErrorToast } from '@/utils/toast';
-import { getUserSettings, updateUserSettings, UserSettings } from '@/lib/settings';
+import { updateUserSettings, UserSettings } from '@/lib/settings';
+import { useUserSettings } from './useUserSettings';
 
 export type AIModelSettingKey =
   | 'ai_model_outfit_render'
@@ -43,28 +44,12 @@ export interface AISettingsState {
 
 export function useAISettings(): AISettingsState {
   const { user } = useAuth();
-  const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { settings, loading, invalidate, optimisticUpdate } = useUserSettings();
   const [saving, setSaving] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    const { data, error } = await getUserSettings(user.id);
-    if (error) {
-      console.error('[AISettings] Failed to load settings:', error);
-      setSettings(null);
-    } else {
-      setSettings(data);
-    }
-    setLoading(false);
-  }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      refresh();
-    }
-  }, [user, refresh]);
+    invalidate();
+  }, [invalidate]);
 
   const updateMany = useCallback(
     async (updates: Partial<UserSettings>) => {
@@ -76,14 +61,14 @@ export function useAISettings(): AISettingsState {
           showErrorToast('Failed to update AI settings');
           return;
         }
-        setSettings({ ...settings, ...updates });
+        optimisticUpdate(updates);
       } catch (error: any) {
         showErrorToast(error.message || 'An unexpected error occurred');
       } finally {
         setSaving(false);
       }
     },
-    [user, settings]
+    [user, settings, optimisticUpdate]
   );
 
   const updateModel = useCallback(

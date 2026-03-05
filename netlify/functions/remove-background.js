@@ -1,9 +1,10 @@
 const fetch = require('node-fetch');
+const { supabaseAdmin } = require('./supabaseClient');
 
 exports.handler = async (event, context) => {
     const headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
     };
 
@@ -16,6 +17,17 @@ exports.handler = async (event, context) => {
     }
 
     try {
+        // Authenticate the request
+        const authHeader = event.headers.authorization || event.headers.Authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
+        }
+        const token = authHeader.replace('Bearer ', '');
+        const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
+        if (authError || !authData?.user?.id) {
+            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) };
+        }
+
         const { imageData } = JSON.parse(event.body);
         
         if (!imageData) {

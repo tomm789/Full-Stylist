@@ -190,7 +190,8 @@ export async function deleteEntityAttribute(
 }
 
 /**
- * Batch create entity attributes from AI auto_tag result
+ * Batch create entity attributes from AI auto_tag result.
+ * Uses batch queries instead of per-value lookups to minimise DB round-trips.
  */
 export async function createEntityAttributesFromAutoTag(
   entityType: 'wardrobe_item' | 'outfit',
@@ -204,24 +205,110 @@ export async function createEntityAttributesFromAutoTag(
   errors: any[];
 }> {
   const errors: any[] = [];
-  let created = 0;
 
+  // Collect all unique attribute keys
+  const allKeys = [...new Set(attributes.map((a) => a.key))];
+  if (allKeys.length === 0) return { created: 0, errors };
+
+  // Batch-fetch all definitions in one query
+  const { data: definitions, error: defError } = await supabase
+    .from('attribute_definitions')
+    .select('id, key')
+    .in('key', allKeys);
+
+  if (defError) {
+    return { created: 0, errors: [{ key: 'definitions', error: defError }] };
+  }
+
+  const defMap = new Map((definitions || []).map((d) => [d.key, d.id]));
+
+  // Collect all (defId, value) pairs
+  const valuePairs: Array<{ defId: string; key: string; value: string; confidence?: number }> = [];
   for (const attr of attributes) {
+    const defId = defMap.get(attr.key);
+    if (!defId) continue;
     for (const val of attr.values) {
-      const { error } = await createEntityAttribute(
-        entityType,
-        entityId,
-        attr.key,
-        val.value,
-        val.confidence,
-        'ai'
-      );
+      valuePairs.push({ defId, key: attr.key, value: val.value, confidence: val.confidence });
+    }
+  }
 
-      if (error) {
-        errors.push({ key: attr.key, value: val.value, error });
-      } else {
-        created++;
-      }
+  if (valuePairs.length === 0) return { created: 0, errors };
+
+  // Batch-fetch existing attribute values
+  const defIds = [...new Set(valuePairs.map((p) => p.defId))];
+  const { data: existingValues } = await supabase
+    .from('attribute_values')
+    .select('id, definition_id, value, normalized_value')
+    .in('definition_id', defIds);
+
+  // Build lookup: "defId|normalized" → id
+  const valueMap = new Map<string, string>();
+  for (const ev of existingValues || []) {
+    const normalized = (ev.normalized_value || ev.value).toLowerCase().trim();
+    valueMap.set(`${ev.definition_id}|${normalized}`, ev.id);
+  }
+
+  // Find and batch-insert missing values
+  const seen = new Set<string>();
+  const missingInserts: Array<{ definition_id: string; value: string; normalized_value: string }> = [];
+  for (const pair of valuePairs) {
+    const normalized = pair.value.toLowerCase().trim();
+    const lookupKey = `${pair.defId}|${normalized}`;
+    if (!valueMap.has(lookupKey) && !seen.has(lookupKey)) {
+      seen.add(lookupKey);
+      missingInserts.push({
+        definition_id: pair.defId,
+        value: pair.value.trim(),
+        normalized_value: normalized,
+      });
+    }
+  }
+
+  if (missingInserts.length > 0) {
+    const { data: inserted, error: insertError } = await supabase
+      .from('attribute_values')
+      .insert(missingInserts)
+      .select('id, definition_id, value, normalized_value');
+
+    if (insertError) {
+      errors.push({ key: 'batch_insert_values', error: insertError });
+    }
+    for (const iv of inserted || []) {
+      const normalized = (iv.normalized_value || iv.value).toLowerCase().trim();
+      valueMap.set(`${iv.definition_id}|${normalized}`, iv.id);
+    }
+  }
+
+  // Build entity_attributes rows
+  const entityAttrs = [];
+  for (const pair of valuePairs) {
+    const normalized = pair.value.toLowerCase().trim();
+    const valueId = valueMap.get(`${pair.defId}|${normalized}`);
+    if (valueId) {
+      entityAttrs.push({
+        entity_type: entityType,
+        entity_id: entityId,
+        definition_id: pair.defId,
+        value_id: valueId,
+        raw_value: pair.value,
+        confidence: pair.confidence,
+        source: 'ai' as const,
+      });
+    }
+  }
+
+  // Batch-insert all entity attributes
+  let created = 0;
+  if (entityAttrs.length > 0) {
+    const { data: insertedAttrs, error: attrError } = await supabase
+      .from('entity_attributes')
+      .insert(entityAttrs)
+      .select();
+
+    if (attrError) {
+      errors.push({ key: 'batch_insert_entity_attributes', error: attrError });
+    } else {
+      created = (insertedAttrs || []).length;
     }
   }
 
