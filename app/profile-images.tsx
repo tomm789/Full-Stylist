@@ -3,10 +3,9 @@
  * Manage headshots and body shots for profile
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
-  StyleSheet,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
@@ -19,8 +18,12 @@ import {
 import { HeadshotSection, BodyShotSection } from '@/components/profile';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
 import { LoadingOverlay } from '@/components/shared';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createStyles } from '@/styles/screens/profile-images.styles';
 
 export default function ProfileImagesScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
 
@@ -118,19 +121,3 @@ export default function ProfileImagesScreen() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    padding: 20,
-  },
-});

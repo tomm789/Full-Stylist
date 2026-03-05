@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useSegments, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { isUserProfileComplete } from '@/lib/user';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View, ActivityIndicator, Text } from 'react-native';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createStyles } from '@/styles/screens/index-screen.styles';
 
 export default function Index() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { session, loading, verifyOtp } = useAuth();
   const router = useRouter();
   const segments = useSegments();
@@ -211,29 +215,3 @@ export default function Index() {
 
   return null;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  errorText: {
-    color: '#ff0000',
-    fontSize: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  errorSubtext: {
-    color: '#666',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  loadingText: {
-    color: '#666',
-    fontSize: 14,
-    marginTop: 12,
-    textAlign: 'center',
-  },
-});

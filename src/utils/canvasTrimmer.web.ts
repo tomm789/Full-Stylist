@@ -1,31 +1,32 @@
 /**
- * Canvas Trimming Utility
+ * Canvas Trimming Utility (Web)
  * Removes whitespace from images by detecting content bounding boxes
  */
+
+type ImageSource = HTMLImageElement | HTMLCanvasElement | string;
 
 /**
  * Trims whitespace from an image by detecting the content bounding box.
  * A pixel is considered "empty" if its RGB channels are all above (255 - threshold).
  * Transparent pixels are treated as empty.
- * 
- * @param {HTMLImageElement|HTMLCanvasElement|string} imageSource - Image source to trim
- * @param {number} threshold - Brightness threshold (0-255). Pixels with R,G,B all > (255 - threshold) are considered empty. Default: 15
- * @param {boolean} debug - If true, draws a red border around the edges of the trimmed canvas. Default: false
- * @returns {Promise<HTMLCanvasElement>} Canvas element containing the trimmed image (always cropped to bounding box)
  */
-export async function trimImageWhitespace(imageSource, threshold = 15, debug = false) {
+export async function trimImageWhitespace(
+  imageSource: ImageSource,
+  threshold: number = 15,
+  debug: boolean = false
+): Promise<HTMLCanvasElement> {
   // Create a temporary canvas to draw the source image
   const tempCanvas = document.createElement('canvas');
   const tempCtx = tempCanvas.getContext('2d');
-  
+
   if (!tempCtx) {
     throw new Error('Could not get canvas context for trimming');
   }
 
   // Load the image if it's a URL string
-  let image;
+  let image: HTMLImageElement | HTMLCanvasElement;
   if (typeof imageSource === 'string') {
-    image = await new Promise((resolve, reject) => {
+    image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => resolve(img);
@@ -40,8 +41,7 @@ export async function trimImageWhitespace(imageSource, threshold = 15, debug = f
   tempCanvas.width = image.width;
   tempCanvas.height = image.height;
 
-  // Log start of trim operation
-    if (__DEV__) console.log(`[trimImageWhitespace] Start Trim: ${image.width} x ${image.height}`);
+  if (__DEV__) console.log(`[trimImageWhitespace] Start Trim: ${image.width} x ${image.height}`);
 
   // Draw the image onto the temporary canvas
   tempCtx.drawImage(image, 0, 0);
@@ -62,7 +62,6 @@ export async function trimImageWhitespace(imageSource, threshold = 15, debug = f
   let maxY = 0;
   let foundContent = false;
 
-  // Scan all pixels to find content boundaries
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const index = (y * width + x) * 4;
@@ -71,13 +70,9 @@ export async function trimImageWhitespace(imageSource, threshold = 15, debug = f
       const b = data[index + 2];
       const a = data[index + 3];
 
-      // Check if pixel is "empty":
-      // - Alpha is 0 (transparent), OR
-      // - All RGB channels are above the threshold (white/light)
       const isEmpty = a === 0 || (r > minChannelValue && g > minChannelValue && b > minChannelValue);
 
       if (!isEmpty) {
-        // Found content pixel
         foundContent = true;
         minX = Math.min(minX, x);
         minY = Math.min(minY, y);
@@ -87,37 +82,27 @@ export async function trimImageWhitespace(imageSource, threshold = 15, debug = f
     }
   }
 
-  // Log detected bounding box
-  const boundingBox = {
-    top: minY,
-    bottom: maxY,
-    left: minX,
-    right: maxX
-  };
-    if (__DEV__) console.log(`[trimImageWhitespace] Detected bounding box:`, boundingBox);
+  if (__DEV__) console.log(`[trimImageWhitespace] Detected bounding box:`, { top: minY, bottom: maxY, left: minX, right: maxX });
 
-  // Safety check: if no content found, return original image (as safety fallback)
+  // Safety check: if no content found, return original image
   if (!foundContent || minX >= maxX || minY >= maxY) {
-        if (__DEV__) console.log('[trimImageWhitespace] No content found - returning original image');
+    if (__DEV__) console.log('[trimImageWhitespace] No content found - returning original image');
     const originalCanvas = document.createElement('canvas');
-    const originalCtx = originalCanvas.getContext('2d');
+    const originalCtx = originalCanvas.getContext('2d')!;
     originalCanvas.width = image.width;
     originalCanvas.height = image.height;
-    
-    // Enable high-quality rendering
+
     originalCtx.imageSmoothingEnabled = true;
     originalCtx.imageSmoothingQuality = 'high';
-    
     originalCtx.drawImage(image, 0, 0);
-    
-    // In debug mode, draw red border around the entire canvas
+
     if (debug) {
       originalCtx.strokeStyle = '#FF0000';
       originalCtx.lineWidth = 4;
       originalCtx.strokeRect(0, 0, originalCanvas.width, originalCanvas.height);
-            if (__DEV__) console.log('[trimImageWhitespace] Debug mode: Red border drawn around original canvas (no content found)');
+      if (__DEV__) console.log('[trimImageWhitespace] Debug mode: Red border drawn around original canvas (no content found)');
     }
-    
+
     return originalCanvas;
   }
 
@@ -125,13 +110,13 @@ export async function trimImageWhitespace(imageSource, threshold = 15, debug = f
   const trimmedWidth = maxX - minX + 1;
   const trimmedHeight = maxY - minY + 1;
 
-    if (__DEV__) console.log(`[trimImageWhitespace] Final Size: ${trimmedWidth} x ${trimmedHeight}`);
-    if (__DEV__) console.log(`[trimImageWhitespace] Trimmed from ${width}x${height} to ${trimmedWidth}x${trimmedHeight} (bounds: ${minX},${minY} to ${maxX},${maxY})`);
+  if (__DEV__) console.log(`[trimImageWhitespace] Final Size: ${trimmedWidth} x ${trimmedHeight}`);
+  if (__DEV__) console.log(`[trimImageWhitespace] Trimmed from ${width}x${height} to ${trimmedWidth}x${trimmedHeight} (bounds: ${minX},${minY} to ${maxX},${maxY})`);
 
-  // Create new canvas with trimmed dimensions (always cropped)
+  // Create new canvas with trimmed dimensions
   const trimmedCanvas = document.createElement('canvas');
   const trimmedCtx = trimmedCanvas.getContext('2d');
-  
+
   if (!trimmedCtx) {
     throw new Error('Could not get canvas context for trimmed canvas');
   }
@@ -139,23 +124,20 @@ export async function trimImageWhitespace(imageSource, threshold = 15, debug = f
   trimmedCanvas.width = trimmedWidth;
   trimmedCanvas.height = trimmedHeight;
 
-  // Enable high-quality rendering
   trimmedCtx.imageSmoothingEnabled = true;
   trimmedCtx.imageSmoothingQuality = 'high';
 
-  // Draw the trimmed region from the source image onto the new canvas
   trimmedCtx.drawImage(
     image,
-    minX, minY, trimmedWidth, trimmedHeight, // Source region
-    0, 0, trimmedWidth, trimmedHeight        // Destination (full canvas)
+    minX, minY, trimmedWidth, trimmedHeight,
+    0, 0, trimmedWidth, trimmedHeight
   );
 
-  // Debug mode: draw red border around the edges of the trimmed canvas
   if (debug) {
     trimmedCtx.strokeStyle = '#FF0000';
     trimmedCtx.lineWidth = 4;
     trimmedCtx.strokeRect(0, 0, trimmedCanvas.width, trimmedCanvas.height);
-        if (__DEV__) console.log(`[trimImageWhitespace] Debug mode: Red border drawn around trimmed canvas edges (${trimmedWidth}x${trimmedHeight})`);
+    if (__DEV__) console.log(`[trimImageWhitespace] Debug mode: Red border drawn around trimmed canvas edges (${trimmedWidth}x${trimmedHeight})`);
   }
 
   return trimmedCanvas;

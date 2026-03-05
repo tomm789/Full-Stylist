@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
@@ -16,8 +15,12 @@ import { supabase } from '@/lib/supabase';
 import { Alert } from 'react-native';
 import { showErrorToast } from '@/utils/toast';
 import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createStyles } from '@/styles/screens/listings.styles';
 
 export default function MyListingsScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { user } = useAuth();
   const [listings, setListings] = useState<ListingWithImages[]>([]);
@@ -165,113 +168,3 @@ export default function MyListingsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  listingsList: {
-    padding: 16,
-  },
-  listingCard: {
-    flexDirection: 'row',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  listingImage: {
-    width: 120,
-    height: 120,
-  },
-  listingImagePlaceholder: {
-    width: 120,
-    height: 120,
-    backgroundColor: '#e0e0e0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  listingImagePlaceholderText: {
-    color: '#999',
-    fontSize: 12,
-  },
-  listingInfo: {
-    flex: 1,
-    padding: 12,
-    justifyContent: 'space-between',
-  },
-  listingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
-  },
-  listingPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 4,
-  },
-  listingStatus: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-  },
-  listingActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  editButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    borderRadius: 6,
-  },
-  editButtonText: {
-    color: '#007AFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: '#ff3b30',
-    borderRadius: 6,
-  },
-  deleteButtonText: {
-    color: '#ff3b30',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-  },
-  emptyButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  emptyButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

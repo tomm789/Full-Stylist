@@ -3,11 +3,10 @@
  * Read-only view of a lookbook with social engagement
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -44,8 +43,12 @@ import {
 } from '@/components/shared/modals';
 import { CommentsModal } from '@/components/social';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createStyles } from '@/styles/screens/lookbook-view.styles';
 
 export default function LookbookViewScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
@@ -373,70 +376,3 @@ export default function LookbookViewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#fafafa',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  playButtonDisabled: {
-    opacity: 0.5,
-  },
-  content: {
-    flex: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  emptyOutfitsContainer: {
-    padding: 32,
-    alignItems: 'center',
-  },
-  emptyOutfitsText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-  socialActions: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 24,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  actionCount: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '600',
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: '#e5e7eb',
-    marginVertical: 4,
-  },
-});

@@ -3,16 +3,17 @@
  * User profile with posts, headshots, and bodyshots tabs
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createStyles } from '@/styles/screens/profile-tab.styles';
 import { useProfileData, useProfileEdit } from '@/hooks/profile';
 import {
   ProfileHeader,
@@ -24,6 +25,8 @@ import { SkeletonGrid, SkeletonProfileCard } from '@/components/shared/loading';
 type TabType = 'headshots' | 'bodyshots';
 
 export default function ProfileScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
   const { tab } = useLocalSearchParams<{ tab?: string | string[] }>();
@@ -159,39 +162,3 @@ export default function ProfileScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fafafa',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    padding: 20,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    marginTop: 20,
-  },
-  warningText: {
-    fontSize: 14,
-    color: '#ff9500',
-    marginBottom: 16,
-    textAlign: 'center',
-    padding: 12,
-    backgroundColor: '#fff3e0',
-    borderRadius: 8,
-  },
-  heroSection: {
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-});

@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
@@ -12,8 +11,13 @@ import { useNewLookbook } from '@/hooks/lookbooks';
 import { OutfitGridSelector } from '@/components/lookbooks';
 import FilterDefinitionEditor from '@/components/lookbooks/FilterDefinitionEditor';
 import { Header, HeaderActionButton, HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layout';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createStyles } from '@/styles/screens/lookbook-new.styles';
 
 export default function NewLookbookScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const router = useRouter();
   const {
     // Form state
@@ -226,137 +230,3 @@ export default function NewLookbookScreen() {
     </KeyboardAwareScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  contentContainer: {
-    paddingBottom: 32,
-  },
-  form: {
-    padding: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-    marginTop: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  typeSelector: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 8,
-  },
-  typeOption: {
-    flex: 1,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  typeOptionActive: {
-    borderColor: '#007AFF',
-    backgroundColor: '#e7f3ff',
-  },
-  typeOptionText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 4,
-  },
-  typeOptionTextActive: {
-    color: '#007AFF',
-  },
-  typeOptionDescription: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
-  },
-  visibilitySelector: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  visibilityOption: {
-    flex: 1,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  visibilityOptionActive: {
-    borderColor: '#007AFF',
-    backgroundColor: '#e7f3ff',
-  },
-  visibilityOptionText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  visibilityOptionTextActive: {
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  outfitsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  emptyContainer: {
-    padding: 32,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-  },
-  emptyButton: {
-    backgroundColor: '#000',
-    borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  emptyButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  savingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  savingText: {
-    color: '#fff',
-    fontSize: 16,
-    marginTop: 16,
-  },
-});

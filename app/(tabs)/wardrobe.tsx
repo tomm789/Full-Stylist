@@ -11,7 +11,6 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Platform,
-  TouchableOpacity,
   useWindowDimensions,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -39,18 +38,16 @@ import { setItemPreview } from '@/lib/wardrobe/itemPreviewCache';
 import {
   EmptyState,
   LoadingOverlay,
-  HeaderTabPill,
 } from '@/components/shared';
 import { SkeletonGrid } from '@/components/shared/loading';
 import type { ThumbnailItem } from '@/components/shared';
-import { WardrobeTabIcon } from '@/components/icons/tabs';
 
 // Wardrobe Components
 import {
-  CategoryPills,
   FilterDrawer,
   ItemGrid,
 } from '@/components/wardrobe';
+import WardrobeHeader from '@/components/wardrobe/WardrobeHeader';
 import TutorialScreen from '@/components/wardrobe/TutorialScreen';
 import OutfitCreatorSection from '@/components/wardrobe/OutfitCreatorSection';
 import { PANEL_COLLAPSED_HEIGHT } from '@/components/wardrobe/OutfitCreatorPanel';
@@ -69,9 +66,7 @@ import { createCommonStyles } from '@/styles/commonStyles';
 import { createStyles } from '@/styles/screens/wardrobe-tab.styles';
 import { useSearch } from '@/hooks';
 import SearchOverlay from '@/components/search/SearchOverlay';
-import { Ionicons } from '@expo/vector-icons';
 import { useWardrobeCamera } from '@/hooks/wardrobe/useWardrobeCamera';
-import SearchHeaderRow from '@/components/search/SearchHeaderRow';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSearchResultNavigation } from '@/hooks/search';
 import { useCreatorReset } from '@/hooks/wardrobe/useCreatorReset';
@@ -555,71 +550,31 @@ export default function WardrobeScreen() {
         pointerEvents={uiHidden ? 'none' : 'auto'}
       >
         <View onLayout={handleHeaderLayout}>
-          <SearchHeaderRow
-            title="Wardrobe"
-            leftIcon="camera-outline"
-            onLeftAction={handleOpenCamera}
-            centerSlot={
-              <HeaderTabPill
-                pills={[
-                  {
-                    id: 'my',
-                    label: 'My Wardrobe',
-                    icon: 'shirt-outline',
-                    iconComponent: ({ size, color }) => (
-                      <WardrobeTabIcon width={size} height={size} color={color} fill={color} />
-                    ),
-                  },
-                  { id: 'following', label: 'Following', icon: 'people-outline' },
-                  { id: 'discover', label: 'Discover', icon: 'compass-outline' },
-                ]}
-                activeId={activeTab}
-                onPress={(id) => setActiveTab(id as 'my' | 'following' | 'discover')}
-              />
-            }
+          <WardrobeHeader
+            colors={colors}
+            styles={styles}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onOpenCamera={handleOpenCamera}
             searchQuery={globalSearchQuery}
             onSearchChange={setGlobalSearchQuery}
             onSearchToggle={handleSearchToggle}
             searchOpen={searchOverlayOpen}
-            placeholder="Search wardrobe..."
             avatarUri={bodyShot.currentHeadshotUrl ?? undefined}
             avatarInitials={user?.email?.slice(0, 2).toUpperCase() ?? undefined}
             onProfile={() => router.push('/(tabs)/profile' as any)}
+            hasDraft={outfitDraft.hasDraft}
+            outfitCreatorMode={outfitCreatorMode}
+            onRestoreDraft={() => outfitDraft.restoreDraft()}
+            hasActiveFilters={hasActiveFilters}
+            onOpenFilterDrawer={() => setShowFilterDrawer(true)}
+            categories={categories}
+            subcategories={subcategories}
+            selectedCategoryId={selectedCategoryId}
+            selectedSubcategoryId={filters.subcategoryId}
+            onSelectCategory={handleCategorySelect}
+            onSelectSubcategory={(id) => updateFilter('subcategoryId', id)}
           />
-
-          {/* Filter icon + Category Pills row */}
-          <View style={styles.filterAndCategoriesRow}>
-            {outfitDraft.hasDraft && !outfitCreatorMode && (
-              <TouchableOpacity
-                style={styles.draftButton}
-                onPress={() => outfitDraft.restoreDraft()}
-                accessibilityLabel="Open draft outfit"
-              >
-                <Ionicons name="bookmark" size={16} color={colors.primary} />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}
-              onPress={() => setShowFilterDrawer(true)}
-              accessibilityLabel="Filters"
-            >
-              <Ionicons
-                name="options-outline"
-                size={18}
-                color={hasActiveFilters ? colors.textLight : colors.textSecondary}
-              />
-            </TouchableOpacity>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <CategoryPills
-                categories={categories}
-                subcategories={subcategories}
-                selectedCategoryId={selectedCategoryId}
-                selectedSubcategoryId={filters.subcategoryId}
-                onSelectCategory={handleCategorySelect}
-                onSelectSubcategory={(id) => updateFilter('subcategoryId', id)}
-              />
-            </View>
-          </View>
         </View>
       </Animated.View>
 

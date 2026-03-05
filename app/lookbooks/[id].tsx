@@ -3,11 +3,10 @@
  * View and manage a single lookbook with outfits
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
@@ -31,8 +30,13 @@ import {
 import { LoadingSpinner } from '@/components/shared';
 import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 import { isLookbookEditable } from '@/utils/lookbookHelpers';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createStyles } from '@/styles/screens/lookbook-detail.styles';
 
 export default function LookbookDetailScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
@@ -234,53 +238,3 @@ export default function LookbookDetailScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    flex: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  emptyOutfitsContainer: {
-    padding: 32,
-    alignItems: 'center',
-  },
-  emptyOutfitsText: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  addOutfitsButton: {
-    backgroundColor: '#000',
-    borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  addOutfitsButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

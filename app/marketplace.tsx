@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
@@ -14,8 +13,12 @@ import { Image as ExpoImage } from 'expo-image';
 import { getActiveListings, ListingWithImages } from '@/lib/listings';
 import { supabase } from '@/lib/supabase';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
+import { useThemeColors } from '@/contexts/ThemeContext';
+import { createStyles } from '@/styles/screens/marketplace.styles';
 
 export default function MarketplaceScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const [listings, setListings] = useState<ListingWithImages[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,81 +123,3 @@ export default function MarketplaceScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  listingsList: {
-    padding: 8,
-  },
-  listingCard: {
-    flex: 1,
-    margin: 8,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#f9f9f9',
-  },
-  listingImage: {
-    width: '100%',
-    aspectRatio: 1,
-  },
-  listingImagePlaceholder: {
-    width: '100%',
-    aspectRatio: 1,
-    backgroundColor: '#e0e0e0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  listingImagePlaceholderText: {
-    color: '#999',
-    fontSize: 12,
-  },
-  listingInfo: {
-    padding: 12,
-  },
-  listingTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
-  },
-  listingPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 4,
-  },
-  listingCondition: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  listingSeller: {
-    fontSize: 12,
-    color: '#999',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
