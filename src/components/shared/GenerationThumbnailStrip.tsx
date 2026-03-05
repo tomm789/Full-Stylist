@@ -89,7 +89,7 @@ export default function GenerationThumbnailStrip({
           <Ionicons
             name="chevron-back"
             size={18}
-            color={canNavigateBack ? colors.text : colors.textSecondary}
+            color={canNavigateBack ? colors.textPrimary : colors.textSecondary}
           />
         </TouchableOpacity>
       )}
@@ -124,7 +124,7 @@ export default function GenerationThumbnailStrip({
           <Ionicons
             name="chevron-forward"
             size={18}
-            color={canNavigateForward ? colors.text : colors.textSecondary}
+            color={canNavigateForward ? colors.textPrimary : colors.textSecondary}
           />
         </TouchableOpacity>
       )}

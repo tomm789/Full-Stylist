@@ -3,7 +3,8 @@
  * Light and dark color palettes for theme switching
  */
 
-export type ThemeColors = typeof lightColors;
+type ColorKeys = keyof typeof lightColors;
+export type ThemeColors = Readonly<Record<ColorKeys, string>>;
 
 export const lightColors = {
   // Primary colors (same in both themes)
@@ -88,7 +89,7 @@ export const lightColors = {
   glassBorderDark: 'rgba(0, 0, 0, 0.2)',
 } as const;
 
-export const darkColors: ThemeColors = {
+export const darkColors = {
   // Primary colors (same in both themes)
   primary: '#007AFF',
   primaryDark: '#0051D5',

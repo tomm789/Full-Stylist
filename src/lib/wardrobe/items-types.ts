@@ -26,6 +26,7 @@ export interface WardrobeItem {
   visibility_override: 'public' | 'followers' | 'private_link' | 'private' | 'inherit';
   condition?: string;
   is_sellable: boolean;
+  archived_at?: string | null;
   created_at: string;
   updated_at: string;
 }

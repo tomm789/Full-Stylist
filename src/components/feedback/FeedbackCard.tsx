@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedbackThread } from '@/lib/feedback';
+import { formatTimestamp } from '@/utils/formatUtils';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themeColors';
@@ -56,26 +57,6 @@ const getStatusLabel = (status: string): string => {
     default:
       return status;
   }
-};
-
-const formatTimestamp = (timestamp: string): string => {
-  const now = new Date();
-  const posted = new Date(timestamp);
-  const diffMs = now.getTime() - posted.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-
-  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-  if (posted.getFullYear() !== now.getFullYear()) {
-    options.year = 'numeric';
-  }
-  return posted.toLocaleDateString('en-US', options);
 };
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({

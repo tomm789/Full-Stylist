@@ -85,7 +85,7 @@ export function useWardrobeItemData({
       if (refreshedItem) {
         setItem(refreshedItem);
         if (refreshedItem.category_id) {
-          const { data: categories } = await getWardrobeCategories();
+          const { data: categories } = await getCachedWardrobeCategories();
           const foundCategory = categories?.find(
             (c) => c.id === refreshedItem.category_id
           );

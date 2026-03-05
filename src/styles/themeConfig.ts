@@ -4,89 +4,9 @@
  */
 
 import { Platform } from 'react-native';
+import { lightColors } from './themeColors';
 
-export const colors = {
-  // Primary colors
-  primary: '#007AFF',
-  primaryDark: '#0051D5',
-  primaryLight: '#4DA2FF',
-  
-  // Neutral colors
-  black: '#000',
-  white: '#fff',
-  gray900: '#111',
-  gray800: '#333',
-  gray700: '#444',
-  gray600: '#666',
-  gray500: '#999',
-  gray400: '#ccc',
-  gray300: '#ddd',
-  gray200: '#e0e0e0',
-  gray100: '#f0f0f0',
-  gray50: '#f9f9f9',
-  
-  // Semantic colors
-  success: '#34C759',
-  error: '#FF3B30',
-  warning: '#FF9500',
-  info: '#5AC8FA',
-  
-  // Background colors
-  background: '#fff',
-  backgroundSecondary: '#f9f9f9',
-  backgroundTertiary: '#f0f0f0',
-  backgroundDark: '#000',
-  
-  // Text colors
-  textPrimary: '#000',
-  textSecondary: '#666',
-  textTertiary: '#999',
-  textLight: '#fff',
-  textPlaceholder: '#999',
-  
-  // Border colors
-  border: '#ddd',
-  borderLight: '#e0e0e0',
-  borderDark: '#333',
-  
-  // Overlay colors
-  overlayLight: 'rgba(0, 0, 0, 0.4)',
-  overlayDark: 'rgba(0, 0, 0, 0.7)',
-  overlayHeavy: 'rgba(0, 0, 0, 0.95)',
-  
-  // Tinted backgrounds
-  primaryTint: '#e7f3ff',
-  warningBackground: '#fff3e0',
-  successBackground: '#d4edda',
-  warningBannerBackground: '#fff3cd',
-
-  // Tinted text
-  successText: '#155724',
-  warningBannerText: '#856404',
-  primaryAccent: '#0066cc',
-
-  // Social action colors
-  repost: '#00ba7c',
-
-  // Notification colors
-  notificationPurple: '#5555ff',
-  unreadBackground: '#f8f8ff',
-  iconFallbackBackground: '#e8e8f0',
-
-  // System gray
-  systemGray: '#8e8e93',
-
-  // Special colors
-  favorite: '#ff0000',
-  selected: '#007AFF',
-  transparent: 'transparent',
-
-  // Glass tokens
-  glassBackground: 'rgba(255, 255, 255, 0.2)',
-  glassBorder: 'rgba(255, 255, 255, 0.2)',
-  glassBackgroundDark: 'rgba(0, 0, 0, 0.2)',
-  glassBorderDark: 'rgba(0, 0, 0, 0.2)',
-} as const;
+export const colors = lightColors;
 
 export const spacing = {
   xs: 4,
