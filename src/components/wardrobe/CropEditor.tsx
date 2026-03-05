@@ -175,7 +175,7 @@ export default function CropEditor({
       { translateX: translateX.value },
       { translateY: translateY.value },
       { scale: scale.value },
-    ],
+    ] as const,
   }));
 
   // Dimmed overlay path (full screen with square cutout using even-odd fill)

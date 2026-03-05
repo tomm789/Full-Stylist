@@ -34,7 +34,7 @@ export default function SystemLookbookCard({
           {...GRID_IMAGE_PROPS}
           source={{ uri: lookbook.coverImageUrl }}
           style={styles.image}
-          recyclingKey={lookbook.id}
+          recyclingKey={lookbook.category}
         />
       ) : (
         <View style={styles.placeholder}>

@@ -8,7 +8,6 @@ import type { SvgProps } from 'react-native-svg';
  */
 const SvgShoes = (props: SvgProps) => (
   <Svg
-    xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 487.992 487.992"
     fill="currentColor"
     width={24}

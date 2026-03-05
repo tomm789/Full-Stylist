@@ -30,6 +30,9 @@ interface UseWardrobeItemCacheProps {
     item: any;
     allImages: Array<{ id: string; image_id: string; type: string; image: any }>;
     attributes: any[];
+    setItem: (item: any) => void;
+    setAllImages: (images: Array<{ id: string; image_id: string; type: string; image: any }>) => void;
+    setAttributes: (attributes: any[]) => void;
     loadItemData: () => Promise<void>;
     refreshImages: () => Promise<void>;
     refreshAttributes: () => Promise<void>;

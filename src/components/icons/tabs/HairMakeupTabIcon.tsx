@@ -8,7 +8,6 @@ import type { SvgProps } from 'react-native-svg';
  */
 const HairMakeupTabIcon = (props: SvgProps) => (
   <Svg
-    xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 120.66 122.88"
     fill="currentColor"
     fillRule="evenodd"
