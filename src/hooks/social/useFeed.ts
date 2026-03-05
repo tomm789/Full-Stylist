@@ -174,12 +174,14 @@ export function useFeed({
         : feedItems;
 
       if (isCancelled()) return;
-      setFeed(filteredFeed);
+
+      // Collect all data into locals before setting any state
+      // so React 18 batches all updates into a single render
 
       // Extract all post IDs and owner IDs
       const postIds: string[] = [];
       const ownerIds = new Set<string>();
-      
+
       filteredFeed.forEach(item => {
         const post = item.type === 'post' ? item.post : item.repost?.original_post;
         if (post) {
@@ -190,29 +192,22 @@ export function useFeed({
         }
       });
 
-      // 🔥 OPTIMIZATION: Batch load everything in parallel
+      // Batch load engagement, reposts, follows in parallel
       const [
         engagementData,
         repostData,
         userRepostData,
         followData,
       ] = await Promise.all([
-        // Batch get engagement counts (1 query instead of 5*N queries!)
         batchGetEngagementCounts(postIds, userId),
-        
-        // Get all repost counts
         Promise.all(postIds.map(async (postId) => ({
           postId,
           count: await getRepostCount(postId),
         }))),
-        
-        // Get user's reposts
         Promise.all(postIds.map(async (postId) => ({
           postId,
           hasReposted: await hasReposted(userId, postId),
         }))),
-        
-        // Get follow statuses
         Promise.all(
           Array.from(ownerIds).map(async (ownerId) => ({
             ownerId,
@@ -222,43 +217,39 @@ export function useFeed({
       ]);
       if (isCancelled()) return;
 
-      // Combine engagement data with reposts
-      const counts: Record<string, EngagementCounts> = {};
+      // Process engagement counts
+      const localCounts: Record<string, EngagementCounts> = {};
       const repostMap = new Map(repostData.map(r => [r.postId, r.count]));
       const userRepostMap = new Map(userRepostData.map(r => [r.postId, r.hasReposted]));
-
       postIds.forEach(postId => {
-        counts[postId] = {
+        localCounts[postId] = {
           ...engagementData[postId],
           reposts: repostMap.get(postId) || 0,
           hasReposted: userRepostMap.get(postId) || false,
         };
       });
 
-      if (isCancelled()) return;
-      setEngagementCounts(counts);
-
-      // Set follow statuses
-      const followStatusMap = new Map(
+      const localFollowStatuses = new Map(
         followData.map(f => [f.ownerId, f.following])
       );
-      if (isCancelled()) return;
-      setFollowStatuses(followStatusMap);
 
-      // 🔥 OPTIMIZATION: Batch get outfit images
+      // Batch get outfit images
       const outfitItems = filteredFeed
         .filter(item => {
           const post = item.type === 'post' ? item.post : item.repost?.original_post;
           return post?.entity_type === 'outfit' && item.entity?.outfit;
         });
-
       const outfits = outfitItems.map(item => item.entity!.outfit);
-      const outfitImageCache = await batchGetOutfitCoverImages(outfits, 'card');
+      let localOutfitImages = new Map<string, string | null>();
+      try {
+        localOutfitImages = await batchGetOutfitCoverImages(outfits, 'card');
+      } catch (imgErr) {
+        console.error('Failed to load outfit images:', imgErr);
+      }
       if (isCancelled()) return;
-      setOutfitImages(outfitImageCache);
 
-      // Handle lookbooks (this is already relatively optimized)
-      const lookbookImageCache = new Map<string, any>();
+      // Handle lookbooks
+      const localLookbookImages = new Map<string, any>();
       const lookbookItems = filteredFeed.filter(item => {
         const post = item.type === 'post' ? item.post : item.repost?.original_post;
         return post?.entity_type === 'lookbook' && item.entity?.lookbook;
@@ -268,7 +259,7 @@ export function useFeed({
         lookbookItems.map(async (item) => {
           const lookbookId = item.entity!.lookbook.id;
           const { data } = await getLookbook(lookbookId);
-          
+
           if (data && data.outfits.length > 0) {
             const lookbookOwnerId = data.lookbook.owner_user_id;
             const { data: allOutfits } = await getUserOutfits(lookbookOwnerId);
@@ -278,32 +269,30 @@ export function useFeed({
                 .map((lo: any) => allOutfits.find((o: any) => o.id === lo.outfit_id))
                 .filter(Boolean);
 
-              lookbookImageCache.set(`${lookbookId}_outfits`, lookbookOutfits);
+              localLookbookImages.set(`${lookbookId}_outfits`, lookbookOutfits);
 
               const imageUrls = await batchGetOutfitCoverImages(lookbookOutfits, 'card');
-              
+
               if (lookbookOutfits.length > 0) {
                 const firstUrl = imageUrls.get(lookbookOutfits[0].id);
-                lookbookImageCache.set(lookbookId, firstUrl);
+                localLookbookImages.set(lookbookId, firstUrl);
               }
 
               imageUrls.forEach((url, outfitId) => {
-                lookbookImageCache.set(`${lookbookId}_outfit_${outfitId}`, url);
+                localLookbookImages.set(`${lookbookId}_outfit_${outfitId}`, url);
               });
             } else {
-              lookbookImageCache.set(lookbookId, null);
+              localLookbookImages.set(lookbookId, null);
             }
           } else {
-            lookbookImageCache.set(lookbookId, null);
+            localLookbookImages.set(lookbookId, null);
           }
         })
       );
-
       if (isCancelled()) return;
-      setLookbookImages(lookbookImageCache);
 
-      // Build headshot image URL map from entity data (storage info already attached)
-      const headshotImageCache = new Map<string, string | null>();
+      // Build headshot image URL map (sync — no async needed)
+      const localHeadshotImages = new Map<string, string | null>();
       filteredFeed.forEach(item => {
         const post = item.type === 'post' ? item.post : item.repost?.original_post;
         if (post?.entity_type === 'headshot' && item.entity?.headshot) {
@@ -312,14 +301,22 @@ export function useFeed({
             const { data } = supabase.storage
               .from(h.storage_bucket || 'user-images')
               .getPublicUrl(h.storage_key);
-            headshotImageCache.set(h.id, data.publicUrl);
+            localHeadshotImages.set(h.id, data.publicUrl);
           } else {
-            headshotImageCache.set(h.id, null);
+            localHeadshotImages.set(h.id, null);
           }
         }
       });
-      if (isCancelled()) return;
-      setHeadshotImages(headshotImageCache);
+
+      // Set ALL state in one synchronous tick — React batches into one render
+      if (!isCancelled()) {
+        setFeed(filteredFeed);
+        setEngagementCounts(localCounts);
+        setFollowStatuses(localFollowStatuses);
+        setOutfitImages(localOutfitImages);
+        setLookbookImages(localLookbookImages);
+        setHeadshotImages(localHeadshotImages);
+      }
     } catch (error) {
       console.error('Error loading feed:', error);
     } finally {

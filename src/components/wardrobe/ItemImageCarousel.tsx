@@ -36,7 +36,7 @@ export function ItemImageCarousel({
     return getTransformedImageUrl(
       imageData.storage_bucket || 'media',
       imageData.storage_key,
-      'card'
+      'full'
     );
   };
 

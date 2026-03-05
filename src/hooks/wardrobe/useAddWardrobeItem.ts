@@ -19,6 +19,7 @@ import { setInitialItemData, setPendingItemJob } from '@/lib/wardrobe/initialIte
 import { toDataUri } from '@/lib/images/dataUri';
 import { startTimeline, isPerfLogsEnabled } from '@/lib/perf/timeline';
 import { logWardrobeAddTiming } from '@/lib/perf/wardrobeAddTiming';
+import { GENERATION_MESSAGES } from '@/constants/generationMessages';
 
 interface SelectedImage {
   uri: string;
@@ -129,8 +130,18 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
               result?.suggested_notes
             );
           }
-          setAnalysisStep('Product shot and details generated successfully');
-          setGeneratingAI(false);
+          // Defer overlay dismissal until MIN_DURATION_MS has elapsed
+          const elapsed = Date.now() - (generationStartRef.current || 0);
+          const remaining = GENERATION_MESSAGES.wardrobeItem.MIN_DURATION_MS - elapsed;
+          if (remaining <= 0) {
+            setAnalysisStep(GENERATION_MESSAGES.wardrobeItem.productShotComplete);
+            setGeneratingAI(false);
+          } else {
+            scheduleCompletionTimeout(() => {
+              setAnalysisStep(GENERATION_MESSAGES.wardrobeItem.productShotComplete);
+              setGeneratingAI(false);
+            }, remaining);
+          }
           return;
         }
 
@@ -196,15 +207,14 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
               }
             }
 
-            // Product shot succeeded - update UI immediately
-            setAnalysisStep('Product shot generated successfully');
-            // The backend has already applied the product shot to the database,
-            // so we just need to redirect to see it
+            // Product shot succeeded - defer until MIN_DURATION_MS elapsed
+            const batchElapsed = Date.now() - (generationStartRef.current || 0);
+            const batchRemaining = Math.max(GENERATION_MESSAGES.wardrobeItem.MIN_DURATION_MS - batchElapsed, 800);
+            setAnalysisStep(GENERATION_MESSAGES.wardrobeItem.productShotOnly);
             scheduleCompletionTimeout(() => {
               setGeneratingAI(false);
-              // Use replace with refresh param to force reload of the item page
               router.replace(`/wardrobe/item/${pendingItemId}?refresh=${Date.now()}`);
-            }, 800);
+            }, batchRemaining);
           } else if (productShotResult?.error) {
             // Product shot failed
             setAiError(`Product shot generation failed: ${productShotResult.error}`);
@@ -215,18 +225,22 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
               batchResult,
               productShotResult,
             });
-            // Still redirect - the item detail page will handle refreshing
+            // Still redirect - defer until MIN_DURATION_MS elapsed
+            const noResultElapsed = Date.now() - (generationStartRef.current || 0);
+            const noResultRemaining = Math.max(GENERATION_MESSAGES.wardrobeItem.MIN_DURATION_MS - noResultElapsed, 800);
             scheduleCompletionTimeout(() => {
               setGeneratingAI(false);
               router.replace(`/wardrobe/item/${pendingItemId}`);
-            }, 800);
+            }, noResultRemaining);
           }
         } else {
-          // Legacy: product_shot or other job types
+          // Legacy: product_shot or other job types - defer until MIN_DURATION_MS elapsed
+          const legacyElapsed = Date.now() - (generationStartRef.current || 0);
+          const legacyRemaining = Math.max(GENERATION_MESSAGES.wardrobeItem.MIN_DURATION_MS - legacyElapsed, 800);
           scheduleCompletionTimeout(() => {
             setGeneratingAI(false);
             router.replace(`/wardrobe/item/${pendingItemId}`);
-          }, 800);
+          }, legacyRemaining);
         }
       } else if (job.status === 'failed') {
         if (job.job_type === 'wardrobe_item_generate') {
@@ -237,11 +251,13 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
           const batchResult = job.result;
           const productShotResult = batchResult?.product_shot;
           if (productShotResult && !productShotResult.error) {
-            setAnalysisStep('Product shot generated (some tasks may have failed)');
+            setAnalysisStep(GENERATION_MESSAGES.wardrobeItem.productShotPartial);
+            const partialElapsed = Date.now() - (generationStartRef.current || 0);
+            const partialRemaining = Math.max(GENERATION_MESSAGES.wardrobeItem.MIN_DURATION_MS - partialElapsed, 800);
             scheduleCompletionTimeout(() => {
               setGeneratingAI(false);
               router.replace(`/wardrobe/item/${pendingItemId}`);
-            }, 800);
+            }, partialRemaining);
           } else {
             setAiError('Sorry, the item failed to add to your wardrobe.');
           }
@@ -262,16 +278,32 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
     },
   });
 
-  // Update analysis step based on AI job progress
+  // Timer-based message rotation: cycle through progress steps equally spaced over MIN_DURATION_MS
+  const generationStartRef = useRef<number>(0);
   useEffect(() => {
-    if (!aiJob || !generatingAI) return;
-
-    if (aiJob.status === 'running') {
-      setAnalysisStep('Analyzing your image...');
-    } else if (aiJob.status === 'succeeded') {
-      setAnalysisStep('Adding item to your wardrobe');
+    if (!generatingAI) {
+      generationStartRef.current = 0;
+      return;
     }
-  }, [aiJob, generatingAI]);
+
+    generationStartRef.current = Date.now();
+    const steps = GENERATION_MESSAGES.wardrobeItem.progressSteps;
+    const interval = GENERATION_MESSAGES.wardrobeItem.MIN_DURATION_MS / steps.length;
+    let stepIndex = 0;
+
+    setAnalysisStep(steps[0]);
+
+    const timer = setInterval(() => {
+      stepIndex += 1;
+      if (stepIndex < steps.length) {
+        setAnalysisStep(steps[stepIndex]);
+      } else {
+        clearInterval(timer);
+      }
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, [generatingAI]);
 
   useEffect(() => {
     return () => {
@@ -336,7 +368,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
         setPendingItemId(itemId);
         pendingImageIdsRef.current = imageIds;
         setGeneratingAI(true);
-        setAnalysisStep('Preparing item...');
+        setAnalysisStep(GENERATION_MESSAGES.wardrobeItem.preparing);
 
         // Unified path: wardrobe_item_generate (image + text in parallel)
         const { data: generateJob, error: generateError } = await triggerWardrobeItemGenerate(

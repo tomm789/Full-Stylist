@@ -10,7 +10,6 @@ export { default as FeedLookbookCarousel } from './FeedLookbookCarousel';
 export { SlideshowSlide } from './SlideshowSlide';
 export { CommentsModal } from './CommentsModal';
 export { SlideshowModal } from './SlideshowModal';
-export { GeneratingOutfitModal } from './GeneratingOutfitModal';
 export { PostMenuModal } from './PostMenuModal';
 export { UserProfileHeader } from './UserProfileHeader';
 export { FeedItemComponent } from './FeedItem';

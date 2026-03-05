@@ -79,23 +79,30 @@ export function useWardrobeItems({
         ...(savedItems || []),
       ];
 
-      setAllItems(combinedItems);
-
-      // Batch load images, entity attributes, and tags in parallel
+      // Batch load images, entity attributes, and tags before setting any state
+      // so React 18 batches all updates into a single render (skeleton → loaded)
       if (combinedItems.length > 0) {
         const itemIds = combinedItems.map(item => item.id);
 
-        const [
-          { data: imagesMap },
-          { data: entityAttrsMap },
-          { data: tagsData },
-        ] = await Promise.all([
-          getWardrobeItemsImages(itemIds),
-          getEntityAttributesForItems('wardrobe_item', itemIds),
-          getTagsForItems('wardrobe_item', itemIds),
-        ]);
+        let newCache = new Map<string, string | null>();
+        let entityAttrsMap: any = new Map();
+        let tagsData: any = new Map();
 
-        const newCache = buildWardrobeItemsImageUrlCache(itemIds, imagesMap);
+        try {
+          const [imagesResult, attrsResult, tagsResult] = await Promise.all([
+            getWardrobeItemsImages(itemIds),
+            getEntityAttributesForItems('wardrobe_item', itemIds),
+            getTagsForItems('wardrobe_item', itemIds),
+          ]);
+          newCache = buildWardrobeItemsImageUrlCache(itemIds, imagesResult.data);
+          entityAttrsMap = attrsResult.data;
+          tagsData = tagsResult.data;
+        } catch (imgErr) {
+          console.error('Failed to load wardrobe item images/attributes:', imgErr);
+        }
+
+        // Set all state in one synchronous tick — React batches into one render
+        setAllItems(combinedItems);
         setImageCache((prev) => {
           const merged = new Map(prev);
           for (const [id, url] of newCache.entries()) {
@@ -105,6 +112,8 @@ export function useWardrobeItems({
         });
         setEntityAttributesMap(entityAttrsMap);
         setTagsMap(tagsData);
+      } else {
+        setAllItems(combinedItems);
       }
     } catch (err) {
       setError(err as Error);

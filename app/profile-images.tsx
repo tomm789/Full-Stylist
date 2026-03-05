@@ -6,11 +6,9 @@
 import React from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +18,7 @@ import {
 } from '@/hooks/profile';
 import { HeadshotSection, BodyShotSection } from '@/components/profile';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
+import { LoadingOverlay } from '@/components/shared';
 
 export default function ProfileImagesScreen() {
   const { user } = useAuth();
@@ -111,27 +110,11 @@ export default function ProfileImagesScreen() {
         />
       </ScrollView>
 
-      {/* Loading Overlay */}
-      <Modal
+      <LoadingOverlay
         visible={isLoading}
-        transparent={true}
-        animationType="fade"
-        statusBarTranslucent={true}
-      >
-        <View style={styles.loadingOverlay}>
-          <View style={styles.generatingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.generatingTitle}>
-              {headshotGeneration.generating
-                ? 'Generating Headshot'
-                : 'Generating Studio Model'}
-            </Text>
-            {loadingMessage && (
-              <Text style={styles.generatingMessage}>{loadingMessage}</Text>
-            )}
-          </View>
-        </View>
-      </Modal>
+        title={headshotGeneration.generating ? 'Generating Headshot' : 'Generating Studio Model'}
+        message={loadingMessage}
+      />
     </>
   );
 }
@@ -149,33 +132,5 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-  },
-  loadingOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  generatingContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 32,
-    alignItems: 'center',
-    minWidth: 280,
-    maxWidth: '80%',
-  },
-  generatingTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  generatingMessage: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });

@@ -7,7 +7,7 @@ import { useState, useCallback } from 'react';
 import {
   getWardrobeItem,
   getWardrobeItemImages,
-  getWardrobeCategories,
+  getCachedWardrobeCategories,
   WardrobeItem,
   WardrobeCategory,
 } from '@/lib/wardrobe';
@@ -101,55 +101,50 @@ export function useWardrobeItemData({
     if (!itemId) return;
 
     try {
-      const { data: foundItem, error: itemError } = await getWardrobeItem(
-        itemId
+      // Run all 5 queries in parallel — they only need itemId
+      const [itemResult, categoriesResult, imagesResult, attrsResult, tagsResult] = await Promise.all([
+        getWardrobeItem(itemId),
+        getCachedWardrobeCategories(),
+        getWardrobeItemImages(itemId),
+        getEntityAttributes('wardrobe_item', itemId),
+        supabase
+          .from('tag_links')
+          .select('*, tags(id, name)')
+          .eq('entity_type', 'wardrobe_item')
+          .eq('entity_id', itemId),
+      ]);
+
+      if (itemResult.error) throw itemResult.error;
+
+      const foundItem = itemResult.data;
+      let foundCategory: WardrobeCategory | null = null;
+      if (foundItem && categoriesResult.data) {
+        foundCategory = categoriesResult.data.find(
+          (c) => c.id === foundItem.category_id
+        ) || null;
+      }
+
+      const itemImages = imagesResult.data || [];
+      const filtered = itemImages.filter(
+        (img) => img.type === 'original' || img.type === 'product_shot'
       );
 
-      if (itemError) throw itemError;
+      const itemAttributes = attrsResult.data || [];
 
-      if (foundItem) {
-        setItem(foundItem);
+      const itemTags = tagsResult.data
+        ? tagsResult.data
+            .map((link: any) => link.tags)
+            .filter((tag: any) => tag)
+            .map((tag: any) => ({ id: tag.id, name: tag.name }))
+        : [];
 
-        const { data: categories } = await getWardrobeCategories();
-        const foundCategory = categories?.find(
-          (c) => c.id === foundItem?.category_id
-        );
-        if (foundCategory) {
-          setCategory(foundCategory);
-        }
-      }
-
-      const { data: itemImages } = await getWardrobeItemImages(itemId);
-
-      if (itemImages) {
-        setAllImages(itemImages);
-        const filtered = itemImages.filter(
-          (img) => img.type === 'original' || img.type === 'product_shot'
-        );
-        setDisplayImages(filtered);
-      }
-
-      const { data: itemAttributes } = await getEntityAttributes(
-        'wardrobe_item',
-        itemId
-      );
-      if (itemAttributes) {
-        setAttributes(itemAttributes);
-      }
-
-      const { data: tagLinks } = await supabase
-        .from('tag_links')
-        .select('*, tags(id, name)')
-        .eq('entity_type', 'wardrobe_item')
-        .eq('entity_id', itemId);
-
-      if (tagLinks) {
-        const itemTags = tagLinks
-          .map((link: any) => link.tags)
-          .filter((tag: any) => tag)
-          .map((tag: any) => ({ id: tag.id, name: tag.name }));
-        setTags(itemTags);
-      }
+      // Set ALL state in one synchronous tick — React batches into one render
+      setItem(foundItem);
+      setCategory(foundCategory);
+      setAllImages(itemImages);
+      setDisplayImages(filtered);
+      setAttributes(itemAttributes);
+      setTags(itemTags);
     } catch (error: any) {
       console.error('Failed to load item data:', error);
       throw error;

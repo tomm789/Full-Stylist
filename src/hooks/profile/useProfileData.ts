@@ -81,58 +81,66 @@ export function useProfileData({
           .limit(100),
       ]);
 
-      if (profileData) {
-        setProfile(profileData);
-      }
+      // Collect all data into locals before setting any state
+      // so React 18 batches all updates into a single render
+      let localProfile = profileData || null;
+      const localSettings = settingsData;
+      let localPosts: FeedItem[] = [];
+      let localPostImages = new Map<string, string | null>();
+      let localHeadshots: Array<{ id: string; url: string; created_at: string }> = [];
+      let localBodyShots: Array<{ id: string; url: string; created_at: string }> = [];
 
-      setSettings(settingsData);
-
-      // Filter to user's own posts
       if (feedData) {
-        const userPosts = feedData.filter((item) => {
+        localPosts = feedData.filter((item) => {
           const post = item.type === 'post' ? item.post : item.repost?.original_post;
           return post?.owner_user_id === userId;
         });
 
-        setPosts(userPosts);
-
-        // 🔥 OPTIMIZATION: Batch get outfit cover images
-        const outfits = userPosts
+        const outfits = localPosts
           .map(item => item.entity?.outfit)
           .filter(Boolean);
-        
-        const imageCache = await batchGetOutfitCoverImages(outfits, 'card');
-        setPostImages(imageCache);
+
+        try {
+          localPostImages = await batchGetOutfitCoverImages(outfits, 'card');
+        } catch (imgErr) {
+          console.error('Failed to load post images:', imgErr);
+        }
       }
 
-      // 🔥 OPTIMIZATION: Batch generate URLs for profile images (no async!)
+      // Batch generate URLs for profile images (sync — no async needed)
       if (allImages) {
-        const headshots = batchGenerateImageUrls(
+        localHeadshots = batchGenerateImageUrls(
           allImages.filter((img) =>
             (img.storage_key || '').toLowerCase().includes('headshot')
           )
         );
-        
-        const bodyShots = batchGenerateImageUrls(
+
+        localBodyShots = batchGenerateImageUrls(
           allImages.filter((img) => {
             const key = (img.storage_key || '').toLowerCase();
             return key.includes('body_shot') || key.includes('bodyshot');
           })
         );
 
-        setHeadshotImages(headshots);
-        setBodyShotImages(bodyShots);
-
-        if (profileData && !profileData.avatar_url && headshots.length > 0 && userId) {
-          const earliestHeadshot = [...headshots].sort(
+        // Avatar backfill — fire-and-forget write, don't block rendering
+        if (profileData && !profileData.avatar_url && localHeadshots.length > 0 && userId) {
+          const earliestHeadshot = [...localHeadshots].sort(
             (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
           )[0];
           if (earliestHeadshot?.url) {
-            await updateUserProfile(userId, { avatar_url: earliestHeadshot.url });
-            setProfile({ ...profileData, avatar_url: earliestHeadshot.url });
+            localProfile = { ...profileData, avatar_url: earliestHeadshot.url };
+            updateUserProfile(userId, { avatar_url: earliestHeadshot.url }).catch(() => {});
           }
         }
       }
+
+      // Set ALL state in one synchronous tick — React batches into one render
+      setProfile(localProfile);
+      setSettings(localSettings);
+      setPosts(localPosts);
+      setPostImages(localPostImages);
+      setHeadshotImages(localHeadshots);
+      setBodyShotImages(localBodyShots);
     } catch (error) {
       console.error('Error loading profile data:', error);
     } finally {

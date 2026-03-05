@@ -24,6 +24,36 @@ export async function getWardrobeCategories(): Promise<
   });
 }
 
+// Module-level cache for categories (rarely change, called from many places)
+let categoriesCache: WardrobeCategory[] | null = null;
+let categoriesCacheTime = 0;
+const CATEGORIES_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Get categories with in-memory caching (5min TTL).
+ * Avoids redundant network calls when multiple screens need categories.
+ */
+export async function getCachedWardrobeCategories(): Promise<
+  QueryListResult<WardrobeCategory>
+> {
+  const now = Date.now();
+  if (categoriesCache && now - categoriesCacheTime < CATEGORIES_TTL_MS) {
+    return { data: categoriesCache, error: null };
+  }
+  const result = await getWardrobeCategories();
+  if (result.data) {
+    categoriesCache = result.data;
+    categoriesCacheTime = now;
+  }
+  return result;
+}
+
+/** Clear the categories cache (e.g. after a manual refresh). */
+export function clearCategoriesCache(): void {
+  categoriesCache = null;
+  categoriesCacheTime = 0;
+}
+
 /**
  * Get subcategories for a category
  */

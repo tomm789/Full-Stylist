@@ -20,6 +20,7 @@ import {
 } from '@/lib/wardrobe/initialItemCache';
 import { checkFeedbackExistsForJob } from '@/lib/ai-feedback';
 import { logWardrobeAddTiming } from '@/lib/perf/wardrobeAddTiming';
+import { getItemPreview } from '@/lib/wardrobe/itemPreviewCache';
 import type { WardrobeItemJobControls } from './useWardrobeItemJobs';
 
 interface UseWardrobeItemCacheProps {
@@ -138,7 +139,18 @@ export function useWardrobeItemCache({
         setLoading(false);
       }
     } else if (!pending) {
-      if (!cancelled) {
+      // No generation cache — check for grid preview data (item + cover image)
+      const preview = getItemPreview(itemId);
+      if (!cancelled && preview) {
+        data.setItem(preview.item);
+        if (preview.imageUrl) {
+          setInitialImageDataUri(preview.imageUrl);
+        }
+        setLoading(false);
+        // loadItemData() still runs below to fetch full data (images, attrs, tags)
+      } else if (!cancelled) {
+        // No cache, no preview, no pending job — clear initial state
+        // Keep loading=true until loadItemData().then() completes
         setInitialImageDataUri(null);
         setInitialTitle(null);
         setInitialDescription(null);
@@ -146,7 +158,6 @@ export function useWardrobeItemCache({
         setLastSucceededJobId(null);
         setLastSucceededJobFeedbackAt(null);
         setLastSucceededJobType(null);
-        setLoading(false);
       }
     }
 
@@ -158,15 +169,17 @@ export function useWardrobeItemCache({
 
         let activeBatchJob: { id: string } | null = null;
         if (!pending) {
-          const { data: activeGenerateJob } = await getActiveWardrobeItemGenerateJob(itemId, userId);
+          // Run all 3 job checks in parallel — they only need itemId + userId
+          const [generateJobResult, batchJobResult, renderJobResult] = await Promise.all([
+            getActiveWardrobeItemGenerateJob(itemId, userId),
+            getActiveBatchJob(itemId, userId),
+            getActiveWardrobeItemRenderJob(itemId, userId),
+          ]);
           if (cancelled) return;
 
-          const batchRes = await getActiveBatchJob(itemId, userId);
-          if (cancelled) return;
-          activeBatchJob = batchRes.data;
-
-          const { data: activeRenderJob } = await getActiveWardrobeItemRenderJob(itemId, userId);
-          if (cancelled) return;
+          const activeGenerateJob = generateJobResult.data;
+          activeBatchJob = batchJobResult.data;
+          const activeRenderJob = renderJobResult.data;
 
           if (activeGenerateJob) {
             if (__DEV__) {

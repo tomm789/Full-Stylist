@@ -744,19 +744,6 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   generatingScrollView: {
     backgroundColor: '#FFFFFF',
   },
-  generatingDialog: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl,
-    gap: spacing.lg,
-    backgroundColor: '#FFFFFF',
-    minHeight: 220,
-  },
-  dialogLine: {
-    fontSize: 20,
-    fontStyle: 'italic',
-    color: '#1a1a1a',
-    lineHeight: 30,
-  },
   // Mirror single-image overlay controls (menu button, generate overlay, restore selfie)
   faceMenuButton: {
     position: 'absolute',

@@ -3,13 +3,8 @@
  * Multi-step onboarding flow for new users
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -25,15 +20,9 @@ import { supabase } from '@/lib/supabase';
 import { updateUserSettings } from '@/lib/settings';
 import ErrorModal from '@/components/ErrorModal';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
-import { theme } from '@/styles';
-import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
-
-const { spacing, borderRadius, typography } = theme;
+import { LoadingOverlay } from '@/components/shared';
 
 export default function OnboardingScreen() {
-  const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuth();
   const router = useRouter();
 
@@ -240,25 +229,11 @@ export default function OnboardingScreen() {
         />
       )}
 
-      {/* Loading Overlay */}
-      <Modal
+      <LoadingOverlay
         visible={isLoading}
-        transparent={true}
-        animationType="fade"
-        statusBarTranslucent={true}
-      >
-        <View style={styles.loadingOverlay}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingTitle}>
-              {loadingTitle}
-            </Text>
-            {loadingMessage && (
-              <Text style={styles.loadingMessage}>{loadingMessage}</Text>
-            )}
-          </View>
-        </View>
-      </Modal>
+        title={loadingTitle}
+        message={loadingMessage}
+      />
 
       <ErrorModal
         visible={Boolean(errorMessage)}
@@ -276,33 +251,3 @@ export default function OnboardingScreen() {
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  loadingOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlayDark,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingContainer: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.xl,
-    padding: spacing.xxxl,
-    alignItems: 'center',
-    minWidth: 280,
-    maxWidth: '80%',
-  },
-  loadingTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  loadingMessage: {
-    fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: typography.lineHeight.normal,
-  },
-});

@@ -54,10 +54,6 @@ interface MirrorTabContentProps {
 
   // Generation state
   generating: boolean;
-  dialogLine1Style: AnimatedStyle;
-  dialogLine2Style: AnimatedStyle;
-  dialogLine3Style: AnimatedStyle;
-  dialogLine4Style: AnimatedStyle;
 
   // Preview state
   previewHasImage: boolean;
@@ -136,10 +132,6 @@ export default function MirrorTabContent({
   previewIsGenerated,
   onRestoreSelfie,
   generating,
-  dialogLine1Style,
-  dialogLine2Style,
-  dialogLine3Style,
-  dialogLine4Style,
   previewHasImage,
   activeImageVariation,
   isStyleDisabled,
@@ -293,22 +285,6 @@ export default function MirrorTabContent({
             </View>
           )}
 
-          {generating && (
-            <View style={styles.generatingDialog}>
-              <Animated.Text style={[styles.dialogLine, dialogLine1Style]}>
-                Ooo...
-              </Animated.Text>
-              <Animated.Text style={[styles.dialogLine, dialogLine2Style]}>
-                You don't need any make up at all honey...
-              </Animated.Text>
-              <Animated.Text style={[styles.dialogLine, dialogLine3Style]}>
-                But I love this look sister!
-              </Animated.Text>
-              <Animated.Text style={[styles.dialogLine, dialogLine4Style]}>
-                Ready?
-              </Animated.Text>
-            </View>
-          )}
         </View>
 
         {/* Generation thumbnail strip — below slider, above controls */}

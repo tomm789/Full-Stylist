@@ -27,6 +27,7 @@ import {
   updateOutfitVariation,
   type OutfitVariationSnapshot,
 } from '@/lib/outfits/sessions';
+import { GENERATION_MESSAGES } from '@/constants/generationMessages';
 
 interface GenerationProgress {
   phase: 'saving' | 'preparing' | 'stacking' | 'generating' | 'complete' | 'error';
@@ -136,7 +137,7 @@ export function useOutfitGeneration({
 
       try {
         // Phase 1 + 2: Save outfit and fetch user settings in parallel
-        setProgress({ phase: 'saving', message: 'Saving outfit...', progress: 10 });
+        setProgress({ phase: 'saving', message: GENERATION_MESSAGES.outfit.saving, progress: 10 });
 
         const outfitItems = selectedItems.map((item, index) => ({
           category_id: item.category_id || null,
@@ -172,7 +173,7 @@ export function useOutfitGeneration({
           }
         }
 
-        setProgress({ phase: 'preparing', message: 'Preparing generation...', progress: 20 });
+        setProgress({ phase: 'preparing', message: GENERATION_MESSAGES.outfit.preparing, progress: 20 });
 
         const { data: userSettings } = settingsResult;
         if (!userSettings?.body_shot_image_id) {
@@ -193,7 +194,7 @@ export function useOutfitGeneration({
         // Phase 3: Grid image — use pre-uploaded key if available, else generate + upload
         setProgress({
           phase: 'stacking',
-          message: `Preparing ${selectedItems.length} items...`,
+          message: GENERATION_MESSAGES.outfit.preparingItems(selectedItems.length),
           progress: 30,
         });
 
@@ -266,7 +267,7 @@ export function useOutfitGeneration({
 
             setProgress({
               phase: 'stacking',
-              message: `Preparing ${topImages.length} images...`,
+              message: GENERATION_MESSAGES.outfit.preparingImages(topImages.length),
               progress: 40,
             });
 
@@ -317,7 +318,7 @@ export function useOutfitGeneration({
         }
 
         // Phase 4: Prepare items data for AI job
-        setProgress({ phase: 'preparing', message: 'Preparing AI generation...', progress: 70 });
+        setProgress({ phase: 'preparing', message: GENERATION_MESSAGES.outfit.preparingAI, progress: 70 });
 
         const hasCustomLayout = Boolean(
           (canvasLayoutMap && Object.keys(canvasLayoutMap).length > 0) ||
@@ -377,7 +378,7 @@ export function useOutfitGeneration({
         }
 
         // Phase 5: Create and trigger AI job
-        setProgress({ phase: 'generating', message: 'Generating outfit image...', progress: 80 });
+        setProgress({ phase: 'generating', message: GENERATION_MESSAGES.outfit.generating, progress: 80 });
 
                 if (__DEV__) console.log(
           `[OutfitGeneration] Creating AI job with stacked image ID: ${stackedResult?.imageId || 'none'}`
@@ -420,7 +421,7 @@ export function useOutfitGeneration({
             // Phase 6: Poll for completion
             setProgress({
               phase: 'generating',
-              message: 'AI is working on your outfit...',
+              message: GENERATION_MESSAGES.outfit.polling,
               progress: 90,
             });
             timeline.mark('poll_start');
@@ -438,7 +439,7 @@ export function useOutfitGeneration({
           }
           setProgress({
             phase: 'complete',
-            message: 'Outfit saved! Image generation in progress...',
+            message: GENERATION_MESSAGES.outfit.timeoutComplete,
             progress: 100,
           });
           setModalVisible(false);
@@ -512,7 +513,7 @@ export function useOutfitGeneration({
         }
 
                 if (__DEV__) console.log('[OutfitGeneration] Generation completed successfully!');
-        setProgress({ phase: 'complete', message: 'Outfit generated successfully!', progress: 100 });
+        setProgress({ phase: 'complete', message: GENERATION_MESSAGES.outfit.complete, progress: 100 });
         setModalVisible(false);
 
         return { success: true, outfitId, renderTraceId: timeline.traceId };

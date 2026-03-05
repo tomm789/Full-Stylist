@@ -10,7 +10,6 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Modal,
   ActivityIndicator,
   FlatList,
 } from 'react-native';
@@ -20,6 +19,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { useNewBodyshot } from '@/hooks/profile';
 import PolicyBlockModal from '@/components/PolicyBlockModal';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
+import { LoadingOverlay } from '@/components/shared';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createStyles } from '@/styles/screens/bodyshot-new.styles';
 
@@ -176,16 +176,11 @@ export default function NewBodyshotScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Loading Overlay */}
-      <Modal visible={generating} transparent animationType="fade">
-        <View style={styles.loadingOverlay}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingTitle}>Generating Bodyshot</Text>
-            <Text style={styles.loadingMessage}>{loadingMessage}</Text>
-          </View>
-        </View>
-      </Modal>
+      <LoadingOverlay
+        visible={generating}
+        title="Generating Bodyshot"
+        message={loadingMessage}
+      />
 
       {/* Policy Block Modal */}
       <PolicyBlockModal

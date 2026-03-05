@@ -111,10 +111,26 @@ export const typography = {
   // Line heights
   lineHeight: {
     tight: 16,
+    snug: 18,
     normal: 20,
     relaxed: 24,
     loose: 28,
   },
+
+  // Letter spacing
+  letterSpacing: {
+    tight: 0.4,
+    normal: 0.5,
+    relaxed: 0.6,
+    wide: 2,
+  },
+} as const;
+
+export const opacity = {
+  disabled: 0.3,
+  subtle: 0.35,
+  muted: 0.5,
+  dimmed: 0.6,
 } as const;
 
 const createShadow = (offsetY: number, radius: number, opacity: number, elevation: number) =>
@@ -178,6 +194,7 @@ export const theme = {
   borderRadius,
   typography,
   shadows,
+  opacity,
   layout,
 } as const;
 

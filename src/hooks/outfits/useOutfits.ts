@@ -43,10 +43,18 @@ export function useOutfits({
         return;
       }
 
-      setOutfits(data || []);
+      // Fetch images before setting any state so React 18 batches
+      // all updates into a single render (skeleton → loaded)
+      const outfitsData = data || [];
+      let imageMap = new Map<string, string | null>();
+      try {
+        imageMap = await getOutfitCoverImages(outfitsData);
+      } catch (imgErr) {
+        console.error('Failed to load outfit cover images:', imgErr);
+      }
 
-      // Single batched fetch for all cover images (one request to images; no per-outfit queries)
-      const imageMap = await getOutfitCoverImages(data || []);
+      // Set both in one synchronous tick — React batches into one render
+      setOutfits(outfitsData);
       setImageCache(imageMap);
     } catch (error) {
       console.error('Error loading outfits:', error);

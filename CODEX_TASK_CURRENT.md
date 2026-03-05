@@ -1,174 +1,101 @@
-# Codex Task: Fix Require Cycles + Style File Route Warnings
+# Codex Task: Move screen style files out of app/ directory
 
-## Summary
-Fix 7 require cycles and 13 style files incorrectly treated as routes by Expo Router. These produce warnings on every Metro startup. All fixes are import path changes and file renames — no logic changes.
+## Problem
+Expo Router treats ALL files in `app/` as potential route files. The 19 `.styles.ts` files inside `app/` trigger "missing the required default export" warnings. The previous `_` prefix rename didn't work — Expo Router still picks them up as routes.
 
----
+The correct fix (per Expo docs) is to move non-route files out of `app/` entirely.
 
-## Task A: Fix Require Cycles (7 cycles, 6 file changes)
+## Task
+Move all 19 screen style files from `app/` to `src/styles/screens/` and update every import.
 
-Every cycle is caused by a file importing from its own ancestor barrel `index.ts`. The fix is always: import directly from the specific source file.
+The `@/styles` path alias already maps to `src/styles/` in both `tsconfig.json` and `metro.config.js`.
 
-### Fix 1: `src/lib/images.ts`
+## File Mapping (source → destination)
 
-```typescript
-// BEFORE (line ~2):
-import { getOutfit } from './outfits';
+Use `git mv` for each move.
 
-// AFTER:
-import { getOutfit } from './outfits/core';
-```
+| # | Current location (in app/) | New location (in src/styles/screens/) |
+|---|---|---|
+| 1 | `_ai-settings.styles.ts` | `ai-settings.styles.ts` |
+| 2 | `_archive.styles.ts` | `archive.styles.ts` |
+| 3 | `_import.styles.ts` | `import.styles.ts` |
+| 4 | `_search.styles.ts` | `search.styles.ts` |
+| 5 | `auth/_login.styles.ts` | `auth-login.styles.ts` |
+| 6 | `auth/_signup.styles.ts` | `auth-signup.styles.ts` |
+| 7 | `bodyshot/_new.styles.ts` | `bodyshot-new.styles.ts` |
+| 8 | `bodyshot/[id]/_styles.ts` | `bodyshot-detail.styles.ts` |
+| 9 | `calendar/_styles.ts` | `calendar.styles.ts` |
+| 10 | `feedback/_new.styles.ts` | `feedback-new.styles.ts` |
+| 11 | `headshot/[id]/_styles.ts` | `headshot-detail.styles.ts` |
+| 12 | `headshot/[id]/_view.styles.ts` | `headshot-view.styles.ts` |
+| 13 | `listings/_new.styles.ts` | `listings-new.styles.ts` |
+| 14 | `(tabs)/outfits/_styles.ts` | `outfits-tab.styles.ts` |
+| 15 | `(tabs)/_wardrobe.styles.ts` | `wardrobe-tab.styles.ts` |
+| 16 | `outfits/[id]/_view.styles.ts` | `outfits-view.styles.ts` |
+| 17 | `social/_following-wardrobes.styles.ts` | `social-following-wardrobes.styles.ts` |
+| 18 | `users/[id]/_styles.ts` | `user-profile.styles.ts` |
+| 19 | `wardrobe/item/[id]/_styles.ts` | `wardrobe-item-detail.styles.ts` |
 
-### Fix 2: `src/contexts/AuthContext.tsx` (fixes Cycles 2 AND 3)
+## Import Updates
 
-```typescript
-// BEFORE (line ~5):
-import { clearHairMakeupSessionVisited } from '@/hooks/headshot/useHairAndMakeup';
+Each screen file needs its import updated. Use `@/styles/screens/` prefix for all.
 
-// AFTER:
-import { clearHairMakeupSessionVisited } from '@/hooks/headshot/useHeadshotSessionData';
-```
+| # | Screen file | Old import | New import |
+|---|---|---|---|
+| 1 | `app/ai-settings.tsx` | `from './_ai-settings.styles'` | `from '@/styles/screens/ai-settings.styles'` |
+| 2 | `app/archive.tsx` | `from './_archive.styles'` | `from '@/styles/screens/archive.styles'` |
+| 3 | `app/import.tsx` | `from './_import.styles'` | `from '@/styles/screens/import.styles'` |
+| 4 | `app/search.tsx` | `from './_search.styles'` | `from '@/styles/screens/search.styles'` |
+| 5 | `app/auth/login.tsx` | `from './_login.styles'` | `from '@/styles/screens/auth-login.styles'` |
+| 6 | `app/auth/signup.tsx` | `from './_signup.styles'` | `from '@/styles/screens/auth-signup.styles'` |
+| 7 | `app/bodyshot/new.tsx` | `from './_new.styles'` | `from '@/styles/screens/bodyshot-new.styles'` |
+| 8 | `app/bodyshot/[id].tsx` | `from './[id]/_styles'` | `from '@/styles/screens/bodyshot-detail.styles'` |
+| 9 | `app/calendar/index.tsx` | `from './_styles'` | `from '@/styles/screens/calendar.styles'` |
+| 10 | `app/feedback/new.tsx` | `from './_new.styles'` | `from '@/styles/screens/feedback-new.styles'` |
+| 11 | `app/headshot/[id].tsx` | `from './[id]/_styles'` | `from '@/styles/screens/headshot-detail.styles'` |
+| 12 | `app/headshot/[id]/view.tsx` | `from './_view.styles'` | `from '@/styles/screens/headshot-view.styles'` |
+| 13 | `app/listings/new.tsx` | `from './_new.styles'` | `from '@/styles/screens/listings-new.styles'` |
+| 14 | `app/(tabs)/outfits/index.tsx` | `from './_styles'` | `from '@/styles/screens/outfits-tab.styles'` |
+| 15 | `app/(tabs)/wardrobe.tsx` | `from './_wardrobe.styles'` | `from '@/styles/screens/wardrobe-tab.styles'` |
+| 16 | `app/outfits/[id]/view.tsx` | `from './_view.styles'` | `from '@/styles/screens/outfits-view.styles'` |
+| 17 | `app/social/following-wardrobes.tsx` | `from './_following-wardrobes.styles'` | `from '@/styles/screens/social-following-wardrobes.styles'` |
+| 18 | `app/users/[id].tsx` | `from './[id]/_styles'` | `from '@/styles/screens/user-profile.styles'` |
+| 19 | `app/wardrobe/item/[id]/index.tsx` | `from './_styles'` | `from '@/styles/screens/wardrobe-item-detail.styles'` |
 
-Verify that `clearHairMakeupSessionVisited` is exported from `useHeadshotSessionData.ts`. If it's not, find where the canonical definition lives and import from there.
+## Steps
 
-### Fix 3: `src/components/shared/filters/FilterPillGroup.tsx`
-
-```typescript
-// BEFORE (line ~8):
-import { PillButton } from '@/components/shared';
-
-// AFTER — import directly from the PillButton source file:
-import PillButton from '@/components/shared/buttons/PillButton';
-```
-
-Check the actual export style of PillButton (default vs named) and adjust the import accordingly. Look in `src/components/shared/buttons/PillButton.tsx`.
-
-### Fix 4: `src/components/shared/TabPillsRow.tsx`
-
-```typescript
-// BEFORE (line ~9):
-import { PillButton } from '@/components/shared';
-
-// AFTER:
-import PillButton from '@/components/shared/buttons/PillButton';
-```
-
-Same as Fix 3 — match the export style.
-
-### Fix 5: `src/components/outfits/OutfitsModals.tsx`
-
-```typescript
-// BEFORE (line ~8):
-import { SortModal } from '@/components/outfits';
-
-// AFTER — import directly:
-import SortModal from '@/components/outfits/SortModal';
-```
-
-Check the actual file name and export style. It might be `SortModal.tsx` or named differently.
-
-### Fix 6: `src/components/wardrobe/WardrobeModalStack.tsx`
-
-```typescript
-// BEFORE (lines ~4-9):
-import {
-  ItemDetailModal,
-  OutfitCreatorOptionsModal,
-  HeadshotSelectorModal,
-  WardrobeCameraOverlay,
-} from '@/components/wardrobe';
-
-// AFTER — import each directly:
-import ItemDetailModal from '@/components/wardrobe/ItemDetailModal';
-import OutfitCreatorOptionsModal from '@/components/wardrobe/OutfitCreatorOptionsModal';
-import HeadshotSelectorModal from '@/components/wardrobe/HeadshotSelectorModal';
-import WardrobeCameraOverlay from '@/components/wardrobe/WardrobeCameraOverlay';
-```
-
-Check each file's export style (default vs named) and adjust accordingly. Some may use `export default function` while others use `export function`.
-
----
-
-## Task B: Fix Style Files Treated as Routes (13 files)
-
-Expo Router treats every `.ts`/`.tsx` file inside `app/` as a route. Style files are not routes and shouldn't be there.
-
-### Approach: Rename with `_` prefix
-
-Files prefixed with `_` are ignored by Expo Router. Rename each style file and update its import in the corresponding route file.
-
-### Files to rename:
-
-| Current path | New path |
-|---|---|
-| `app/(tabs)/wardrobe.styles.ts` | `app/(tabs)/_wardrobe.styles.ts` |
-| `app/ai-settings.styles.ts` | `app/_ai-settings.styles.ts` |
-| `app/archive.styles.ts` | `app/_archive.styles.ts` |
-| `app/import.styles.ts` | `app/_import.styles.ts` |
-| `app/search.styles.ts` | `app/_search.styles.ts` |
-| `app/auth/login.styles.ts` | `app/auth/_login.styles.ts` |
-| `app/auth/signup.styles.ts` | `app/auth/_signup.styles.ts` |
-| `app/bodyshot/new.styles.ts` | `app/bodyshot/_new.styles.ts` |
-| `app/feedback/new.styles.ts` | `app/feedback/_new.styles.ts` |
-| `app/headshot/[id]/view.styles.ts` | `app/headshot/[id]/_view.styles.ts` |
-| `app/listings/new.styles.ts` | `app/listings/_new.styles.ts` |
-| `app/outfits/[id]/view.styles.ts` | `app/outfits/[id]/_view.styles.ts` |
-| `app/social/following-wardrobes.styles.ts` | `app/social/_following-wardrobes.styles.ts` |
-
-Also check for any other `.styles.ts` files in `app/`:
-| `app/bodyshot/[id]/styles.ts` | `app/bodyshot/[id]/_styles.ts` |
-| `app/headshot/[id]/styles.ts` | `app/headshot/[id]/_styles.ts` |
-| `app/wardrobe/item/[id]/styles.ts` | `app/wardrobe/item/[id]/_styles.ts` |
-| `app/users/[id]/styles.ts` | `app/users/[id]/_styles.ts` |
-| `app/calendar/styles.ts` | `app/calendar/_styles.ts` |
-
-Search for ALL `.styles.ts` and `styles.ts` files inside `app/` and rename any that aren't route files.
-
-### For each renamed file:
-1. `git mv` the file to the new name
-2. Find the route file that imports it (usually the file with the same base name, e.g., `wardrobe.tsx` imports `wardrobe.styles.ts`)
-3. Update the import path to use the new `_` prefixed name
-
-Example:
-```typescript
-// In app/(tabs)/wardrobe.tsx
-// BEFORE:
-import { createStyles } from './wardrobe.styles';
-// AFTER:
-import { createStyles } from './_wardrobe.styles';
-```
-
----
+1. Create `src/styles/screens/` directory: `mkdir -p src/styles/screens`
+2. Move each style file using `git mv` (see File Mapping table)
+3. Update the import in each screen `.tsx` file (see Import Updates table)
+4. Delete any empty directories left behind after moves (if any)
+5. Verify no other files import these style files — each should only be imported once by its screen
 
 ## Constraints
 
+- Do NOT modify the style file contents — only move/rename them
+- Do NOT modify any exports — keep the same named/default exports
+- Use `@/styles/screens/...` import paths (the `@/styles` alias maps to `src/styles/`)
+- Do NOT create a barrel export (index.ts) in `src/styles/screens/` — each file is imported directly
+- Do NOT touch any files outside the mapping above
 - Do NOT change any logic or behavior
-- Do NOT restructure barrels/index files — only change the problematic imports
-- Do NOT modify test files
-- Verify each import path is correct after changing (read the target file to confirm the export exists)
-- All changes should be import path updates and file renames only
 
 ## Verification
 
-After all changes, run:
+After completing, run these checks:
 ```bash
-npx expo start --clear 2>&1 | head -80
-```
+# Should return nothing — no style files left in app/
+find app/ -name "*.styles.ts" -o -name "_styles.ts" | head -20
 
-Check that:
-1. No "Require cycle" warnings appear
-2. No "missing the required default export" warnings appear
-3. The app bundles successfully
+# Should return 19 files
+ls src/styles/screens/*.styles.ts | wc -l
 
-Also run:
-```bash
+# Tests should still pass
 npm test
 ```
-All 149 tests must still pass.
 
 ## Output
 
-Write a summary to `CODEX_TASK_REPORT_CYCLES.md` listing:
-1. Each cycle fixed with before/after imports
-2. Each style file renamed with before/after paths
+Write a summary to `CODEX_TASK_REPORT_STYLES.md` listing:
+1. Each file moved with before/after paths
+2. Each import updated with before/after
 3. Verification results

@@ -7,7 +7,9 @@ import React, { useMemo } from 'react';
 import { ActivityIndicator, Modal, Text, View, StyleSheet } from 'react-native';
 import SortModal from '@/components/outfits/SortModal';
 import type { SortOption, SortOrder } from '@/hooks/outfits';
-import { CommentsModal, GeneratingOutfitModal, PostMenuModal } from '@/components/social';
+import { CommentsModal, PostMenuModal } from '@/components/social';
+import { LoadingOverlay } from '@/components/shared';
+import { GENERATION_MESSAGES } from '@/constants/generationMessages';
 import { SlideshowModal } from '@/components/lookbooks';
 import LookbookPickerModal from '@/components/lookbooks/LookbookPickerModal';
 import { typography, spacing, borderRadius } from '@/styles';
@@ -233,11 +235,22 @@ export default function OutfitsModals({
         onToggleAutoPlay={onToggleAutoPlay}
       />
 
-      <GeneratingOutfitModal
+      <LoadingOverlay
         visible={generatingOutfitId !== null}
-        outfitId={generatingOutfitId}
-        onViewOutfit={onViewOutfit}
-        onDismiss={() => {}}
+        title="Generating Outfit..."
+        subMessage={GENERATION_MESSAGES.outfit.socialTimeEstimate}
+        actions={[
+          {
+            label: 'See Outfit',
+            onPress: () => { if (generatingOutfitId) onViewOutfit(generatingOutfitId); },
+            variant: 'primary',
+          },
+          {
+            label: 'OK',
+            onPress: () => {},
+            variant: 'secondary',
+          },
+        ]}
       />
 
       <LookbookPickerModal

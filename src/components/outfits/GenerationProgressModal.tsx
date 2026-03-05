@@ -12,16 +12,20 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themes';
+import { GENERATION_MESSAGES } from '@/constants/generationMessages';
 
-const { spacing, borderRadius, typography } = theme;
-const MODAL_MAX_HEIGHT = Math.min(640, Dimensions.get('window').height * 0.85);
+const { spacing, borderRadius, typography, opacity: themeOpacity } = theme;
+
+// Component-specific dimensional constants
+const ITEM_ICON_WIDTH = 26;
+const MESSAGE_CARD_MIN_HEIGHT = 88;
 const MODAL_BODY_MAX_HEIGHT = Math.min(400, Dimensions.get('window').height * 0.4);
+const SPACING_SM_PLUS = spacing.sm + spacing.xs / 2; // 10px — used for consistent inner padding
 
 interface GenerationItem {
   id: string;
@@ -68,7 +72,7 @@ export default function GenerationProgressModal({
         <View style={styles.overlay}>
           <View style={styles.dialog}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[styles.title, { marginTop: 16 }]}>Generating…</Text>
+            <Text style={[styles.title, { marginTop: spacing.lg }]}>Generating…</Text>
           </View>
         </View>
       </Modal>
@@ -76,20 +80,21 @@ export default function GenerationProgressModal({
   }
 
   const revealedItems = items.slice(0, revealedItemsCount + 1);
-  
+
+  const MSG = GENERATION_MESSAGES.outfitModal;
   const modalTitle =
     phase === 'items'
-      ? 'Checking your pieces'
+      ? MSG.itemsTitle
       : phase === 'analysis'
-        ? 'Stylist notes incoming'
-        : 'Finalising your outfit';
-  
+        ? MSG.analysisTitle
+        : MSG.finalizingTitle;
+
   const modalSubtitle =
     phase === 'items'
-      ? 'Reviewing each item before building the full look.'
+      ? MSG.itemsSubtitle
       : phase === 'analysis'
-        ? "Here's where this outfit will shine the most."
-        : "Polishing the render and preparing your reveal.";
+        ? MSG.analysisSubtitle
+        : MSG.finalizingSubtitle;
 
   return (
     <Modal
@@ -102,7 +107,7 @@ export default function GenerationProgressModal({
         <View style={styles.dialog}>
           {/* Header */}
           <View style={styles.header}>
-            <Ionicons name="sparkles" size={26} color={colors.success} />
+            <Ionicons name="sparkles" size={ITEM_ICON_WIDTH} color={colors.success} />
             <Text style={styles.title}>{modalTitle}</Text>
             <Text style={styles.subtitle}>{modalSubtitle}</Text>
           </View>
@@ -177,8 +182,8 @@ export default function GenerationProgressModal({
                         />
                         <Text style={styles.messageLabel}>
                           {activeMessage.kind === 'finalizing'
-                            ? 'Finishing touches'
-                            : 'Your stylist'}
+                            ? MSG.finishingLabel
+                            : MSG.stylistLabel}
                         </Text>
                       </View>
                       <View style={styles.messageBody}>
@@ -199,8 +204,8 @@ export default function GenerationProgressModal({
                       <ActivityIndicator size="small" color={colors.primary} />
                       <Text style={styles.typingText}>
                         {completedItemsCount >= items.length - 1
-                          ? 'Pulling together your overview…'
-                          : 'Reviewing each piece…'}
+                          ? MSG.pullingOverview
+                          : MSG.reviewingPieces}
                       </Text>
                     </View>
                   )}
@@ -213,7 +218,7 @@ export default function GenerationProgressModal({
           <View style={styles.footer}>
             <ActivityIndicator size="small" color={colors.primary} />
             <Text style={styles.footerText}>
-              Stay on this screen while we craft your look.
+              {MSG.footer}
             </Text>
           </View>
         </View>
@@ -225,27 +230,14 @@ export default function GenerationProgressModal({
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: colors.black,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   dialog: {
-    backgroundColor: colors.white,
-    borderRadius: 18,
     padding: spacing.lg + spacing.md,
     alignItems: 'stretch',
     width: '90%',
-    maxWidth: 540,
-    maxHeight: MODAL_MAX_HEIGHT,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.3)' }
-      : {
-          shadowColor: colors.black,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 8,
-        }),
   },
   bodyScroll: {
     width: '100%',
@@ -255,45 +247,45 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: spacing.xl,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.bold,
     color: colors.textPrimary,
-    marginTop: spacing.sm + spacing.xs / 2,
-    marginBottom: spacing.xs + spacing.xs / 2,
+    marginTop: SPACING_SM_PLUS,
+    marginBottom: SPACING_SM_PLUS,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: typography.lineHeight.snug,
   },
   body: {
     width: '100%',
   },
   section: {
     backgroundColor: colors.backgroundSecondary,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 14,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.sm + spacing.xs / 2,
+    marginBottom: SPACING_SM_PLUS,
   },
   sectionLabel: {
     fontSize: typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
   },
   sectionMeta: {
     fontSize: typography.fontSize.xs,
-    fontWeight: '700',
+    fontWeight: typography.fontWeight.bold,
     color: colors.primary,
   },
   items: {
@@ -304,34 +296,34 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs / 2,
-    borderRadius: spacing.sm + spacing.xs / 2,
+    borderRadius: SPACING_SM_PLUS,
   },
   itemRowComplete: {
-    opacity: 0.35,
+    opacity: themeOpacity.subtle,
   },
   itemIcon: {
-    width: 26,
+    width: ITEM_ICON_WIDTH,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.xs + spacing.xs / 2,
+    marginRight: SPACING_SM_PLUS,
   },
   itemText: {
     flexShrink: 1,
     fontSize: typography.fontSize.sm,
     color: colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: typography.fontWeight.medium,
   },
   itemTextComplete: {
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: typography.fontWeight.medium,
   },
   messageCard: {
     backgroundColor: colors.white,
     borderRadius: borderRadius.lg,
-    padding: spacing.sm + spacing.xs / 2,
+    padding: SPACING_SM_PLUS,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    minHeight: 88,
+    minHeight: MESSAGE_CARD_MIN_HEIGHT,
     justifyContent: 'center',
   },
   messageHeader: {
@@ -340,12 +332,12 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginBottom: spacing.sm,
   },
   messageLabel: {
-    marginLeft: spacing.xs + spacing.xs / 2,
+    marginLeft: SPACING_SM_PLUS,
     fontSize: typography.fontSize.xs,
-    fontWeight: '700',
+    fontWeight: typography.fontWeight.bold,
     color: colors.primary,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: typography.letterSpacing.tight,
   },
   messageBody: {
     flexDirection: 'row',
@@ -353,19 +345,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   inlineSpinner: {
     marginRight: spacing.sm,
-    marginTop: 2,
+    marginTop: spacing.xs / 2,
   },
   messageText: {
     flexShrink: 1,
     fontSize: typography.fontSize.sm,
     color: colors.textPrimary,
-    lineHeight: 20,
+    lineHeight: typography.lineHeight.normal,
   },
   typingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.sm + spacing.xs / 2,
+    paddingVertical: SPACING_SM_PLUS,
   },
   typingText: {
     marginLeft: spacing.sm,
@@ -376,7 +368,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: spacing.xs / 2,
   },
   footerText: {
     marginLeft: spacing.sm,

@@ -18,6 +18,7 @@ import {
   isGeminiPolicyBlockError,
 } from '@/lib/ai-jobs';
 import { useImagePicker } from './useImagePicker';
+import { GENERATION_MESSAGES } from '@/constants/generationMessages';
 
 interface UseImageGenerationReturn {
   generating: boolean;
@@ -95,7 +96,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     }
 
     setGenerating(true);
-    setLoadingMessage('Uploading photo...');
+    setLoadingMessage(GENERATION_MESSAGES.headshot.uploading);
 
     try {
       const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -142,7 +143,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     }
 
     setGenerating(true);
-    setLoadingMessage('Uploading photo...');
+    setLoadingMessage(GENERATION_MESSAGES.headshot.uploading);
 
     try {
             if (__DEV__) console.log('-> Uploading...');
@@ -162,7 +163,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
         throw uploadError || new Error('Failed to upload selfie');
       }
 
-      setLoadingMessage('Creating headshot job...');
+      setLoadingMessage(GENERATION_MESSAGES.headshot.creatingJob);
 
             if (__DEV__) console.log('-> Creating job...');
       const { data: job, error: jobError } = await triggerHeadshotGenerate(
@@ -182,7 +183,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
       await triggerAIJobExecution(job.id);
             if (__DEV__) console.log('Execution triggered');
 
-      setLoadingMessage('Generating professional headshot...\nThis may take 20-30 seconds.');
+      setLoadingMessage(GENERATION_MESSAGES.headshot.generating);
 
             if (__DEV__) console.log('-> Waiting for completion...');
       const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
@@ -277,7 +278,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     }
 
     setGenerating(true);
-    setLoadingMessage('Uploading photo...');
+    setLoadingMessage(GENERATION_MESSAGES.headshot.uploading);
 
     try {
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -295,7 +296,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
         throw uploadError || new Error('Failed to upload body photo');
       }
 
-      setLoadingMessage('Creating studio model job...');
+      setLoadingMessage(GENERATION_MESSAGES.bodyShot.creatingJob);
 
       const { data: job, error: jobError } = await triggerBodyShotGenerate(
         userId,
@@ -308,7 +309,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
       }
 
       await triggerAIJobExecution(job.id);
-      setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
+      setLoadingMessage(GENERATION_MESSAGES.bodyShot.generating);
 
       const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
         job.id,
@@ -372,7 +373,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     }
 
     setGenerating(true);
-    setLoadingMessage('Creating studio model job...');
+    setLoadingMessage(GENERATION_MESSAGES.bodyShot.creatingJob);
 
     try {
       const { data: job, error: jobError } = await triggerBodyShotGenerateFromSelfies(
@@ -386,7 +387,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
       }
 
       await triggerAIJobExecution(job.id);
-      setLoadingMessage('Generating studio model...\nThis may take 30-40 seconds.');
+      setLoadingMessage(GENERATION_MESSAGES.bodyShot.generating);
 
       const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
         job.id,

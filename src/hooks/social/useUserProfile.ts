@@ -65,15 +65,13 @@ export function useUserProfile({
         getUserLookbooks(userId),
       ]);
 
-      setProfile(profileData);
-      setOutfits(outfitsData || []);
-      setLookbooks(lookbooksData || []);
-
-      // 🔥 OPTIMIZATION: Batch load wear counts and lookbook data
-      const outfitIds = (outfitsData || []).map(outfit => outfit.id);
+      // Collect all data into locals before setting any state
+      // so React 18 batches all updates into a single render
+      const localOutfits = outfitsData || [];
+      const localLookbooks = lookbooksData || [];
+      const outfitIds = localOutfits.map(outfit => outfit.id);
 
       const [wearCountsData, lookbookOutfitsData] = await Promise.all([
-        // Get wear counts in ONE query
         outfitIds.length > 0
           ? supabase
               .from('calendar_entries')
@@ -81,42 +79,39 @@ export function useUserProfile({
               .in('outfit_id', outfitIds)
               .eq('status', 'worn')
           : Promise.resolve({ data: null }),
-        
-        // Get first outfit for each lookbook in ONE query
-        lookbooksData && lookbooksData.length > 0
+        localLookbooks.length > 0
           ? supabase
               .from('lookbook_outfits')
               .select('lookbook_id, outfit_id, position')
-              .in('lookbook_id', lookbooksData.map(lb => lb.id))
+              .in('lookbook_id', localLookbooks.map(lb => lb.id))
               .order('position', { ascending: true })
           : Promise.resolve({ data: null }),
       ]);
 
       // Process wear counts
+      const localWearCounts = new Map<string, number>();
       if (outfitIds.length > 0) {
-        const wearCounts = new Map<string, number>();
-        outfitIds.forEach(id => wearCounts.set(id, 0));
-
+        outfitIds.forEach(id => localWearCounts.set(id, 0));
         (wearCountsData.data || []).forEach((entry: any) => {
           const ownerId = entry.calendar_day?.owner_user_id;
           if (!entry.outfit_id || !ownerId || ownerId === userId) return;
-          wearCounts.set(entry.outfit_id, (wearCounts.get(entry.outfit_id) || 0) + 1);
+          localWearCounts.set(entry.outfit_id, (localWearCounts.get(entry.outfit_id) || 0) + 1);
         });
-
-        setOutfitWearCounts(wearCounts);
       }
 
-      // 🔥 OPTIMIZATION: Batch get outfit images
-      if (outfitsData && outfitsData.length > 0) {
-        const outfitImageCache = await batchGetOutfitCoverImages(outfitsData, 'card');
-        setOutfitImages(outfitImageCache);
+      // Batch get outfit images
+      let localOutfitImages = new Map<string, string | null>();
+      if (localOutfits.length > 0) {
+        try {
+          localOutfitImages = await batchGetOutfitCoverImages(localOutfits, 'card');
+        } catch (imgErr) {
+          console.error('Failed to load outfit images:', imgErr);
+        }
       }
 
-      // 🔥 OPTIMIZATION: Process lookbook images
-      if (lookbooksData && lookbooksData.length > 0 && outfitsData) {
-        const lookbookImageCache = new Map<string, string | null>();
-        
-        // Group lookbook outfits by lookbook_id (get first one only)
+      // Process lookbook images
+      let localLookbookImages = new Map<string, string | null>();
+      if (localLookbooks.length > 0 && outfitsData) {
         const firstOutfitsByLookbook = new Map<string, string>();
         (lookbookOutfitsData.data || []).forEach((lo: any) => {
           if (!firstOutfitsByLookbook.has(lo.lookbook_id)) {
@@ -124,25 +119,32 @@ export function useUserProfile({
           }
         });
 
-        // Get images for first outfits
         const firstOutfits = Array.from(firstOutfitsByLookbook.values())
           .map(outfitId => outfitsData.find(o => o.id === outfitId))
           .filter(Boolean);
 
-        const firstOutfitImages = await batchGetOutfitCoverImages(firstOutfits, 'card');
-
-        // Map back to lookbooks
-        lookbooksData.forEach(lookbook => {
-          const firstOutfitId = firstOutfitsByLookbook.get(lookbook.id);
-          if (firstOutfitId) {
-            lookbookImageCache.set(lookbook.id, firstOutfitImages.get(firstOutfitId) || null);
-          } else {
-            lookbookImageCache.set(lookbook.id, null);
-          }
-        });
-
-        setLookbookImages(lookbookImageCache);
+        try {
+          const firstOutfitImages = await batchGetOutfitCoverImages(firstOutfits, 'card');
+          localLookbooks.forEach(lookbook => {
+            const firstOutfitId = firstOutfitsByLookbook.get(lookbook.id);
+            if (firstOutfitId) {
+              localLookbookImages.set(lookbook.id, firstOutfitImages.get(firstOutfitId) || null);
+            } else {
+              localLookbookImages.set(lookbook.id, null);
+            }
+          });
+        } catch (imgErr) {
+          console.error('Failed to load lookbook images:', imgErr);
+        }
       }
+
+      // Set ALL state in one synchronous tick — React batches into one render
+      setProfile(profileData);
+      setOutfits(localOutfits);
+      setLookbooks(localLookbooks);
+      setOutfitWearCounts(localWearCounts);
+      setOutfitImages(localOutfitImages);
+      setLookbookImages(localLookbookImages);
     } catch (error) {
       console.error('Error loading user profile:', error);
     } finally {
@@ -164,10 +166,10 @@ export function useUserProfile({
         getUserLookbooks(userId),
       ]);
 
-      setOutfits(outfitsData || []);
-      setLookbooks(lookbooksData || []);
-
-      const outfitIds = (outfitsData || []).map(outfit => outfit.id);
+      // Collect all data into locals before setting any state
+      const localOutfits = outfitsData || [];
+      const localLookbooks = lookbooksData || [];
+      const outfitIds = localOutfits.map(outfit => outfit.id);
 
       const [wearCountsData, lookbookOutfitsData] = await Promise.all([
         outfitIds.length > 0
@@ -177,33 +179,36 @@ export function useUserProfile({
               .in('outfit_id', outfitIds)
               .eq('status', 'worn')
           : Promise.resolve({ data: null }),
-        lookbooksData && lookbooksData.length > 0
+        localLookbooks.length > 0
           ? supabase
               .from('lookbook_outfits')
               .select('lookbook_id, outfit_id, position')
-              .in('lookbook_id', lookbooksData.map(lb => lb.id))
+              .in('lookbook_id', localLookbooks.map(lb => lb.id))
               .order('position', { ascending: true })
           : Promise.resolve({ data: null }),
       ]);
 
+      const localWearCounts = new Map<string, number>();
       if (outfitIds.length > 0) {
-        const wearCounts = new Map<string, number>();
-        outfitIds.forEach(id => wearCounts.set(id, 0));
+        outfitIds.forEach(id => localWearCounts.set(id, 0));
         (wearCountsData.data || []).forEach((entry: any) => {
           const ownerId = entry.calendar_day?.owner_user_id;
           if (!entry.outfit_id || !ownerId || ownerId === userId) return;
-          wearCounts.set(entry.outfit_id, (wearCounts.get(entry.outfit_id) || 0) + 1);
+          localWearCounts.set(entry.outfit_id, (localWearCounts.get(entry.outfit_id) || 0) + 1);
         });
-        setOutfitWearCounts(wearCounts);
       }
 
-      if (outfitsData && outfitsData.length > 0) {
-        const outfitImageCache = await batchGetOutfitCoverImages(outfitsData, 'card');
-        setOutfitImages(outfitImageCache);
+      let localOutfitImages = new Map<string, string | null>();
+      if (localOutfits.length > 0) {
+        try {
+          localOutfitImages = await batchGetOutfitCoverImages(localOutfits, 'card');
+        } catch (imgErr) {
+          console.error('Failed to load outfit images:', imgErr);
+        }
       }
 
-      if (lookbooksData && lookbooksData.length > 0 && outfitsData) {
-        const lookbookImageCache = new Map<string, string | null>();
+      let localLookbookImages = new Map<string, string | null>();
+      if (localLookbooks.length > 0 && outfitsData) {
         const firstOutfitsByLookbook = new Map<string, string>();
         (lookbookOutfitsData.data || []).forEach((lo: any) => {
           if (!firstOutfitsByLookbook.has(lo.lookbook_id)) {
@@ -213,17 +218,27 @@ export function useUserProfile({
         const firstOutfits = Array.from(firstOutfitsByLookbook.values())
           .map(outfitId => outfitsData.find(o => o.id === outfitId))
           .filter(Boolean);
-        const firstOutfitImages = await batchGetOutfitCoverImages(firstOutfits, 'card');
-        lookbooksData.forEach(lookbook => {
-          const firstOutfitId = firstOutfitsByLookbook.get(lookbook.id);
-          if (firstOutfitId) {
-            lookbookImageCache.set(lookbook.id, firstOutfitImages.get(firstOutfitId) || null);
-          } else {
-            lookbookImageCache.set(lookbook.id, null);
-          }
-        });
-        setLookbookImages(lookbookImageCache);
+        try {
+          const firstOutfitImages = await batchGetOutfitCoverImages(firstOutfits, 'card');
+          localLookbooks.forEach(lookbook => {
+            const firstOutfitId = firstOutfitsByLookbook.get(lookbook.id);
+            if (firstOutfitId) {
+              localLookbookImages.set(lookbook.id, firstOutfitImages.get(firstOutfitId) || null);
+            } else {
+              localLookbookImages.set(lookbook.id, null);
+            }
+          });
+        } catch (imgErr) {
+          console.error('Failed to load lookbook images:', imgErr);
+        }
       }
+
+      // Set ALL state in one synchronous tick — React batches into one render
+      setOutfits(localOutfits);
+      setLookbooks(localLookbooks);
+      setOutfitWearCounts(localWearCounts);
+      setOutfitImages(localOutfitImages);
+      setLookbookImages(localLookbookImages);
     } catch (error) {
       console.error('Error refreshing content:', error);
     } finally {

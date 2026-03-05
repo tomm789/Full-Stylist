@@ -16,6 +16,7 @@ import {
   waitForAIJobCompletion,
   isGeminiPolicyBlockError,
 } from '@/lib/ai-jobs';
+import { GENERATION_MESSAGES } from '@/constants/generationMessages';
 
 interface UseHeadshotDetailActionsProps {
   headshotId: string | undefined;
@@ -118,7 +119,7 @@ export function useHeadshotDetailActions({
     }
 
     setRegenerating(true);
-    setLoadingMessage('Creating headshot job...');
+    setLoadingMessage(GENERATION_MESSAGES.headshot.creatingJob);
 
     try {
       const { data: job, error: jobError } = await triggerHeadshotGenerate(
@@ -133,7 +134,7 @@ export function useHeadshotDetailActions({
       }
 
       await triggerAIJobExecution(job.id);
-      setLoadingMessage('Regenerating headshot...\nThis may take 20-30 seconds.');
+      setLoadingMessage(GENERATION_MESSAGES.headshot.regenerating);
 
       const { data: completedJob, error: pollError } = await waitForAIJobCompletion(
         job.id,

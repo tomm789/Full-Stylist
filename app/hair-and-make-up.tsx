@@ -4,7 +4,7 @@
  * All state and business logic lives in useHairAndMakeup hook.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Modal,
   Text,
@@ -31,7 +31,8 @@ import PolicyBlockModal from '@/components/PolicyBlockModal';
 import ErrorModal from '@/components/ErrorModal';
 import { useHairAndMakeup, type EditTab } from '@/hooks/headshot';
 import { useApplyLook, getPendingApplyLookSnapshot } from '@/hooks/headshot/useApplyLook';
-import { useGenerationDialogAnimation } from '@/hooks/headshot/useGenerationDialogAnimation';
+import { LoadingOverlay } from '@/components/shared/loading';
+import { GENERATION_MESSAGES } from '@/constants/generationMessages';
 import CreatorBar from '@/components/shared/CreatorBar';
 import HeadshotCreatorContainer from '@/components/headshots/HeadshotCreatorContainer';
 import FaceMenuModal from '@/components/hairAndMakeup/FaceMenuModal';
@@ -166,8 +167,24 @@ export default function HairAndMakeUpScreen() {
     if (variation) state.setPreviewFromVariation(variation);
   }, [state.completedVariations, state.setPreviewFromVariation, state.handleRestoreSelfie]);
 
-  const { dialogLine1Style, dialogLine2Style, dialogLine3Style, dialogLine4Style } =
-    useGenerationDialogAnimation(state.generating);
+  // Timer-based message rotation for generating overlay
+  const [generatingMessage, setGeneratingMessage] = useState('');
+  useEffect(() => {
+    if (!state.generating) return;
+    const steps = GENERATION_MESSAGES.hairAndMakeup.progressSteps;
+    const interval = GENERATION_MESSAGES.hairAndMakeup.MIN_DURATION_MS / steps.length;
+    let stepIndex = 0;
+    setGeneratingMessage(steps[0]);
+    const timer = setInterval(() => {
+      stepIndex += 1;
+      if (stepIndex < steps.length) {
+        setGeneratingMessage(steps[stepIndex]);
+      } else {
+        clearInterval(timer);
+      }
+    }, interval);
+    return () => clearInterval(timer);
+  }, [state.generating]);
 
   const handleEdgeSwipeStart = React.useCallback(() => {
     if (!state.isStyleDisabled) {
@@ -350,10 +367,6 @@ export default function HairAndMakeUpScreen() {
             previewIsGenerated={state.previewIsGenerated}
             onRestoreSelfie={state.handleRestoreSelfie}
             generating={state.generating}
-            dialogLine1Style={dialogLine1Style}
-            dialogLine2Style={dialogLine2Style}
-            dialogLine3Style={dialogLine3Style}
-            dialogLine4Style={dialogLine4Style}
             previewHasImage={state.previewHasImage}
             activeImageVariation={state.activeImageVariation}
             isStyleDisabled={state.isStyleDisabled}
@@ -489,6 +502,8 @@ export default function HairAndMakeUpScreen() {
             />
           </>
         )}
+
+        <LoadingOverlay visible={state.generating} message={generatingMessage} />
       </View>
     </PanGestureHandler>
   );

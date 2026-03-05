@@ -43,6 +43,8 @@ export {
   type WardrobeCategory,
   type WardrobeSubcategory,
   getWardrobeCategories,
+  getCachedWardrobeCategories,
+  clearCategoriesCache,
   getSubcategories,
   getCategory,
   getSubcategory,

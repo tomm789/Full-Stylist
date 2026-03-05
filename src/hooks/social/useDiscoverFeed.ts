@@ -55,39 +55,38 @@ export function useDiscoverFeed({
         setHasMore(false);
       }
 
-      const newFeed = append ? [...discoverFeed, ...feedItems] : feedItems;
-      setDiscoverFeed(newFeed);
+      // Collect all data into locals before setting any state
+      // so React 18 batches all updates into a single render
+      const localFeed = append ? [...discoverFeed, ...feedItems] : feedItems;
 
-      // Batch get outfit cover images for all items
+      // Batch get outfit cover images
       const outfitItems = feedItems.filter(item => {
         const post = item.post;
         return post?.entity_type === 'outfit' && item.entity?.outfit;
       });
-
       const outfits = outfitItems.map(item => item.entity!.outfit);
-      const newImageCache = await batchGetOutfitCoverImages(outfits, 'card');
+      let newImageCache = new Map<string, string | null>();
+      try {
+        newImageCache = await batchGetOutfitCoverImages(outfits, 'card');
+      } catch (imgErr) {
+        console.error('Failed to load discover images:', imgErr);
+      }
 
-      // Also handle lookbook images (use first outfit image as cover)
+      // Lookbook placeholders
       const lookbookItems = feedItems.filter(item => {
         const post = item.post;
         return post?.entity_type === 'lookbook' && item.entity?.lookbook;
       });
-
-      // For lookbooks, we just show a placeholder for now in the grid
       lookbookItems.forEach(item => {
         const lookbook = item.entity!.lookbook;
         newImageCache.set(lookbook.id, null);
       });
 
-      if (append) {
-        const mergedImages = new Map(discoverImages);
-        newImageCache.forEach((url, id) => mergedImages.set(id, url));
-        setDiscoverImages(mergedImages);
-      } else {
-        setDiscoverImages(newImageCache);
-      }
+      const localImages = append
+        ? (() => { const m = new Map(discoverImages); newImageCache.forEach((url, id) => m.set(id, url)); return m; })()
+        : newImageCache;
 
-      // Build headshot image URL map from entity data
+      // Build headshot image URL map (sync)
       const newHeadshotCache = new Map<string, string | null>();
       feedItems.forEach(item => {
         if (item.post?.entity_type === 'headshot' && item.entity?.headshot) {
@@ -103,13 +102,14 @@ export function useDiscoverFeed({
         }
       });
 
-      if (append) {
-        const mergedHeadshots = new Map(headshotImages);
-        newHeadshotCache.forEach((url, id) => mergedHeadshots.set(id, url));
-        setHeadshotImages(mergedHeadshots);
-      } else {
-        setHeadshotImages(newHeadshotCache);
-      }
+      const localHeadshots = append
+        ? (() => { const m = new Map(headshotImages); newHeadshotCache.forEach((url, id) => m.set(id, url)); return m; })()
+        : newHeadshotCache;
+
+      // Set ALL state in one synchronous tick — React batches into one render
+      setDiscoverFeed(localFeed);
+      setDiscoverImages(localImages);
+      setHeadshotImages(localHeadshots);
     } catch (error) {
       console.error('Error loading discover feed:', error);
     } finally {

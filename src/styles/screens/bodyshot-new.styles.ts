@@ -146,32 +146,4 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semibold,
   },
-  loadingOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlayDark,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingContainer: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.xl,
-    padding: spacing.xxxl,
-    alignItems: 'center',
-    minWidth: 280,
-    maxWidth: '80%',
-  },
-  loadingTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  loadingMessage: {
-    fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: typography.lineHeight.normal,
-  },
 });

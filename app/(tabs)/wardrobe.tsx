@@ -40,6 +40,7 @@ import { useBodyShotGeneration } from '@/hooks/wardrobe/useBodyShotGeneration';
 import { useCanvasLayout } from '@/hooks/wardrobe/useCanvasLayout';
 import { useWardrobeTutorial } from '@/hooks/wardrobe/useWardrobeTutorial';
 import { useWardrobeItemActions } from '@/hooks/wardrobe/useWardrobeItemActions';
+import { setItemPreview } from '@/lib/wardrobe/itemPreviewCache';
 
 // Shared Components
 import {
@@ -455,6 +456,8 @@ export default function WardrobeScreen() {
 
   const handleModalOpenDetail = () => {
     if (!selectedItem) return;
+    // Pass preview data so detail page can render instantly
+    setItemPreview(selectedItem.id, selectedItem, imageCache.get(selectedItem.id) ?? null);
     const itemIds = filteredItems.map((item) => item.id).join(',');
     router.push(`/wardrobe/item/${selectedItem.id}?itemIds=${itemIds}`);
     setTimeout(() => setShowItemModal(false), 50);

@@ -5,7 +5,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  getWardrobeCategories,
+  getCachedWardrobeCategories,
+  clearCategoriesCache,
   getSubcategories,
   WardrobeCategory,
   WardrobeSubcategory,
@@ -27,7 +28,8 @@ export function useCategories() {
     setError(null);
 
     try {
-      const { data, error: categoriesError } = await getWardrobeCategories();
+      clearCategoriesCache(); // manual refresh should bypass cache
+      const { data, error: categoriesError } = await getCachedWardrobeCategories();
       
       if (categoriesError) {
         throw categoriesError;

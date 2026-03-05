@@ -34,40 +34,45 @@ export function useUserOutfits({ userId }: UseUserOutfitsProps): UseUserOutfitsR
     try {
       const { data: userOutfits } = await getUserOutfits(userId);
       if (userOutfits) {
-        setOutfits(userOutfits);
-
-        // Load outfit images
+        // Build image map before setting any state so React 18 batches
+        // all updates into a single render (skeleton → loaded)
         const imagesMap = new Map<string, string | null>();
         const coverImageIds = userOutfits
           .map((outfit) => outfit.cover_image_id)
           .filter((id): id is string => Boolean(id));
 
         if (coverImageIds.length > 0) {
-          const { data: coverImages } = await supabase
-            .from('images')
-            .select('id, storage_key, storage_bucket')
-            .in('id', coverImageIds);
+          try {
+            const { data: coverImages } = await supabase
+              .from('images')
+              .select('id, storage_key, storage_bucket')
+              .in('id', coverImageIds);
 
-          const coverImageMap = new Map(
-            (coverImages || []).map((image) => [image.id, image])
-          );
+            const coverImageMap = new Map(
+              (coverImages || []).map((image) => [image.id, image])
+            );
 
-          for (const outfit of userOutfits) {
-            if (!outfit.cover_image_id) continue;
-            const coverImage = coverImageMap.get(outfit.cover_image_id);
-            if (!coverImage?.storage_key) continue;
+            for (const outfit of userOutfits) {
+              if (!outfit.cover_image_id) continue;
+              const coverImage = coverImageMap.get(outfit.cover_image_id);
+              if (!coverImage?.storage_key) continue;
 
-            const storageBucket = coverImage.storage_bucket || 'media';
-            const { data: urlData } = supabase.storage
-              .from(storageBucket)
-              .getPublicUrl(coverImage.storage_key);
+              const storageBucket = coverImage.storage_bucket || 'media';
+              const { data: urlData } = supabase.storage
+                .from(storageBucket)
+                .getPublicUrl(coverImage.storage_key);
 
-            if (urlData?.publicUrl) {
-              imagesMap.set(outfit.id, urlData.publicUrl);
+              if (urlData?.publicUrl) {
+                imagesMap.set(outfit.id, urlData.publicUrl);
+              }
             }
+          } catch (imgErr) {
+            console.error('Failed to load outfit images:', imgErr);
           }
         }
 
+        // Set both in one synchronous tick — React batches into one render
+        setOutfits(userOutfits);
         setOutfitImages(imagesMap);
       }
     } catch (error) {

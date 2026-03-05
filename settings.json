@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allowedTools": [
+      "Read",
+      "Edit",
+      "Write",
+      "Grep",
+      "Glob",
+      "LS",
+      "Bash",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Bash(rm -rf:*)",
+      "Bash(sudo:*)"
+    ]
+  }
+}
