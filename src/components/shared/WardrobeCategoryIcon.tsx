@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { wardrobeCategoryIconComponents } from '@/lib/icons/wardrobeCategoryIcons';
+import { wardrobeCategoryIconComponents } from '@/lib/wardrobe/categoryIcons';
 import type { SvgProps } from 'react-native-svg';
 
 interface WardrobeCategoryIconProps {

@@ -1,3 +1,208 @@
-export * from './dataUri';
-export * from './defaults';
-export * from './transforms';
+/**
+ * Images Module
+ * Central image utilities: URL generation, cover image lookups,
+ * image prop defaults, data URI helpers, and transforms.
+ */
+
+import { supabase } from '../supabase';
+import { getOutfit } from '../outfits/core';
+import { getWardrobeItemImages } from '../wardrobe';
+import { getImageUrl, type ImageSizeClass } from './transforms';
+
+// ─── Re-exports from subdirectory modules ─────────────────────────────────────
+
+export { GRID_IMAGE_PROPS, DETAIL_IMAGE_PROPS, AVATAR_IMAGE_PROPS, FEED_IMAGE_PROPS } from './defaults';
+export { getImageUrl, type ImageSizeClass } from './transforms';
+export { toDataUri } from './dataUri';
+
+// ─── Public image URL ─────────────────────────────────────────────────────────
+
+export function getPublicImageUrl(
+  image?: { storage_bucket?: string | null; storage_key?: string | null } | null,
+  size: ImageSizeClass = 'full'
+): string | null {
+  if (!image?.storage_key) return null;
+  const bucket = image.storage_bucket || 'media';
+  if (size !== 'full') {
+    return getImageUrl(bucket, image.storage_key, size);
+  }
+
+  return supabase.storage.from(bucket).getPublicUrl(image.storage_key).data.publicUrl;
+}
+
+// ─── Outfit cover image lookups ───────────────────────────────────────────────
+
+/** Minimal outfit shape for batched cover image lookup */
+export type OutfitCoverDescriptor = { id: string; cover_image_id?: string | null };
+
+/**
+ * Batched fetch of outfit cover image URLs (list use only).
+ * One request to images; no per-outfit queries. Do not use for single-outfit views.
+ *
+ * State model:
+ * - key missing => "loading/unknown" (allows list spinners)
+ * - key => string => image loaded
+ * - key => null => known no cover image
+ */
+export async function getOutfitCoverImages(
+  outfits: Array<OutfitCoverDescriptor>,
+  size: ImageSizeClass = 'full'
+): Promise<Map<string, string | null>> {
+  // Deduplicate by outfit id (first occurrence wins)
+  const byId = new Map<string, OutfitCoverDescriptor>();
+  for (const o of outfits) {
+    if (o?.id && !byId.has(o.id)) byId.set(o.id, o);
+  }
+  const deduped = [...byId.values()];
+  if (deduped.length === 0) return new Map();
+
+  const coverImageIds = [
+    ...new Set(deduped.map((o) => o.cover_image_id).filter(Boolean)),
+  ] as string[];
+
+  // If there are no cover_image_id values at all, we *know* there are no covers for this list.
+  if (coverImageIds.length === 0) {
+    const imageMap = new Map<string, string | null>();
+    for (const o of deduped) imageMap.set(o.id, null);
+    return imageMap;
+  }
+
+  const { data: images, error } = await supabase
+    .from('images')
+    .select('id, storage_bucket, storage_key')
+    .in('id', coverImageIds);
+
+  // On failure, return empty map (treat as "unknown/loading" rather than "no image")
+  if (error || !images) {
+    if (__DEV__) console.warn('getOutfitCoverImages: images fetch failed', error);
+    return new Map();
+  }
+
+  const urlByImageId = new Map<string, string | null>();
+  for (const img of images) {
+    urlByImageId.set(img.id, getPublicImageUrl(img, size));
+  }
+
+  const imageMap = new Map<string, string | null>();
+  for (const o of deduped) {
+    const url = o.cover_image_id
+      ? urlByImageId.get(o.cover_image_id) ?? null
+      : null;
+    imageMap.set(o.id, url);
+  }
+
+  return imageMap;
+}
+
+/**
+ * Get outfit cover image URL with fallback
+ * 1. Try cover_image_id if exists
+ * 2. Fallback to first image from first outfit item
+ * Use for single-outfit views only; do not use in list path.
+ */
+export async function getOutfitCoverImageUrl(outfit: {
+  id: string;
+  cover_image_id?: string;
+}): Promise<string | null> {
+  // Try cover_image_id first
+  if (outfit.cover_image_id) {
+    const { data: imageData } = await supabase
+      .from('images')
+      .select('*')
+      .eq('id', outfit.cover_image_id)
+      .single();
+
+    const url = getPublicImageUrl(imageData);
+    if (url) return url;
+  }
+
+  // Fallback: get first image from first outfit item
+  if (outfit.id) {
+    const { data: outfitData } = await getOutfit(outfit.id);
+    if (outfitData?.items && outfitData.items.length > 0) {
+      const firstItem = outfitData.items[0];
+      const { data: images } = await getWardrobeItemImages(firstItem.wardrobe_item_id);
+      if (images && images.length > 0) {
+        const url = getPublicImageUrl(images[0].image);
+        if (url) return url;
+      }
+    }
+  }
+
+  return null;
+}
+
+// ─── User generated images ────────────────────────────────────────────────────
+
+export async function getUserGeneratedImages(userId: string): Promise<{
+  headshots: Array<{ id: string; url: string | null; created_at: string }>;
+  bodyShots: Array<{ id: string; url: string | null; created_at: string }>;
+}> {
+  const { data: allImages, error } = await supabase
+    .from('images')
+    .select('id, storage_bucket, storage_key, created_at')
+    .eq('owner_user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error || !allImages) {
+    return { headshots: [], bodyShots: [] };
+  }
+
+  const headshots = allImages
+    .filter((img) => (img.storage_key || '').toLowerCase().includes('headshot'))
+    .map((img) => ({
+      id: img.id,
+      url: getPublicImageUrl(img),
+      created_at: img.created_at,
+    }));
+
+  // Include saved headshot variations (from hair & make-up sessions)
+  const { data: savedVariations } = await supabase
+    .from('headshot_generation_variations')
+    .select('image_id, created_at')
+    .eq('user_id', userId)
+    .eq('is_saved', true)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  const existingHeadshotIds = new Set(headshots.map((item) => item.id));
+  const savedVariationIds =
+    savedVariations
+      ?.map((item) => item.image_id)
+      .filter((id): id is string => Boolean(id))
+      .filter((id) => !existingHeadshotIds.has(id)) || [];
+
+  if (savedVariationIds.length > 0) {
+    const { data: savedImages, error: savedError } = await supabase
+      .from('images')
+      .select('id, storage_bucket, storage_key, created_at')
+      .in('id', savedVariationIds);
+
+    if (!savedError && savedImages) {
+      const createdAtById = new Map(
+        (savedVariations || []).map((item) => [item.image_id, item.created_at])
+      );
+      savedImages.forEach((img) => {
+        headshots.push({
+          id: img.id,
+          url: getPublicImageUrl(img),
+          created_at: createdAtById.get(img.id) || img.created_at,
+        });
+      });
+    }
+  }
+
+  const bodyShots = allImages
+    .filter((img) => {
+      const key = (img.storage_key || '').toLowerCase();
+      return key.includes('body_shot') || key.includes('bodyshot');
+    })
+    .map((img) => ({
+      id: img.id,
+      url: getPublicImageUrl(img),
+      created_at: img.created_at,
+    }));
+
+  return { headshots, bodyShots };
+}

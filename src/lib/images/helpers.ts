@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as LegacyFileSystem from 'expo-file-system/legacy';
 import { supabase, SUPABASE_CONFIG } from '../supabase';
-import { compressImageFile, compressImageUri } from '../../utils/image-compression';
+import { compressImageFile, compressImageUri } from './compression';
 
 type UriUploadSource = {
   uri: string;

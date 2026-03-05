@@ -23,10 +23,10 @@ export { useSearch } from './search/useSearch';
 export type { SearchResult, SearchResultType } from './search/useSearch';
 
 // PWA
-export { useAddToHomeScreenDetection } from './useAddToHomeScreenDetection';
+export { useAddToHomeScreenDetection } from './ui/useAddToHomeScreenDetection';
 
 // Find Similar
-export { useFindSimilar } from './useFindSimilar';
+export { useFindSimilar } from './search/useFindSimilar';
 export { useHideHeaderOnScroll } from './ui/useHideHeaderOnScroll';
 export { useLookbookSelection } from './lookbooks/useLookbookSelection';
 

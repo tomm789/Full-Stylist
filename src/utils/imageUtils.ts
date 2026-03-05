@@ -1,50 +1,7 @@
 /**
  * Image Utilities
- * Helper functions for image operations
+ * Helper functions for image validation and dimensions
  */
-
-import { supabase } from '@/lib/supabase';
-
-/**
- * Get public URL for an image from storage
- */
-export function getImagePublicUrl(
-  storageKey: string,
-  bucket: string = 'media'
-): string | null {
-  try {
-    const { data } = supabase.storage.from(bucket).getPublicUrl(storageKey);
-    return data?.publicUrl || null;
-  } catch (error) {
-    console.error('Error getting image public URL:', error);
-    return null;
-  }
-}
-
-/**
- * Get public URLs for multiple images
- */
-export function getImagePublicUrls(
-  images: Array<{ storage_key: string; storage_bucket?: string }>
-): Map<string, string | null> {
-  const urlMap = new Map<string, string | null>();
-
-  images.forEach((image) => {
-    const url = getImagePublicUrl(image.storage_key, image.storage_bucket);
-    urlMap.set(image.storage_key, url);
-  });
-
-  return urlMap;
-}
-
-/**
- * Convert URI to Blob for image uploads (handles file:// on iOS)
- */
-export async function uriToBlob(uri: string): Promise<Blob> {
-  const response = await fetch(uri);
-  const blob = await response.blob();
-  return blob;
-}
 
 /**
  * Get image dimensions from URI

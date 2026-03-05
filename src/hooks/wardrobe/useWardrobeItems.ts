@@ -13,7 +13,7 @@ import {
   WardrobeItem,
 } from '@/lib/wardrobe';
 import { getEntityAttributesForItems } from '@/lib/attributes/entity-attributes';
-import { getTagsForItems } from '@/lib/tags';
+import { getTagsForItems } from '@/lib/wardrobe/tags';
 
 interface UseWardrobeItemsOptions {
   wardrobeId: string | null;

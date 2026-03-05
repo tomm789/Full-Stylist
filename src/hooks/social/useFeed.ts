@@ -10,8 +10,8 @@ import { supabase } from '@/lib/supabase';
 import { getLookbook } from '@/lib/lookbooks';
 import { getUserOutfits } from '@/lib/outfits';
 import { isFollowing } from '@/lib/user';
-import { getRepostCount, hasReposted } from '@/lib/reposts';
-import { batchGetOutfitCoverImages } from '@/utils/batchImageHelpers';
+import { getRepostCount, hasReposted } from '@/lib/engagement/reposts';
+import { getOutfitCoverImages } from '@/lib/images';
 
 import type { EngagementCounts } from '@/hooks/engagement';
 
@@ -214,7 +214,7 @@ export function useFeed({
       const outfits = outfitItems.map(item => item.entity!.outfit);
       let localOutfitImages = new Map<string, string | null>();
       try {
-        localOutfitImages = await batchGetOutfitCoverImages(outfits, 'card');
+        localOutfitImages = await getOutfitCoverImages(outfits, 'card');
       } catch (imgErr) {
         console.error('Failed to load outfit images:', imgErr);
       }
@@ -242,7 +242,7 @@ export function useFeed({
 
               localLookbookImages.set(`${lookbookId}_outfits`, lookbookOutfits);
 
-              const imageUrls = await batchGetOutfitCoverImages(lookbookOutfits, 'card');
+              const imageUrls = await getOutfitCoverImages(lookbookOutfits, 'card');
 
               if (lookbookOutfits.length > 0) {
                 const firstUrl = imageUrls.get(lookbookOutfits[0].id);

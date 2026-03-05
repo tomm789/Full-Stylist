@@ -54,6 +54,15 @@ export {
 // Re-export submission helper
 export { submitWardrobeImage } from './submitWardrobeImage';
 
+// Re-export from tags
+export {
+  type Tag,
+  getTagsForItems,
+} from './tags';
+
+// Re-export from category icons
+export { wardrobeCategoryIconComponents } from './categoryIcons';
+
 // Re-export from diagnostics
 export {
   findOrphanedImages,

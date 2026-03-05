@@ -11,7 +11,7 @@ import { getFullUserProfile } from '@/lib/user';
 import { getUserOutfits } from '@/lib/outfits';
 import { getUserLookbooks } from '@/lib/lookbooks';
 import { supabase } from '@/lib/supabase';
-import { batchGetOutfitCoverImages } from '@/utils/batchImageHelpers';
+import { getOutfitCoverImages } from '@/lib/images';
 
 interface UseUserProfileProps {
   userId: string | undefined;
@@ -87,7 +87,7 @@ async function fetchUserProfileImages(
   // Fetch outfit cover images + lookbook images in parallel
   const [outfitResult, lookbookResult] = await Promise.all([
     outfits.length > 0
-      ? batchGetOutfitCoverImages(outfits, 'card').catch((err) => {
+      ? getOutfitCoverImages(outfits, 'card').catch((err) => {
           console.error('Failed to load outfit images:', err);
           return new Map<string, string | null>();
         })
@@ -126,7 +126,7 @@ async function fetchLookbookImages(
     .filter(Boolean);
 
   try {
-    const firstOutfitImages = await batchGetOutfitCoverImages(firstOutfits, 'card');
+    const firstOutfitImages = await getOutfitCoverImages(firstOutfits, 'card');
     lookbooks.forEach((lookbook) => {
       const firstOutfitId = firstOutfitsByLookbook.get(lookbook.id);
       if (firstOutfitId) {

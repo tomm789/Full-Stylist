@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
-import { getPost } from './posts';
+import { supabase } from '../supabase';
+import { getPost } from '../posts';
 
 export interface Repost {
   id: string;

@@ -9,7 +9,7 @@ import { getFullUserProfile, updateUserProfile } from '@/lib/user';
 import { getUserSettings } from '@/lib/settings';
 import { getFeed, FeedItem } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
-import { batchGetOutfitCoverImages } from '@/utils/batchImageHelpers';
+import { getOutfitCoverImages } from '@/lib/images';
 
 interface UseProfileDataProps {
   userId: string | undefined;
@@ -97,7 +97,7 @@ export function useProfileData({
           .filter(Boolean);
 
         try {
-          localPostImages = await batchGetOutfitCoverImages(outfits, 'card');
+          localPostImages = await getOutfitCoverImages(outfits, 'card');
         } catch (imgErr) {
           console.error('Failed to load post images:', imgErr);
         }

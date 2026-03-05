@@ -8,7 +8,7 @@ import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Cropper, { Area } from 'react-easy-crop';
 import { getCroppedImg } from '@/utils/canvasUtils';
-import { compressImageFile } from '@/utils/image-compression';
+import { compressImageFile } from '@/lib/images/compression';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import type { ThemeColors } from '@/styles/themeColors';

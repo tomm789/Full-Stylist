@@ -21,7 +21,7 @@ import {
   removeRepost,
   hasReposted,
   getRepostCount,
-} from '@/lib/reposts';
+} from '@/lib/engagement/reposts';
 import type {
   EngagementCounts,
   UseEngagementFeedOptions,

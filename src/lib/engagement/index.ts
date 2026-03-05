@@ -25,6 +25,15 @@ export {
   getUserSaves,
 } from './saves';
 
+// Re-export from reposts
+export {
+  type Repost,
+  createRepost,
+  removeRepost,
+  hasReposted,
+  getRepostCount,
+} from './reposts';
+
 // Re-export from comments
 export {
   type Comment,

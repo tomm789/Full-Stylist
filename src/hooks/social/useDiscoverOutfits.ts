@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { FeedItem, Post } from '@/lib/posts';
 import { getPublicOutfits } from '@/lib/outfits/core';
-import { batchGetOutfitCoverImages } from '@/utils/batchImageHelpers';
+import { getOutfitCoverImages } from '@/lib/images';
 
 interface UseDiscoverOutfitsProps {
   limit?: number;
@@ -78,7 +78,7 @@ export function useDiscoverOutfits({
       const newFeed = append ? [...discoverOutfitFeed, ...feedItems] : feedItems;
       setDiscoverOutfitFeed(newFeed);
 
-      const newImageCache = await batchGetOutfitCoverImages(outfits, 'card');
+      const newImageCache = await getOutfitCoverImages(outfits, 'card');
 
       if (append) {
         const mergedImages = new Map(discoverOutfitImages);

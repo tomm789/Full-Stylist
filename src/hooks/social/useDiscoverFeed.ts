@@ -8,7 +8,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getDiscoverFeed, FeedItem } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
-import { batchGetOutfitCoverImages } from '@/utils/batchImageHelpers';
+import { getOutfitCoverImages } from '@/lib/images';
 
 interface UseDiscoverFeedProps {
   userId: string | undefined;
@@ -49,7 +49,7 @@ async function fetchDiscoverPage(
   const outfits = outfitItems.map(item => item.entity!.outfit);
   let newImageCache = new Map<string, string | null>();
   try {
-    newImageCache = await batchGetOutfitCoverImages(outfits, 'card');
+    newImageCache = await getOutfitCoverImages(outfits, 'card');
   } catch (imgErr) {
     console.error('Failed to load discover images:', imgErr);
   }
