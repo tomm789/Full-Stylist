@@ -7,7 +7,7 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SearchFilterBar, SearchResultItem, LoadingSpinner } from '@/components/shared';
-import type { SearchResult, SearchResultType } from '@/hooks/useSearch';
+import type { SearchResult, SearchResultType } from '@/hooks/search';
 
 interface SearchResultsPanelProps {
   searchQuery: string;

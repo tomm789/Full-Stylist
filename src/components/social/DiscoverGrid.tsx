@@ -22,7 +22,7 @@ import { haptics } from '@/utils/haptics';
 import { spacing, typography } from '@/styles';
 import PostGrid, { postGridStyles } from './PostGrid';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 
 interface DiscoverGridProps {

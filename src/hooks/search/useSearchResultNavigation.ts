@@ -6,7 +6,7 @@
 
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import type { SearchResult } from '@/hooks/useSearch';
+import type { SearchResult } from './useSearch';
 
 export function useSearchResultNavigation() {
   const router = useRouter();

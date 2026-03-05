@@ -26,7 +26,7 @@ import { useDayEntries, useSlotPresets, useUserOutfits } from '@/hooks/calendar'
 import { EntryCard } from '@/components/calendar';
 import { LoadingSpinner } from '@/components/shared';
 import { theme } from '@/styles';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing, borderRadius, typography } = theme;
 const SCREEN_HEIGHT = Dimensions.get('window').height;

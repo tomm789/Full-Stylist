@@ -10,7 +10,7 @@ import { generateClothingGrid } from '@/utils/clothing-grid';
 import {
   uploadBase64ImageToStorage,
   uploadBytesToStorage,
-} from '@/lib/utils/image-helpers';
+} from '@/lib/images/helpers';
 import { supabase } from '@/lib/supabase';
 import type { OutfitCanvasLayoutMap } from '@/lib/outfits/canvasLayout';
 

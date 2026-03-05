@@ -20,7 +20,7 @@ import { LoadingSpinner } from '@/components/shared';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { spacing, borderRadius, typography } from '@/styles';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 export default function AccountSettingsScreen() {
   const colors = useThemeColors();

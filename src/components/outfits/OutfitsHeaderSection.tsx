@@ -7,7 +7,7 @@ import { useThemeColors } from '@/contexts/ThemeContext';
 import OutfitsHeaderBar from './OutfitsHeaderBar';
 import OccasionPills from './OccasionPills';
 import type { OutfitsTab } from './OutfitsHeaderBar';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing } = theme;
 

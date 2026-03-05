@@ -9,7 +9,6 @@ export { useImageGeneration } from './useImageGeneration';
 export { useImageEdit } from './useImageEdit';
 export { useOnboarding } from './useOnboarding';
 export { useProfileImages } from './useProfileImages';
-export { useHeadshotDetailActions } from './useHeadshotDetailActions';
 export { useAccountSettings } from './useAccountSettings';
 export { useProfileImageGeneration } from './useProfileImageGeneration';
 export { useNewBodyshot } from './useNewBodyshot';

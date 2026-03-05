@@ -18,7 +18,7 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing } = theme;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');

@@ -24,7 +24,7 @@ import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HeaderAvatarButton from '@/components/shared/layout/HeaderAvatarButton';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing, typography, borderRadius } = theme;
 

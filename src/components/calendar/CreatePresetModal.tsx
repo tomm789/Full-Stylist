@@ -16,7 +16,7 @@ import {
 import { Input, PrimaryButton } from '@/components/shared';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing, borderRadius } = theme;
 

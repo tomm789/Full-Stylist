@@ -7,8 +7,8 @@ import React, { useMemo, useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, interpolate } from 'react-native-reanimated';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
-import type { SearchResult, SearchResultType } from '@/hooks/useSearch';
+import type { ThemeColors } from '@/styles/themeColors';
+import type { SearchResult, SearchResultType } from '@/hooks/search';
 import SearchResultsPanel from './SearchResultsPanel';
 
 interface SearchOverlayProps {

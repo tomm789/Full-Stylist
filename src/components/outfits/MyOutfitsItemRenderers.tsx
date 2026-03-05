@@ -14,7 +14,7 @@ import MyOutfitFeedCard from './MyOutfitFeedCard';
 import { haptics } from '@/utils/haptics';
 import { typography, spacing } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 type GridItemProps = {
   item: OutfitWithRating;

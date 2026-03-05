@@ -12,7 +12,7 @@ import { DETAIL_IMAGE_PROPS } from '@/lib/images';
 import { DropdownMenuModal, DropdownMenuItem } from '@/components/shared/modals';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 import { WardrobeItem } from '@/lib/wardrobe';
 
 const { spacing, borderRadius, typography } = theme;

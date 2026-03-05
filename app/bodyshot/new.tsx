@@ -17,7 +17,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useNewBodyshot } from '@/hooks/profile';
-import PolicyBlockModal from '@/components/PolicyBlockModal';
+import PolicyBlockModal from '@/components/shared/modals/PolicyBlockModal';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
 import { LoadingOverlay } from '@/components/shared';
 import { useThemeColors } from '@/contexts/ThemeContext';

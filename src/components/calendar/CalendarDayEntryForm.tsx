@@ -20,7 +20,7 @@ import { PrimaryButton } from '@/components/shared';
 import { theme } from '@/styles';
 import { CalendarEntry } from '@/lib/calendar';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing, borderRadius } = theme;
 

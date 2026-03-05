@@ -4,7 +4,7 @@
 
 import { StyleSheet } from 'react-native';
 import { theme } from '@/styles';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing, borderRadius, typography, shadows } = theme;
 

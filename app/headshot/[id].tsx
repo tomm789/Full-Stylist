@@ -17,10 +17,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
-import { useHeadshotDetailActions } from '@/hooks/profile';
+import { useHeadshotDetailActions } from '@/hooks/headshot';
 import { getRecentHeadshotJobForImage, getAIJobNoStore } from '@/lib/ai-jobs';
 import { checkFeedbackExistsForJob } from '@/lib/ai-feedback';
-import PolicyBlockModal from '@/components/PolicyBlockModal';
+import PolicyBlockModal from '@/components/shared/modals/PolicyBlockModal';
 import { AIGenerationFeedback } from '@/components/ai';
 import {
   DropdownMenuModal,

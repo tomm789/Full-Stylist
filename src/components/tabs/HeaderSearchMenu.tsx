@@ -25,7 +25,7 @@ import { HeaderRightMenu } from './HeaderRightMenu';
 import HeaderIconButton from '@/components/shared/layout/HeaderIconButton';
 import HeaderTitleRow from './HeaderTitleRow';
 import HeaderSearchPill from './HeaderSearchPill';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 import { usePathname } from 'expo-router';
 import { useNotifications } from '@/contexts/NotificationsContext';
 

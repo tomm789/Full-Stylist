@@ -6,7 +6,7 @@
  */
 
 import { Dimensions, StyleSheet } from 'react-native';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 import { theme } from '@/styles';
 
 export { HAIR_COLOR_SWATCHES, needsLightTextOnColor } from '@/lib/headshot/hairColors';

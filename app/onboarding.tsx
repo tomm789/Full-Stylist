@@ -18,8 +18,8 @@ import {
 import { useImageGeneration } from '@/hooks/profile';
 import { supabase } from '@/lib/supabase';
 import { updateUserSettings } from '@/lib/settings';
-import ErrorModal from '@/components/ErrorModal';
-import PolicyBlockModal from '@/components/PolicyBlockModal';
+import ErrorModal from '@/components/shared/modals/ErrorModal';
+import PolicyBlockModal from '@/components/shared/modals/PolicyBlockModal';
 import { LoadingOverlay } from '@/components/shared';
 
 export default function OnboardingScreen() {

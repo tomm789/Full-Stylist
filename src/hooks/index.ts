@@ -20,17 +20,17 @@ export { useOutfitGeneration } from './outfits/useOutfitGeneration';
 export type { SortOption, SortOrder } from './outfits/useOutfitFilters';
 
 // Search
-export { useSearch } from './useSearch';
-export type { SearchResult, SearchResultType } from './useSearch';
+export { useSearch } from './search/useSearch';
+export type { SearchResult, SearchResultType } from './search/useSearch';
 
 // PWA
 export { useAddToHomeScreenDetection } from './useAddToHomeScreenDetection';
 
 // Find Similar
 export { useFindSimilar } from './useFindSimilar';
-export { useHideHeaderOnScroll } from './useHideHeaderOnScroll';
+export { useHideHeaderOnScroll } from './ui/useHideHeaderOnScroll';
 export { useLookbookSelection } from './lookbooks/useLookbookSelection';
 
 // Edge swipe gesture detection
-export { useEdgeSwipe } from './useEdgeSwipe';
-export type { EdgeSwipeDirection } from './useEdgeSwipe';
+export { useEdgeSwipe } from './ui/useEdgeSwipe';
+export type { EdgeSwipeDirection } from './ui/useEdgeSwipe';

@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 import { WardrobeCategory, WardrobeSubcategory } from '@/lib/wardrobe';
 import PillButton from '@/components/shared/buttons/PillButton';
 import WardrobeCategoryIcon from '@/components/shared/WardrobeCategoryIcon';

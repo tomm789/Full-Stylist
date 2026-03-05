@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { submitAIFeedback, FEEDBACK_TAGS, type FeedbackTag } from '@/lib/ai-feedback';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const FEEDBACK_TAG_VALUES = FEEDBACK_TAGS as readonly string[];
 

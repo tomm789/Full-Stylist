@@ -1,5 +1,5 @@
 import React from 'react';
-import FindSimilarModal from '@/components/FindSimilarModal';
+import FindSimilarModal from '@/components/wardrobe/find-similar/FindSimilarModal';
 import { DropdownMenuItem, DropdownMenuModal } from '@/components/shared/modals';
 
 export type OutfitsAuxModalsProps = {

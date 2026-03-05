@@ -27,15 +27,15 @@ import MirrorCategoryPillsRow from '@/components/headshots/MirrorCategoryPillsRo
 import ShareToFeedModal from '@/components/headshots/ShareToFeedModal';
 import { HeaderTitlePillRow } from '@/components/shared/layout';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
-import PolicyBlockModal from '@/components/PolicyBlockModal';
-import ErrorModal from '@/components/ErrorModal';
+import PolicyBlockModal from '@/components/shared/modals/PolicyBlockModal';
+import ErrorModal from '@/components/shared/modals/ErrorModal';
 import { useHairAndMakeup, type EditTab } from '@/hooks/headshot';
 import { useApplyLook, getPendingApplyLookSnapshot } from '@/hooks/headshot/useApplyLook';
 import { LoadingOverlay } from '@/components/shared/loading';
 import { GENERATION_MESSAGES } from '@/constants/generationMessages';
 import CreatorBar from '@/components/shared/CreatorBar';
 import HeadshotCreatorContainer from '@/components/headshots/HeadshotCreatorContainer';
-import FaceMenuModal from '@/components/hairAndMakeup/FaceMenuModal';
+import FaceMenuModal from '@/components/hair-and-makeup/FaceMenuModal';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,8 +44,7 @@ import { useRouter } from 'expo-router';
 import { theme } from '@/styles';
 import { createCommonStyles } from '@/styles/commonStyles';
 import { createStyles } from '@/styles/hairAndMakeupStyles';
-import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
-import { useHideHeaderOnScroll } from '@/hooks/useHideHeaderOnScroll';
+import { useEdgeSwipe, useHideHeaderOnScroll } from '@/hooks/ui';
 import { useKeyboardInsets } from '@/hooks/ui/useKeyboardInsets';
 
 const { spacing } = theme;

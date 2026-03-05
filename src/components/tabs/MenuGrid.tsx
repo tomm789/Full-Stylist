@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text as RNText, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { MenuItem } from './FullScreenMenuModal';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 import { createStyles } from './FullScreenMenuModal.styles';
 
 interface MenuGridProps {

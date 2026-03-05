@@ -12,7 +12,7 @@ import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { ThemedBottomSheet } from '@/components/shared';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing, borderRadius, typography } = theme;
 

@@ -10,7 +10,7 @@ import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import HeaderTitleRow from '@/components/tabs/HeaderTitleRow';
 import HeaderActionPill from './HeaderActionPill';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing } = theme;
 

@@ -10,9 +10,9 @@ import { NotificationsProvider } from '@/contexts/NotificationsContext';
 import { CalendarEntryFlowProvider } from '@/contexts/CalendarEntryFlowContext';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { AddToHomeScreenBanner } from '@/components/AddToHomeScreenBanner';
-import { useBiometricAuth } from '@/hooks/useBiometricAuth';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { AddToHomeScreenBanner } from '@/components/shared/banners/AddToHomeScreenBanner';
+import { useBiometricAuth } from '@/hooks/auth';
+import { usePushNotifications } from '@/hooks/notifications';
 import BiometricLockScreen from '@/components/auth/BiometricLockScreen';
 
 export default function RootLayout() {

@@ -8,8 +8,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { showErrorToast } from '@/utils/toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useImageEdit } from './useImageEdit';
-import { useImageGeneration } from './useImageGeneration';
+import { useImageEdit } from '../profile/useImageEdit';
+import { useImageGeneration } from '../profile/useImageGeneration';
 import {
   triggerHeadshotGenerate,
   triggerAIJobExecution,

@@ -29,7 +29,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 import { theme } from '@/styles';
 import { supabase } from '@/lib/supabase';
 import { useDrawModeLogic } from '@/hooks/headshot/useDrawModeLogic';

@@ -10,7 +10,7 @@ import PrimaryButton from '../buttons/PrimaryButton';
 import { theme } from '@/styles';
 import { createCommonStyles } from '@/styles/commonStyles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing, typography } = theme;
 

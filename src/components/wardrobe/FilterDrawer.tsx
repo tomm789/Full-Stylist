@@ -9,7 +9,7 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { ThemedBottomSheet, PrimaryButton, FilterPillGroup, FilterAccordionSection } from '@/components/shared';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 import type { FilterState, AvailableEntityAttribute } from '@/hooks/wardrobe';
 import { WardrobeSubcategory } from '@/lib/wardrobe';
 

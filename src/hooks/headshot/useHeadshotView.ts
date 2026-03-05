@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useAuth } from '@/contexts/AuthContext';
 import { resolveImageUrls } from '@/lib/outfits/sessions';
-import { deleteImage } from '@/lib/utils/image-helpers';
+import { deleteImage } from '@/lib/images/helpers';
 import { getVariationByImageId } from '@/lib/headshot/generation';
 import type { HeadshotGenerationVariation } from '@/lib/headshot/generation';
 import { useActiveHeadshotActions } from './useActiveHeadshotActions';

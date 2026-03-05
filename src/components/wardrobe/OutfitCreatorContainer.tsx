@@ -12,7 +12,7 @@ import { ImagePlaceholder, WardrobeCategoryIcon } from '@/components/shared';
 import HeadshotSelectorCard from './HeadshotSelectorCard';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 import { WardrobeCategory } from '@/lib/wardrobe';
 
 const { spacing, borderRadius } = theme;

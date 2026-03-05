@@ -5,7 +5,7 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useFloatingTabBar } from '@/contexts/FloatingTabBarContext';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { borderRadius, shadows, spacing, typography } from '@/styles/theme';
+import { borderRadius, shadows, spacing, typography } from '@/styles/themeConfig';
 import { haptics } from '@/utils/haptics';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 

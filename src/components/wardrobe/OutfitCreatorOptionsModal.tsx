@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from 'react-native';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing, borderRadius, typography } = theme;
 

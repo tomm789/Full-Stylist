@@ -10,7 +10,7 @@ import { createCalendarEntry, deleteCalendarEntry, getOutfitScheduledDates, Cale
 import { theme } from '@/styles';
 import { PrimaryButton, ScheduleCalendar } from '@/components/shared';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing } = theme;
 

@@ -16,7 +16,7 @@ import { WardrobeCategory, WardrobeItem } from '@/lib/wardrobe';
 import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 import WardrobeCategoryIcon from '@/components/shared/WardrobeCategoryIcon';
 
 const { spacing, borderRadius, typography } = theme;

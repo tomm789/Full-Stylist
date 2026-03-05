@@ -18,12 +18,12 @@ import { Image as ExpoImage } from 'expo-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { showSuccessToast } from '@/utils/toast';
 import { useImageGeneration } from '@/hooks/profile';
-import PolicyBlockModal from '@/components/PolicyBlockModal';
-import ErrorModal from '@/components/ErrorModal';
+import PolicyBlockModal from '@/components/shared/modals/PolicyBlockModal';
+import ErrorModal from '@/components/shared/modals/ErrorModal';
 import { Header, HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layout';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing, borderRadius, typography } = theme;
 

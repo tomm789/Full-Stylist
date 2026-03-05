@@ -18,7 +18,7 @@ import { LoadingSpinner, EmptyState } from '@/components/shared';
 import { Header, HeaderActionButton, HeaderIconButton } from '@/components/shared/layout';
 import { createCommonStyles } from '@/styles/commonStyles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 export default function FeedbackListScreen() {
   const colors = useThemeColors();

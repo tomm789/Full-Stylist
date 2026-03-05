@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { borderRadius, spacing, typography, shadows } from '@/styles/theme';
-import type { ThemeColors } from '@/styles/themes';
+import { borderRadius, spacing, typography, shadows } from '@/styles/themeConfig';
+import type { ThemeColors } from '@/styles/themeColors';
 
 export const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {

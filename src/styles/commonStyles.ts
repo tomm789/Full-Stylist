@@ -4,8 +4,8 @@
  */
 
 import { StyleSheet } from 'react-native';
-import { theme } from './theme';
-import type { ThemeColors } from './themes';
+import { theme } from './themeConfig';
+import type { ThemeColors } from './themeColors';
 
 const { colors, spacing, borderRadius, typography, shadows, layout } = theme;
 

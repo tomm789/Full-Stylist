@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { showErrorToast } from '@/utils/toast';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { uriToBlob } from '@/lib/utils/image-helpers';
+import { uriToBlob } from '@/lib/images/helpers';
 
 export function useImagePicker() {
   const [uploadedUri, setUploadedUri] = useState<string | null>(null);

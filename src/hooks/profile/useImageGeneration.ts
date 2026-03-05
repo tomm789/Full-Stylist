@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { Platform } from 'react-native';
-import { uploadAndCreateImage } from '@/lib/utils/image-helpers';
+import { uploadAndCreateImage } from '@/lib/images/helpers';
 import { showErrorToast } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
 import { updateUserProfile } from '@/lib/user';

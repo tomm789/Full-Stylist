@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme, typography, spacing } from '@/styles';
 import { SearchBar } from '@/components/shared';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 export type OutfitsTab = 'my_outfits' | 'explore' | 'following' | 'lookbooks' | `lookbook_${string}`;
 

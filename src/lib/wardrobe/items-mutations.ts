@@ -5,7 +5,7 @@
 
 import { supabase } from '../supabase';
 import { QueryResult, QueryListResult } from '../utils/supabase-helpers';
-import { batchUploadImages } from '../utils/image-helpers';
+import { batchUploadImages } from '../images/helpers';
 import { WardrobeItem } from './items-types';
 import { getDefaultWardrobeId } from './items-queries';
 

@@ -14,7 +14,7 @@ import {
 import { theme } from '@/styles';
 import { SortOption, SortOrder } from '@/hooks/outfits';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing, typography } = theme;
 

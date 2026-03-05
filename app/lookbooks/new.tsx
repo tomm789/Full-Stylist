@@ -10,7 +10,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useNewLookbook } from '@/hooks/lookbooks';
 import { OutfitGridSelector } from '@/components/lookbooks';
-import FilterDefinitionEditor from '@/components/FilterDefinitionEditor';
+import FilterDefinitionEditor from '@/components/lookbooks/FilterDefinitionEditor';
 import { Header, HeaderActionButton, HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layout';
 
 export default function NewLookbookScreen() {

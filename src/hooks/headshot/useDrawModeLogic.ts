@@ -16,7 +16,7 @@ import { Gesture } from 'react-native-gesture-handler';
 import type React from 'react';
 
 import { supabase } from '@/lib/supabase';
-import { uploadBase64ImageToStorage } from '@/lib/utils/image-helpers';
+import { uploadBase64ImageToStorage } from '@/lib/images/helpers';
 import {
   saveDrawingTemplate,
   listDrawingTemplates,

@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { updateUserProfile } from '@/lib/user';
-import { uploadImageToStorage } from '@/lib/utils/image-helpers';
+import { uploadImageToStorage } from '@/lib/images/helpers';
 import { supabase } from '@/lib/supabase';
 import { showSuccessToast, showErrorToast } from '@/utils/toast';
 

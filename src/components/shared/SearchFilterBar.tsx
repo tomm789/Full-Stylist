@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SearchResultType } from '@/hooks/useSearch';
+import { SearchResultType } from '@/hooks/search';
 
 interface SearchFilterBarProps {
   selectedFilter: SearchResultType | 'all';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlatList, RefreshControl, StyleSheet, ViewStyle } from 'react-native';
 import { spacing, layout, typography } from '@/styles';
-import { lightColors } from '@/styles/themes';
+import { lightColors } from '@/styles/themeColors';
 
 export const postGridStyles = StyleSheet.create({
   gridList: {

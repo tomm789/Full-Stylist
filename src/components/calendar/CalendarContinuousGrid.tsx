@@ -18,7 +18,7 @@ import { CalendarEntry } from '@/lib/calendar';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { CALENDAR_CONFIG } from '@/lib/calendar/config';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing } = theme;
 

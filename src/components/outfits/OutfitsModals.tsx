@@ -14,7 +14,7 @@ import { SlideshowModal } from '@/components/lookbooks';
 import LookbookPickerModal from '@/components/lookbooks/LookbookPickerModal';
 import { typography, spacing, borderRadius } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 type OutfitsModalsProps = {
   showSortModal: boolean;

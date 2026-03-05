@@ -9,7 +9,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { uploadBase64ImageToStorage } from '@/lib/utils/image-helpers';
+import { uploadBase64ImageToStorage } from '@/lib/images/helpers';
 import { generateClothingGrid } from '@/utils/clothing-grid';
 import type { WardrobeItem } from '@/lib/wardrobe';
 

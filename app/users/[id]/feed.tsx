@@ -22,7 +22,7 @@ import { theme } from '@/styles';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 export default function UserFeedScreen() {
   const colors = useThemeColors();

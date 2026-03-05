@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { layout, spacing, borderRadius } from '@/styles/theme';
+import { layout, spacing, borderRadius } from '@/styles/themeConfig';
 import { useTheme } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 type DropdownMenuModalProps = {
   visible: boolean;

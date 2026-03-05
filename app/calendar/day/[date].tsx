@@ -41,7 +41,7 @@ import {
 import { LoadingSpinner } from '@/components/shared';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 import type { CalendarEntry } from '@/lib/calendar';
 
 const { spacing, borderRadius, typography } = theme;

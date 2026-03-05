@@ -19,7 +19,7 @@ import { GRID_IMAGE_PROPS } from '@/lib/images';
 import { postGridStyles } from '@/components/social/PostGrid';
 import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 import { haptics } from '@/utils/haptics';
 
 const { spacing, typography } = theme;

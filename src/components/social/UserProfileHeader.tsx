@@ -22,7 +22,7 @@ import { LoadingSpinner, EmptyState } from '@/components/shared';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import { createCommonStyles } from '@/styles/commonStyles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 /** Header component for user profile; accepts profile + stats and renders via ProfileHeader */
 export function UserProfileHeader({

@@ -65,13 +65,26 @@ Do NOT: <any constraints>
 ```
 
 ## Project Structure
-- `/src/` — main source code
-- `/src/components/` — reusable UI components
-- `/src/screens/` — screen-level components
-- `/src/navigation/` — navigation configuration
-- `/src/services/` — API and business logic
-- `/src/hooks/` — custom React hooks
-- `/src/utils/` — utility functions
+- `/app/` — Expo Router file-based routes
+- `/src/components/` — reusable UI components (grouped by feature domain)
+- `/src/hooks/` — custom React hooks (grouped by feature domain)
+- `/src/lib/` — data access, API calls, business logic (no React hooks or JSX)
+- `/src/utils/` — pure, framework-agnostic utility functions
+- `/src/styles/` — theme config (`themeConfig.ts`), colour palettes (`themeColors.ts`), shared styles
+- `/src/contexts/` — React context providers
+- `/src/constants/` — app-wide constants
+- `/docs/archive/` — historical planning/task docs from optimisation project
+
+### Hook subdirectories
+`auth/`, `calendar/`, `engagement/`, `feedback/`, `headshot/`, `listings/`, `lookbooks/`, `notifications/`, `outfits/`, `profile/`, `search/`, `social/`, `tabs/`, `ui/`, `wardrobe/`
+
+### Boundary Rules (enforced)
+| Directory | Rule |
+|---|---|
+| `src/lib/` | No React hooks (`use*`) or JSX — pure data/business logic only |
+| `src/hooks/` | No direct Supabase calls — use `lib/` functions |
+| `src/components/` | UI components only — no screen-level components at root |
+| `src/utils/` | No React, no Supabase — pure helpers only |
 
 ## Key Commands
 ```bash

@@ -11,7 +11,7 @@ import { theme } from '@/styles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { useCalendarEntryFlow } from '@/contexts/CalendarEntryFlowContext';
 import HeaderTitleRow from './HeaderTitleRow';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing } = theme;
 

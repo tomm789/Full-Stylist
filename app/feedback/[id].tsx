@@ -17,7 +17,7 @@ import { CommentInput, ThreadHeader, CommentsList } from '@/components/feedback'
 import { Header, HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layout';
 import { createCommonStyles } from '@/styles/commonStyles';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 export default function FeedbackThreadDetailScreen() {
   const colors = useThemeColors();

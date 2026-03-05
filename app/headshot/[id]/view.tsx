@@ -15,7 +15,7 @@ import { EdgePeekSlider } from '@/components/shared';
 import HeadshotSlideItem from '@/components/headshots/HeadshotSlideItem';
 import HeadshotPromptSettings from '@/components/headshots/HeadshotPromptSettings';
 import ShareToFeedModal from '@/components/headshots/ShareToFeedModal';
-import FaceMenuModal from '@/components/hairAndMakeup/FaceMenuModal';
+import FaceMenuModal from '@/components/hair-and-makeup/FaceMenuModal';
 import NavigationSlider from '@/components/wardrobe/NavigationSlider';
 import { Header, HeaderIconButton } from '@/components/shared/layout';
 import { FullscreenImageModal } from '@/components/shared/modals';

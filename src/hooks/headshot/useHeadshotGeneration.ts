@@ -13,7 +13,7 @@ import {
   type HeadshotGenerationVariation,
 } from '@/lib/headshot/generation';
 import { buildHairMakeupPrompt } from '@/lib/headshot/hairMakeupPrompt';
-import { uploadBase64ImageToStorage } from '@/lib/utils/image-helpers';
+import { uploadBase64ImageToStorage } from '@/lib/images/helpers';
 import {
   triggerAIJobExecution,
   waitForAIJobCompletion,

@@ -7,7 +7,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { SearchResult } from '@/hooks/useSearch';
+import { SearchResult } from '@/hooks/search';
 
 interface SearchResultItemProps {
   result: SearchResult;

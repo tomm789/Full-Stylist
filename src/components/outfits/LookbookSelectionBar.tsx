@@ -12,7 +12,7 @@ import { typography, spacing } from '@/styles';
 import { LookbookCreatorPanel } from '@/components/lookbooks';
 import { CreatorBar } from '@/components/shared';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const CREATOR_BAR_HEIGHT = 60;
 

@@ -7,7 +7,7 @@ import React from 'react';
 import { FlatList, Platform, StyleSheet, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
-import { useEdgeSwipe } from '@/hooks/useEdgeSwipe';
+import { useEdgeSwipe } from '@/hooks/ui';
 
 type RenderItemProps<T> = {
   item: T;

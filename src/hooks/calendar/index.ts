@@ -8,3 +8,4 @@ export { useDayEntries } from './useDayEntries';
 export { useSlotPresets } from './useSlotPresets';
 export { useUserOutfits } from './useUserOutfits';
 export { useCalendarDayForm } from './useCalendarDayForm';
+export { useMonthCarousel } from './useMonthCarousel';

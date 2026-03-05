@@ -14,7 +14,7 @@ import { runDescriptionMessageDrip } from '@/lib/outfits/outfitDescriptionMessag
 import { getUserSettings } from '@/lib/settings';
 import { startTimeline } from '@/lib/perf/timeline';
 import { generateAndUploadGrid } from '@/lib/outfits/generateAndUploadGrid';
-import { useDescriptionPolling } from '@/lib/outfits/useDescriptionPolling';
+import { useDescriptionPolling } from './useDescriptionPolling';
 import { useItemRevealAnimation } from '@/hooks/outfits/useItemRevealAnimation';
 import { useOutfitRenderJob } from '@/hooks/outfits/useOutfitRenderJob';
 import {

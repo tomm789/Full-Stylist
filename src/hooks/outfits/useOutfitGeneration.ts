@@ -19,7 +19,7 @@ import { PERF_MODE } from '@/lib/perf/perfMode';
 import { toDataUri } from '@/lib/images/dataUri';
 import type { OutfitCanvasLayoutMap, OutfitCanvasTrimMap } from '@/lib/outfits/canvasLayout';
 import { generateAndUploadGrid } from '@/lib/outfits/generateAndUploadGrid';
-import { useDescriptionPolling } from '@/lib/outfits/useDescriptionPolling';
+import { useDescriptionPolling } from './useDescriptionPolling';
 import { useItemRevealAnimation } from '@/hooks/outfits/useItemRevealAnimation';
 import { useOutfitRenderJob } from '@/hooks/outfits/useOutfitRenderJob';
 import {

@@ -12,8 +12,8 @@ import { useThemeColors } from '@/contexts/ThemeContext';
 import { HeaderSearchProvider } from '@/contexts/HeaderSearchContext';
 import { TabSearchProvider } from '@/contexts/TabSearchContext';
 import { useTabMenuItems } from '@/hooks/tabs/useTabMenuItems';
-import { spacing } from '@/styles/theme';
-import type { ThemeColors } from '@/styles/themes';
+import { spacing } from '@/styles/themeConfig';
+import type { ThemeColors } from '@/styles/themeColors';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 export default function TabsLayout() {

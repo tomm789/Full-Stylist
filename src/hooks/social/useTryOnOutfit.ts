@@ -10,7 +10,7 @@ import { getOutfit, saveOutfit } from '@/lib/outfits';
 import { getOutfitRenderItemLimit } from '@/lib/ai-jobs';
 import { supabase } from '@/lib/supabase';
 import { getWardrobeCategories, getWardrobeItemsByIds } from '@/lib/wardrobe';
-import { createImageRecord, uploadAndCreateImage } from '@/lib/utils/image-helpers';
+import { createImageRecord, uploadAndCreateImage } from '@/lib/images/helpers';
 import { useOutfitRenderJob } from '@/hooks/outfits/useOutfitRenderJob';
 
 interface UseTryOnOutfitProps {

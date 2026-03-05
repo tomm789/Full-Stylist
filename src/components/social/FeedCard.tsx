@@ -11,7 +11,7 @@ import { FeedItem } from '@/lib/posts';
 import { theme } from '@/styles';
 import { formatTimestamp } from '@/utils/formatUtils';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 
 const { spacing, typography } = theme;
 

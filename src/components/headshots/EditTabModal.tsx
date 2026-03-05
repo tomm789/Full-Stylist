@@ -22,9 +22,9 @@ import { createStyles } from '@/styles/hairAndMakeupStyles';
 import { HAIR_COLOR_SWATCHES } from '@/lib/headshot/hairColors';
 import { PillButton } from '@/components/shared';
 import HairLengthSlider from '@/components/headshots/HairLengthSlider';
-import PresetGridTile from '@/components/hairAndMakeup/PresetGridTile';
-import ColorPresetTile from '@/components/hairAndMakeup/ColorPresetTile';
-import SubcategoryPillSelector from '@/components/hairAndMakeup/SubcategoryPillSelector';
+import PresetGridTile from '@/components/hair-and-makeup/PresetGridTile';
+import ColorPresetTile from '@/components/hair-and-makeup/ColorPresetTile';
+import SubcategoryPillSelector from '@/components/hair-and-makeup/SubcategoryPillSelector';
 import AdvancedFieldsPanel from '@/components/headshots/AdvancedFieldsPanel';
 import {
   ACCESSORY_SUBCATEGORIES,

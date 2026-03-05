@@ -18,7 +18,7 @@ import {
   JEWELLERY_SUBCATEGORIES,
 } from '@/lib/headshot/hairAndMakeupTypes';
 import type { HeadshotGenerationVariation } from '@/lib/headshot/generation';
-import type { ThemeColors } from '@/styles/themes';
+import type { ThemeColors } from '@/styles/themeColors';
 import { theme } from '@/styles';
 
 const { spacing, borderRadius, typography } = theme;

@@ -8,7 +8,7 @@ import { Alert, Platform, Share } from 'react-native';
 import { showErrorToast } from '@/utils/toast';
 import { useCallback } from 'react';
 import * as FileSystem from 'expo-file-system/legacy';
-import { deleteImage } from '@/lib/utils/image-helpers';
+import { deleteImage } from '@/lib/images/helpers';
 import { updateHeadshotGenerationVariation } from '@/lib/headshot/generation';
 
 export type UseHeadshotImageActionsParams = {
