@@ -1,7 +1,7 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import { showSuccessToast } from '@/utils/toast';
-import ItemDetailModal from '@/components/wardrobe/ItemDetailModal';
+import ItemDetailSheet from '@/components/wardrobe/ItemDetailSheet';
 import OutfitCreatorOptionsModal from '@/components/wardrobe/OutfitCreatorOptionsModal';
 import HeadshotSelectorModal from '@/components/wardrobe/HeadshotSelectorModal';
 import WardrobeCameraOverlay from '@/components/wardrobe/WardrobeCameraOverlay';
@@ -9,16 +9,17 @@ import WardrobeCameraOverlay from '@/components/wardrobe/WardrobeCameraOverlay';
 interface WardrobeModalStackProps {
   activeTab: string;
 
-  // Item Detail Modal
+  // Item Detail Sheet
   showItemModal: boolean;
   selectedItem: any;
   imageCache: Map<string, string>;
   userId: string | undefined;
+  itemIds: string[];
   onCloseItemModal: () => void;
   onItemAddToOutfit: (item: any) => void;
-  onItemOpenDetail: () => void;
   onItemEdit: () => void;
   onItemDelete: () => void;
+  onChangeItem: (itemId: string) => void;
 
   // Creator Options Modal
   showCreatorOptionsModal: boolean;
@@ -45,11 +46,12 @@ export default function WardrobeModalStack({
   selectedItem,
   imageCache,
   userId,
+  itemIds,
   onCloseItemModal,
   onItemAddToOutfit,
-  onItemOpenDetail,
   onItemEdit,
   onItemDelete,
+  onChangeItem,
   showCreatorOptionsModal,
   onCloseCreatorOptionsModal,
   onCreatorExpand,
@@ -66,21 +68,24 @@ export default function WardrobeModalStack({
   return (
     <>
       {activeTab === 'my' && (
-        <ItemDetailModal
+        <ItemDetailSheet
           visible={showItemModal}
           onClose={onCloseItemModal}
           item={selectedItem}
           imageUrl={selectedItem ? imageCache.get(selectedItem.id) || null : null}
           isOwner={Boolean(userId && selectedItem && selectedItem.owner_user_id === userId)}
+          itemIds={itemIds}
+          imageCache={imageCache}
+          userId={userId}
           onAddToOutfit={() => {
             if (!selectedItem) return;
             onItemAddToOutfit(selectedItem);
             onCloseItemModal();
             showSuccessToast('Added to outfit. Tip: Long hold an item to add it to your outfit.');
           }}
-          onOpenDetail={onItemOpenDetail}
           onEdit={onItemEdit}
           onDelete={onItemDelete}
+          onChangeItem={onChangeItem}
         />
       )}
 

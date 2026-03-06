@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   CalendarEntry,
@@ -27,6 +27,11 @@ export function useOutfitSchedule({
   outfitIds,
   statusLabels,
 }: UseOutfitScheduleParams) {
+  // Stabilize outfitIds so the reference doesn't change on every render
+  const outfitIdsKey = useMemo(() => [...outfitIds].sort().join(','), [outfitIds]);
+  const stableOutfitIds = useRef(outfitIds);
+  stableOutfitIds.current = outfitIds;
+
   const [scheduleByOutfitId, setScheduleByOutfitId] = useState<Map<string, ScheduleRecord>>(
     new Map()
   );
@@ -52,8 +57,9 @@ export function useOutfitSchedule({
   );
 
   const loadSchedules = useCallback(async () => {
-    if (!userId || outfitIds.length === 0) {
-      setScheduleByOutfitId(new Map());
+    const ids = stableOutfitIds.current;
+    if (!userId || ids.length === 0) {
+      setScheduleByOutfitId((prev) => (prev.size === 0 ? prev : new Map()));
       return;
     }
 
@@ -61,7 +67,7 @@ export function useOutfitSchedule({
       const { data, error } = await supabase
         .from('calendar_entries')
         .select('id,outfit_id,status,calendar_day:calendar_days!calendar_day_id(date, owner_user_id)')
-        .in('outfit_id', outfitIds);
+        .in('outfit_id', ids);
 
       if (error) {
         console.error('Failed to load outfit schedules:', error);
@@ -90,7 +96,7 @@ export function useOutfitSchedule({
     } catch (error) {
       console.error('Failed to load outfit schedules:', error);
     }
-  }, [outfitIds, userId]);
+  }, [outfitIdsKey, userId]);
 
   const addEntry = useCallback(
     async (entry: {

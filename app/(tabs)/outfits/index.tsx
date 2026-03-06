@@ -338,7 +338,7 @@ export default function OutfitsScreen() {
 
   React.useEffect(() => {
     modals.setFollowStatuses(feedFollowStatuses);
-  }, [feedFollowStatuses, modals]);
+  }, [feedFollowStatuses]);
 
   const handleSwitchToFeed = useCallback(() => {
     setHeaderVisible(true);

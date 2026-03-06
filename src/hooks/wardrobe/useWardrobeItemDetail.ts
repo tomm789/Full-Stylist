@@ -40,7 +40,7 @@ export function useWardrobeItemDetail({ itemId, userId }: UseWardrobeItemDetailP
     activeImageId,
     attributes: data.attributes,
     tags: data.tags,
-    loading: cache.loading,
+    loading: cache.dataLoading,
     isGeneratingProductShot: jobs.isGeneratingProductShot,
     isGeneratingDetails: !!jobs.generateJobId && jobs.isGeneratingProductShot,
     generationFailed: jobs.generationFailed,

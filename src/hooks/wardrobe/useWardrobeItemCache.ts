@@ -47,6 +47,7 @@ interface UseWardrobeItemCacheProps {
 
 export interface WardrobeItemCacheState {
   loading: boolean;
+  dataLoading: boolean;
   initialImageDataUri: string | null;
   initialTitle: string | null;
   initialDescription: string | null;
@@ -71,6 +72,7 @@ export function useWardrobeItemCache({
   jobControlsRef,
 }: UseWardrobeItemCacheProps): WardrobeItemCacheState {
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [initialImageDataUri, setInitialImageDataUri] = useState<string | null>(null);
   const [initialTitle, setInitialTitle] = useState<string | null>(null);
   const [initialDescription, setInitialDescription] = useState<string | null>(null);
@@ -85,12 +87,14 @@ export function useWardrobeItemCache({
 
     if (!itemId || !userId) {
       setLoading(false);
+      setDataLoading(false);
       return () => {
         cancelled = true;
       };
     }
 
     setLoading(true);
+    setDataLoading(true);
 
     const pending = getPendingItemJob(itemId);
     if (pending) {
@@ -140,6 +144,7 @@ export function useWardrobeItemCache({
 
       if (!cancelled) {
         setLoading(false);
+        setDataLoading(false);
       }
     } else if (!pending) {
       // No generation cache — check for grid preview data (item + cover image)
@@ -150,6 +155,7 @@ export function useWardrobeItemCache({
           setInitialImageDataUri(preview.imageUrl);
         }
         setLoading(false);
+        setDataLoading(false);
         // loadItemData() still runs below to fetch full data (images, attrs, tags)
       } else if (!cancelled) {
         // No cache, no preview, no pending job — clear initial state
@@ -166,6 +172,8 @@ export function useWardrobeItemCache({
 
     void data.loadItemData().then(async () => {
       if (cancelled) return;
+      // Item data is now renderable — clear dataLoading before job checks
+      setDataLoading(false);
 
       try {
         logWardrobeAddTiming('load_item_data_completion', { itemId });
@@ -338,6 +346,7 @@ export function useWardrobeItemCache({
 
   return {
     loading,
+    dataLoading,
     initialImageDataUri,
     initialTitle,
     initialDescription,

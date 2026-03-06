@@ -1,7 +1,10 @@
 import React from 'react';
 import {
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
   type ScrollViewProps,
@@ -9,7 +12,16 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+
+let KBScrollView: React.ComponentType<any> = ScrollView;
+try {
+  const mod = require('react-native-keyboard-controller');
+  if (mod?.KeyboardAwareScrollView) {
+    KBScrollView = mod.KeyboardAwareScrollView;
+  }
+} catch {
+  // Native module not available (Expo Go) — use ScrollView fallback
+}
 
 type KeyboardAwareScreenProps = {
   children: React.ReactNode;
@@ -36,8 +48,8 @@ export default function KeyboardAwareScreen({
 }: KeyboardAwareScreenProps) {
   const insets = useSafeAreaInsets();
 
-  const body = scrollEnabled ? (
-    <KeyboardAwareScrollView
+  const scrollContent = scrollEnabled ? (
+    <KBScrollView
       style={[styles.flex, scrollViewStyle]}
       contentContainerStyle={[
         contentContainerStyle,
@@ -48,11 +60,23 @@ export default function KeyboardAwareScreen({
       keyboardDismissMode={keyboardDismissMode}
     >
       {children}
-    </KeyboardAwareScrollView>
+    </KBScrollView>
   ) : (
     <View style={[styles.flex, contentContainerStyle, { paddingBottom: insets.bottom + bottomSpacer }]}>
       {children}
     </View>
+  );
+
+  // Wrap in KeyboardAvoidingView when using the ScrollView fallback
+  const body = KBScrollView === ScrollView ? (
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      {scrollContent}
+    </KeyboardAvoidingView>
+  ) : (
+    scrollContent
   );
 
   return (

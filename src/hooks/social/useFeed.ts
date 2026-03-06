@@ -3,7 +3,7 @@
  * Load and cache feed items with images and engagement counts
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFeed, FeedItem } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
@@ -322,14 +322,18 @@ export function useFeed({
     [data?.engagementCounts]
   );
 
+  // Stable empty fallbacks to avoid creating new references each render
+  const emptyFeed = useRef<FeedItem[]>([]).current;
+  const emptyMap = useRef(new Map()).current;
+
   return {
-    feed: data?.feed ?? [],
-    outfitImages: data?.outfitImages ?? new Map(),
-    lookbookImages: data?.lookbookImages ?? new Map(),
-    headshotImages: data?.headshotImages ?? new Map(),
+    feed: data?.feed ?? emptyFeed,
+    outfitImages: data?.outfitImages ?? emptyMap,
+    lookbookImages: data?.lookbookImages ?? emptyMap,
+    headshotImages: data?.headshotImages ?? emptyMap,
     engagementCounts: mergedEngagement,
     setEngagementCounts,
-    followStatuses: data?.followStatuses ?? new Map(),
+    followStatuses: data?.followStatuses ?? emptyMap,
     loading: isLoading,
     refresh,
   };

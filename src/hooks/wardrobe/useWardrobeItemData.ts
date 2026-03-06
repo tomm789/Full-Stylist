@@ -3,7 +3,7 @@
  * Load and refresh wardrobe item data (item, category, images, attributes, tags)
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   getWardrobeItem,
   getWardrobeItemImages,
@@ -49,6 +49,16 @@ export function useWardrobeItemData({
   >([]);
   const [attributes, setAttributes] = useState<any[]>([]);
   const [tags, setTags] = useState<Array<{ id: string; name: string }>>([]);
+
+  // Reset all state when itemId changes to prevent stale data from previous item
+  useEffect(() => {
+    setItem(null);
+    setCategory(null);
+    setAllImages([]);
+    setDisplayImages([]);
+    setAttributes([]);
+    setTags([]);
+  }, [itemId]);
 
   const refreshImages = useCallback(async () => {
     if (!itemId) return;
