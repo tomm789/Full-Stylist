@@ -3,8 +3,9 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, FlatList, TouchableOpacity } from 'react-native';
+import { Dimensions, View, FlatList, TouchableOpacity } from 'react-native';
 import { Text } from 'react-native';
+import { theme } from '@/styles';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/contexts/ThemeContext';
@@ -16,6 +17,19 @@ type GridViewProps = {
   loading: boolean;
   onSelect: (headshot: Headshot) => void;
 };
+
+const NUM_COLUMNS = 3;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const GRID_PADDING = theme.spacing.lg; // gridContent padding
+const COLUMN_GAP = theme.spacing.md; // columnWrapper gap
+const ITEM_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - COLUMN_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
+const ROW_HEIGHT = ITEM_WIDTH + theme.spacing.md; // square item (aspectRatio: 1) + marginBottom
+
+const getItemLayout = (_data: unknown, index: number) => ({
+  length: ROW_HEIGHT,
+  offset: ROW_HEIGHT * Math.floor(index / NUM_COLUMNS),
+  index,
+});
 
 export function GridView({ headshots, currentHeadshotId, loading, onSelect }: GridViewProps) {
   const colors = useThemeColors();
@@ -66,6 +80,7 @@ export function GridView({ headshots, currentHeadshotId, loading, onSelect }: Gr
       maxToRenderPerBatch={4}
       windowSize={5}
       numColumns={3}
+      getItemLayout={getItemLayout}
       columnWrapperStyle={styles.columnWrapper}
       contentContainerStyle={styles.gridContent}
       scrollEnabled

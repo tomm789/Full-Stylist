@@ -11,7 +11,7 @@ import { getLookbook } from '@/lib/lookbooks';
 import { getUserOutfits } from '@/lib/outfits';
 import { isFollowing } from '@/lib/user';
 import { getRepostCount, hasReposted } from '@/lib/engagement/reposts';
-import { getOutfitCoverImages } from '@/lib/images';
+import { getOutfitCoverImages, prefetchImages } from '@/lib/images';
 
 import type { EngagementCounts } from '@/hooks/engagement';
 
@@ -297,6 +297,13 @@ export function useFeed({
       setEngagementOverrides({});
     }
   }, [data]);
+
+  // Prefetch off-screen outfit images for smoother scrolling
+  useEffect(() => {
+    if (!data?.outfitImages || data.outfitImages.size === 0) return;
+    const urls = Array.from(data.outfitImages.values()).slice(8);
+    prefetchImages(urls);
+  }, [data?.outfitImages]);
 
   const refresh = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey });

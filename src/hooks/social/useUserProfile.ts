@@ -5,13 +5,13 @@
  * images load in a dependent second query without blocking the UI.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFullUserProfile } from '@/lib/user';
 import { getUserOutfits } from '@/lib/outfits';
 import { getUserLookbooks } from '@/lib/lookbooks';
 import { supabase } from '@/lib/supabase';
-import { getOutfitCoverImages } from '@/lib/images';
+import { getOutfitCoverImages, prefetchImages } from '@/lib/images';
 
 interface UseUserProfileProps {
   userId: string | undefined;
@@ -170,6 +170,16 @@ export function useUserProfile({
     enabled: imageQueryEnabled,
     staleTime: 1000 * 60 * 3,
   });
+
+  // Prefetch all profile outfit/lookbook thumbnails when image query resolves
+  useEffect(() => {
+    if (!imageData) return;
+    const urls = [
+      ...Array.from(imageData.outfitImages.values()),
+      ...Array.from(imageData.lookbookImages.values()),
+    ];
+    prefetchImages(urls);
+  }, [imageData]);
 
   const refresh = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ['userProfile', userId] });

@@ -3,8 +3,8 @@
  * Grid layout for wardrobe items with pull-to-refresh
  */
 
-import React from 'react';
-import { FlatList, RefreshControl, StyleSheet, ViewStyle } from 'react-native';
+import React, { useCallback } from 'react';
+import { Dimensions, FlatList, RefreshControl, StyleSheet, ViewStyle } from 'react-native';
 import ItemCard from './ItemCard';
 import { EmptyState } from '@/components/shared';
 import { theme } from '@/styles';
@@ -82,6 +82,21 @@ export default function ItemGrid({
     );
   }, [selectedItems, dimmedItems, imageCache, onItemPress, onItemLongPress, onFavoritePress, showFavorite]);
 
+  const SCREEN_WIDTH = Dimensions.get('window').width;
+  const GAP = 1; // matches styles.row gap
+  const PADDING = 1; // matches styles.list padding
+  const ITEM_SIZE = (SCREEN_WIDTH - PADDING * 2 - GAP * (numColumns - 1)) / numColumns;
+  const ROW_HEIGHT = ITEM_SIZE + GAP; // square items (aspectRatio: 1) + gap
+
+  const getItemLayout = useCallback(
+    (_data: unknown, index: number) => ({
+      length: ROW_HEIGHT,
+      offset: ROW_HEIGHT * Math.floor(index / numColumns),
+      index,
+    }),
+    [ROW_HEIGHT, numColumns]
+  );
+
   if (items.length === 0) {
     return (
       <EmptyState
@@ -103,6 +118,7 @@ export default function ItemGrid({
       maxToRenderPerBatch={4}
       windowSize={5}
       numColumns={numColumns}
+      getItemLayout={getItemLayout}
       contentContainerStyle={[styles.list, contentContainerStyle]}
       columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
       onScroll={onScroll}

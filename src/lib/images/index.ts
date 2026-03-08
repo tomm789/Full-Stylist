@@ -14,6 +14,7 @@ import { getImageUrl, type ImageSizeClass } from './transforms';
 export { GRID_IMAGE_PROPS, DETAIL_IMAGE_PROPS, AVATAR_IMAGE_PROPS, FEED_IMAGE_PROPS } from './defaults';
 export { getImageUrl, type ImageSizeClass } from './transforms';
 export { toDataUri } from './dataUri';
+export { prefetchImages } from './prefetch';
 
 // ─── Public image URL ─────────────────────────────────────────────────────────
 

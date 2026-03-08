@@ -1,7 +1,19 @@
 import React from 'react';
-import { FlatList, RefreshControl, StyleSheet, ViewStyle } from 'react-native';
+import { Dimensions, FlatList, RefreshControl, StyleSheet, ViewStyle } from 'react-native';
 import { spacing, layout, typography } from '@/styles';
 import { lightColors } from '@/styles/themeColors';
+
+const NUM_COLUMNS = 3;
+const ITEM_MARGIN = 0.5;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const ITEM_WIDTH = SCREEN_WIDTH / NUM_COLUMNS - ITEM_MARGIN * 2;
+const ROW_HEIGHT = ITEM_WIDTH * (4 / 3) + ITEM_MARGIN * 2;
+
+const getItemLayout = (_data: unknown, index: number) => ({
+  length: ROW_HEIGHT,
+  offset: ROW_HEIGHT * Math.floor(index / NUM_COLUMNS),
+  index,
+});
 
 export const postGridStyles = StyleSheet.create({
   gridList: {
@@ -110,6 +122,7 @@ export default function PostGrid<T>({
       maxToRenderPerBatch={4}
       windowSize={5}
       numColumns={3}
+      getItemLayout={getItemLayout}
       style={[postGridStyles.gridList, style]}
       contentContainerStyle={[postGridStyles.gridContent, contentContainerStyle]}
       columnWrapperStyle={[postGridStyles.gridRow, columnWrapperStyle]}

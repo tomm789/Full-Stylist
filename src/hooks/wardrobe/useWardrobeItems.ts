@@ -3,7 +3,7 @@
  * Manages wardrobe items loading, caching, and state
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   getWardrobeItems,
@@ -14,6 +14,7 @@ import {
 } from '@/lib/wardrobe';
 import { getEntityAttributesForItems } from '@/lib/attributes/entity-attributes';
 import { getTagsForItems } from '@/lib/wardrobe/tags';
+import { prefetchImages } from '@/lib/images';
 
 interface UseWardrobeItemsOptions {
   wardrobeId: string | null;
@@ -111,6 +112,14 @@ export function useWardrobeItems({
     staleTime: 1000 * 60 * 5, // 5 minutes
     placeholderData: keepPreviousData,
   });
+
+  // Prefetch off-screen wardrobe item images for smoother scrolling
+  useEffect(() => {
+    const cache = data?.imageCache;
+    if (!cache || cache.size === 0) return;
+    const urls = Array.from(cache.values()).slice(8);
+    prefetchImages(urls);
+  }, [data?.imageCache]);
 
   const loadItems = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey });
