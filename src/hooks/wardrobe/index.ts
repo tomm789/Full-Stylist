@@ -25,6 +25,7 @@ export { useOutfitSelectionFlow } from './useOutfitSelectionFlow';
 export { useWardrobeCameraFlow } from './useWardrobeCameraFlow';
 export { useGenerateOutfitFlow } from './useGenerateOutfitFlow';
 export { useWardrobeBrowser } from './useWardrobeBrowser';
+export { useItemSwipeNavigation } from './useItemSwipeNavigation';
 
 export type { FilterState, AvailableEntityAttribute } from './useFilters';
 export type { WardrobeItemsState } from './useWardrobeItems';

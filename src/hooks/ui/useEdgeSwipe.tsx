@@ -1,15 +1,14 @@
 /**
  * useEdgeSwipe Hook
  * Detects swipe gestures from screen edges for actions like opening camera or navigation.
- * Uses react-native-gesture-handler for reliable gesture detection.
+ * Uses react-native-gesture-handler modern Gesture API.
  *
- * Returns a stable `gestureHandler` prop object to spread onto a PanGestureHandler,
- * rather than returning a component (which would cause remounts when callbacks change).
+ * Returns a configured Gesture.Pan() object for use with <GestureDetector>.
  */
 
-import { useRef, useCallback } from 'react';
+import { useRef, useMemo } from 'react';
 import { Dimensions } from 'react-native';
-import { PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
+import { Gesture, type GestureType } from 'react-native-gesture-handler';
 
 export type EdgeSwipeDirection = 'left' | 'right' | 'top' | 'bottom';
 
@@ -24,8 +23,7 @@ interface UseEdgeSwipeProps {
 }
 
 interface UseEdgeSwipeReturn {
-  enabled: boolean;
-  onGestureEvent: (event: PanGestureHandlerGestureEvent) => void;
+  gesture: GestureType;
 }
 
 export function useEdgeSwipe({
@@ -38,57 +36,63 @@ export function useEdgeSwipe({
   enabled = true,
 }: UseEdgeSwipeProps): UseEdgeSwipeReturn {
   const lastTriggerRef = useRef<number>(0);
-  const gestureContext = useRef<{ startX: number; startY: number }>({ startX: 0, startY: 0 });
+  const startPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Use a ref for onSwipe so the gesture handler callback stays stable
+  // Stable ref for onSwipe so gesture doesn't need to be recreated on callback changes
   const onSwipeRef = useRef(onSwipe);
   onSwipeRef.current = onSwipe;
 
-  const handleGestureEvent = useCallback(
-    (event: PanGestureHandlerGestureEvent) => {
-      const { absoluteX, absoluteY, translationX, translationY, velocityX, velocityY } = event.nativeEvent;
+  const gesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(enabled)
+        .runOnJS(true)
+        .onBegin((e) => {
+          startPosRef.current = { x: e.absoluteX, y: e.absoluteY };
+        })
+        .onEnd((e) => {
+          const { x: startX, y: startY } = startPosRef.current;
+          const { width: screenWidth, height: screenHeight } =
+            Dimensions.get('window');
 
-      // Capture start position on gesture begin
-      if (translationX === 0 && translationY === 0) {
-        gestureContext.current = { startX: absoluteX, startY: absoluteY };
-        return;
-      }
+          const isHorizontalDominant =
+            Math.abs(e.velocityX) > Math.abs(e.velocityY);
+          const isVerticalDominant =
+            Math.abs(e.velocityY) > Math.abs(e.velocityX);
 
-      const { startX, startY } = gestureContext.current;
-      const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+          let triggered = false;
 
-      const isHorizontalDominant = Math.abs(velocityX) > Math.abs(velocityY);
-      const isVerticalDominant = Math.abs(velocityY) > Math.abs(velocityX);
+          if (direction === 'left') {
+            const isFromEdge = startX < edgeThreshold;
+            const isSwiping =
+              e.translationX > swipeDistance && e.velocityX > minVelocity;
+            triggered = isFromEdge && isSwiping && isHorizontalDominant;
+          } else if (direction === 'right') {
+            const isFromEdge = startX > screenWidth - edgeThreshold;
+            const isSwiping =
+              e.translationX < -swipeDistance && e.velocityX < -minVelocity;
+            triggered = isFromEdge && isSwiping && isHorizontalDominant;
+          } else if (direction === 'top') {
+            const isFromEdge = startY < edgeThreshold;
+            const isSwiping =
+              e.translationY > swipeDistance && e.velocityY > minVelocity;
+            triggered = isFromEdge && isSwiping && isVerticalDominant;
+          } else if (direction === 'bottom') {
+            const isFromEdge = startY > screenHeight - edgeThreshold;
+            const isSwiping =
+              e.translationY < -swipeDistance && e.velocityY < -minVelocity;
+            triggered = isFromEdge && isSwiping && isVerticalDominant;
+          }
 
-      let triggered = false;
-
-      if (direction === 'left') {
-        const isFromEdge = startX < edgeThreshold;
-        const isSwiping = translationX > swipeDistance && velocityX > minVelocity;
-        triggered = isFromEdge && isSwiping && isHorizontalDominant;
-      } else if (direction === 'right') {
-        const isFromEdge = startX > screenWidth - edgeThreshold;
-        const isSwiping = translationX < -swipeDistance && velocityX < -minVelocity;
-        triggered = isFromEdge && isSwiping && isHorizontalDominant;
-      } else if (direction === 'top') {
-        const isFromEdge = startY < edgeThreshold;
-        const isSwiping = translationY > swipeDistance && velocityY > minVelocity;
-        triggered = isFromEdge && isSwiping && isVerticalDominant;
-      } else if (direction === 'bottom') {
-        const isFromEdge = startY > screenHeight - edgeThreshold;
-        const isSwiping = translationY < -swipeDistance && velocityY < -minVelocity;
-        triggered = isFromEdge && isSwiping && isVerticalDominant;
-      }
-
-      if (triggered) {
-        const now = Date.now();
-        if (now - lastTriggerRef.current < debounceMs) return;
-        lastTriggerRef.current = now;
-        onSwipeRef.current();
-      }
-    },
-    [direction, edgeThreshold, swipeDistance, minVelocity, debounceMs],
+          if (triggered) {
+            const now = Date.now();
+            if (now - lastTriggerRef.current < debounceMs) return;
+            lastTriggerRef.current = now;
+            onSwipeRef.current();
+          }
+        }),
+    [direction, edgeThreshold, swipeDistance, minVelocity, debounceMs, enabled],
   );
 
-  return { enabled, onGestureEvent: handleGestureEvent };
+  return { gesture };
 }

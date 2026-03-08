@@ -14,7 +14,7 @@ import {
 import Animated from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
-import { PanGestureHandler } from 'react-native-gesture-handler';
+import { GestureDetector } from 'react-native-gesture-handler';
 import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
 import { HeaderTabPill } from '@/components/shared';
@@ -275,7 +275,7 @@ export default function HairAndMakeUpScreen() {
   );
 
   return (
-    <PanGestureHandler enabled={cameraSwipe.enabled} onGestureEvent={cameraSwipe.onGestureEvent}>
+    <GestureDetector gesture={cameraSwipe.gesture}>
       <View style={commonStyles.container}>
         {!isFullscreenDraw && (
           <Animated.View
@@ -504,7 +504,7 @@ export default function HairAndMakeUpScreen() {
 
         <LoadingOverlay visible={state.generating} message={generatingMessage} />
       </View>
-    </PanGestureHandler>
+    </GestureDetector>
   );
 }
 

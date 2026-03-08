@@ -3,8 +3,9 @@
  * Horizontal navigation bar for browsing between items
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { haptics } from '@/utils/haptics';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { GRID_IMAGE_PROPS } from '@/lib/images';
@@ -22,16 +23,38 @@ interface ItemNavigationProps {
   onNavigate: (itemId: string) => void;
 }
 
+const ITEM_WIDTH = 60;
+const ITEM_GAP = 12;
+
 export function ItemNavigation({
   items,
   currentItemId,
   scrollRef,
   onNavigate,
 }: ItemNavigationProps) {
+  const containerWidthRef = useRef(0);
+
+  // Auto-scroll to keep the active thumbnail centered/visible
+  useEffect(() => {
+    if (!currentItemId || !scrollRef.current) return;
+    const index = items.findIndex((item) => item.id === currentItemId);
+    if (index < 0) return;
+    const itemOffset = index * (ITEM_WIDTH + ITEM_GAP);
+    const centered = itemOffset - containerWidthRef.current / 2 + ITEM_WIDTH / 2;
+    scrollRef.current.scrollTo({ x: Math.max(0, centered), animated: true });
+  }, [currentItemId, items, scrollRef]);
+
   if (items.length <= 1) return null;
 
   return (
-    <BlurView intensity={50} tint="dark" style={styles.container}>
+    <BlurView
+      intensity={50}
+      tint="dark"
+      style={styles.container}
+      onLayout={(e) => {
+        containerWidthRef.current = e.nativeEvent.layout.width;
+      }}
+    >
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -47,7 +70,12 @@ export function ItemNavigation({
                 styles.item,
                 isActive && styles.itemActive,
               ]}
-              onPress={() => !isActive && onNavigate(navItem.id)}
+              onPress={() => {
+                if (!isActive) {
+                  haptics.light();
+                  onNavigate(navItem.id);
+                }
+              }}
             >
               {navItem.imageUrl ? (
                 <Image

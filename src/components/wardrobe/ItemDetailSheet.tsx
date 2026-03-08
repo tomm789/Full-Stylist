@@ -20,11 +20,13 @@ import {
   BottomSheetScrollView,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useSharedValue } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/contexts/ThemeContext';
-import { useWardrobeItemDetail } from '@/hooks/wardrobe';
+import { useWardrobeItemDetail, useItemSwipeNavigation } from '@/hooks/wardrobe';
 import {
   ItemImageCarousel,
   ItemAttributes,
@@ -116,6 +118,10 @@ export default function ItemDetailSheet({
   }, [itemIds, imageCache]);
 
   const navigationScrollRef = useRef<any>(null);
+  const carouselScrollRef = useRef<any>(null);
+
+  // Shared value from bottom sheet for animation state guard
+  const animatedIndex = useSharedValue(-1);
 
   // Present/dismiss the sheet
   useEffect(() => {
@@ -161,6 +167,35 @@ export default function ItemDetailSheet({
     [onChangeItem]
   );
 
+  // Swipe navigation between items
+  const { navigateNext, navigatePrev } = useItemSwipeNavigation({
+    itemIds,
+    currentItemId: item?.id,
+    onNavigate: handleNavigateItem,
+    enabled: isExpanded && itemIds.length > 1,
+  });
+
+  const swipeGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(isExpanded && itemIds.length > 1)
+        .activeOffsetX([-60, 60])
+        .failOffsetY([-20, 20])
+        .requireExternalGestureToFail(carouselScrollRef)
+        .runOnJS(true)
+        .onEnd((e) => {
+          // Guard: only navigate if sheet is fully settled at expanded snap
+          if (animatedIndex.value < 0.95) return;
+          const { translationX, velocityX } = e;
+          if (translationX < -60 || velocityX < -500) {
+            navigateNext();
+          } else if (translationX > 60 || velocityX > 500) {
+            navigatePrev();
+          }
+        }),
+    [isExpanded, itemIds.length, navigateNext, navigatePrev, animatedIndex],
+  );
+
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop
@@ -190,10 +225,12 @@ export default function ItemDetailSheet({
         borderTopLeftRadius: borderRadius.xl,
         borderTopRightRadius: borderRadius.xl,
       }}
+      animatedIndex={animatedIndex}
       enablePanDownToClose
       enableDynamicSizing={false}
     >
       <View style={styles.sheetContent}>
+      <GestureDetector gesture={swipeGesture}>
       <BottomSheetScrollView
         contentContainerStyle={[
           styles.scrollContent,
@@ -254,6 +291,7 @@ export default function ItemDetailSheet({
               currentScreenWidth={screenWidth}
               onImageIndexChange={setCurrentImageIndex}
               currentImageIndex={currentImageIndex}
+              scrollRef={carouselScrollRef}
             />
           ) : imageUrl ? (
             <Image
@@ -306,6 +344,7 @@ export default function ItemDetailSheet({
           )}
         </View>
       </BottomSheetScrollView>
+      </GestureDetector>
 
       {/* Expanded: Item Navigation Rail — pinned at bottom */}
       {isExpanded && navigationItems.length > 1 && (

@@ -8,9 +8,9 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
 import { getImageUrl as getTransformedImageUrl } from '@/lib/images';
 import { FullscreenImageModal } from '@/components/shared/modals';
@@ -20,6 +20,7 @@ interface ItemImageCarouselProps {
   currentScreenWidth: number;
   onImageIndexChange: (index: number) => void;
   currentImageIndex: number;
+  scrollRef?: React.RefObject<ScrollView>;
 }
 
 export function ItemImageCarousel({
@@ -27,6 +28,7 @@ export function ItemImageCarousel({
   currentScreenWidth,
   onImageIndexChange,
   currentImageIndex,
+  scrollRef,
 }: ItemImageCarouselProps) {
   const [showImageModal, setShowImageModal] = useState(false);
   const [modalImageIndex, setModalImageIndex] = useState(0);
@@ -78,6 +80,7 @@ export function ItemImageCarousel({
         ]}
       >
         <ScrollView
+          ref={scrollRef}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}

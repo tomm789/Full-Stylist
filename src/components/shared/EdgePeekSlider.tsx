@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { FlatList, Platform, StyleSheet, useWindowDimensions, View, ViewStyle } from 'react-native';
-import { PanGestureHandler } from 'react-native-gesture-handler';
+import { GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import { useEdgeSwipe } from '@/hooks/ui';
 
@@ -163,7 +163,7 @@ function EdgePeekSliderInner<T>({
   );
 
   return (
-    <PanGestureHandler enabled={edgeSwipe.enabled} onGestureEvent={edgeSwipe.onGestureEvent}>
+    <GestureDetector gesture={edgeSwipe.gesture}>
       <View style={[{ width: '100%' }, style]}>
         <FlatList
           ref={listRef}
@@ -189,7 +189,7 @@ function EdgePeekSliderInner<T>({
           onScrollToIndexFailed={handleScrollToIndexFailed}
         />
       </View>
-    </PanGestureHandler>
+    </GestureDetector>
   );
 }
 
