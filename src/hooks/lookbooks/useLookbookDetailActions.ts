@@ -8,7 +8,7 @@ import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { deleteLookbook, saveLookbook, Lookbook } from '@/lib/lookbooks';
-import { createPost } from '@/lib/posts';
+// createPost import removed — lookbooks now auto-post via saveLookbook
 import { getUserOutfits } from '@/lib/outfits';
 import { getOutfitCoverImageUrl } from '@/lib/images';
 import { supabase } from '@/lib/supabase';
@@ -193,31 +193,10 @@ export function useLookbookDetailActions({
     );
   }, [user, lookbook, router]);
 
+  /** @deprecated Lookbooks now auto-post on save. Kept for API compat. */
   const handlePublish = useCallback(async () => {
-    if (!user || !lookbook) return;
-
-    setPublishing(true);
-
-    try {
-      const { error } = await createPost(
-        user.id,
-        'lookbook',
-        lookbook.id,
-        undefined,
-        lookbook.visibility === 'inherit' ? 'followers' : lookbook.visibility
-      );
-
-      if (error) {
-        showErrorToast(`Failed to publish: ${error.message || error}`);
-      } else {
-        showSuccessToast('Lookbook published to feed!');
-      }
-    } catch (error: any) {
-      showErrorToast(error.message || 'An unexpected error occurred');
-    } finally {
-      setPublishing(false);
-    }
-  }, [user, lookbook]);
+    showSuccessToast('Lookbooks are now automatically posted when saved.');
+  }, []);
 
   const openAddOutfitsModal = useCallback(async () => {
     if (!user) return;

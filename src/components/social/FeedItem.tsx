@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import FeedOutfitCard from '@/components/social/FeedOutfitCard';
 import FeedLookbookCarousel from '@/components/social/FeedLookbookCarousel';
 import HeadshotFeedCard from '@/components/social/HeadshotFeedCard';
+import FeedWardrobeCard from '@/components/social/FeedWardrobeCard';
 import { FeedItem } from '@/lib/posts';
 import { formatTimestamp } from '@/utils/formatUtils';
 import { theme } from '@/styles';
@@ -199,8 +200,10 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
 
   const isOutfit = post.entity_type === 'outfit';
   const isHeadshot = post.entity_type === 'headshot';
+  const isWardrobe = post.entity_type === 'wardrobe';
   const entity = item.entity?.outfit || item.entity?.lookbook;
   const headshotEntity = item.entity?.headshot;
+  const wardrobeItems = item.entity?.wardrobeItems;
   const timestamp = item.type === 'post' ? item.post!.created_at : item.repost!.created_at;
   const isOwnPost = item.type === 'post' && post.owner_user_id === currentUserId;
 
@@ -325,9 +328,15 @@ export const FeedItemComponent = React.memo(function FeedItemComponent({
           loading={headshotImageLoading}
         />
       )}
+      {isWardrobe && wardrobeItems && wardrobeItems.length > 0 && (
+        <FeedWardrobeCard
+          items={wardrobeItems}
+          caption={post.caption}
+        />
+      )}
 
-      {/* Caption */}
-      {post.caption && <Text style={styles.caption}>{post.caption}</Text>}
+      {/* Caption (skip for wardrobe — rendered inside card) */}
+      {post.caption && !isWardrobe && <Text style={styles.caption}>{post.caption}</Text>}
 
       {/* Social Actions */}
       <View style={styles.socialActions}>

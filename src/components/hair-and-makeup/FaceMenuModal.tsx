@@ -1,6 +1,6 @@
 /**
  * FaceMenuModal
- * Dropdown menu for the active headshot: Set as Active, Share to Feed, Share, Delete.
+ * Dropdown menu for the active headshot: Set as Active, Share, Delete.
  */
 
 import React from 'react';
@@ -18,7 +18,8 @@ type FaceMenuModalProps = {
   onSetAsActiveHeadshot: () => Promise<void>;
   onOpenInMirror?: () => void;
   onEdit?: () => void;
-  onShareToFeed: () => void;
+  /** @deprecated Headshots now auto-post on save. Kept for backward compat. */
+  onShareToFeed?: () => void;
   onShare: () => void;
   onDelete: () => void;
   canShare: boolean;
@@ -32,7 +33,6 @@ export default function FaceMenuModal({
   onSetAsActiveHeadshot,
   onOpenInMirror,
   onEdit,
-  onShareToFeed,
   onShare,
   onDelete,
   canShare,
@@ -81,16 +81,6 @@ export default function FaceMenuModal({
           />
         </>
       )}
-      <View style={dropdownMenuStyles.menuDivider} />
-      <DropdownMenuItem
-        label="Share to Feed"
-        icon="share-social-outline"
-        onPress={() => {
-          onClose();
-          onShareToFeed();
-        }}
-        disabled={!canShare}
-      />
       <View style={dropdownMenuStyles.menuDivider} />
       <DropdownMenuItem
         label="Share"

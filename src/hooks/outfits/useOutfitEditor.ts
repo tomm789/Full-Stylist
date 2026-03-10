@@ -37,7 +37,7 @@ interface UseOutfitEditorReturn {
   setNotes: (notes: string) => void;
   setVisibility: (visibility: 'public' | 'followers' | 'private_link' | 'private') => void;
   setOutfitItems: (items: Map<string, WardrobeItem>) => void;
-  saveOutfit: () => Promise<string | null>;
+  saveOutfit: () => Promise<{ id: string; isFirstPost: boolean } | null>;
   refreshOutfit: () => Promise<void>;
   getItemImageUrl: (itemId: string) => Promise<string | null>;
   ensureItemImageUrls: (itemIds: string[]) => Promise<void>;
@@ -103,7 +103,7 @@ export function useOutfitEditor({
     });
   };
 
-  const saveOutfitAction = async (): Promise<string | null> => {
+  const saveOutfitAction = async (): Promise<{ id: string; isFirstPost: boolean } | null> => {
     if (!userId) return null;
 
     const items = Array.from(outfitItems.entries()).map(
@@ -114,7 +114,7 @@ export function useOutfitEditor({
       })
     );
 
-    const { data, error } = await saveOutfit(
+    const { data, error, isFirstPost } = await saveOutfit(
       userId,
       {
         id: outfitId === 'new' ? undefined : outfit?.id,
@@ -132,7 +132,7 @@ export function useOutfitEditor({
 
     if (data) {
       setOutfit(data.outfit);
-      return data.outfit.id;
+      return { id: data.outfit.id, isFirstPost: isFirstPost ?? false };
     }
 
     return null;

@@ -22,6 +22,10 @@ import { FullscreenImageModal } from '@/components/shared/modals';
 import { useHeadshotView } from '@/hooks/headshot/useHeadshotView';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createStyles } from '@/styles/screens/headshot-view.styles';
+import { VisibilityToggle } from '@/components/shared/VisibilityToggle';
+import { usePostVisibility } from '@/hooks/social/usePostVisibility';
+import { useFirstPostIntro } from '@/hooks/social/useFirstPostIntro';
+import { FirstPostVisibilityModal } from '@/components/shared/modals/FirstPostVisibilityModal';
 
 // Static style for non-generating state (no overlay)
 const ZERO_OVERLAY_STYLE = { opacity: 0 };
@@ -36,6 +40,15 @@ export default function HeadshotViewScreen() {
   }>();
 
   const state = useHeadshotView({ headshotId: id, headshotIds });
+  const postVisibility = usePostVisibility({ entityType: 'headshot', entityId: id });
+
+  // First-post intro modal
+  const firstPostIntro = useFirstPostIntro();
+  React.useEffect(() => {
+    if (postVisibility.postId && !postVisibility.loading) {
+      firstPostIntro.triggerIntroIfNeeded('headshot', postVisibility.postId);
+    }
+  }, [postVisibility.postId, postVisibility.loading]);
 
   const [showShareModal, setShowShareModal] = React.useState(false);
 
@@ -88,11 +101,18 @@ export default function HeadshotViewScreen() {
           <HeaderIconButton icon="chevron-back" onPress={state.handleBackPress} />
         }
         rightContent={
-          <HeaderIconButton
-            icon="ellipsis-vertical"
-            onPress={() => state.setShowMenu(true)}
-            accessibilityLabel="Open menu"
-          />
+          <>
+            <VisibilityToggle
+              visibility={postVisibility.visibility}
+              onVisibilityChange={postVisibility.handleVisibilityChange}
+              disabled={postVisibility.loading}
+            />
+            <HeaderIconButton
+              icon="ellipsis-vertical"
+              onPress={() => state.setShowMenu(true)}
+              accessibilityLabel="Open menu"
+            />
+          </>
         }
       />
 
@@ -172,6 +192,17 @@ export default function HeadshotViewScreen() {
           // TODO: integrate with headshot share-to-feed action
         }}
       />
+
+      {/* First-post visibility intro */}
+      {firstPostIntro.introEntityType && (
+        <FirstPostVisibilityModal
+          visible={firstPostIntro.showIntro}
+          entityType={firstPostIntro.introEntityType}
+          currentVisibility={firstPostIntro.currentVisibility}
+          defaultVisibility={firstPostIntro.defaultVisibility}
+          onDone={firstPostIntro.handleIntroDone}
+        />
+      )}
     </View>
   );
 }

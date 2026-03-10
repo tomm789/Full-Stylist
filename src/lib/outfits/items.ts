@@ -1,5 +1,7 @@
 import { supabase } from '../supabase';
 import type { Outfit } from './core';
+import { upsertEntityPost, resolveVisibility, type Visibility } from '../posts';
+import { getUserSettings } from '../settings';
 
 export interface OutfitItem {
   id: string;
@@ -8,48 +10,6 @@ export interface OutfitItem {
   wardrobe_item_id: string;
   position: number;
   created_at: string;
-}
-
-async function upsertOutfitPost(
-  userId: string,
-  outfitId: string,
-  visibility: 'public' | 'followers' | 'private_link' | 'private' | 'inherit'
-): Promise<void> {
-  const { data: existingPost, error: existingError } = await supabase
-    .from('posts')
-    .select('id')
-    .eq('owner_user_id', userId)
-    .eq('entity_type', 'outfit')
-    .eq('entity_id', outfitId)
-    .maybeSingle();
-
-  if (existingError) {
-    throw existingError;
-  }
-
-  if (existingPost?.id) {
-    const { error: updateError } = await supabase
-      .from('posts')
-      .update({ visibility })
-      .eq('id', existingPost.id)
-      .eq('owner_user_id', userId);
-
-    if (updateError) {
-      throw updateError;
-    }
-    return;
-  }
-
-  const { error: insertError } = await supabase.from('posts').insert({
-    owner_user_id: userId,
-    entity_type: 'outfit',
-    entity_id: outfitId,
-    visibility,
-  });
-
-  if (insertError) {
-    throw insertError;
-  }
 }
 
 /**
@@ -67,6 +27,7 @@ export async function saveOutfit(
 ): Promise<{
   data: { outfit: Outfit; items: OutfitItem[] } | null;
   error: any;
+  isFirstPost?: boolean;
 }> {
   try {
     let outfitId: string;
@@ -134,22 +95,22 @@ export async function saveOutfit(
       .eq('id', outfitId)
       .single();
 
+    let isFirstPost = false;
     if (fullOutfit) {
-      await upsertOutfitPost(
-        userId,
-        outfitId,
-        (outfitData.visibility || fullOutfit.visibility || 'followers') as
-          | 'public'
-          | 'followers'
-          | 'private_link'
-          | 'private'
-          | 'inherit'
+      const { data: settings } = await getUserSettings(userId);
+      const visibility = resolveVisibility(
+        (outfitData.visibility || fullOutfit.visibility) as Visibility | undefined,
+        settings,
+        'outfit'
       );
+      const postResult = await upsertEntityPost(userId, 'outfit', outfitId, visibility);
+      isFirstPost = postResult.isFirstPost;
     }
 
     return {
       data: { outfit: fullOutfit, items: outfitItems || [] },
       error: null,
+      isFirstPost,
     };
   } catch (error: any) {
     return { data: null, error };

@@ -1,4 +1,6 @@
 import { supabase } from '../supabase';
+import { upsertEntityPost, resolveVisibility, type Visibility } from '../posts';
+import { getUserSettings } from '../settings';
 
 export interface Lookbook {
   id: string;
@@ -160,6 +162,7 @@ export async function saveLookbook(
 ): Promise<{
   data: Lookbook | null;
   error: any;
+  isFirstPost?: boolean;
 }> {
   try {
     let lookbook: Lookbook;
@@ -227,7 +230,20 @@ export async function saveLookbook(
       }
     }
 
-    return { data: lookbook, error: null };
+    // Auto-post: create feed post on first save only (not on edits)
+    let isFirstPost = false;
+    if (!lookbookData.id) {
+      const { data: settings } = await getUserSettings(userId);
+      const postVisibility = resolveVisibility(
+        lookbook.visibility as Visibility | undefined,
+        settings,
+        'lookbook'
+      );
+      const postResult = await upsertEntityPost(userId, 'lookbook', lookbook.id, postVisibility);
+      isFirstPost = postResult.isFirstPost;
+    }
+
+    return { data: lookbook, error: null, isFirstPost };
   } catch (error: any) {
     return { data: null, error };
   }
@@ -235,6 +251,7 @@ export async function saveLookbook(
 
 /**
  * Publish lookbook to feed (creates post)
+ * @deprecated Use saveLookbook instead — posts are now auto-created on save
  */
 export async function publishLookbook(
   userId: string,

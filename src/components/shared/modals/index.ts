@@ -9,3 +9,4 @@ export { DropdownMenuModal } from './DropdownMenuModal';
 export { dropdownMenuStyles, createDropdownMenuStyles } from './dropdownMenuStyles';
 export { DropdownMenuItem } from './DropdownMenuItem';
 export { FullscreenImageModal } from './FullscreenImageModal';
+export { FirstPostVisibilityModal } from './FirstPostVisibilityModal';

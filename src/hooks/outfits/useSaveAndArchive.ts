@@ -6,11 +6,12 @@ interface UseSaveAndArchiveProps {
   user: { id: string } | null;
   outfit: any | null;
   isNew: boolean;
-  saveOutfit: () => Promise<string | null>;
+  saveOutfit: () => Promise<{ id: string; isFirstPost: boolean } | null>;
   router: {
     replace: (path: string) => void;
     back: () => void;
   };
+  onFirstPost?: (outfitId: string) => void;
 }
 
 export interface UseSaveAndArchiveReturn {
@@ -25,6 +26,7 @@ export function useSaveAndArchive({
   isNew,
   saveOutfit,
   router,
+  onFirstPost,
 }: UseSaveAndArchiveProps): UseSaveAndArchiveReturn {
   const [saving, setSaving] = useState(false);
 
@@ -33,11 +35,14 @@ export function useSaveAndArchive({
 
     setSaving(true);
     try {
-      const savedOutfitId = await saveOutfit();
-      if (savedOutfitId) {
+      const result = await saveOutfit();
+      if (result) {
+        if (result.isFirstPost && onFirstPost) {
+          onFirstPost(result.id);
+        }
         if (isNew) {
           showSuccessToast('Outfit saved! You can now generate the outfit image.');
-          router.replace(`/outfits/${savedOutfitId}`);
+          router.replace(`/outfits/${result.id}`);
         } else {
           showSuccessToast('Outfit saved!');
         }
@@ -47,7 +52,7 @@ export function useSaveAndArchive({
     } finally {
       setSaving(false);
     }
-  }, [user, saveOutfit, isNew, router]);
+  }, [user, saveOutfit, isNew, router, onFirstPost]);
 
   const handleDelete = useCallback(() => {
     if (!user || !outfit || isNew) return;

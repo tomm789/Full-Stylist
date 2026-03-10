@@ -32,6 +32,10 @@ import { Header, HeaderActionButton, HeaderIconButton } from '@/components/share
 import { isLookbookEditable } from '@/utils/lookbookHelpers';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createStyles } from '@/styles/screens/lookbook-detail.styles';
+import { VisibilityToggle } from '@/components/shared/VisibilityToggle';
+import { usePostVisibility } from '@/hooks/social/usePostVisibility';
+import { useFirstPostIntro } from '@/hooks/social/useFirstPostIntro';
+import { FirstPostVisibilityModal } from '@/components/shared/modals/FirstPostVisibilityModal';
 
 export default function LookbookDetailScreen() {
   const colors = useThemeColors();
@@ -46,6 +50,17 @@ export default function LookbookDetailScreen() {
     lookbookId: id as string,
     userId: user?.id,
   });
+
+  // Post visibility
+  const postVisibility = usePostVisibility({ entityType: 'lookbook', entityId: id as string });
+
+  // First-post intro modal
+  const firstPostIntro = useFirstPostIntro();
+  useEffect(() => {
+    if (postVisibility.postId && !postVisibility.loading) {
+      firstPostIntro.triggerIntroIfNeeded('lookbook', postVisibility.postId);
+    }
+  }, [postVisibility.postId, postVisibility.loading]);
 
   // Slideshow
   const slideshow = useSlideshow({ autoPlayInterval: 4000 });
@@ -132,16 +147,11 @@ export default function LookbookDetailScreen() {
                   onPress={actions.handleEdit}
                   accessibilityLabel="Edit lookbook"
                 />
-                {actions.publishing ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <HeaderIconButton
-                    icon="paper-plane-outline"
-                    onPress={actions.handlePublish}
-                    disabled={actions.publishing}
-                    accessibilityLabel="Publish lookbook"
-                  />
-                )}
+                <VisibilityToggle
+                  visibility={postVisibility.visibility}
+                  onVisibilityChange={postVisibility.handleVisibilityChange}
+                  disabled={postVisibility.loading}
+                />
                 {actions.deleting ? (
                   <ActivityIndicator size="small" color={colors.error} />
                 ) : (
@@ -235,6 +245,17 @@ export default function LookbookDetailScreen() {
         onPrevious={() => slideshow.previous()}
         onToggleAutoPlay={slideshow.toggleAutoPlay}
       />
+
+      {/* First-post visibility intro */}
+      {firstPostIntro.introEntityType && (
+        <FirstPostVisibilityModal
+          visible={firstPostIntro.showIntro}
+          entityType={firstPostIntro.introEntityType}
+          currentVisibility={firstPostIntro.currentVisibility}
+          defaultVisibility={firstPostIntro.defaultVisibility}
+          onDone={firstPostIntro.handleIntroDone}
+        />
+      )}
     </View>
   );
 }

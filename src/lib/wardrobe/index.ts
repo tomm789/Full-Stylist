@@ -22,6 +22,7 @@ export {
   getUserWardrobeItems,
   saveWardrobeItem,
   unsaveWardrobeItem,
+  publishWardrobeItem,
   isWardrobeItemSaved,
   getSavedWardrobeItems,
 } from './items';

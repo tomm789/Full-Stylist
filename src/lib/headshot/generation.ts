@@ -5,6 +5,7 @@ export type HeadshotGenerationSession = {
   user_id: string;
   base_image_id: string | null;
   input_json: Record<string, any>;
+  is_onboarding: boolean;
   created_at: string;
 };
 
@@ -43,15 +44,21 @@ export async function getLatestHeadshotGenerationSession(
 export async function createHeadshotGenerationSession(
   userId: string,
   baseImageId: string,
-  inputJson: Record<string, any>
+  inputJson: Record<string, any>,
+  options?: { isOnboarding?: boolean }
 ): Promise<HeadshotGenerationSession | null> {
+  const insertData: Record<string, any> = {
+    user_id: userId,
+    base_image_id: baseImageId,
+    input_json: inputJson,
+  };
+  // Only include is_onboarding when true (column may not exist before migration)
+  if (options?.isOnboarding) {
+    insertData.is_onboarding = true;
+  }
   const { data, error } = await supabase
     .from('headshot_generation_sessions')
-    .insert({
-      user_id: userId,
-      base_image_id: baseImageId,
-      input_json: inputJson,
-    })
+    .insert(insertData)
     .select('*')
     .single();
 
@@ -156,6 +163,55 @@ export async function updateHeadshotGenerationVariation(
 
   if (error) {
         if (__DEV__) console.warn('updateHeadshotGenerationVariation failed', error);
+  }
+}
+
+/**
+ * Save a headshot variation and auto-post to feed (unless onboarding session).
+ * Combines the variation save + post upsert into a single call.
+ */
+export async function saveHeadshotVariationWithPost(
+  variationId: string,
+  userId: string
+): Promise<{ posted: boolean; error: any; isFirstPost: boolean }> {
+  try {
+    // Mark variation as saved
+    await updateHeadshotGenerationVariation(variationId, { is_saved: true });
+
+    // Get variation to find image_id and session_id
+    const { data: variation } = await supabase
+      .from('headshot_generation_variations')
+      .select('image_id, session_id')
+      .eq('id', variationId)
+      .single();
+
+    if (!variation?.image_id) {
+      return { posted: false, error: null, isFirstPost: false };
+    }
+
+    // Check if this is an onboarding session
+    const { data: session } = await supabase
+      .from('headshot_generation_sessions')
+      .select('is_onboarding')
+      .eq('id', variation.session_id)
+      .single();
+
+    if (session?.is_onboarding) {
+      return { posted: false, error: null, isFirstPost: false };
+    }
+
+    // Auto-post with resolved visibility
+    const { getUserSettings } = await import('../settings');
+    const { upsertEntityPost, resolveVisibility } = await import('../posts');
+
+    const { data: settings } = await getUserSettings(userId);
+    const visibility = resolveVisibility(undefined, settings, 'headshot');
+    const postResult = await upsertEntityPost(userId, 'headshot', variation.image_id, visibility);
+
+    return { posted: true, error: null, isFirstPost: postResult.isFirstPost };
+  } catch (error: any) {
+    if (__DEV__) console.warn('saveHeadshotVariationWithPost failed', error);
+    return { posted: false, error, isFirstPost: false };
   }
 }
 

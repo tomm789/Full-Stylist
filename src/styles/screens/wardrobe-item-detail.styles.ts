@@ -146,4 +146,18 @@ export const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: '#1a1a1a', // Image placeholder always dark
     alignSelf: 'center',
   },
+  draftButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+  },
+  draftSaveButton: {
+    borderRadius: borderRadius.lg,
+  },
+  draftButtonText: {
+    fontSize: typography.fontSize.md,
+  },
 });

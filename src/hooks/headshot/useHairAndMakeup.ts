@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { showSuccessToast, showErrorToast } from '@/utils/toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfileImages, useImageGeneration } from '@/hooks/profile';
-import { createHeadshotPost } from '@/lib/posts';
+// createHeadshotPost removed — headshots now auto-post via saveHeadshotVariationWithPost
 import type { HeadshotDrawingCanvasRef } from '@/components/headshots/HeadshotDrawingCanvas';
 import { getDrawColour } from '@/lib/headshot/drawingColors';
 import { updateUserSettings } from '@/lib/settings';
@@ -31,7 +31,7 @@ import { useHeadshotImageActions } from './useHeadshotImageActions';
 import { useActiveHeadshotActions } from './useActiveHeadshotActions';
 import { usePresetDisplay } from './usePresetDisplay';
 import { useGenerationAnimation } from './useGenerationAnimation';
-import { updateHeadshotGenerationVariation, type HeadshotGenerationVariation } from '@/lib/headshot/generation';
+import { saveHeadshotVariationWithPost, type HeadshotGenerationVariation } from '@/lib/headshot/generation';
 
 // Re-export so AuthContext can import from this module (unchanged public API).
 export { clearHairMakeupSessionVisited };
@@ -341,28 +341,12 @@ export function useHairAndMakeup() {
     }
   };
 
+  /** @deprecated Headshots now auto-post on save. This is kept for API compat. */
   const handleShareToFeed = React.useCallback(
-    async (
-      caption?: string,
-      visibility: 'public' | 'followers' | 'private_link' | 'private' | 'inherit' = 'public'
-    ) => {
-      if (!user?.id) {
-        showErrorToast('You must be signed in to share.');
-        return;
-      }
-      const imageId = previewVariation?.image_id ?? previewImageId;
-      if (!imageId) {
-        showErrorToast('No headshot is selected to share.');
-        return;
-      }
-      const { error } = await createHeadshotPost(user.id, imageId, caption, visibility);
-      if (error) {
-        showErrorToast('Failed to share headshot');
-        return;
-      }
-      showSuccessToast('Your headshot has been posted to your feed.');
+    async () => {
+      showSuccessToast('Headshots are now automatically posted when saved.');
     },
-    [previewVariation, previewImageId, user?.id]
+    []
   );
 
   const {
@@ -432,9 +416,9 @@ export function useHairAndMakeup() {
 
   const handleSaveVariation = React.useCallback(async (variationId: string) => {
     if (variationId === '__selfie_ref__') return;
-    await updateHeadshotGenerationVariation(variationId, { is_saved: true });
+    await saveHeadshotVariationWithPost(variationId, user?.id ?? '');
     await sessionData.refreshVariations();
-  }, [sessionData.refreshVariations]);
+  }, [sessionData.refreshVariations, user?.id]);
 
   // ── Return ───────────────────────────────────────────────────────────────────
 

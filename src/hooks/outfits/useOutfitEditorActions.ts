@@ -26,10 +26,11 @@ interface UseOutfitEditorActionsProps {
   outfitItems: Map<string, WardrobeItem>;
   itemImageUrls: Map<string, string>;
   notes: string;
-  saveOutfit: () => Promise<string | null>;
+  saveOutfit: () => Promise<{ id: string; isFirstPost: boolean } | null>;
   setOutfitItems: Dispatch<SetStateAction<Map<string, WardrobeItem>>>;
   ensureItemImageUrls: (itemIds: string[]) => Promise<void>;
   onDescriptionReady?: () => void;
+  onFirstPost?: (outfitId: string) => void;
 }
 
 export interface UseOutfitEditorActionsReturn
@@ -64,6 +65,7 @@ export function useOutfitEditorActions({
   setOutfitItems,
   ensureItemImageUrls,
   onDescriptionReady,
+  onFirstPost,
 }: UseOutfitEditorActionsProps): UseOutfitEditorActionsReturn {
   const router = useRouter();
   const { user } = useAuth();
@@ -81,6 +83,7 @@ export function useOutfitEditorActions({
     isNew,
     saveOutfit,
     router: router as any,
+    onFirstPost,
   });
 
   // Session management

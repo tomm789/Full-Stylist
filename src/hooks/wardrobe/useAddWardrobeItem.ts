@@ -400,7 +400,7 @@ export function useAddWardrobeItem(): UseAddWardrobeItemReturn {
 
         setPendingItemJob(itemId, generateJob.id);
         logWardrobeAddTiming('navigation_start', { item_id: itemId, job_id: generateJob.id });
-        router.replace(`/wardrobe/item/${itemId}?refresh=${Date.now()}`);
+        router.replace(`/wardrobe/item/${itemId}?refresh=${Date.now()}&draft=true`);
         logWardrobeAddTiming('navigation_dispatched');
       }
     } catch (error: any) {

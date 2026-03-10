@@ -16,6 +16,15 @@ import { getEntityAttributesForItems } from '@/lib/attributes/entity-attributes'
 import { getTagsForItems } from '@/lib/wardrobe/tags';
 import { prefetchImages } from '@/lib/images';
 
+/** Ensure a value is a Map (handles JSON round-trip from query persister) */
+function ensureMap<K extends string, V>(value: unknown): Map<K, V> {
+  if (value instanceof Map) return value;
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return new Map(Object.entries(value)) as Map<K, V>;
+  }
+  return new Map<K, V>();
+}
+
 interface UseWardrobeItemsOptions {
   wardrobeId: string | null;
   userId: string | null;
@@ -115,8 +124,8 @@ export function useWardrobeItems({
 
   // Prefetch off-screen wardrobe item images for smoother scrolling
   useEffect(() => {
-    const cache = data?.imageCache;
-    if (!cache || cache.size === 0) return;
+    const cache = ensureMap<string, string | null>(data?.imageCache);
+    if (cache.size === 0) return;
     const urls = Array.from(cache.values()).slice(8);
     prefetchImages(urls);
   }, [data?.imageCache]);
@@ -131,9 +140,9 @@ export function useWardrobeItems({
 
   return {
     allItems: data?.allItems ?? [],
-    imageCache: data?.imageCache ?? new Map<string, string | null>(),
-    entityAttributesMap: data?.entityAttributesMap ?? new Map(),
-    tagsMap: data?.tagsMap ?? new Map(),
+    imageCache: ensureMap<string, string | null>(data?.imageCache),
+    entityAttributesMap: ensureMap<string, any[]>(data?.entityAttributesMap),
+    tagsMap: ensureMap<string, Array<{ id: string; name: string }>>(data?.tagsMap),
     loading: isLoading,
     refreshing: isFetching && !isLoading,
     error: queryError as Error | null,

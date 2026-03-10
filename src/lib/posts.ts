@@ -1,13 +1,17 @@
 import { supabase } from './supabase';
 
+export type EntityType = 'outfit' | 'lookbook' | 'headshot' | 'wardrobe';
+export type Visibility = 'public' | 'followers' | 'private_link' | 'private' | 'inherit';
+
 export interface Post {
   id: string;
   owner_user_id: string;
-  entity_type: 'outfit' | 'lookbook' | 'headshot';
+  entity_type: EntityType;
   entity_id: string;
   caption?: string;
-  visibility: 'public' | 'followers' | 'private_link' | 'private' | 'inherit';
+  visibility: Visibility;
   share_slug?: string;
+  is_aggregate?: boolean;
   created_at: string;
 }
 
@@ -42,6 +46,11 @@ export interface FeedItem {
       input_snapshot_json?: any;
       variation_id?: string;
     };
+    wardrobeItems?: Array<{
+      id: string;
+      title: string;
+      image_url?: string | null;
+    }>;
   };
 }
 
@@ -50,10 +59,10 @@ export interface FeedItem {
  */
 export async function createPost(
   userId: string,
-  entityType: 'outfit' | 'lookbook' | 'headshot',
+  entityType: EntityType,
   entityId: string,
   caption?: string,
-  visibility?: 'public' | 'followers' | 'private_link' | 'private' | 'inherit'
+  visibility?: Visibility
 ): Promise<{
   data: Post | null;
   error: any;
@@ -133,17 +142,237 @@ export async function deletePost(
 
 /**
  * Create a post for a headshot image
+ * @deprecated Use upsertEntityPost instead for auto-post flow
  */
 export async function createHeadshotPost(
   userId: string,
   imageId: string,
   caption?: string,
-  visibility?: 'public' | 'followers' | 'private_link' | 'private' | 'inherit'
+  visibility?: Visibility
 ): Promise<{
   data: Post | null;
   error: any;
 }> {
   return createPost(userId, 'headshot', imageId, caption, visibility);
+}
+
+/**
+ * Resolve visibility for a post using the cascade:
+ * entity override → per-type default → account default → fallback
+ */
+export function resolveVisibility(
+  entityVisibility: Visibility | undefined,
+  settings: {
+    default_visibility?: Visibility;
+    default_visibility_outfit?: Visibility;
+    default_visibility_lookbook?: Visibility;
+    default_visibility_headshot?: Visibility;
+    default_visibility_wardrobe?: Visibility;
+  } | null,
+  entityType: EntityType,
+  fallback: Visibility = 'followers'
+): Visibility {
+  // 1. Use entity-level override if set and not 'inherit'
+  if (entityVisibility && entityVisibility !== 'inherit') {
+    return entityVisibility;
+  }
+
+  // 2. Use per-entity-type default if set and not 'inherit'
+  const typeKey = `default_visibility_${entityType}` as keyof typeof settings;
+  const typeDefault = settings?.[typeKey] as Visibility | undefined;
+  if (typeDefault && typeDefault !== 'inherit') {
+    return typeDefault;
+  }
+
+  // 3. Use account-level default if set and not 'inherit'
+  const accountDefault = settings?.default_visibility;
+  if (accountDefault && accountDefault !== 'inherit') {
+    return accountDefault;
+  }
+
+  // 4. Hardcoded fallback
+  return fallback;
+}
+
+/**
+ * Upsert a post for any entity type.
+ * Creates post on first call, updates visibility on subsequent calls.
+ */
+export async function upsertEntityPost(
+  userId: string,
+  entityType: EntityType,
+  entityId: string,
+  visibility: Visibility
+): Promise<{ data: Post | null; error: any; isFirstPost: boolean }> {
+  try {
+    const { data: existingPost } = await supabase
+      .from('posts')
+      .select('id')
+      .eq('owner_user_id', userId)
+      .eq('entity_type', entityType)
+      .eq('entity_id', entityId)
+      .maybeSingle();
+
+    if (existingPost?.id) {
+      const { data, error } = await supabase
+        .from('posts')
+        .update({ visibility })
+        .eq('id', existingPost.id)
+        .eq('owner_user_id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null, isFirstPost: false };
+    }
+
+    const { data, error } = await supabase
+      .from('posts')
+      .insert({
+        owner_user_id: userId,
+        entity_type: entityType,
+        entity_id: entityId,
+        visibility,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { data, error: null, isFirstPost: true };
+  } catch (error: any) {
+    return { data: null, error, isFirstPost: false };
+  }
+}
+
+/**
+ * Upsert a daily wardrobe aggregate post.
+ * Creates one aggregate post per user per day, appends items to it.
+ */
+export async function upsertDailyWardrobePost(
+  userId: string,
+  wardrobeItemId: string,
+  visibility: Visibility
+): Promise<{ data: Post | null; error: any; isFirstPost: boolean }> {
+  try {
+    // Find aggregate post from the last 24 hours (avoids timezone issues)
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const { data: existingPost } = await supabase
+      .from('posts')
+      .select('id')
+      .eq('owner_user_id', userId)
+      .eq('entity_type', 'wardrobe')
+      .gte('created_at', twentyFourHoursAgo.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let postId: string;
+    let isFirstPost = false;
+
+    if (existingPost?.id) {
+      postId = existingPost.id;
+    } else {
+      // Create new aggregate post
+      const { data: newPost, error: postError } = await supabase
+        .from('posts')
+        .insert({
+          owner_user_id: userId,
+          entity_type: 'wardrobe',
+          entity_id: userId, // Use userId as entity_id for aggregate posts
+          visibility,
+          caption: 'Added a new item to their wardrobe',
+        })
+        .select()
+        .single();
+
+      if (postError) throw postError;
+      postId = newPost.id;
+      isFirstPost = true;
+    }
+
+    // Add wardrobe item to the aggregate post
+    const { error: linkError } = await supabase
+      .from('post_wardrobe_items')
+      .insert({
+        post_id: postId,
+        wardrobe_item_id: wardrobeItemId,
+      });
+
+    // Ignore duplicate (item already in this post)
+    if (linkError && linkError.code !== '23505') {
+      throw linkError;
+    }
+
+    // Update caption with item count
+    const { count } = await supabase
+      .from('post_wardrobe_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('post_id', postId);
+
+    if (count && count > 1) {
+      await supabase
+        .from('posts')
+        .update({ caption: `Added ${count} new items to their wardrobe` })
+        .eq('id', postId);
+    }
+
+    const { data: post } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('id', postId)
+      .single();
+
+    return { data: post, error: null, isFirstPost };
+  } catch (error: any) {
+    return { data: null, error, isFirstPost: false };
+  }
+}
+
+/**
+ * Update post visibility
+ */
+export async function updatePostVisibility(
+  postId: string,
+  userId: string,
+  visibility: Visibility
+): Promise<{ error: any }> {
+  try {
+    const { error } = await supabase
+      .from('posts')
+      .update({ visibility })
+      .eq('id', postId)
+      .eq('owner_user_id', userId);
+
+    if (error) throw error;
+    return { error: null };
+  } catch (error: any) {
+    return { error };
+  }
+}
+
+/**
+ * Get post for an entity (used by VisibilityToggle to find the post)
+ */
+export async function getPostForEntity(
+  userId: string,
+  entityType: EntityType,
+  entityId: string
+): Promise<{ data: Post | null; error: any }> {
+  try {
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('owner_user_id', userId)
+      .eq('entity_type', entityType)
+      .eq('entity_id', entityId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error: any) {
+    return { data: null, error };
+  }
 }
 
 /**
@@ -254,6 +483,7 @@ export async function getFeed(
     const outfitIds = new Set<string>();
     const lookbookIds = new Set<string>();
     const headshotIds = new Set<string>();
+    const wardrobePostIds = new Set<string>();
 
     limitedItems.forEach(item => {
       const post = item.type === 'post' ? item.post! : item.repost!.original_post!;
@@ -264,6 +494,8 @@ export async function getFeed(
           lookbookIds.add(post.entity_id);
         } else if (post.entity_type === 'headshot') {
           headshotIds.add(post.entity_id);
+        } else if (post.entity_type === 'wardrobe') {
+          wardrobePostIds.add(post.id);
         }
       }
     });
@@ -324,6 +556,29 @@ export async function getFeed(
       });
     }
 
+    // Fetch wardrobe items for aggregate posts
+    const wardrobeItemsMap = new Map<string, Array<{ id: string; title: string; image_url?: string | null }>>();
+    if (wardrobePostIds.size > 0) {
+      const { data: postItems } = await supabase
+        .from('post_wardrobe_items')
+        .select('post_id, wardrobe_item_id, wardrobe_item:wardrobe_items(id, title)')
+        .in('post_id', Array.from(wardrobePostIds));
+
+      if (postItems) {
+        // Group items by post_id
+        for (const pi of postItems as any[]) {
+          const items = wardrobeItemsMap.get(pi.post_id) || [];
+          if (pi.wardrobe_item) {
+            items.push({
+              id: pi.wardrobe_item.id,
+              title: pi.wardrobe_item.title,
+            });
+          }
+          wardrobeItemsMap.set(pi.post_id, items);
+        }
+      }
+    }
+
     // Attach entities to feed items (instant lookup)
     limitedItems.forEach(item => {
       const post = item.type === 'post' ? item.post! : item.repost!.original_post!;
@@ -342,6 +597,11 @@ export async function getFeed(
           const headshot = headshotsMap.get(post.entity_id);
           if (headshot) {
             item.entity = { headshot };
+          }
+        } else if (post.entity_type === 'wardrobe') {
+          const wardrobeItems = wardrobeItemsMap.get(post.id);
+          if (wardrobeItems) {
+            item.entity = { wardrobeItems };
           }
         }
       }
@@ -398,6 +658,7 @@ export async function getDiscoverFeed(
     const outfitIds = new Set<string>();
     const lookbookIds = new Set<string>();
     const headshotIds = new Set<string>();
+    const wardrobePostIds = new Set<string>();
 
     feedItems.forEach(item => {
       const post = item.post!;
@@ -407,6 +668,8 @@ export async function getDiscoverFeed(
         lookbookIds.add(post.entity_id);
       } else if (post.entity_type === 'headshot') {
         headshotIds.add(post.entity_id);
+      } else if (post.entity_type === 'wardrobe') {
+        wardrobePostIds.add(post.id);
       }
     });
 
@@ -466,6 +729,28 @@ export async function getDiscoverFeed(
       });
     }
 
+    // Fetch wardrobe items for aggregate posts
+    const wardrobeItemsMap = new Map<string, Array<{ id: string; title: string; image_url?: string | null }>>();
+    if (wardrobePostIds.size > 0) {
+      const { data: postItems } = await supabase
+        .from('post_wardrobe_items')
+        .select('post_id, wardrobe_item_id, wardrobe_item:wardrobe_items(id, title)')
+        .in('post_id', Array.from(wardrobePostIds));
+
+      if (postItems) {
+        for (const pi of postItems as any[]) {
+          const items = wardrobeItemsMap.get(pi.post_id) || [];
+          if (pi.wardrobe_item) {
+            items.push({
+              id: pi.wardrobe_item.id,
+              title: pi.wardrobe_item.title,
+            });
+          }
+          wardrobeItemsMap.set(pi.post_id, items);
+        }
+      }
+    }
+
     // Attach entities
     feedItems.forEach(item => {
       const post = item.post!;
@@ -483,6 +768,11 @@ export async function getDiscoverFeed(
         const headshot = headshotsMap.get(post.entity_id);
         if (headshot) {
           item.entity = { headshot };
+        }
+      } else if (post.entity_type === 'wardrobe') {
+        const wardrobeItems = wardrobeItemsMap.get(post.id);
+        if (wardrobeItems) {
+          item.entity = { wardrobeItems };
         }
       }
     });

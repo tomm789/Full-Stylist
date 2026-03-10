@@ -28,4 +28,5 @@ export {
   restoreWardrobeItem,
   saveWardrobeItem,
   unsaveWardrobeItem,
+  publishWardrobeItem,
 } from './items-mutations';

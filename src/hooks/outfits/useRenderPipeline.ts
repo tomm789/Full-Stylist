@@ -28,7 +28,7 @@ interface UseRenderPipelineProps {
   outfitItems: Map<string, WardrobeItem>;
   itemImageUrls: Map<string, string>;
   notes: string;
-  saveOutfit: () => Promise<string | null>;
+  saveOutfit: () => Promise<{ id: string; isFirstPost: boolean } | null>;
   router: { push: (path: string) => void };
   onDescriptionReady?: () => void;
   // Session integration
@@ -112,12 +112,13 @@ export function useRenderPipeline({
     let variationId: string | null = null;
 
     try {
-      const savedOutfitId = await saveOutfit();
-      if (!savedOutfitId) {
+      const saveResult = await saveOutfit();
+      if (!saveResult) {
         showErrorToast('Failed to save outfit before rendering');
         setRendering(false);
         return;
       }
+      const savedOutfitId = saveResult.id;
 
       // Ensure session exists for variation tracking
       const sessionId = await ensureSession();

@@ -24,7 +24,7 @@ import HeadshotSocialTab from '@/components/headshots/HeadshotSocialTab';
 import DrawModeInline from '@/components/headshots/DrawModeInline';
 import MirrorTabContent from '@/components/headshots/MirrorTabContent';
 import MirrorCategoryPillsRow from '@/components/headshots/MirrorCategoryPillsRow';
-import ShareToFeedModal from '@/components/headshots/ShareToFeedModal';
+// ShareToFeedModal removed — headshots now auto-post on save
 import { HeaderTitlePillRow } from '@/components/shared/layout';
 import PostGrid, { postGridStyles } from '@/components/social/PostGrid';
 import PolicyBlockModal from '@/components/shared/modals/PolicyBlockModal';
@@ -57,7 +57,7 @@ export default function HairAndMakeUpScreen() {
   const insets = useSafeAreaInsets();
   const { variationId, returnToWardrobe, baseHeadshotId } = useLocalSearchParams<{ variationId?: string; returnToWardrobe?: string; baseHeadshotId?: string }>();
   const { applyLook } = useApplyLook();
-  const [showShareModal, setShowShareModal] = React.useState(false);
+  // showShareModal removed — headshots now auto-post on save
   const [mirrorEditTabRequest, setMirrorEditTabRequest] = React.useState<EditTab | null>(null);
   const returnToWardrobeRef = React.useRef(returnToWardrobe === '1');
 
@@ -427,7 +427,6 @@ export default function HairAndMakeUpScreen() {
                 router.push('/(tabs)/wardrobe' as any);
               }
             }}
-            onShareToFeed={() => setShowShareModal(true)}
             onShare={state.handleSharePreview}
             onDelete={state.handleDeletePreviewImage}
             canShare={state.canShare}
@@ -473,15 +472,6 @@ export default function HairAndMakeUpScreen() {
           visible={state.lightboxVisible}
           images={state.lightboxUrl ? [state.lightboxUrl] : []}
           onClose={() => state.setLightboxVisible(false)}
-        />
-
-        <ShareToFeedModal
-          visible={showShareModal}
-          onClose={() => setShowShareModal(false)}
-          onShare={async (caption) => {
-            setShowShareModal(false);
-            await state.handleShareToFeed(caption);
-          }}
         />
 
         {/* Headshot Creator Bar & Container — hidden when draw mode is active (DrawModeInline has its own) */}

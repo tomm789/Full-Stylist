@@ -39,17 +39,23 @@ import { LoadingSpinner } from '@/components/shared';
 import { createCommonStyles } from '@/styles/commonStyles';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createStyles } from '@/styles/screens/wardrobe-item-detail.styles';
+import { useFirstPostIntro } from '@/hooks/social/useFirstPostIntro';
+import { FirstPostVisibilityModal } from '@/components/shared/modals/FirstPostVisibilityModal';
+import { getUserSettings } from '@/lib/settings';
+import { publishWardrobeItem, archiveWardrobeItem } from '@/lib/wardrobe';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 
 export default function ItemDetailScreen() {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const commonStyles = useMemo(() => createCommonStyles(colors), [colors]);
-  const { id, itemIds, readOnly, traceId: traceIdParam } = useLocalSearchParams<{
+  const { id, itemIds, readOnly, traceId: traceIdParam, draft: draftParam } = useLocalSearchParams<{
     id: string;
     itemIds?: string;
     readOnly?: string;
     traceId?: string;
     refresh?: string;
+    draft?: string;
   }>();
   const timeline = traceIdParam && isPerfLogsEnabled() ? continueTimeline(traceIdParam) : null;
   const router = useRouter();
@@ -80,6 +86,71 @@ export default function ItemDetailScreen() {
     itemId: id,
     userId: user?.id,
   });
+
+  // Draft state: item was just created and hasn't been published yet
+  const [isDraft, setIsDraft] = useState(draftParam === 'true');
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  // First-post intro modal for wardrobe
+  const firstPostIntro = useFirstPostIntro();
+
+  const handleDraftSave = useCallback(async () => {
+    if (!user?.id || !id || isPublishing) return;
+    setIsPublishing(true);
+    try {
+      const result = await publishWardrobeItem(user.id, id);
+      if (result.error) {
+        showErrorToast('Failed to publish item');
+        return;
+      }
+      setIsDraft(false);
+      showSuccessToast('Item saved to your feed');
+      if (result.isFirstPost) {
+        const { getPostForEntity } = await import('@/lib/posts');
+        const { data: post } = await getPostForEntity(user.id, 'wardrobe', user.id);
+        if (post) {
+          firstPostIntro.triggerIntroIfNeeded('wardrobe', post.id);
+        }
+      }
+    } finally {
+      setIsPublishing(false);
+    }
+  }, [user?.id, id, isPublishing, firstPostIntro]);
+
+  const handleDraftDiscard = useCallback(async () => {
+    if (!user?.id || !id) return;
+    const { error } = await archiveWardrobeItem(id, user.id);
+    if (error) {
+      showErrorToast('Failed to discard item');
+      return;
+    }
+    router.back();
+  }, [user?.id, id, router]);
+
+  // On mount: detect orphaned drafts (no post exists) or check first-post intro
+  useEffect(() => {
+    if (!user?.id || !item || item.owner_user_id !== user.id) return;
+    (async () => {
+      const { getPostForEntity } = await import('@/lib/posts');
+      const { data: post } = await getPostForEntity(user.id, 'wardrobe', user.id);
+
+      // Orphaned draft: item exists but was never published (no post, not archived)
+      if (!post && !item.archived_at && !isDraft) {
+        setIsDraft(true);
+        return;
+      }
+
+      // Already in draft mode — skip intro check
+      if (isDraft) return;
+
+      // Check first-post intro
+      const { data: settings } = await getUserSettings(user.id);
+      if (settings?.has_seen_visibility_intro_wardrobe) return;
+      if (post) {
+        firstPostIntro.triggerIntroIfNeeded('wardrobe', post.id);
+      }
+    })();
+  }, [isDraft, user?.id, item?.id, firstPostIntro]);
 
   const [feedbackSubmittedForJobId, setFeedbackSubmittedForJobId] = useState<string | null>(null);
   const showFeedbackOverlay = !!(initialImageDataUri && lastSucceededJobId);
@@ -242,27 +313,60 @@ export default function ItemDetailScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <Header
-        variant="overlay"
-        leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
-        rightContent={
-          <View style={styles.headerRightButtons}>
-            {isOwnItem && (
+      {isDraft ? (
+        <Header
+          variant="overlay"
+          leftContent={
+            <TouchableOpacity
+              style={styles.draftButton}
+              onPress={handleDraftDiscard}
+              accessibilityLabel="Discard item"
+            >
+              <Ionicons name="close" size={20} color={colors.textSecondary} />
+              <Text style={[styles.draftButtonText, { color: colors.textSecondary }]}>Close</Text>
+            </TouchableOpacity>
+          }
+          rightContent={
+            <TouchableOpacity
+              style={[styles.draftButton, styles.draftSaveButton, { backgroundColor: colors.textPrimary }]}
+              onPress={handleDraftSave}
+              disabled={isPublishing || isGeneratingDetails}
+              accessibilityLabel="Save item"
+            >
+              {isPublishing ? (
+                <ActivityIndicator size="small" color={colors.background} />
+              ) : (
+                <>
+                  <Ionicons name="checkmark" size={20} color={colors.background} />
+                  <Text style={[styles.draftButtonText, { color: colors.background, fontWeight: '600' }]}>Save</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          }
+        />
+      ) : (
+        <Header
+          variant="overlay"
+          leftContent={<HeaderIconButton icon="chevron-back" onPress={() => router.back()} />}
+          rightContent={
+            <View style={styles.headerRightButtons}>
+              {isOwnItem && (
+                <HeaderIconButton
+                  icon={item?.is_favorite ? 'heart' : 'heart-outline'}
+                  color={item?.is_favorite ? colors.favorite : colors.textPrimary}
+                  onPress={actions.toggleFavorite}
+                  accessibilityLabel="Toggle favorite"
+                />
+              )}
               <HeaderIconButton
-                icon={item?.is_favorite ? 'heart' : 'heart-outline'}
-                color={item?.is_favorite ? colors.favorite : colors.textPrimary}
-                onPress={actions.toggleFavorite}
-                accessibilityLabel="Toggle favorite"
+                icon="ellipsis-vertical"
+                onPress={() => setShowMenu(true)}
+                accessibilityLabel="Open menu"
               />
-            )}
-            <HeaderIconButton
-              icon="ellipsis-vertical"
-              onPress={() => setShowMenu(true)}
-              accessibilityLabel="Open menu"
-            />
-          </View>
-        }
-      />
+            </View>
+          }
+        />
+      )}
 
       <DropdownMenuModal
         visible={showMenu}
@@ -446,6 +550,17 @@ export default function ItemDetailScreen() {
         scrollRef={navigationScrollRef}
         onNavigate={actions.handleNavigateToItem}
       />
+
+      {/* First-post visibility intro */}
+      {firstPostIntro.introEntityType && (
+        <FirstPostVisibilityModal
+          visible={firstPostIntro.showIntro}
+          entityType={firstPostIntro.introEntityType}
+          currentVisibility={firstPostIntro.currentVisibility}
+          defaultVisibility={firstPostIntro.defaultVisibility}
+          onDone={firstPostIntro.handleIntroDone}
+        />
+      )}
     </View>
   );
 }

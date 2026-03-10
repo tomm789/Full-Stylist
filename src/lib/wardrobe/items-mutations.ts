@@ -8,6 +8,8 @@ import { QueryResult, QueryListResult } from '../utils/supabase-helpers';
 import { batchUploadImages } from '../images/helpers';
 import { WardrobeItem } from './items-types';
 import { getDefaultWardrobeId } from './items-queries';
+import { upsertDailyWardrobePost, resolveVisibility, type Visibility } from '../posts';
+import { getUserSettings } from '../settings';
 
 /**
  * Create wardrobe item with images
@@ -27,6 +29,7 @@ export async function createWardrobeItem(
 ): Promise<{
   data: { item: WardrobeItem; images: any[] } | null;
   error: any;
+  isFirstPost?: boolean;
 }> {
   try {
     // Upload images first
@@ -99,9 +102,34 @@ export async function createWardrobeItem(
       };
     }
 
+    // Auto-post is deferred until the user explicitly saves (draft state).
+    // See publishWardrobeItem() below.
     return { data: { item, images: itemImages || [] }, error: null };
   } catch (error: any) {
     return { data: null, error };
+  }
+}
+
+/**
+ * Publish a wardrobe item by creating its feed post.
+ * Called when the user explicitly saves from the draft state.
+ */
+export async function publishWardrobeItem(
+  userId: string,
+  itemId: string,
+  visibilityOverride?: Visibility
+): Promise<{ error: any; isFirstPost: boolean }> {
+  try {
+    const { data: settings } = await getUserSettings(userId);
+    const postVisibility = resolveVisibility(
+      visibilityOverride,
+      settings,
+      'wardrobe'
+    );
+    const postResult = await upsertDailyWardrobePost(userId, itemId, postVisibility);
+    return { error: null, isFirstPost: postResult.isFirstPost };
+  } catch (error: any) {
+    return { error, isFirstPost: false };
   }
 }
 

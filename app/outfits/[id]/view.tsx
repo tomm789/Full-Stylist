@@ -47,6 +47,10 @@ import {
   getCalendarEntriesForDate,
 } from '@/lib/calendar';
 import { restoreOutfit } from '@/lib/outfits';
+import { VisibilityToggle } from '@/components/shared/VisibilityToggle';
+import { usePostVisibility } from '@/hooks/social/usePostVisibility';
+import { useFirstPostIntro } from '@/hooks/social/useFirstPostIntro';
+import { FirstPostVisibilityModal } from '@/components/shared/modals/FirstPostVisibilityModal';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { createCommonStyles } from '@/styles/commonStyles';
 import { createStyles } from '@/styles/screens/outfits-view.styles';
@@ -112,6 +116,17 @@ export default function OutfitViewScreen() {
     submitComment,
     triggerLoadEngagement,
   } = useEngagementEntity('outfit', id, user?.id, PERF_MODE ? { deferInitialFetch: true } : undefined);
+
+  // Post visibility
+  const postVisibility = usePostVisibility({ entityType: 'outfit', entityId: id });
+
+  // First-post intro modal
+  const firstPostIntro = useFirstPostIntro();
+  useEffect(() => {
+    if (postVisibility.postId && !postVisibility.loading) {
+      firstPostIntro.triggerIntroIfNeeded('outfit', postVisibility.postId);
+    }
+  }, [postVisibility.postId, postVisibility.loading]);
 
   // PERF_MODE: fallback trigger engagement after delay if image never loads (triggerLoadEngagement is single-fire inside hook)
   const DEFERRED_ENGAGEMENT_FALLBACK_MS = 4000;
@@ -248,6 +263,11 @@ export default function OutfitViewScreen() {
         rightContent={
           isOwnOutfit ? (
             <>
+              <VisibilityToggle
+                visibility={postVisibility.visibility}
+                onVisibilityChange={postVisibility.handleVisibilityChange}
+                disabled={postVisibility.loading}
+              />
               <HeaderIconButton
                 icon="calendar-outline"
                 onPress={() => setShowDatePickerModal(true)}
@@ -422,6 +442,17 @@ export default function OutfitViewScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* First-post visibility intro */}
+      {firstPostIntro.introEntityType && (
+        <FirstPostVisibilityModal
+          visible={firstPostIntro.showIntro}
+          entityType={firstPostIntro.introEntityType}
+          currentVisibility={firstPostIntro.currentVisibility}
+          defaultVisibility={firstPostIntro.defaultVisibility}
+          onDone={firstPostIntro.handleIntroDone}
+        />
+      )}
     </View>
   );
 }

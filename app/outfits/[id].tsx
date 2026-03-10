@@ -38,6 +38,9 @@ import { HeaderIconButton, KeyboardAwareScreen } from '@/components/shared/layou
 import { theme } from '@/styles';
 import { PERF_MODE } from '@/lib/perf/perfMode';
 import { useThemeColors } from '@/contexts/ThemeContext';
+import { useFirstPostIntro } from '@/hooks/social/useFirstPostIntro';
+import { FirstPostVisibilityModal } from '@/components/shared/modals/FirstPostVisibilityModal';
+import { getPostForEntity } from '@/lib/posts';
 import { createCommonStyles } from '@/styles/commonStyles';
 import type { ThemeColors } from '@/styles/themeColors';
 import { normalizeLabelList } from '@/lib/outfits/normalizeLabels';
@@ -169,6 +172,15 @@ export default function OutfitEditorScreen() {
 
   const isNew = id === 'new';
 
+  const firstPostIntro = useFirstPostIntro();
+
+  const handleFirstPost = useCallback(async (outfitId: string) => {
+    const { data: post } = await getPostForEntity(user?.id ?? '', 'outfit', outfitId);
+    if (post) {
+      firstPostIntro.triggerIntroIfNeeded('outfit', post.id);
+    }
+  }, [user?.id, firstPostIntro]);
+
   const {
     loading,
     outfit,
@@ -204,6 +216,7 @@ export default function OutfitEditorScreen() {
     setOutfitItems,
     ensureItemImageUrls,
     onDescriptionReady: refreshOutfit,
+    onFirstPost: handleFirstPost,
   });
 
   const [visibilityExpanded, setVisibilityExpanded] = React.useState(false);
@@ -459,6 +472,17 @@ export default function OutfitEditorScreen() {
         selectedItemIds={actions.selectedItemIds}
         title="Add Item"
       />
+
+      {/* First-post visibility intro */}
+      {firstPostIntro.introEntityType && (
+        <FirstPostVisibilityModal
+          visible={firstPostIntro.showIntro}
+          entityType={firstPostIntro.introEntityType}
+          currentVisibility={firstPostIntro.currentVisibility}
+          defaultVisibility={firstPostIntro.defaultVisibility}
+          onDone={firstPostIntro.handleIntroDone}
+        />
+      )}
     </View>
   );
 }

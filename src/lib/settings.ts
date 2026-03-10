@@ -32,6 +32,14 @@ export interface UserSettings {
   ai_model_lock_auto_tag?: boolean | null;
   ai_model_lock_style_advice?: boolean | null;
   include_headshot_in_generation?: boolean;
+  default_visibility_outfit?: 'public' | 'followers' | 'private_link' | 'private' | 'inherit';
+  default_visibility_lookbook?: 'public' | 'followers' | 'private_link' | 'private' | 'inherit';
+  default_visibility_headshot?: 'public' | 'followers' | 'private_link' | 'private' | 'inherit';
+  default_visibility_wardrobe?: 'public' | 'followers' | 'private_link' | 'private' | 'inherit';
+  has_seen_visibility_intro_outfit?: boolean;
+  has_seen_visibility_intro_lookbook?: boolean;
+  has_seen_visibility_intro_headshot?: boolean;
+  has_seen_visibility_intro_wardrobe?: boolean;
   created_at?: string;
   updated_at?: string;
 }
