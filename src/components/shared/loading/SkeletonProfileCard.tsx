@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Skeleton } from 'moti/skeleton';
+import { Skeleton } from './Skeleton';
 import { useThemeColors } from '@/contexts/ThemeContext';
 import { theme } from '@/styles';
 

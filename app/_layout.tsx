@@ -2,8 +2,9 @@ import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient } from '@/lib/queryClient';
+import { asyncStoragePersister } from '@/lib/queryPersister';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
@@ -107,7 +108,7 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: asyncStoragePersister }}>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
       <KeyboardProvider>
@@ -119,7 +120,7 @@ export default function RootLayout() {
       </KeyboardProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 
